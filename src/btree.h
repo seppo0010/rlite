@@ -41,5 +41,6 @@ rl_tree* rl_tree_create(rl_tree_type* type, long max_size, rl_accessor* accessor
 int rl_tree_add_child(rl_tree* tree, void* score, void* value);
 long rl_tree_find_score(rl_tree* tree, void* score, rl_tree_node*** nodes, long** positions);
 void rl_print_tree(rl_tree* tree);
+void rl_flatten_tree(rl_tree* tree, void*** scores, long* size);
 
 #endif

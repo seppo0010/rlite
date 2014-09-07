@@ -3,6 +3,13 @@
 #include <stdio.h>
 #include "btree.h"
 
+void rl_print_node(rl_tree* tree, rl_tree_node* node, long level);
+void *memmove_dbg(void *dest, void *src, size_t n, int flag) {
+   void* retval = memmove(dest, src, n);
+   memset(src, flag, n);
+   return retval;
+}
+
 int long_cmp(void* v1, void* v2) {
    long a = *((long*)v1), b = *((long*)v2);
    if (a == b) {
@@ -76,7 +83,7 @@ long rl_tree_find_score(rl_tree* tree, void* score, rl_tree_node*** nodes, long*
       min = 0;
       max = node->size - 1;
       while (min <= max) {
-         pos = (max - min) / 2;
+         pos = (max - min) / 2 + min;
          cmp = tree->type->cmp(score, node->scores[pos]);
          if (cmp == 0) {
             if (nodes) {
@@ -86,9 +93,13 @@ long rl_tree_find_score(rl_tree* tree, void* score, rl_tree_node*** nodes, long*
             }
             return 1;
          } else if (cmp > 0) {
-            if (min == pos) {
+            if (max == pos) {
                pos++;
                break;
+            }
+            if (min == pos) {
+               min++;
+               continue;
             }
             min = pos;
          } else {
@@ -112,6 +123,7 @@ long rl_tree_find_score(rl_tree* tree, void* score, rl_tree_node*** nodes, long*
 int rl_tree_add_child(rl_tree* tree, void* score, void* value) {
    rl_tree_node** nodes = malloc(sizeof(rl_tree_node*) * tree->height);
    long* positions = malloc(sizeof(long) * tree->height);
+   void* tmp;
    long found = rl_tree_find_score(tree, score, &nodes, &positions);
    long i, pos;
    long child = -1;
@@ -125,12 +137,12 @@ int rl_tree_add_child(rl_tree* tree, void* score, void* value) {
    for (i = tree->height - 1; i >= 0; i--) {
       node = nodes[i];
       if (node->size < tree->max_size) {
-         memmove(&node->scores[positions[i] + 1], &node->scores[positions[i]], sizeof(void*) * (node->size - positions[i]));
+         memmove_dbg(&node->scores[positions[i] + 1], &node->scores[positions[i]], sizeof(void*) * (node->size - positions[i]), 1);
          if (node->values) {
-            memmove(&node->values[positions[i] + 1], &node->values[positions[i]], sizeof(void*) * (node->size - positions[i]));
+            memmove_dbg(&node->values[positions[i] + 1], &node->values[positions[i]], sizeof(void*) * (node->size - positions[i]), 2);
          }
          if (node->children) {
-            memmove(&node->children[positions[i] + 2], &node->children[positions[i] + 1], sizeof(long) * (node->size - positions[i]));
+            memmove_dbg(&node->children[positions[i] + 2], &node->children[positions[i] + 1], sizeof(long) * (node->size - positions[i]), 3);
          }
          node->scores[positions[i]] = score;
          if (node->values) {
@@ -146,7 +158,6 @@ int rl_tree_add_child(rl_tree* tree, void* score, void* value) {
          score = NULL;
          break;
       } else {
-         // TODO: copy values
          pos = positions[i];
 
          rl_tree_node* right = rl_tree_node_create(tree);
@@ -156,32 +167,35 @@ int rl_tree_add_child(rl_tree* tree, void* score, void* value) {
 
          if (pos < tree->max_size / 2) {
             if (child != -1) {
-               memmove(&node->children[pos + 2], &node->children[pos + 1], sizeof(void*) * (tree->max_size / 2 - 1 - pos));
+               memmove_dbg(&node->children[pos + 2], &node->children[pos + 1], sizeof(void*) * (tree->max_size / 2 - 1 - pos), 4);
+               memmove_dbg(right->children, &node->children[tree->max_size / 2], sizeof(void*) * (tree->max_size / 2 + 1), 5);
                node->children[pos + 1] = child;
-               memmove(right->children, &node->children[tree->max_size / 2], sizeof(void*) * tree->max_size / 2);
+
             }
-            memmove(&node->scores[pos + 1], &node->scores[pos], sizeof(void*) * (tree->max_size / 2 - 1 - pos));
+            memmove_dbg(&node->scores[pos + 1], &node->scores[pos], sizeof(void*) * (tree->max_size / 2 - 1 - pos), 6);
+            tmp = node->scores[tree->max_size / 2 - 1];
             node->scores[pos] = score;
-            score = node->scores[tree->max_size / 2 - 1];
-            memmove(right->scores, &node->scores[tree->max_size / 2], sizeof(void*) * tree->max_size / 2);
+            score = tmp;
+            memmove_dbg(right->scores, &node->scores[tree->max_size / 2], sizeof(void*) * tree->max_size / 2, 7);
          }
 
          if (pos == tree->max_size / 2) {
             if (child != -1) {
-               memmove(right->children, &node->children[tree->max_size / 2], sizeof(void*) * tree->max_size / 2);
+               memmove_dbg(&right->children[1], &node->children[tree->max_size / 2 + 1], sizeof(void*) * (tree->max_size / 2), 8);
+               right->children[0] = child;
             }
-            memmove(right->scores, &node->scores[tree->max_size / 2], sizeof(void*) * tree->max_size / 2);
+            memmove_dbg(right->scores, &node->scores[tree->max_size / 2], sizeof(void*) * tree->max_size / 2, 9);
          }
 
          if (pos > tree->max_size / 2) {
             if (child != -1) {
-               memmove(right->children, &node->children[tree->max_size / 2 + 1], sizeof(void*) * (pos - tree->max_size / 2));
+               memmove_dbg(right->children, &node->children[tree->max_size / 2 + 1], sizeof(void*) * (pos - tree->max_size / 2), 10);
                right->children[pos - tree->max_size / 2] = child;
-               memmove(&right->children[pos - tree->max_size / 2 + 1], &node->children[tree->max_size / 2 + 1], sizeof(void*) * (tree->max_size - pos));
+               memmove_dbg(&right->children[pos - tree->max_size / 2 + 1], &node->children[tree->max_size / 2 + 1], sizeof(void*) * (tree->max_size - pos), 11);
             }
-            memmove(right->scores, &node->scores[tree->max_size / 2], sizeof(void*) * (pos - tree->max_size / 2 - 1));
+            memmove_dbg(right->scores, &node->scores[tree->max_size / 2], sizeof(void*) * (pos - tree->max_size / 2 - 1), 12);
             right->scores[pos - tree->max_size / 2 - 1] = score;
-            memmove(&right->scores[pos - tree->max_size / 2], &node->scores[pos], sizeof(void*) * (tree->max_size - pos));
+            memmove_dbg(&right->scores[pos - tree->max_size / 2], &node->scores[pos], sizeof(void*) * (tree->max_size - pos), 13);
             score = node->scores[tree->max_size / 2];
          }
 
@@ -233,4 +247,22 @@ void rl_print_tree(rl_tree* tree) {
    printf("-------\n");
    rl_print_node(tree, tree->root, 1);
    printf("-------\n");
+}
+
+void rl_flatten_node(rl_tree* tree, rl_tree_node* node, void*** scores, long* size) {
+   long i;
+   if (node->children) {
+      rl_flatten_node(tree, tree->accessor->getter(tree, node->children[0]), scores, size);
+   }
+   for (i = 0; i < node->size; i++) {
+      (*scores)[*size] = node->scores[i];
+      (*size)++;
+      if (node->children) {
+         rl_flatten_node(tree, tree->accessor->getter(tree, node->children[i + 1]), scores, size);
+      }
+   }
+}
+
+void rl_flatten_tree(rl_tree* tree, void*** scores, long* size) {
+   rl_flatten_node(tree, tree->root, scores, size);
 }
