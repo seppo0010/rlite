@@ -53,7 +53,7 @@ int contains_element(long element, long* elements, long size) {
    return 0;
 }
 int fuzzy_set_test(long size, long tree_node_size) {
-   fprintf(stderr, "Start fuzzy_set_test\n");
+   fprintf(stderr, "Start fuzzy_set_test %ld %ld\n", size, tree_node_size);
    rl_accessor accessor;
    accessor.getter = getter;
    accessor.setter = setter;
@@ -71,6 +71,7 @@ int fuzzy_set_test(long size, long tree_node_size) {
       element = rand();
       if (contains_element(element, elements, i)) {
          i--;
+         continue;
       } else {
          elements[i] = element;
          if (0 != rl_tree_add_child(tree, &elements[i], NULL)) {
@@ -82,7 +83,6 @@ int fuzzy_set_test(long size, long tree_node_size) {
       rl_flatten_tree(tree, &flatten_scores, &flatten_size);
       for (j = 1; j < flatten_size; j++) {
          if (*(long*)flatten_scores[j - 1] >= *(long*)flatten_scores[j]) {
-            rl_print_tree(tree);
             fprintf(stderr, "Tree is in a bad state in element %ld after adding child %ld\n", j, i);
             return 1;
          }
@@ -120,6 +120,12 @@ int main() {
    if (retval != 0) goto cleanup;
    srand(1);
    retval = fuzzy_set_test(100, 2);
+   if (retval != 0) goto cleanup;
+   srand(1);
+   retval = fuzzy_set_test(200, 2);
+   if (retval != 0) goto cleanup;
+   srand(1);
+   retval = fuzzy_set_test(200, 10);
    if (retval != 0) goto cleanup;
 
 cleanup:

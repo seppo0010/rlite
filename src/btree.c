@@ -5,8 +5,11 @@
 
 void rl_print_node(rl_tree* tree, rl_tree_node* node, long level);
 void *memmove_dbg(void *dest, void *src, size_t n, int flag) {
-   void* retval = memmove(dest, src, n);
+   void* data = malloc(n);
+   memmove(data, src, n);
    memset(src, flag, n);
+   void* retval = memmove(dest, data, n);
+   free(data);
    return retval;
 }
 
@@ -172,8 +175,8 @@ int rl_tree_add_child(rl_tree* tree, void* score, void* value) {
                node->children[pos + 1] = child;
 
             }
-            memmove_dbg(&node->scores[pos + 1], &node->scores[pos], sizeof(void*) * (tree->max_size / 2 - 1 - pos), 6);
             tmp = node->scores[tree->max_size / 2 - 1];
+            memmove_dbg(&node->scores[pos + 1], &node->scores[pos], sizeof(void*) * (tree->max_size / 2 - 1 - pos), 6);
             node->scores[pos] = score;
             score = tmp;
             memmove_dbg(right->scores, &node->scores[tree->max_size / 2], sizeof(void*) * tree->max_size / 2, 7);
@@ -191,12 +194,13 @@ int rl_tree_add_child(rl_tree* tree, void* score, void* value) {
             if (child != -1) {
                memmove_dbg(right->children, &node->children[tree->max_size / 2 + 1], sizeof(void*) * (pos - tree->max_size / 2), 10);
                right->children[pos - tree->max_size / 2] = child;
-               memmove_dbg(&right->children[pos - tree->max_size / 2 + 1], &node->children[tree->max_size / 2 + 1], sizeof(void*) * (tree->max_size - pos), 11);
+               memmove_dbg(&right->children[pos - tree->max_size / 2 + 1], &node->children[pos + 1], sizeof(void*) * (tree->max_size - pos), 11);
             }
-            memmove_dbg(right->scores, &node->scores[tree->max_size / 2], sizeof(void*) * (pos - tree->max_size / 2 - 1), 12);
+            tmp = node->scores[tree->max_size / 2];
+            memmove_dbg(right->scores, &node->scores[tree->max_size / 2 + 1], sizeof(void*) * (pos - tree->max_size / 2 - 1), 12);
             right->scores[pos - tree->max_size / 2 - 1] = score;
             memmove_dbg(&right->scores[pos - tree->max_size / 2], &node->scores[pos], sizeof(void*) * (tree->max_size - pos), 13);
-            score = node->scores[tree->max_size / 2];
+            score = tmp;
          }
 
          node->size = right->size = tree->max_size / 2;
