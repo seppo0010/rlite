@@ -1,0 +1,38 @@
+#!/bin/bash
+do_version_check() {
+
+   [ "$1" == "$2" ] && return 10
+
+   ver1front=`echo $1 | cut -d "." -f -1`
+   ver1back=`echo $1 | cut -d "." -f 2-`
+
+   ver2front=`echo $2 | cut -d "." -f -1`
+   ver2back=`echo $2 | cut -d "." -f 2-`
+
+   if [ "$ver1front" != "$1" ] || [ "$ver2front" != "$2" ]; then
+       [ "$ver1front" -gt "$ver2front" ] && return 11
+       [ "$ver1front" -lt "$ver2front" ] && return 9
+
+       [ "$ver1front" == "$1" ] || [ -z "$ver1back" ] && ver1back=0
+       [ "$ver2front" == "$2" ] || [ -z "$ver2back" ] && ver2back=0
+       do_version_check "$ver1back" "$ver2back"
+       return $?
+   else
+           [ "$1" -gt "$2" ] && return 11 || return 9
+   fi
+}
+
+VERSION=$(astyle --version 2>&1 >/dev/null)
+VERSION=${VERSION#Artistic Style Version}
+do_version_check $VERSION 2
+if [ $? -eq 9 ]; then
+	echo "Using an old version of astyle; please update to continue"
+	exit 1;
+fi
+
+if [ $(astyle --indent=tab -l -S -K -y -j -p -k3 src/*.{c,h} |grep -i formatted |wc -l) -eq 0 ]; then
+	exit 0
+else
+	echo "Commit failed due to inconsistent styling; autostyled"
+	exit 1
+fi
