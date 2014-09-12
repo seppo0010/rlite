@@ -60,6 +60,21 @@ rl_tree_node *rl_tree_node_create(rl_tree *tree)
 	return node;
 }
 
+long rl_tree_node_destroy(rl_tree *tree, rl_tree_node *node)
+{
+	if (node->scores) {
+		free(node->scores);
+	}
+	if (node->values) {
+		free(node->values);
+	}
+	if (node->children) {
+		free(node->children);
+	}
+	free(node);
+	return 0;
+}
+
 rl_tree *rl_tree_create(rl_tree_type *type, long max_size, rl_accessor *accessor)
 {
 	rl_tree *tree = malloc(sizeof(rl_tree));
@@ -77,6 +92,23 @@ rl_tree *rl_tree_create(rl_tree_type *type, long max_size, rl_accessor *accessor
 	tree->accessor = accessor;
 	tree->height = 1;
 	return tree;
+}
+
+int rl_tree_destroy(rl_tree *tree)
+{
+	long i;
+	rl_tree_node **nodes;
+	long size;
+	if (0 != tree->accessor->list(tree, &nodes, &size)) {
+		return 1;
+	}
+	for (i = 0; i < size; i++) {
+		if (0 != rl_tree_node_destroy(tree, nodes[i])) {
+			return 1;
+		}
+	}
+	free(tree);
+	return 0;
 }
 
 long rl_tree_find_score(rl_tree *tree, void *score, rl_tree_node *** nodes, long **positions)

@@ -25,8 +25,10 @@ typedef struct rl_tree_node {
 } rl_tree_node;
 
 typedef struct rl_accessor {
+	void *context;
 	void *(*getter)(void *tree, long number);
 	long (*setter)(void *tree, void *node);
+	long (*list)(void *tree, rl_tree_node *** nodes, long *size);
 } rl_accessor;
 
 typedef struct {
@@ -38,6 +40,7 @@ typedef struct {
 } rl_tree;
 
 rl_tree *rl_tree_create(rl_tree_type *type, long max_size, rl_accessor *accessor);
+int rl_tree_destroy(rl_tree *tree);
 int rl_tree_add_child(rl_tree *tree, void *score, void *value);
 long rl_tree_find_score(rl_tree *tree, void *score, rl_tree_node *** nodes, long **positions);
 void rl_print_tree(rl_tree *tree);

@@ -2,6 +2,11 @@
 #include <stdlib.h>
 #include <stdio.h>
 
+typedef struct rl_test_context {
+	long size;
+	rl_tree_node **nodes;
+} rl_test_context;
+
 static void *getter(void *tree, long number)
 {
 	return (void *)number;
@@ -9,15 +14,40 @@ static void *getter(void *tree, long number)
 
 static long setter(void *tree, void *node)
 {
+	rl_test_context *context = (rl_test_context *)((rl_tree *)tree)->accessor->context;
+	long pos = context->size, i;
+	for (i = 0; i < context->size; i++) {
+		if (context->nodes[i] == node) {
+			pos = i;
+		}
+	}
+	if (pos == context->size) {
+		context->nodes[pos] = node;
+		context->size++;
+	}
 	return (long)node;
+}
+
+static long list(void *tree, rl_tree_node *** nodes, long *size)
+{
+	rl_test_context *context = (rl_test_context *)((rl_tree *)tree)->accessor->context;
+	*nodes = context->nodes;
+	*size = context->size;
+	return 0;
 }
 
 int basic_set_test()
 {
 	fprintf(stderr, "Start basic_set_test\n");
+	rl_test_context *context = malloc(sizeof(rl_test_context));
+	context->size = 0;
+	context->nodes = malloc(sizeof(rl_tree_node *) * 100);
 	rl_accessor accessor;
 	accessor.getter = getter;
 	accessor.setter = setter;
+	accessor.list = list;
+	accessor.context = context;
+
 	init_long_set();
 	rl_tree *tree = rl_tree_create(&long_set, 2, &accessor);
 	long vals[7] = {1, 2, 3, 4, 5, 6, 7};
@@ -43,6 +73,12 @@ int basic_set_test()
 		}
 	}
 	fprintf(stderr, "End basic_set_test\n");
+	if (0 != rl_tree_destroy(tree)) {
+		fprintf(stderr, "Failed to destroy tree\n");
+		return 1;
+	}
+	free(context->nodes);
+	free(context);
 	return 0;
 }
 
@@ -59,9 +95,14 @@ int contains_element(long element, long *elements, long size)
 int fuzzy_set_test(long size, long tree_node_size)
 {
 	fprintf(stderr, "Start fuzzy_set_test %ld %ld\n", size, tree_node_size);
+	rl_test_context *context = malloc(sizeof(rl_test_context));
+	context->size = 0;
+	context->nodes = malloc(sizeof(rl_tree_node *) * size);
 	rl_accessor accessor;
 	accessor.getter = getter;
 	accessor.setter = setter;
+	accessor.list = list;
+	accessor.context = context;
 	init_long_set();
 	rl_tree *tree = rl_tree_create(&long_set, tree_node_size, &accessor);
 
@@ -118,6 +159,17 @@ int fuzzy_set_test(long size, long tree_node_size)
 		}
 	}
 	fprintf(stderr, "End fuzzy_set_test\n");
+
+	if (0 != rl_tree_destroy(tree)) {
+		fprintf(stderr, "Failed to destroy tree\n");
+		return 1;
+	}
+
+	free(elements);
+	free(nonelements);
+	free(flatten_scores);
+	free(context->nodes);
+	free(context);
 	return 0;
 }
 
