@@ -1,6 +1,7 @@
 #include "btree.h"
 #include <stdlib.h>
 #include <stdio.h>
+#include <string.h>
 
 typedef struct rl_test_context {
 	long size;
@@ -36,20 +37,79 @@ static long list(void *tree, rl_tree_node *** nodes, long *size)
 	return 0;
 }
 
+rl_accessor *accessor_long_set_create(void *context)
+{
+	rl_accessor *accessor = malloc(sizeof(rl_accessor));
+	if (accessor == NULL) {
+		fprintf(stderr, "Failed to create accessor\n");
+		return NULL;
+	}
+	accessor->getter = getter;
+	accessor->setter = setter;
+	accessor->list = list;
+	accessor->context = context;
+	return accessor;
+}
+
+int basic_set_serde_test()
+{
+	fprintf(stderr, "Start basic_set_serde_test\n");
+	rl_test_context *context = malloc(sizeof(rl_test_context));
+	context->size = 0;
+	context->nodes = malloc(sizeof(rl_tree_node *) * 100);
+
+	init_long_set();
+	rl_accessor *accessor = accessor_long_set_create(context);
+	rl_tree *tree = rl_tree_create(&long_set, 10, accessor);
+
+	long vals[7] = {1, 2, 3, 4, 5, 6, 7};
+	int i;
+	for (i = 0; i < 7; i++) {
+		if (0 != rl_tree_add_child(tree, &vals[i], NULL)) {
+			fprintf(stderr, "Failed to add child %d\n", i);
+			return 1;
+		}
+	}
+
+	long data_size;
+	unsigned char *data;
+	tree->type->serialize(tree, tree->root, &data, &data_size);
+	unsigned char expected[128];
+	memset(expected, 0, 128);
+	expected[3] = 7; // length
+	for (i = 1; i < 8; i++) {
+		expected[8 * i - 1] = i;
+	}
+	for (i = 0; i < data_size; i++) {
+		if (data[i] != expected[i]) {
+			fprintf(stderr, "Unexpected value in position %d (got %d, expected %d)\n", i, data[i], expected[i]);
+			return 1;
+		}
+	}
+	free(data);
+
+	fprintf(stderr, "End basic_set_serde_test\n");
+
+	if (0 != rl_tree_destroy(tree)) {
+		fprintf(stderr, "Failed to destroy tree\n");
+		return 1;
+	}
+	free(context->nodes);
+	free(context);
+	free(accessor);
+	return 0;
+}
+
 int basic_set_test()
 {
 	fprintf(stderr, "Start basic_set_test\n");
 	rl_test_context *context = malloc(sizeof(rl_test_context));
 	context->size = 0;
 	context->nodes = malloc(sizeof(rl_tree_node *) * 100);
-	rl_accessor accessor;
-	accessor.getter = getter;
-	accessor.setter = setter;
-	accessor.list = list;
-	accessor.context = context;
 
 	init_long_set();
-	rl_tree *tree = rl_tree_create(&long_set, 2, &accessor);
+	rl_accessor *accessor = accessor_long_set_create(context);
+	rl_tree *tree = rl_tree_create(&long_set, 2, accessor);
 	long vals[7] = {1, 2, 3, 4, 5, 6, 7};
 	int i;
 	for (i = 0; i < 7; i++) {
@@ -79,6 +139,7 @@ int basic_set_test()
 	}
 	free(context->nodes);
 	free(context);
+	free(accessor);
 	return 0;
 }
 
@@ -98,13 +159,9 @@ int fuzzy_set_test(long size, long tree_node_size)
 	rl_test_context *context = malloc(sizeof(rl_test_context));
 	context->size = 0;
 	context->nodes = malloc(sizeof(rl_tree_node *) * size);
-	rl_accessor accessor;
-	accessor.getter = getter;
-	accessor.setter = setter;
-	accessor.list = list;
-	accessor.context = context;
 	init_long_set();
-	rl_tree *tree = rl_tree_create(&long_set, tree_node_size, &accessor);
+	rl_accessor *accessor = accessor_long_set_create(context);
+	rl_tree *tree = rl_tree_create(&long_set, tree_node_size, accessor);
 
 	long i, element;
 	long *elements = malloc(sizeof(long) * size);
@@ -170,6 +227,7 @@ int fuzzy_set_test(long size, long tree_node_size)
 	free(flatten_scores);
 	free(context->nodes);
 	free(context);
+	free(accessor);
 	return 0;
 }
 
@@ -192,6 +250,10 @@ int main()
 	}
 	srand(1);
 	retval = fuzzy_set_test(200, 10);
+	if (retval != 0) {
+		goto cleanup;
+	}
+	retval = basic_set_serde_test();
 	if (retval != 0) {
 		goto cleanup;
 	}

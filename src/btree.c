@@ -4,6 +4,8 @@
 #include "btree.h"
 
 void rl_print_node(rl_tree *tree, rl_tree_node *node, long level);
+rl_tree_node *rl_tree_node_create(rl_tree *tree);
+
 void *memmove_dbg(void *dest, void *src, size_t n, int flag)
 {
 	void *data = malloc(n);
@@ -14,6 +16,21 @@ void *memmove_dbg(void *dest, void *src, size_t n, int flag)
 	return retval;
 }
 
+
+int get_4bytes(const unsigned char *p)
+{
+	return (p[0] << 24) | (p[1] << 16) | (p[2] << 8) | p[3];
+}
+
+
+void put_4bytes(unsigned char *p, long v)
+{
+	p[0] = (unsigned char)(v >> 24);
+	p[1] = (unsigned char)(v >> 16);
+	p[2] = (unsigned char)(v >> 8);
+	p[3] = (unsigned char)v;
+}
+
 int long_cmp(void *v1, void *v2)
 {
 	long a = *((long *)v1), b = *((long *)v2);
@@ -21,6 +38,53 @@ int long_cmp(void *v1, void *v2)
 		return 0;
 	}
 	return a > b ? 1 : -1;
+}
+
+long long_set_node_serialize_length(void *_tree)
+{
+	rl_tree *tree = (rl_tree *)_tree;
+	return sizeof(unsigned char) * ((8 * tree->max_size) + 8);
+}
+
+long long_set_node_serialize(void *_tree, void *_node, unsigned char **_data, long *data_size)
+{
+	rl_tree *tree = (rl_tree *)_tree;
+	rl_tree_node *node = (rl_tree_node *)_node;
+	unsigned char *data = malloc(tree->type->serialize_length(tree));
+	put_4bytes(data, node->size);
+	long i, pos = 4;
+	for (i = 0; i < node->size; i++) {
+		put_4bytes(&data[pos], *(long *)(node->scores[i]));
+		put_4bytes(&data[pos + 4], node->children ? node->children[i] : 0);
+		pos += 8;
+	}
+	put_4bytes(&data[pos], node->children ? node->children[node->size] : 0);
+	*_data = data;
+	*data_size = pos + 4;
+	return 0;
+}
+
+long long_set_node_deserialize(void *_tree, unsigned char *data, void **_node)
+{
+	rl_tree *tree = (rl_tree *)_tree;
+	rl_tree_node *node = rl_tree_node_create(tree);
+	node->size = (long)get_4bytes(data);
+	long i, pos = 4, child;
+	for (i = 0; i < node->size; i++) {
+		node->scores[i] = (void *)(long)get_4bytes(&data[pos]);
+		child = get_4bytes(&data[pos + 4]);
+		if (child != 0) {
+			if (!node->children) {
+				node->children = malloc(sizeof(long) * (tree->max_size + 1));
+			}
+			node->children[i] = child;
+		}
+		pos += 8;
+	}
+	child = get_4bytes(&data[pos]);
+	if (child != 0) {
+		node->children[node->size + 1] = child;
+	}
 }
 
 void long_formatter(void *v2, char **formatted, int *size)
@@ -35,6 +99,9 @@ void init_long_set()
 	long_set.value_size = 0;
 	long_set.cmp = long_cmp;
 	long_set.formatter = long_formatter;
+	long_set.serialize_length = long_set_node_serialize_length;
+	long_set.serialize = long_set_node_serialize;
+	long_set.deserialize = long_set_node_deserialize;
 }
 
 void init_long_hash()
@@ -91,6 +158,7 @@ rl_tree *rl_tree_create(rl_tree_type *type, long max_size, rl_accessor *accessor
 	tree->root->size = 0;
 	tree->accessor = accessor;
 	tree->height = 1;
+	tree->accessor->setter(tree, tree->root);
 	return tree;
 }
 

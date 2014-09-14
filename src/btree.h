@@ -4,6 +4,9 @@
 typedef struct {
 	int score_size;
 	int value_size;
+	long (*serialize_length)(void *tree);
+	long (*serialize)(void *tree, void *node, unsigned char **data, long *data_size);
+	long (*deserialize)(void *tree, unsigned char *data, void **node);
 	int (*cmp)(void *v1, void *v2);
 	void (*formatter)(void *v, char **str, int *size);
 } rl_tree_type;
