@@ -38,7 +38,7 @@ typedef struct {
 	long max_size; // maximum number of scores in a node
 	long height;
 	rl_tree_type *type;
-	rl_tree_node *root;
+	long root;
 	rl_accessor *accessor;
 } rl_tree;
 

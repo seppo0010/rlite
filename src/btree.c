@@ -150,15 +150,15 @@ rl_tree *rl_tree_create(rl_tree_type *type, long max_size, rl_accessor *accessor
 	}
 	tree->max_size = max_size;
 	tree->type = type;
-	tree->root = rl_tree_node_create(tree);
-	if (!tree->root) {
+	rl_tree_node *root = rl_tree_node_create(tree);
+	root->size = 0;
+	if (!root) {
 		free(tree);
 		return NULL;
 	}
-	tree->root->size = 0;
 	tree->accessor = accessor;
 	tree->height = 1;
-	tree->accessor->setter(tree, tree->root);
+	tree->root = tree->accessor->setter(tree, root);
 	return tree;
 }
 
@@ -181,7 +181,7 @@ int rl_tree_destroy(rl_tree *tree)
 
 long rl_tree_find_score(rl_tree *tree, void *score, rl_tree_node *** nodes, long **positions)
 {
-	rl_tree_node *node = tree->root;
+	rl_tree_node *node = tree->accessor->getter(tree, tree->root);
 	if ((!nodes && positions) || (nodes && !positions)) {
 		return -1;
 	}
@@ -323,15 +323,15 @@ int rl_tree_add_child(rl_tree *tree, void *score, void *value)
 		}
 	}
 	if (score) {
+		rl_tree_node *old_root = node;
 		node = rl_tree_node_create(tree);
 		node->size = 1;
 		node->scores[0] = score;
 		node->children = malloc(sizeof(long) * (tree->max_size + 1));
-		node->children[0] = tree->accessor->setter(tree, tree->root);
+		node->children[0] = tree->accessor->setter(tree, old_root);
 		node->children[1] = child;
-		tree->root = node;
+		tree->root = tree->accessor->setter(tree, node);
 		tree->height++;
-		tree->accessor->setter(tree, tree->root);
 	}
 
 cleanup:
@@ -366,7 +366,7 @@ void rl_print_node(rl_tree *tree, rl_tree_node *node, long level)
 void rl_print_tree(rl_tree *tree)
 {
 	printf("-------\n");
-	rl_print_node(tree, tree->root, 1);
+	rl_print_node(tree, tree->accessor->getter(tree, tree->root), 1);
 	printf("-------\n");
 }
 
@@ -387,5 +387,5 @@ void rl_flatten_node(rl_tree *tree, rl_tree_node *node, void *** scores, long *s
 
 void rl_flatten_tree(rl_tree *tree, void *** scores, long *size)
 {
-	rl_flatten_node(tree, tree->root, scores, size);
+	rl_flatten_node(tree, tree->accessor->getter(tree, tree->root), scores, size);
 }
