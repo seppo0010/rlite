@@ -68,6 +68,9 @@ long long_set_node_deserialize(void *_tree, unsigned char *data, void **_node)
 {
 	rl_tree *tree = (rl_tree *)_tree;
 	rl_tree_node *node = rl_tree_node_create(tree);
+	if (!node) {
+		return 1;
+	}
 	node->size = (long)get_4bytes(data);
 	long i, pos = 4, child;
 	for (i = 0; i < node->size; i++) {
@@ -76,6 +79,10 @@ long long_set_node_deserialize(void *_tree, unsigned char *data, void **_node)
 		if (child != 0) {
 			if (!node->children) {
 				node->children = malloc(sizeof(long) * (tree->max_size + 1));
+				if (!node->children) {
+					free(node);
+					return 1;
+				}
 			}
 			node->children[i] = child;
 		}
@@ -85,6 +92,7 @@ long long_set_node_deserialize(void *_tree, unsigned char *data, void **_node)
 	if (child != 0) {
 		node->children[node->size + 1] = child;
 	}
+	return 0;
 }
 
 void long_formatter(void *v2, char **formatted, int *size)
