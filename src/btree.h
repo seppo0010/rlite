@@ -29,8 +29,9 @@ typedef struct rl_tree_node {
 
 typedef struct rl_accessor {
 	void *context;
-	void *(*getter)(void *tree, long number);
-	long (*setter)(void *tree, void *node);
+	void *(*select)(void *tree, long number);
+	long (*update)(void *tree, long *number, void *node);
+	long (*insert)(void *tree, long *number, void *node);
 	long (*list)(void *tree, rl_tree_node *** nodes, long *size);
 } rl_accessor;
 

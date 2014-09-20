@@ -8,25 +8,35 @@ typedef struct rl_test_context {
 	rl_tree_node **nodes;
 } rl_test_context;
 
-static void *getter(void *tree, long number)
-{
-	return (void *)number;
-}
-
-static long setter(void *tree, void *node)
+static void *_select(void *tree, long number)
 {
 	rl_test_context *context = (rl_test_context *)((rl_tree *)tree)->accessor->context;
-	long pos = context->size, i;
+	return context->nodes[number];
+}
+
+static long insert(void *tree, long *number, void *node)
+{
+	rl_test_context *context = (rl_test_context *)((rl_tree *)tree)->accessor->context;
+	context->nodes[context->size] = node;
+	*number = context->size++;
+	return 0;
+}
+
+static long update(void *tree, long *number, void *node)
+{
+	rl_test_context *context = (rl_test_context *)((rl_tree *)tree)->accessor->context;
+	long i;
 	for (i = 0; i < context->size; i++) {
 		if (context->nodes[i] == node) {
-			pos = i;
+			// this doesn't make sense now, but it should involve some serialization
+			// context->nodes[i] = node;
+			if (number) {
+				*number = i;
+			}
+			return 0;
 		}
 	}
-	if (pos == context->size) {
-		context->nodes[pos] = node;
-		context->size++;
-	}
-	return (long)node;
+	return -1;
 }
 
 static long list(void *tree, rl_tree_node *** nodes, long *size)
@@ -44,8 +54,9 @@ rl_accessor *accessor_long_set_create(void *context)
 		fprintf(stderr, "Failed to create accessor\n");
 		return NULL;
 	}
-	accessor->getter = getter;
-	accessor->setter = setter;
+	accessor->select = _select;
+	accessor->insert = insert;
+	accessor->update = update;
 	accessor->list = list;
 	accessor->context = context;
 	return accessor;
@@ -73,7 +84,7 @@ int basic_set_serde_test()
 
 	long data_size;
 	unsigned char *data;
-	tree->type->serialize(tree, tree->root, &data, &data_size);
+	tree->type->serialize(tree, _select(tree, tree->root), &data, &data_size);
 	unsigned char expected[128];
 	memset(expected, 0, 128);
 	expected[3] = 7; // length
