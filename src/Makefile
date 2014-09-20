@@ -19,6 +19,7 @@ libredislite.a: btree.o
 
 test: redislite-test.o libredislite.a
 	$(CC) $(DEBUG) $(CFLAGS) -lm -o redislite-test redislite-test.o libredislite.a
+	./redislite-test
 
 clean:
 	rm -rf redislite-test *.o *.a redislite-*.dSYM

@@ -1,0 +1,10 @@
+language: c
+
+compiler:
+  - clang
+  - gcc
+
+script: make && make test
+
+notifications:
+  email: false
