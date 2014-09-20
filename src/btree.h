@@ -4,6 +4,8 @@
 typedef struct {
 	int score_size;
 	int value_size;
+	void *(*score_create)(void *tree);
+	void (*score_destroy)(void *tree, void *score);
 	long (*serialize_length)(void *tree);
 	long (*serialize)(void *tree, void *node, unsigned char **data, long *data_size);
 	long (*deserialize)(void *tree, unsigned char *data, void **node);
@@ -29,6 +31,8 @@ typedef struct rl_tree_node {
 
 typedef struct rl_accessor {
 	void *context;
+	long (*commit)(void *tree);
+	long (*discard)(void *tree);
 	void *(*select)(void *tree, long number);
 	long (*update)(void *tree, long *number, void *node);
 	long (*insert)(void *tree, long *number, void *node);
@@ -45,6 +49,7 @@ typedef struct {
 
 rl_tree *rl_tree_create(rl_tree_type *type, long max_size, rl_accessor *accessor);
 int rl_tree_destroy(rl_tree *tree);
+long rl_tree_node_destroy(rl_tree *tree, rl_tree_node *node);
 int rl_tree_add_child(rl_tree *tree, void *score, void *value);
 long rl_tree_find_score(rl_tree *tree, void *score, rl_tree_node *** nodes, long **positions);
 void rl_print_tree(rl_tree *tree);

@@ -5,20 +5,31 @@
 
 typedef struct rl_test_context {
 	long size;
-	rl_tree_node **nodes;
+	unsigned char **serialized_nodes;
+	rl_tree_node **active_nodes;
 } rl_test_context;
 
-static void *_select(void *tree, long number)
+static void *_select(void *_tree, long _number)
 {
-	rl_test_context *context = (rl_test_context *)((rl_tree *)tree)->accessor->context;
-	return context->nodes[number];
+	rl_tree *tree = (rl_tree *)_tree;
+	rl_test_context *context = (rl_test_context *)tree->accessor->context;
+	long number = _number - 1;
+	if (!context->active_nodes[number]) {
+		void *node;
+		if (0 != tree->type->deserialize(tree, context->serialized_nodes[number], &node)) {
+			fprintf(stderr, "Failed to deserialize node %ld\n", number);
+			return NULL;
+		}
+		context->active_nodes[number] = (rl_tree_node *)node;
+	}
+	return context->active_nodes[number];
 }
 
 static long insert(void *tree, long *number, void *node)
 {
 	rl_test_context *context = (rl_test_context *)((rl_tree *)tree)->accessor->context;
-	context->nodes[context->size] = node;
-	*number = context->size++;
+	context->active_nodes[context->size] = node;
+	*number = ++context->size;
 	return 0;
 }
 
@@ -27,11 +38,9 @@ static long update(void *tree, long *number, void *node)
 	rl_test_context *context = (rl_test_context *)((rl_tree *)tree)->accessor->context;
 	long i;
 	for (i = 0; i < context->size; i++) {
-		if (context->nodes[i] == node) {
-			// this doesn't make sense now, but it should involve some serialization
-			// context->nodes[i] = node;
+		if (context->active_nodes[i] == node) {
 			if (number) {
-				*number = i;
+				*number = i + 1;
 			}
 			return 0;
 		}
@@ -42,9 +51,63 @@ static long update(void *tree, long *number, void *node)
 static long list(void *tree, rl_tree_node *** nodes, long *size)
 {
 	rl_test_context *context = (rl_test_context *)((rl_tree *)tree)->accessor->context;
-	*nodes = context->nodes;
+	long i;
+	for (i = 0; i < context->size; i++) {
+		nodes[i] = _select(tree, i);
+	}
 	*size = context->size;
 	return 0;
+}
+
+static long discard(void *tree)
+{
+	rl_test_context *context = (rl_test_context *)((rl_tree *)tree)->accessor->context;
+	long i;
+	for (i = 0; i < context->size; i++) {
+		rl_tree_node_destroy(tree, context->active_nodes[i]);
+		context->active_nodes[i] = NULL;
+	}
+	return 0;
+}
+
+static long commit(void *_tree)
+{
+	rl_tree *tree = (rl_tree *)_tree;
+	rl_test_context *context = (rl_test_context *)tree->accessor->context;
+	long i;
+	long length = tree->type->serialize_length(tree);
+	for (i = 0; i < context->size; i++) {
+		if (context->active_nodes[i]) {
+			if (context->serialized_nodes[i]) {
+				free(context->serialized_nodes[i]);
+			}
+			tree->type->serialize(tree, context->active_nodes[i], &context->serialized_nodes[i], NULL);
+			rl_tree_node_destroy(tree, context->active_nodes[i]);
+			context->active_nodes[i] = NULL;
+		}
+	}
+	return 0;
+}
+
+rl_test_context *context_create(long size)
+{
+	rl_test_context *context = malloc(sizeof(rl_test_context));
+	context->size = 0;
+	context->serialized_nodes = calloc(size, sizeof(unsigned char **));
+	context->active_nodes = calloc(size, sizeof(rl_tree_node *));
+	return context;
+}
+
+void context_destroy(rl_tree *tree, rl_test_context *context)
+{
+	discard(tree);
+	long i;
+	for (i = 0; i < context->size; i++) {
+		free(context->serialized_nodes[i]);
+	}
+	free(context->serialized_nodes);
+	free(context->active_nodes);
+	free(context);
 }
 
 rl_accessor *accessor_long_set_create(void *context)
@@ -58,6 +121,8 @@ rl_accessor *accessor_long_set_create(void *context)
 	accessor->insert = insert;
 	accessor->update = update;
 	accessor->list = list;
+	accessor->commit = commit;
+	accessor->discard = discard;
 	accessor->context = context;
 	return accessor;
 }
@@ -65,19 +130,21 @@ rl_accessor *accessor_long_set_create(void *context)
 int basic_set_serde_test()
 {
 	fprintf(stderr, "Start basic_set_serde_test\n");
-	rl_test_context *context = malloc(sizeof(rl_test_context));
-	context->size = 0;
-	context->nodes = malloc(sizeof(rl_tree_node *) * 100);
 
 	init_long_set();
+	rl_test_context *context = context_create(100);
 	rl_accessor *accessor = accessor_long_set_create(context);
 	rl_tree *tree = rl_tree_create(&long_set, 10, accessor);
 
-	long vals[7] = {1, 2, 3, 4, 5, 6, 7};
-	int i;
+	long **vals = malloc(sizeof(long *) * 7);
+	long i;
 	for (i = 0; i < 7; i++) {
-		if (0 != rl_tree_add_child(tree, &vals[i], NULL)) {
-			fprintf(stderr, "Failed to add child %d\n", i);
+		vals[i] = malloc(sizeof(long));
+		*vals[i] = i;
+	}
+	for (i = 0; i < 7; i++) {
+		if (0 != rl_tree_add_child(tree, vals[i], NULL)) {
+			fprintf(stderr, "Failed to add child %ld\n", i);
 			return 1;
 		}
 	}
@@ -93,7 +160,7 @@ int basic_set_serde_test()
 	}
 	for (i = 0; i < data_size; i++) {
 		if (data[i] != expected[i]) {
-			fprintf(stderr, "Unexpected value in position %d (got %d, expected %d)\n", i, data[i], expected[i]);
+			fprintf(stderr, "Unexpected value in position %ld (got %d, expected %d)\n", i, data[i], expected[i]);
 			return 1;
 		}
 	}
@@ -101,56 +168,52 @@ int basic_set_serde_test()
 
 	fprintf(stderr, "End basic_set_serde_test\n");
 
-	if (0 != rl_tree_destroy(tree)) {
-		fprintf(stderr, "Failed to destroy tree\n");
-		return 1;
-	}
-	free(context->nodes);
-	free(context);
+	context_destroy(tree, context);
 	free(accessor);
+	free(vals);
+	free(tree);
 	return 0;
 }
 
 int basic_set_test()
 {
 	fprintf(stderr, "Start basic_set_test\n");
-	rl_test_context *context = malloc(sizeof(rl_test_context));
-	context->size = 0;
-	context->nodes = malloc(sizeof(rl_tree_node *) * 100);
+	rl_test_context *context = context_create(100);
 
 	init_long_set();
 	rl_accessor *accessor = accessor_long_set_create(context);
 	rl_tree *tree = rl_tree_create(&long_set, 2, accessor);
-	long vals[7] = {1, 2, 3, 4, 5, 6, 7};
-	int i;
+	long **vals = malloc(sizeof(long *) * 7);
+	long i;
 	for (i = 0; i < 7; i++) {
-		if (0 != rl_tree_add_child(tree, &vals[i], NULL)) {
-			fprintf(stderr, "Failed to add child %d\n", i);
+		vals[i] = malloc(sizeof(long));
+		*vals[i] = i + 1;
+	}
+	for (i = 0; i < 7; i++) {
+		if (0 != rl_tree_add_child(tree, vals[i], NULL)) {
+			fprintf(stderr, "Failed to add child %ld\n", i);
 			return 1;
 		}
 	}
 	// rl_print_tree(tree);
 	for (i = 0; i < 7; i++) {
-		if (1 != rl_tree_find_score(tree, &vals[i], NULL, NULL)) {
-			fprintf(stderr, "Failed to find child %d\n", i);
+		if (1 != rl_tree_find_score(tree, vals[i], NULL, NULL)) {
+			fprintf(stderr, "Failed to find child %ld\n", i);
 			return 1;
 		}
 	}
 	long nonexistent_vals[2] = {0, 8};
 	for (i = 0; i < 2; i++) {
 		if (0 != rl_tree_find_score(tree, &nonexistent_vals[i], NULL, NULL)) {
-			fprintf(stderr, "Failed to not find child %d\n", i);
+			fprintf(stderr, "Failed to not find child %ld\n", i);
 			return 1;
 		}
 	}
 	fprintf(stderr, "End basic_set_test\n");
-	if (0 != rl_tree_destroy(tree)) {
-		fprintf(stderr, "Failed to destroy tree\n");
-		return 1;
-	}
-	free(context->nodes);
-	free(context);
+	context_destroy(tree, context);
 	free(accessor);
+	free(vals);
+	free(tree);
 	return 0;
 }
 
@@ -164,17 +227,15 @@ int contains_element(long element, long *elements, long size)
 	}
 	return 0;
 }
-int fuzzy_set_test(long size, long tree_node_size)
+int fuzzy_set_test(long size, long tree_node_size, int _commit)
 {
-	fprintf(stderr, "Start fuzzy_set_test %ld %ld\n", size, tree_node_size);
-	rl_test_context *context = malloc(sizeof(rl_test_context));
-	context->size = 0;
-	context->nodes = malloc(sizeof(rl_tree_node *) * size);
+	fprintf(stderr, "Start fuzzy_set_test %ld %ld %d\n", size, tree_node_size, _commit);
+	rl_test_context *context = context_create(size);
 	init_long_set();
 	rl_accessor *accessor = accessor_long_set_create(context);
 	rl_tree *tree = rl_tree_create(&long_set, tree_node_size, accessor);
 
-	long i, element;
+	long i, element, *element_copy;
 	long *elements = malloc(sizeof(long) * size);
 	long *nonelements = malloc(sizeof(long) * size);
 
@@ -189,7 +250,9 @@ int fuzzy_set_test(long size, long tree_node_size)
 		}
 		else {
 			elements[i] = element;
-			if (0 != rl_tree_add_child(tree, &elements[i], NULL)) {
+			element_copy = malloc(sizeof(long));
+			*element_copy = element;
+			if (0 != rl_tree_add_child(tree, element_copy, NULL)) {
 				fprintf(stderr, "Failed to add child %ld\n", i);
 				return 1;
 			}
@@ -201,6 +264,9 @@ int fuzzy_set_test(long size, long tree_node_size)
 				fprintf(stderr, "Tree is in a bad state in element %ld after adding child %ld\n", j, i);
 				return 1;
 			}
+		}
+		if (_commit) {
+			commit(tree);
 		}
 	}
 
@@ -228,17 +294,12 @@ int fuzzy_set_test(long size, long tree_node_size)
 	}
 	fprintf(stderr, "End fuzzy_set_test\n");
 
-	if (0 != rl_tree_destroy(tree)) {
-		fprintf(stderr, "Failed to destroy tree\n");
-		return 1;
-	}
-
+	context_destroy(tree, context);
 	free(elements);
 	free(nonelements);
 	free(flatten_scores);
-	free(context->nodes);
-	free(context);
 	free(accessor);
+	free(tree);
 	return 0;
 }
 
@@ -249,24 +310,23 @@ int main()
 	if (retval != 0) {
 		goto cleanup;
 	}
-	srand(1);
-	retval = fuzzy_set_test(100, 2);
-	if (retval != 0) {
-		goto cleanup;
-	}
-	srand(1);
-	retval = fuzzy_set_test(200, 2);
-	if (retval != 0) {
-		goto cleanup;
-	}
-	srand(1);
-	retval = fuzzy_set_test(200, 10);
-	if (retval != 0) {
-		goto cleanup;
-	}
-	retval = basic_set_serde_test();
-	if (retval != 0) {
-		goto cleanup;
+	int i, j, k;
+	long size, tree_node_size;
+	int commit;
+
+	for (i = 0; i < 2; i++) {
+		size = i == 0 ? 100 : 200;
+		for (j = 0; j < 2; j++) {
+			tree_node_size = j == 0 ? 2 : 10;
+			for (k = 0; k < 2; k++) {
+				commit = k;
+				srand(1);
+				retval = fuzzy_set_test(100, 2, commit);
+				if (retval != 0) {
+					goto cleanup;
+				}
+			}
+		}
 	}
 
 cleanup:

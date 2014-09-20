@@ -9,7 +9,7 @@ else
   DEBUG?=-g -rdynamic -ggdb 
 endif
 
-all: test
+all: buildtest
 
 .c.o:
 	$(CC) $(ARCH) $(DEBUG) $(CFLAGS) -c $<
@@ -17,8 +17,10 @@ all: test
 libredislite.a: btree.o
 	ar -cq libredislite.a btree.o
 
-test: redislite-test.o libredislite.a
+buildtest: redislite-test.o libredislite.a
 	$(CC) $(DEBUG) $(CFLAGS) -lm -o redislite-test redislite-test.o libredislite.a
+
+test: buildtest
 	./redislite-test
 
 clean:

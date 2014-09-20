@@ -40,6 +40,16 @@ int long_cmp(void *v1, void *v2)
 	return a > b ? 1 : -1;
 }
 
+void *long_score_create(void *_tree)
+{
+	return malloc(sizeof(long));
+}
+
+void long_score_destroy(void *_tree, void *score)
+{
+	free(score);
+}
+
 long long_set_node_serialize_length(void *_tree)
 {
 	rl_tree *tree = (rl_tree *)_tree;
@@ -60,7 +70,9 @@ long long_set_node_serialize(void *_tree, void *_node, unsigned char **_data, lo
 	}
 	put_4bytes(&data[pos], node->children ? node->children[node->size] : 0);
 	*_data = data;
-	*data_size = pos + 4;
+	if (data_size) {
+		*data_size = pos + 4;
+	}
 	return 0;
 }
 
@@ -74,7 +86,8 @@ long long_set_node_deserialize(void *_tree, unsigned char *data, void **_node)
 	node->size = (long)get_4bytes(data);
 	long i, pos = 4, child;
 	for (i = 0; i < node->size; i++) {
-		node->scores[i] = (void *)(long)get_4bytes(&data[pos]);
+		node->scores[i] = tree->type->score_create(tree);
+		*(long *)node->scores[i] = get_4bytes(&data[pos]);
 		child = get_4bytes(&data[pos + 4]);
 		if (child != 0) {
 			if (!node->children) {
@@ -90,8 +103,9 @@ long long_set_node_deserialize(void *_tree, unsigned char *data, void **_node)
 	}
 	child = get_4bytes(&data[pos]);
 	if (child != 0) {
-		node->children[node->size + 1] = child;
+		node->children[node->size] = child;
 	}
+	*_node = node;
 	return 0;
 }
 
@@ -110,6 +124,8 @@ void init_long_set()
 	long_set.serialize_length = long_set_node_serialize_length;
 	long_set.serialize = long_set_node_serialize;
 	long_set.deserialize = long_set_node_deserialize;
+	long_set.score_create = long_score_create;
+	long_set.score_destroy = long_score_destroy;
 }
 
 void init_long_hash()
@@ -137,7 +153,11 @@ rl_tree_node *rl_tree_node_create(rl_tree *tree)
 
 long rl_tree_node_destroy(rl_tree *tree, rl_tree_node *node)
 {
+	long i;
 	if (node->scores) {
+		for (i = 0; i < node->size; i++) {
+			tree->type->score_destroy(tree, node->scores[i]);
+		}
 		free(node->scores);
 	}
 	if (node->values) {
