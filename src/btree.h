@@ -36,6 +36,7 @@ typedef struct rl_accessor {
 	void *(*select)(void *tree, long number);
 	long (*update)(void *tree, long *number, void *node);
 	long (*insert)(void *tree, long *number, void *node);
+	long (*remove)(void *tree, void *node);
 	long (*list)(void *tree, rl_tree_node *** nodes, long *size);
 } rl_accessor;
 
@@ -51,6 +52,7 @@ rl_tree *rl_tree_create(rl_tree_type *type, long max_size, rl_accessor *accessor
 int rl_tree_destroy(rl_tree *tree);
 long rl_tree_node_destroy(rl_tree *tree, rl_tree_node *node);
 int rl_tree_add_child(rl_tree *tree, void *score, void *value);
+int rl_tree_remove_child(rl_tree *tree, void *score);
 long rl_tree_find_score(rl_tree *tree, void *score, rl_tree_node *** nodes, long **positions);
 void rl_print_tree(rl_tree *tree);
 void rl_flatten_tree(rl_tree *tree, void *** scores, long *size);

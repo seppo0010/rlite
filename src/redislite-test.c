@@ -48,6 +48,19 @@ static long update(void *tree, long *number, void *node)
 	return -1;
 }
 
+static long _remove(void *tree, void *node)
+{
+	rl_test_context *context = (rl_test_context *)((rl_tree *)tree)->accessor->context;
+	long i;
+	for (i = 0; i < context->size; i++) {
+		if (context->active_nodes[i] == node) {
+			context->active_nodes[i] = NULL;
+			return 0;
+		}
+	}
+	return -1;
+}
+
 static long list(void *tree, rl_tree_node *** nodes, long *size)
 {
 	rl_test_context *context = (rl_test_context *)((rl_tree *)tree)->accessor->context;
@@ -75,7 +88,6 @@ static long commit(void *_tree)
 	rl_tree *tree = (rl_tree *)_tree;
 	rl_test_context *context = (rl_test_context *)tree->accessor->context;
 	long i;
-	long length = tree->type->serialize_length(tree);
 	for (i = 0; i < context->size; i++) {
 		if (context->active_nodes[i]) {
 			if (context->serialized_nodes[i]) {
@@ -120,6 +132,7 @@ rl_accessor *accessor_long_set_create(void *context)
 	accessor->select = _select;
 	accessor->insert = insert;
 	accessor->update = update;
+	accessor->remove = _remove;
 	accessor->list = list;
 	accessor->commit = commit;
 	accessor->discard = discard;
@@ -175,9 +188,9 @@ int basic_set_serde_test()
 	return 0;
 }
 
-int basic_set_test()
+int basic_insert_set_test()
 {
-	fprintf(stderr, "Start basic_set_test\n");
+	fprintf(stderr, "Start basic_insert_set_test\n");
 	rl_test_context *context = context_create(100);
 
 	init_long_set();
@@ -209,7 +222,52 @@ int basic_set_test()
 			return 1;
 		}
 	}
-	fprintf(stderr, "End basic_set_test\n");
+	fprintf(stderr, "End basic_insert_set_test\n");
+	context_destroy(tree, context);
+	free(accessor);
+	free(vals);
+	free(tree);
+	return 0;
+}
+
+int basic_delete_set_test()
+{
+	fprintf(stderr, "Start basic_delete_set_test\n");
+	rl_test_context *context = context_create(100);
+
+	init_long_set();
+	rl_accessor *accessor = accessor_long_set_create(context);
+	rl_tree *tree = rl_tree_create(&long_set, 2, accessor);
+	long **vals = malloc(sizeof(long *) * 7);
+	long i, j;
+	for (i = 0; i < 4; i++) {
+		vals[i] = malloc(sizeof(long));
+		*vals[i] = i + 1;
+	}
+	for (i = 0; i < 4; i++) {
+		if (0 != rl_tree_add_child(tree, vals[i], NULL)) {
+			fprintf(stderr, "Failed to add child %ld\n", i);
+			return 1;
+		}
+	}
+	// rl_print_tree(tree);
+
+	for (i = 3; i >= 1; i--) {
+		if (0 != rl_tree_remove_child(tree, vals[i])) {
+			fprintf(stderr, "Failed to remove child %ld\n", i);
+			return 1;
+		}
+		for (j = 0; j < i; j++) {
+			if (0 != rl_tree_find_score(tree, &vals[j], NULL, NULL)) {
+				fprintf(stderr, "Failed to find child %ld (%ld) after deleting element %ld (%ld)\n", j, *vals[j], i, *vals[i]);
+				return 1;
+			}
+		}
+	}
+
+	// rl_print_tree(tree);
+
+	fprintf(stderr, "End basic_delete_set_test\n");
 	context_destroy(tree, context);
 	free(accessor);
 	free(vals);
@@ -306,7 +364,11 @@ int fuzzy_set_test(long size, long tree_node_size, int _commit)
 int main()
 {
 	int retval = 0;
-	retval = basic_set_test();
+	retval = basic_insert_set_test();
+	if (retval != 0) {
+		goto cleanup;
+	}
+	retval = basic_delete_set_test();
 	if (retval != 0) {
 		goto cleanup;
 	}
@@ -321,7 +383,7 @@ int main()
 			for (k = 0; k < 2; k++) {
 				commit = k;
 				srand(1);
-				retval = fuzzy_set_test(100, 2, commit);
+				retval = fuzzy_set_test(size, tree_node_size, commit);
 				if (retval != 0) {
 					goto cleanup;
 				}
