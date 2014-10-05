@@ -77,8 +77,10 @@ static long discard(void *tree)
 	rl_test_context *context = (rl_test_context *)((rl_tree *)tree)->accessor->context;
 	long i;
 	for (i = 0; i < context->size; i++) {
-		rl_tree_node_destroy(tree, context->active_nodes[i]);
-		context->active_nodes[i] = NULL;
+		if (context->active_nodes[i]) {
+			rl_tree_node_destroy(tree, context->active_nodes[i]);
+			context->active_nodes[i] = NULL;
+		}
 	}
 	return 0;
 }
@@ -272,6 +274,8 @@ int basic_delete_set_test(long elements, long element_to_remove, char *name)
 		return 1;
 	}
 
+	// rl_print_tree(tree);
+
 	if (0 == rl_tree_is_balanced(tree)) {
 		fprintf(stderr, "Node is not balanced after removing child %ld\n", element_to_remove - 1);
 		return 1;
@@ -294,8 +298,6 @@ int basic_delete_set_test(long elements, long element_to_remove, char *name)
 			return 1;
 		}
 	}
-
-	// rl_print_tree(tree);
 
 	fprintf(stderr, "End basic_delete_set_test (%ld, %ld)\n", elements, element_to_remove);
 	context_destroy(tree, context);
@@ -395,7 +397,7 @@ int fuzzy_set_test(long size, long tree_node_size, int _commit)
 	return 0;
 }
 
-#define DELETE_TESTS_COUNT 3
+#define DELETE_TESTS_COUNT 4
 int main()
 {
 	int i, j, k;
@@ -411,11 +413,13 @@ int main()
 		{8, 8},
 		{ -8, -5},
 		{8, 5},
+		{8, 3},
 	};
 	char *delete_tests_name[DELETE_TESTS_COUNT] = {
 		"delete leaf node, no rebalance",
 		"delete leaf node, rebalance from sibling in the right",
 		"delete leaf node, rebalance from sibling in the left",
+		"delete leaf node, rebalance with merge, change root",
 	};
 	for (i = 0; i < DELETE_TESTS_COUNT; i++) {
 		retval = basic_delete_set_test(delete_tests[i][0], delete_tests[i][1], delete_tests_name[i]);

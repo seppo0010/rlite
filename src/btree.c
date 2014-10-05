@@ -425,6 +425,7 @@ int rl_tree_remove_child(rl_tree *tree, void *score)
 					// we have an empty root, promote the only child if any
 					tree->accessor->update(tree, &tree->root, tree->accessor->select(tree, node->children[0]));
 					tree->accessor->remove(tree, node);
+					rl_tree_node_destroy(tree, node);
 				}
 			}
 			break;
@@ -432,6 +433,12 @@ int rl_tree_remove_child(rl_tree *tree, void *score)
 	}
 
 	for (; i >= 0; i--) {
+		node = nodes[i];
+		if (i == 0) {
+			if (node->size == 0) {
+				tree->root = node->children[0];
+			}
+		}
 		if (node->size >= tree->max_size / 2 || i == 0) {
 			break;
 		}
@@ -459,6 +466,8 @@ int rl_tree_remove_child(rl_tree *tree, void *score)
 
 					sibling_node->size--;
 					node->size++;
+					tree->accessor->update(tree, NULL, sibling_node);
+					tree->accessor->update(tree, NULL, node);
 					break;
 				}
 			}
@@ -475,19 +484,83 @@ int rl_tree_remove_child(rl_tree *tree, void *score)
 						parent_node->values[positions[i - 1]] = sibling_node->values[0];
 					}
 
-					memmove_dbg(&sibling_node->scores[0], &sibling_node->scores[1], sizeof(void *) * (sibling_node->size - 1), 20);
+					memmove_dbg(&sibling_node->scores[0], &sibling_node->scores[1], sizeof(void *) * (sibling_node->size - 1), __LINE__);
 					if (node->values) {
-						memmove_dbg(&sibling_node->values[0], &sibling_node->values[1], sizeof(void *) * (sibling_node->size - 1), 21);
+						memmove_dbg(&sibling_node->values[0], &sibling_node->values[1], sizeof(void *) * (sibling_node->size - 1), __LINE__);
 					}
 					if (node->children) {
-						memmove_dbg(&sibling_node->children[0], &sibling_node->children[1], sizeof(long) * (sibling_node->size), 22);
+						memmove_dbg(&sibling_node->children[0], &sibling_node->children[1], sizeof(long) * (sibling_node->size), __LINE__);
 					}
 
 					sibling_node->size--;
 					node->size++;
+					tree->accessor->update(tree, NULL, sibling_node);
+					tree->accessor->update(tree, NULL, node);
 					break;
 				}
 			}
+			// not taking from either slibing, need to merge with either
+			// if either of them exists, they have the minimum number of elements
+
+			if (positions[i - 1] > 0) {
+				sibling_node = tree->accessor->select(tree, parent_node->children[positions[i - 1] - 1]);
+				sibling_node->scores[sibling_node->size] = parent_node->scores[positions[i - 1] - 1];
+				if (parent_node->values) {
+					sibling_node->values[sibling_node->size] = parent_node->values[positions[i - 1] - 1];
+				}
+				memmove_dbg(&sibling_node->scores[sibling_node->size + 1], &node->scores[0], sizeof(void *) * (node->size), __LINE__);
+				if (sibling_node->values) {
+					memmove_dbg(&sibling_node->values[sibling_node->size + 1], &node->values[0], sizeof(void *) * (node->size), __LINE__);
+				}
+
+				memmove_dbg(&parent_node->scores[positions[i - 1]], &parent_node->scores[positions[i - 1] + 1], sizeof(void *) * (parent_node->size - positions[i - 1]), __LINE__);
+				if (parent_node->values) {
+					memmove_dbg(&parent_node->values[positions[i - 1]], &parent_node->values[positions[i - 1] + 1], sizeof(void *) * (parent_node->size - positions[i - 1]), __LINE__);
+				}
+				parent_node->size--;
+				sibling_node->size += 1 + node->size;
+				tree->accessor->update(tree, NULL, sibling_node);
+				tree->accessor->update(tree, NULL, parent_node);
+				tree->accessor->remove(tree, node);
+				rl_tree_node_destroy(tree, node);
+				continue;
+			}
+			if (positions[i - 1] < parent_node->size) {
+				sibling_node = tree->accessor->select(tree, parent_node->children[positions[i - 1] + 1]);
+				node->scores[node->size] = parent_node->scores[positions[i - 1]];
+				if (parent_node->values) {
+					node->values[node->size] = parent_node->values[positions[i - 1]];
+				}
+				memmove_dbg(&node->scores[node->size + 1], &sibling_node->scores[0], sizeof(void *) * (sibling_node->size), __LINE__);
+				if (node->values) {
+					memmove_dbg(&node->values[node->size + 1], &sibling_node->values[0], sizeof(void *) * (sibling_node->size), __LINE__);
+				}
+				if (node->children) {
+					memmove_dbg(&node->children[node->size + 1], &sibling_node->children[0], sizeof(void *) * (sibling_node->size + 1), __LINE__);
+				}
+
+
+				memmove_dbg(&parent_node->scores[positions[i - 1] - 1], &parent_node->scores[positions[i - 1]], sizeof(void *) * (parent_node->size - positions[i - 1] - 1), __LINE__);
+				if (parent_node->values) {
+					memmove_dbg(&parent_node->values[positions[i - 1] - 1], &parent_node->values[positions[i - 1]], sizeof(void *) * (parent_node->size - positions[i - 1] - 1), __LINE__);
+				}
+				memmove_dbg(&parent_node->children[positions[i - 1] + 1], &parent_node->children[positions[i - 1] + 2], sizeof(void *) * (parent_node->size - positions[i - 1]), __LINE__);
+
+				parent_node->size--;
+				node->size += 1 + sibling_node->size;
+				tree->accessor->update(tree, NULL, node);
+				tree->accessor->update(tree, NULL, parent_node);
+				// freeing manually scores before calling destroy to avoid deleting scores that were handed over to `node`
+				free(sibling_node->scores);
+				sibling_node->scores = NULL;
+				tree->accessor->remove(tree, sibling_node);
+				rl_tree_node_destroy(tree, sibling_node);
+				continue;
+			}
+
+			// this shouldn't happen
+			retval = 1;
+			goto cleanup;
 		}
 	}
 
