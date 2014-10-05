@@ -431,21 +431,15 @@ int rl_tree_remove_child(rl_tree *tree, void *score)
 		}
 	}
 
-	for (i = tree->height - 1; i >= 0; i--) {
-		node = nodes[i];
-		if (!node) {
-			continue;
-		}
-
-		if (node->size > tree->max_size / 2 || i == 0) {
+	for (; i >= 0; i--) {
+		if (node->size >= tree->max_size / 2 || i == 0) {
 			break;
 		}
 		else {
 			parent_node = nodes[i - 1];
 			if (positions[i - 1] > 0) {
-				sibling_node = tree->accessor->select(tree, parent_node->children[positions[i - 1]]);
+				sibling_node = tree->accessor->select(tree, parent_node->children[positions[i - 1] - 1]);
 				if (sibling_node->size > tree->max_size / 2) {
-					sibling_node->size--;
 					memmove_dbg(&node->scores[1], &node->scores[0], sizeof(void *) * (node->size), 17);
 					if (node->values) {
 						memmove_dbg(&node->values[1], &node->values[0], sizeof(void *) * (node->size), 18);
@@ -453,11 +447,45 @@ int rl_tree_remove_child(rl_tree *tree, void *score)
 					if (node->children) {
 						memmove_dbg(&node->children[1], &node->children[0], sizeof(long) * (node->size + 1), 19);
 					}
-					node->scores[0] = parent_node->scores[positions[i - 1]];
+					node->scores[0] = parent_node->scores[positions[i - 1] - 1];
 					if (node->values) {
-						node->values[0] = parent_node->values[positions[i - 1]];
+						node->values[0] = parent_node->values[positions[i - 1] - 1];
 					}
 
+					parent_node->scores[positions[i - 1] - 1] = sibling_node->scores[sibling_node->size - 1];
+					if (parent_node->values) {
+						parent_node->values[0] = sibling_node->values[sibling_node->size - 1];
+					}
+
+					sibling_node->size--;
+					node->size++;
+					break;
+				}
+			}
+			if (positions[i - 1] < parent_node->size) {
+				sibling_node = tree->accessor->select(tree, parent_node->children[positions[i - 1] + 1]);
+				if (sibling_node->size > tree->max_size / 2) {
+					node->scores[node->size] = parent_node->scores[positions[i - 1]];
+					if (node->values) {
+						node->values[node->size] = parent_node->values[positions[i - 1]];
+					}
+
+					parent_node->scores[positions[i - 1]] = sibling_node->scores[0];
+					if (parent_node->values) {
+						parent_node->values[positions[i - 1]] = sibling_node->values[0];
+					}
+
+					memmove_dbg(&sibling_node->scores[0], &sibling_node->scores[1], sizeof(void *) * (sibling_node->size - 1), 20);
+					if (node->values) {
+						memmove_dbg(&sibling_node->values[0], &sibling_node->values[1], sizeof(void *) * (sibling_node->size - 1), 21);
+					}
+					if (node->children) {
+						memmove_dbg(&sibling_node->children[0], &sibling_node->children[1], sizeof(long) * (sibling_node->size), 22);
+					}
+
+					sibling_node->size--;
+					node->size++;
+					break;
 				}
 			}
 		}
