@@ -55,6 +55,7 @@ int rl_tree_add_child(rl_tree *tree, void *score, void *value);
 int rl_tree_remove_child(rl_tree *tree, void *score);
 long rl_tree_find_score(rl_tree *tree, void *score, rl_tree_node *** nodes, long **positions);
 void rl_print_tree(rl_tree *tree);
+int rl_tree_is_balanced(rl_tree *tree);
 void rl_flatten_tree(rl_tree *tree, void *** scores, long *size);
 
 #endif

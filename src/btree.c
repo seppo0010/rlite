@@ -498,6 +498,28 @@ cleanup:
 	return retval;
 }
 
+int rl_node_is_balanced(rl_tree *tree, rl_tree_node *node, int is_root)
+{
+	if (!is_root && node->size < tree->max_size / 2) {
+		return 0;
+	}
+
+	int i;
+	for (i = 0; i < node->size + 1; i++) {
+		if (node->children) {
+			if (rl_node_is_balanced(tree, (rl_tree_node *)tree->accessor->select(tree, node->children[i]), 0) == 0) {
+				return 0;
+			}
+		}
+	}
+	return 1;
+}
+
+int rl_tree_is_balanced(rl_tree *tree)
+{
+	return rl_node_is_balanced(tree, tree->accessor->select(tree, tree->root), 1);
+}
+
 void rl_print_node(rl_tree *tree, rl_tree_node *node, long level)
 {
 	long i, j;

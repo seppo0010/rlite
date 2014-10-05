@@ -160,6 +160,10 @@ int basic_set_serde_test()
 			fprintf(stderr, "Failed to add child %ld\n", i);
 			return 1;
 		}
+		if (0 == rl_tree_is_balanced(tree)) {
+			fprintf(stderr, "Node is not balanced after adding child %ld\n", i);
+			return 1;
+		}
 	}
 
 	long data_size;
@@ -207,6 +211,10 @@ int basic_insert_set_test()
 			fprintf(stderr, "Failed to add child %ld\n", i);
 			return 1;
 		}
+		if (0 == rl_tree_is_balanced(tree)) {
+			fprintf(stderr, "Node is not balanced after adding child %ld\n", i);
+			return 1;
+		}
 	}
 	// rl_print_tree(tree);
 	for (i = 0; i < 7; i++) {
@@ -251,7 +259,12 @@ int basic_delete_set_test(long elements, long element_to_remove, char *name)
 			fprintf(stderr, "Failed to add child %ld\n", i);
 			return 1;
 		}
+		if (0 == rl_tree_is_balanced(tree)) {
+			fprintf(stderr, "Node is not balanced after adding child %ld\n", i);
+			return 1;
+		}
 	}
+
 	// rl_print_tree(tree);
 
 	if (0 != rl_tree_remove_child(tree, vals[pos_element_to_remove - 1])) {
@@ -259,7 +272,10 @@ int basic_delete_set_test(long elements, long element_to_remove, char *name)
 		return 1;
 	}
 
-	// rl_print_tree(tree);
+	if (0 == rl_tree_is_balanced(tree)) {
+		fprintf(stderr, "Node is not balanced after removing child %ld\n", element_to_remove - 1);
+		return 1;
+	}
 
 	int expected;
 	long score[1];
@@ -326,6 +342,10 @@ int fuzzy_set_test(long size, long tree_node_size, int _commit)
 			*element_copy = element;
 			if (0 != rl_tree_add_child(tree, element_copy, NULL)) {
 				fprintf(stderr, "Failed to add child %ld\n", i);
+				return 1;
+			}
+			if (0 == rl_tree_is_balanced(tree)) {
+				fprintf(stderr, "Node is not balanced after adding child %ld\n", i);
 				return 1;
 			}
 		}
