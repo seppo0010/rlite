@@ -397,7 +397,7 @@ int fuzzy_set_test(long size, long tree_node_size, int _commit)
 	return 0;
 }
 
-#define DELETE_TESTS_COUNT 4
+#define DELETE_TESTS_COUNT 6
 int main()
 {
 	int i, j, k;
@@ -414,12 +414,16 @@ int main()
 		{ -8, -5},
 		{8, 5},
 		{8, 3},
+		{ -8, -6},
+		{8, 6},
 	};
 	char *delete_tests_name[DELETE_TESTS_COUNT] = {
 		"delete leaf node, no rebalance",
 		"delete leaf node, rebalance from sibling in the right",
 		"delete leaf node, rebalance from sibling in the left",
 		"delete leaf node, rebalance with merge, change root",
+		"delete internal node, no rebalance",
+		"delete internal node, rebalance leaf",
 	};
 	for (i = 0; i < DELETE_TESTS_COUNT; i++) {
 		retval = basic_delete_set_test(delete_tests[i][0], delete_tests[i][1], delete_tests_name[i]);

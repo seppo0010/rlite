@@ -409,6 +409,7 @@ int rl_tree_remove_child(rl_tree *tree, void *score)
 				tree->accessor->update(tree, NULL, node);
 				node = child_node;
 			}
+			nodes[i] = node;
 			break;
 		}
 		else {
