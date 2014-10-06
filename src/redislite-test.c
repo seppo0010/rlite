@@ -55,6 +55,8 @@ static long _remove(void *tree, void *node)
 	for (i = 0; i < context->size; i++) {
 		if (context->active_nodes[i] == node) {
 			context->active_nodes[i] = NULL;
+			free(context->serialized_nodes[i]);
+			context->serialized_nodes[i] = NULL;
 			return 0;
 		}
 	}
@@ -397,6 +399,68 @@ int fuzzy_set_test(long size, long tree_node_size, int _commit)
 	return 0;
 }
 
+int fuzzy_set_delete_test(long size, long tree_node_size, int _commit)
+{
+	fprintf(stderr, "Start fuzzy_set_delete_test %ld %ld %d\n", size, tree_node_size, _commit);
+	rl_test_context *context = context_create(size);
+	init_long_set();
+	rl_accessor *accessor = accessor_long_set_create(context);
+	rl_tree *tree = rl_tree_create(&long_set, tree_node_size, accessor);
+
+	long i, element, *element_copy;
+	long *elements = malloc(sizeof(long) * size);
+
+	for (i = 0; i < size; i++) {
+		element = rand();
+		if (contains_element(element, elements, i)) {
+			i--;
+			continue;
+		}
+		else {
+			elements[i] = element;
+			element_copy = malloc(sizeof(long));
+			*element_copy = element;
+			if (0 != rl_tree_add_child(tree, element_copy, NULL)) {
+				fprintf(stderr, "Failed to add child %ld\n", i);
+				return 1;
+			}
+			if (0 == rl_tree_is_balanced(tree)) {
+				fprintf(stderr, "Node is not balanced after adding child %ld\n", i);
+				return 1;
+			}
+		}
+		if (_commit) {
+			commit(tree);
+		}
+	}
+
+	// rl_print_tree(tree);
+
+	while (size > 0) {
+		i = (long)(((float)rand() / RAND_MAX) * size);
+		if (0 != rl_tree_remove_child(tree, &elements[i])) {
+			fprintf(stderr, "Failed to delete child %ld\n", elements[i]);
+			return 1;
+		}
+
+		// rl_print_tree(tree);
+
+		if (0 == rl_tree_is_balanced(tree)) {
+			fprintf(stderr, "Node is not balanced after deleting child %ld\n", i);
+			return 1;
+		}
+		elements[i] = elements[size - 1];
+		size--;
+	}
+	fprintf(stderr, "End fuzzy_set_delete_test\n");
+
+	context_destroy(tree, context);
+	free(elements);
+	free(accessor);
+	free(tree);
+	return 0;
+}
+
 #define DELETE_TESTS_COUNT 7
 int main()
 {
@@ -442,6 +506,21 @@ int main()
 				commit = k;
 				srand(1);
 				retval = fuzzy_set_test(size, tree_node_size, commit);
+				if (retval != 0) {
+					goto cleanup;
+				}
+			}
+		}
+	}
+
+	for (i = 0; i < 2; i++) {
+		size = i == 0 ? 100 : 200;
+		for (j = 0; j < 2; j++) {
+			tree_node_size = j == 0 ? 2 : 10;
+			for (k = 0; k < 2; k++) {
+				commit = k;
+				srand(1);
+				retval = fuzzy_set_delete_test(size, tree_node_size, commit);
 				if (retval != 0) {
 					goto cleanup;
 				}

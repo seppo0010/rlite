@@ -18,7 +18,7 @@ libredislite.a: btree.o
 	ar -cq libredislite.a btree.o
 
 buildtest: redislite-test.o libredislite.a
-	$(CC) $(DEBUG) $(CFLAGS) -lm -o redislite-test redislite-test.o libredislite.a
+	$(CC) $(DEBUG) $(CFLAGS) -o redislite-test redislite-test.o libredislite.a -lm
 
 test: buildtest
 	./redislite-test

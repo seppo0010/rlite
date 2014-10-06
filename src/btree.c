@@ -1,6 +1,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <stdio.h>
+#include <math.h>
 #include "btree.h"
 
 void rl_print_node(rl_tree *tree, rl_tree_node *node, long level);
@@ -389,6 +390,7 @@ int rl_tree_remove_child(rl_tree *tree, void *score)
 	if (!found) {
 		goto cleanup;
 	}
+
 	rl_tree_node *node, *parent_node, *sibling_node, *child_node;
 	for (i = tree->height - 1; i >= 0; i--) {
 		node = nodes[i];
@@ -405,14 +407,15 @@ int rl_tree_remove_child(rl_tree *tree, void *score)
 				nodes[i + 1] = child_node;
 				positions[i + 1] = child_node->size;
 			}
-			// only the leaf node loses an element, all the others were promoted
+
 			if (child_node->children) {
 				fprintf(stderr, "last child_node mustn't have children\n");
 				retval = 1;
 				goto cleanup;
 			}
-			child_node->size--;
 
+			// only the leaf node loses an element, to replace the deleted one
+			child_node->size--;
 			node->scores[positions[j]] = child_node->scores[child_node->size];
 			if (node->values) {
 				node->values[positions[j]] = child_node->values[child_node->size];
@@ -433,6 +436,7 @@ int rl_tree_remove_child(rl_tree *tree, void *score)
 			else {
 				if (i == 0 && node->children) {
 					// we have an empty root, promote the only child if any
+					tree->height--;
 					tree->accessor->update(tree, &tree->root, tree->accessor->select(tree, node->children[0]));
 					tree->accessor->remove(tree, node);
 					rl_tree_node_destroy(tree, node);
@@ -446,8 +450,12 @@ int rl_tree_remove_child(rl_tree *tree, void *score)
 		node = nodes[i];
 		if (i == 0) {
 			if (node->size == 0) {
-				tree->root = node->children[0];
+				tree->height--;
+				if (node->children) {
+					tree->root = node->children[0];
+				}
 			}
+			break;
 		}
 		if (node->size >= tree->max_size / 2 || i == 0) {
 			break;
@@ -468,6 +476,7 @@ int rl_tree_remove_child(rl_tree *tree, void *score)
 					}
 					if (node->children) {
 						memmove_dbg(&node->children[1], &node->children[0], sizeof(long) * (node->size + 1), __LINE__);
+						node->children[0] = sibling_node->children[sibling_node->size];
 					}
 					node->scores[0] = parent_node->scores[positions[i - 1] - 1];
 					if (node->values) {
@@ -504,6 +513,7 @@ int rl_tree_remove_child(rl_tree *tree, void *score)
 						memmove_dbg(&sibling_node->values[0], &sibling_node->values[1], sizeof(void *) * (sibling_node->size - 1), __LINE__);
 					}
 					if (node->children) {
+						node->children[node->size + 1] = sibling_node->children[0];
 						memmove_dbg(&sibling_node->children[0], &sibling_node->children[1], sizeof(long) * (sibling_node->size), __LINE__);
 					}
 
@@ -531,11 +541,13 @@ int rl_tree_remove_child(rl_tree *tree, void *score)
 					memmove_dbg(&sibling_node->children[sibling_node->size + 1], &node->children[0], sizeof(void *) * (node->size + 1), __LINE__);
 				}
 
-				memmove_dbg(&parent_node->scores[positions[i - 1]], &parent_node->scores[positions[i - 1] + 1], sizeof(void *) * (parent_node->size - positions[i - 1]), __LINE__);
-				if (parent_node->values) {
-					memmove_dbg(&parent_node->values[positions[i - 1]], &parent_node->values[positions[i - 1] + 1], sizeof(void *) * (parent_node->size - positions[i - 1]), __LINE__);
+				if (positions[i - 1] < parent_node->size) {
+					memmove_dbg(&parent_node->scores[positions[i - 1] - 1], &parent_node->scores[positions[i - 1]], sizeof(void *) * (parent_node->size - positions[i - 1]), __LINE__);
+					if (parent_node->values) {
+						memmove_dbg(&parent_node->values[positions[i - 1] - 1], &parent_node->values[positions[i - 1]], sizeof(void *) * (parent_node->size - positions[i - 1]), __LINE__);
+					}
+					memmove_dbg(&parent_node->children[positions[i - 1]], &parent_node->children[positions[i - 1] + 1], sizeof(void *) * (parent_node->size - positions[i - 1]), __LINE__);
 				}
-				memmove_dbg(&parent_node->children[positions[i - 1]], &parent_node->children[positions[i - 1] + 1], sizeof(void *) * (parent_node->size - positions[i]), __LINE__);
 				parent_node->size--;
 				sibling_node->size += 1 + node->size;
 				tree->accessor->update(tree, NULL, sibling_node);
@@ -561,11 +573,11 @@ int rl_tree_remove_child(rl_tree *tree, void *score)
 				}
 
 
-				memmove_dbg(&parent_node->scores[positions[i - 1] - 1], &parent_node->scores[positions[i - 1]], sizeof(void *) * (parent_node->size - positions[i - 1] - 1), __LINE__);
+				memmove_dbg(&parent_node->scores[positions[i - 1]], &parent_node->scores[positions[i - 1] + 1], sizeof(void *) * (parent_node->size - positions[i - 1] - 1), __LINE__);
 				if (parent_node->values) {
-					memmove_dbg(&parent_node->values[positions[i - 1] - 1], &parent_node->values[positions[i - 1]], sizeof(void *) * (parent_node->size - positions[i - 1] - 1), __LINE__);
+					memmove_dbg(&parent_node->values[positions[i - 1]], &parent_node->values[positions[i - 1] + 1], sizeof(void *) * (parent_node->size - positions[i - 1] - 1), __LINE__);
 				}
-				memmove_dbg(&parent_node->children[positions[i - 1] + 1], &parent_node->children[positions[i - 1] + 2], sizeof(void *) * (parent_node->size - positions[i - 1]), __LINE__);
+				memmove_dbg(&parent_node->children[positions[i - 1] + 1], &parent_node->children[positions[i - 1] + 2], sizeof(void *) * (parent_node->size - positions[i - 1] - 1), __LINE__);
 
 				parent_node->size--;
 				node->size += 1 + sibling_node->size;
@@ -612,7 +624,25 @@ int rl_node_is_balanced(rl_tree *tree, rl_tree_node *node, int is_root)
 
 int rl_tree_is_balanced(rl_tree *tree)
 {
-	return rl_node_is_balanced(tree, tree->accessor->select(tree, tree->root), 1);
+	if (!rl_node_is_balanced(tree, tree->accessor->select(tree, tree->root), 1)) {
+		return 0;
+	}
+
+	long size = (long)pow(tree->max_size + 1, tree->height + 1);
+	void **scores = malloc(sizeof(void *) * size);
+	size = 0;
+	rl_flatten_tree(tree, &scores, &size);
+	long i, j;
+	for (i = 0; i < size; i++) {
+		for (j = i + 1; j < size; j++) {
+			if (tree->type->cmp(scores[i], scores[j]) == 0) {
+				free(scores);
+				return 0;
+			}
+		}
+	}
+	free(scores);
+	return 1;
 }
 
 void rl_print_node(rl_tree *tree, rl_tree_node *node, long level)
