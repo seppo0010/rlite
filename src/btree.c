@@ -383,7 +383,7 @@ int rl_tree_remove_child(rl_tree *tree, void *score)
 	rl_tree_node **nodes = malloc(sizeof(rl_tree_node *) * tree->height);
 	long *positions = malloc(sizeof(long) * tree->height);
 	long found = rl_tree_find_score(tree, score, &nodes, &positions);
-	long i;
+	long i, j;
 	int retval = 0;
 
 	if (!found) {
@@ -398,18 +398,27 @@ int rl_tree_remove_child(rl_tree *tree, void *score)
 
 		tree->type->score_destroy(tree, node->scores[positions[i]]);
 		if (node->children) {
+			j = i;
+			child_node = node;
 			for (; i < tree->height - 1; i++) {
-				child_node = (rl_tree_node *)tree->accessor->select(tree, node->children[positions[i]]);
-				nodes[i + 1] = node;
-				positions[i + 1] = --child_node->size;
-				node->scores[positions[i]] = child_node->scores[child_node->size];
-				if (node->values) {
-					node->values[positions[i]] = child_node->values[child_node->size];
-				}
-				tree->accessor->update(tree, NULL, node);
-				node = child_node;
+				child_node = (rl_tree_node *)tree->accessor->select(tree, child_node->children[positions[i]]);
+				nodes[i + 1] = child_node;
+				positions[i + 1] = child_node->size;
 			}
-			nodes[i] = node;
+			// only the leaf node loses an element, all the others were promoted
+			if (child_node->children) {
+				fprintf(stderr, "last child_node mustn't have children\n");
+				retval = 1;
+				goto cleanup;
+			}
+			child_node->size--;
+
+			node->scores[positions[j]] = child_node->scores[child_node->size];
+			if (node->values) {
+				node->values[positions[j]] = child_node->values[child_node->size];
+			}
+			tree->accessor->update(tree, NULL, node);
+			tree->accessor->update(tree, NULL, child_node);
 			break;
 		}
 		else {
@@ -445,6 +454,11 @@ int rl_tree_remove_child(rl_tree *tree, void *score)
 		}
 		else {
 			parent_node = nodes[i - 1];
+			if (parent_node->size == 0) {
+				fprintf(stderr, "Empty parent\n");
+				retval = 1;
+				goto cleanup;
+			}
 			if (positions[i - 1] > 0) {
 				sibling_node = tree->accessor->select(tree, parent_node->children[positions[i - 1] - 1]);
 				if (sibling_node->size > tree->max_size / 2) {
@@ -500,9 +514,9 @@ int rl_tree_remove_child(rl_tree *tree, void *score)
 					break;
 				}
 			}
+
 			// not taking from either slibing, need to merge with either
 			// if either of them exists, they have the minimum number of elements
-
 			if (positions[i - 1] > 0) {
 				sibling_node = tree->accessor->select(tree, parent_node->children[positions[i - 1] - 1]);
 				sibling_node->scores[sibling_node->size] = parent_node->scores[positions[i - 1] - 1];
@@ -513,16 +527,22 @@ int rl_tree_remove_child(rl_tree *tree, void *score)
 				if (sibling_node->values) {
 					memmove_dbg(&sibling_node->values[sibling_node->size + 1], &node->values[0], sizeof(void *) * (node->size), __LINE__);
 				}
+				if (sibling_node->children) {
+					memmove_dbg(&sibling_node->children[sibling_node->size + 1], &node->children[0], sizeof(void *) * (node->size + 1), __LINE__);
+				}
 
 				memmove_dbg(&parent_node->scores[positions[i - 1]], &parent_node->scores[positions[i - 1] + 1], sizeof(void *) * (parent_node->size - positions[i - 1]), __LINE__);
 				if (parent_node->values) {
 					memmove_dbg(&parent_node->values[positions[i - 1]], &parent_node->values[positions[i - 1] + 1], sizeof(void *) * (parent_node->size - positions[i - 1]), __LINE__);
 				}
+				memmove_dbg(&parent_node->children[positions[i - 1]], &parent_node->children[positions[i - 1] + 1], sizeof(void *) * (parent_node->size - positions[i]), __LINE__);
 				parent_node->size--;
 				sibling_node->size += 1 + node->size;
 				tree->accessor->update(tree, NULL, sibling_node);
 				tree->accessor->update(tree, NULL, parent_node);
 				tree->accessor->remove(tree, node);
+				free(node->scores);
+				node->scores = NULL;
 				rl_tree_node_destroy(tree, node);
 				continue;
 			}
@@ -560,6 +580,7 @@ int rl_tree_remove_child(rl_tree *tree, void *score)
 			}
 
 			// this shouldn't happen
+			fprintf(stderr, "No sibling to borrow or merge\n");
 			retval = 1;
 			goto cleanup;
 		}
