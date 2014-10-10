@@ -14,14 +14,14 @@ all: buildtest
 .c.o:
 	$(CC) $(ARCH) $(DEBUG) $(CFLAGS) -c $<
 
-libredislite.a: btree.o
-	ar -cq libredislite.a btree.o
+librlite.a: btree.o
+	ar -cq librlite.a btree.o
 
-buildtest: redislite-test.o libredislite.a
-	$(CC) $(DEBUG) $(CFLAGS) -o redislite-test redislite-test.o libredislite.a -lm
+buildtest: rlite-test.o librlite.a
+	$(CC) $(DEBUG) $(CFLAGS) -o rlite-test rlite-test.o librlite.a -lm
 
 test: buildtest
-	./redislite-test
+	./rlite-test
 
 clean:
-	rm -rf redislite-test *.o *.a redislite-*.dSYM
+	rm -rf rlite-test *.o *.a rlite-*.dSYM
