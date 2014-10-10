@@ -17,11 +17,11 @@ all: buildtest
 librlite.a: btree.o
 	ar -cq librlite.a btree.o
 
-buildtest: rlite-test.o librlite.a
-	$(CC) $(DEBUG) $(CFLAGS) -o rlite-test rlite-test.o librlite.a -lm
+buildtest: btree-test.o librlite.a
+	$(CC) $(DEBUG) $(CFLAGS) -o btree-test btree-test.o librlite.a -lm
 
 test: buildtest
-	./rlite-test
+	./btree-test
 
 clean:
-	rm -rf rlite-test *.o *.a rlite-*.dSYM
+	rm -rf btree-test *.o *.a rlite-*.dSYM
