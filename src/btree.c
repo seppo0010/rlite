@@ -77,7 +77,6 @@ long long_hash_btree_node_serialize(void *_btree, void *_node, unsigned char **_
 	unsigned char *data = malloc(sizeof(unsigned char) * (((btree->type->score_size + btree->type->value_size + 4) * btree->max_node_size) + 8));
 	put_4bytes(data, node->size);
 	long i, pos = 4;
-	void *value;
 	for (i = 0; i < node->size; i++) {
 		put_4bytes(&data[pos], *(long *)(node->scores[i]));
 		put_4bytes(&data[pos + 4], node->children ? node->children[i] : 0);
