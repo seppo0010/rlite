@@ -169,6 +169,7 @@ rl_btree_node *rl_btree_node_create(rl_btree *btree)
 
 long rl_btree_node_destroy(rl_btree *btree, rl_btree_node *node)
 {
+	btree = btree;
 	long i;
 	if (node->scores) {
 		for (i = 0; i < node->size; i++) {
