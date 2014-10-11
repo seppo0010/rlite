@@ -44,7 +44,7 @@ int long_cmp(void *v1, void *v2)
 long long_set_btree_node_serialize_length(void *_btree)
 {
 	rl_btree *btree = (rl_btree *)_btree;
-	return sizeof(unsigned char) * ((8 * btree->max_size) + 8);
+	return sizeof(unsigned char) * ((8 * btree->max_node_size) + 8);
 }
 
 long long_set_btree_node_serialize(void *_btree, void *_node, unsigned char **_data, long *data_size)
@@ -82,7 +82,7 @@ long long_set_btree_node_deserialize(void *_btree, unsigned char *data, void **_
 		child = get_4bytes(&data[pos + 4]);
 		if (child != 0) {
 			if (!node->children) {
-				node->children = malloc(sizeof(long) * (btree->max_size + 1));
+				node->children = malloc(sizeof(long) * (btree->max_node_size + 1));
 				if (!node->children) {
 					free(node);
 					return 1;
@@ -103,7 +103,7 @@ long long_set_btree_node_deserialize(void *_btree, unsigned char *data, void **_
 long long_hash_btree_node_serialize_length(void *_btree)
 {
 	rl_btree *btree = (rl_btree *)_btree;
-	return sizeof(unsigned char) * (((btree->type->score_size + btree->type->value_size + 4) * btree->max_size) + 8);
+	return sizeof(unsigned char) * (((btree->type->score_size + btree->type->value_size + 4) * btree->max_node_size) + 8);
 }
 
 long long_hash_btree_node_serialize(void *_btree, void *_node, unsigned char **_data, long *data_size)
@@ -143,7 +143,7 @@ long long_hash_btree_node_deserialize(void *_btree, unsigned char *data, void **
 		child = get_4bytes(&data[pos + 4]);
 		if (child != 0) {
 			if (!node->children) {
-				node->children = malloc(sizeof(long) * (btree->max_size + 1));
+				node->children = malloc(sizeof(long) * (btree->max_node_size + 1));
 				if (!node->children) {
 					free(node);
 					return 1;
@@ -194,10 +194,10 @@ void init_long_hash()
 rl_btree_node *rl_btree_node_create(rl_btree *btree)
 {
 	rl_btree_node *node = malloc(sizeof(rl_btree_node));
-	node->scores = malloc(sizeof(void *) * btree->max_size);
+	node->scores = malloc(sizeof(void *) * btree->max_node_size);
 	node->children = NULL;
 	if (btree->type->value_size) {
-		node->values = malloc(sizeof(void *) * btree->max_size);
+		node->values = malloc(sizeof(void *) * btree->max_node_size);
 	}
 	else {
 		node->values = NULL;
@@ -228,13 +228,13 @@ long rl_btree_node_destroy(rl_btree *btree, rl_btree_node *node)
 	return 0;
 }
 
-rl_btree *rl_btree_create(rl_btree_type *type, long max_size, rl_accessor *accessor)
+rl_btree *rl_btree_create(rl_btree_type *type, long max_node_size, rl_accessor *accessor)
 {
 	rl_btree *btree = malloc(sizeof(rl_btree));
 	if (!btree) {
 		return NULL;
 	}
-	btree->max_size = max_size;
+	btree->max_node_size = max_node_size;
 	btree->type = type;
 	rl_btree_node *root = rl_btree_node_create(btree);
 	root->size = 0;
@@ -349,7 +349,7 @@ int rl_btree_add_element(rl_btree *btree, void *score, void *value)
 	rl_btree_node *node = NULL;
 	for (i = btree->height - 1; i >= 0; i--) {
 		node = nodes[i];
-		if (node->size < btree->max_size) {
+		if (node->size < btree->max_node_size) {
 			memmove_dbg(&node->scores[positions[i] + 1], &node->scores[positions[i]], sizeof(void *) * (node->size - positions[i]), __LINE__);
 			if (node->values) {
 				memmove_dbg(&node->values[positions[i] + 1], &node->values[positions[i]], sizeof(void *) * (node->size - positions[i]), __LINE__);
@@ -376,62 +376,62 @@ int rl_btree_add_element(rl_btree *btree, void *score, void *value)
 
 			rl_btree_node *right = rl_btree_node_create(btree);
 			if (child != -1) {
-				right->children = malloc(sizeof(long) * (btree->max_size + 1));
+				right->children = malloc(sizeof(long) * (btree->max_node_size + 1));
 			}
 
-			if (pos < btree->max_size / 2) {
+			if (pos < btree->max_node_size / 2) {
 				if (child != -1) {
-					memmove_dbg(right->children, &node->children[btree->max_size / 2], sizeof(void *) * (btree->max_size / 2 + 1), __LINE__);
-					memmove_dbg(&node->children[pos + 2], &node->children[pos + 1], sizeof(void *) * (btree->max_size / 2 - 1 - pos), __LINE__);
+					memmove_dbg(right->children, &node->children[btree->max_node_size / 2], sizeof(void *) * (btree->max_node_size / 2 + 1), __LINE__);
+					memmove_dbg(&node->children[pos + 2], &node->children[pos + 1], sizeof(void *) * (btree->max_node_size / 2 - 1 - pos), __LINE__);
 					node->children[pos + 1] = child;
 
 				}
-				tmp = node->scores[btree->max_size / 2 - 1];
-				memmove_dbg(&node->scores[pos + 1], &node->scores[pos], sizeof(void *) * (btree->max_size / 2 - 1 - pos), __LINE__);
+				tmp = node->scores[btree->max_node_size / 2 - 1];
+				memmove_dbg(&node->scores[pos + 1], &node->scores[pos], sizeof(void *) * (btree->max_node_size / 2 - 1 - pos), __LINE__);
 				node->scores[pos] = score;
 				score = tmp;
-				memmove_dbg(right->scores, &node->scores[btree->max_size / 2], sizeof(void *) * btree->max_size / 2, __LINE__);
+				memmove_dbg(right->scores, &node->scores[btree->max_node_size / 2], sizeof(void *) * btree->max_node_size / 2, __LINE__);
 				if (node->values) {
-					tmp = node->values[btree->max_size / 2 - 1];
-					memmove_dbg(&node->values[pos + 1], &node->values[pos], sizeof(void *) * (btree->max_size / 2 - 1 - pos), __LINE__);
+					tmp = node->values[btree->max_node_size / 2 - 1];
+					memmove_dbg(&node->values[pos + 1], &node->values[pos], sizeof(void *) * (btree->max_node_size / 2 - 1 - pos), __LINE__);
 					node->values[pos] = value;
-					memmove_dbg(right->values, &node->values[btree->max_size / 2], sizeof(void *) * btree->max_size / 2, __LINE__);
+					memmove_dbg(right->values, &node->values[btree->max_node_size / 2], sizeof(void *) * btree->max_node_size / 2, __LINE__);
 					value = tmp;
 				}
 			}
 
-			if (pos == btree->max_size / 2) {
+			if (pos == btree->max_node_size / 2) {
 				if (child != -1) {
-					memmove_dbg(&right->children[1], &node->children[btree->max_size / 2 + 1], sizeof(void *) * (btree->max_size / 2), __LINE__);
+					memmove_dbg(&right->children[1], &node->children[btree->max_node_size / 2 + 1], sizeof(void *) * (btree->max_node_size / 2), __LINE__);
 					right->children[0] = child;
 				}
-				memmove_dbg(right->scores, &node->scores[btree->max_size / 2], sizeof(void *) * btree->max_size / 2, __LINE__);
+				memmove_dbg(right->scores, &node->scores[btree->max_node_size / 2], sizeof(void *) * btree->max_node_size / 2, __LINE__);
 				if (node->values) {
-					memmove_dbg(right->values, &node->values[btree->max_size / 2], sizeof(void *) * btree->max_size / 2, __LINE__);
+					memmove_dbg(right->values, &node->values[btree->max_node_size / 2], sizeof(void *) * btree->max_node_size / 2, __LINE__);
 				}
 			}
 
-			if (pos > btree->max_size / 2) {
+			if (pos > btree->max_node_size / 2) {
 				if (child != -1) {
-					memmove_dbg(right->children, &node->children[btree->max_size / 2 + 1], sizeof(void *) * (pos - btree->max_size / 2), __LINE__);
-					right->children[pos - btree->max_size / 2] = child;
-					memmove_dbg(&right->children[pos - btree->max_size / 2 + 1], &node->children[pos + 1], sizeof(void *) * (btree->max_size - pos), __LINE__);
+					memmove_dbg(right->children, &node->children[btree->max_node_size / 2 + 1], sizeof(void *) * (pos - btree->max_node_size / 2), __LINE__);
+					right->children[pos - btree->max_node_size / 2] = child;
+					memmove_dbg(&right->children[pos - btree->max_node_size / 2 + 1], &node->children[pos + 1], sizeof(void *) * (btree->max_node_size - pos), __LINE__);
 				}
-				tmp = node->scores[btree->max_size / 2];
-				memmove_dbg(right->scores, &node->scores[btree->max_size / 2 + 1], sizeof(void *) * (pos - btree->max_size / 2 - 1), __LINE__);
-				right->scores[pos - btree->max_size / 2 - 1] = score;
-				memmove_dbg(&right->scores[pos - btree->max_size / 2], &node->scores[pos], sizeof(void *) * (btree->max_size - pos), __LINE__);
+				tmp = node->scores[btree->max_node_size / 2];
+				memmove_dbg(right->scores, &node->scores[btree->max_node_size / 2 + 1], sizeof(void *) * (pos - btree->max_node_size / 2 - 1), __LINE__);
+				right->scores[pos - btree->max_node_size / 2 - 1] = score;
+				memmove_dbg(&right->scores[pos - btree->max_node_size / 2], &node->scores[pos], sizeof(void *) * (btree->max_node_size - pos), __LINE__);
 				score = tmp;
 				if (node->values) {
-					tmp = node->values[btree->max_size / 2];
-					memmove_dbg(right->values, &node->values[btree->max_size / 2 + 1], sizeof(void *) * (pos - btree->max_size / 2 - 1), __LINE__);
-					right->values[pos - btree->max_size / 2 - 1] = value;
-					memmove_dbg(&right->values[pos - btree->max_size / 2], &node->values[pos], sizeof(void *) * (btree->max_size - pos), __LINE__);
+					tmp = node->values[btree->max_node_size / 2];
+					memmove_dbg(right->values, &node->values[btree->max_node_size / 2 + 1], sizeof(void *) * (pos - btree->max_node_size / 2 - 1), __LINE__);
+					right->values[pos - btree->max_node_size / 2 - 1] = value;
+					memmove_dbg(&right->values[pos - btree->max_node_size / 2], &node->values[pos], sizeof(void *) * (btree->max_node_size - pos), __LINE__);
 					value = tmp;
 				}
 			}
 
-			node->size = right->size = btree->max_size / 2;
+			node->size = right->size = btree->max_node_size / 2;
 			btree->accessor->insert(btree, &child, right);
 		}
 	}
@@ -443,7 +443,7 @@ int rl_btree_add_element(rl_btree *btree, void *score, void *value)
 		if (node->values) {
 			node->values[0] = value;
 		}
-		node->children = malloc(sizeof(long) * (btree->max_size + 1));
+		node->children = malloc(sizeof(long) * (btree->max_node_size + 1));
 		btree->accessor->update(btree, &node->children[0], old_root);
 		node->children[1] = child;
 		btree->accessor->insert(btree, &btree->root, node);
@@ -535,7 +535,7 @@ int rl_btree_remove_element(rl_btree *btree, void *score)
 			}
 			break;
 		}
-		if (node->size >= btree->max_size / 2 || i == 0) {
+		if (node->size >= btree->max_node_size / 2 || i == 0) {
 			break;
 		}
 		else {
@@ -547,7 +547,7 @@ int rl_btree_remove_element(rl_btree *btree, void *score)
 			}
 			if (positions[i - 1] > 0) {
 				sibling_node = btree->accessor->select(btree, parent_node->children[positions[i - 1] - 1]);
-				if (sibling_node->size > btree->max_size / 2) {
+				if (sibling_node->size > btree->max_node_size / 2) {
 					memmove_dbg(&node->scores[1], &node->scores[0], sizeof(void *) * (node->size), __LINE__);
 					if (node->values) {
 						memmove_dbg(&node->values[1], &node->values[0], sizeof(void *) * (node->size), __LINE__);
@@ -575,7 +575,7 @@ int rl_btree_remove_element(rl_btree *btree, void *score)
 			}
 			if (positions[i - 1] < parent_node->size) {
 				sibling_node = btree->accessor->select(btree, parent_node->children[positions[i - 1] + 1]);
-				if (sibling_node->size > btree->max_size / 2) {
+				if (sibling_node->size > btree->max_node_size / 2) {
 					node->scores[node->size] = parent_node->scores[positions[i - 1]];
 					if (node->values) {
 						node->values[node->size] = parent_node->values[positions[i - 1]];
@@ -685,7 +685,7 @@ cleanup:
 
 int rl_btree_node_is_balanced(rl_btree *btree, rl_btree_node *node, int is_root)
 {
-	if (!is_root && node->size < btree->max_size / 2) {
+	if (!is_root && node->size < btree->max_node_size / 2) {
 		return 0;
 	}
 
@@ -706,7 +706,7 @@ int rl_btree_is_balanced(rl_btree *btree)
 		return 0;
 	}
 
-	long size = (long)pow(btree->max_size + 1, btree->height + 1);
+	long size = (long)pow(btree->max_node_size + 1, btree->height + 1);
 	void **scores = malloc(sizeof(void *) * size);
 	size = 0;
 	rl_flatten_btree(btree, &scores, &size);

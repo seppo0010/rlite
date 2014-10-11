@@ -39,14 +39,14 @@ typedef struct rl_accessor {
 } rl_accessor;
 
 typedef struct {
-	long max_size; // maximum number of scores in a node
+	long max_node_size; // maximum number of scores in a node
 	long height;
 	rl_btree_type *type;
 	long root;
 	rl_accessor *accessor;
 } rl_btree;
 
-rl_btree *rl_btree_create(rl_btree_type *type, long max_size, rl_accessor *accessor);
+rl_btree *rl_btree_create(rl_btree_type *type, long max_node_size, rl_accessor *accessor);
 int rl_btree_destroy(rl_btree *btree);
 long rl_btree_node_destroy(rl_btree *btree, rl_btree_node *node);
 int rl_btree_add_element(rl_btree *btree, void *score, void *value);
