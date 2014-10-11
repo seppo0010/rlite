@@ -17,17 +17,11 @@ int long_cmp(void *v1, void *v2)
 	return a > b ? 1 : -1;
 }
 
-long long_set_btree_node_serialize_length(void *_btree)
-{
-	rl_btree *btree = (rl_btree *)_btree;
-	return sizeof(unsigned char) * ((8 * btree->max_node_size) + 8);
-}
-
 long long_set_btree_node_serialize(void *_btree, void *_node, unsigned char **_data, long *data_size)
 {
 	rl_btree *btree = (rl_btree *)_btree;
 	rl_btree_node *node = (rl_btree_node *)_node;
-	unsigned char *data = malloc(btree->type->serialize_length(btree));
+	unsigned char *data = malloc(sizeof(unsigned char) * ((8 * btree->max_node_size) + 8));
 	put_4bytes(data, node->size);
 	long i, pos = 4;
 	for (i = 0; i < node->size; i++) {
@@ -76,17 +70,11 @@ long long_set_btree_node_deserialize(void *_btree, unsigned char *data, void **_
 	return 0;
 }
 
-long long_hash_btree_node_serialize_length(void *_btree)
-{
-	rl_btree *btree = (rl_btree *)_btree;
-	return sizeof(unsigned char) * (((btree->type->score_size + btree->type->value_size + 4) * btree->max_node_size) + 8);
-}
-
 long long_hash_btree_node_serialize(void *_btree, void *_node, unsigned char **_data, long *data_size)
 {
 	rl_btree *btree = (rl_btree *)_btree;
 	rl_btree_node *node = (rl_btree_node *)_node;
-	unsigned char *data = malloc(btree->type->serialize_length(btree));
+	unsigned char *data = malloc(sizeof(unsigned char) * (((btree->type->score_size + btree->type->value_size + 4) * btree->max_node_size) + 8));
 	put_4bytes(data, node->size);
 	long i, pos = 4;
 	void *value;
@@ -151,7 +139,6 @@ void init_long_set()
 	long_set.value_size = 0;
 	long_set.cmp = long_cmp;
 	long_set.formatter = long_formatter;
-	long_set.serialize_length = long_set_btree_node_serialize_length;
 	long_set.serialize = long_set_btree_node_serialize;
 	long_set.deserialize = long_set_btree_node_deserialize;
 }
@@ -162,7 +149,6 @@ void init_long_hash()
 	long_hash.value_size = sizeof(void *);
 	long_hash.cmp = long_cmp;
 	long_hash.formatter = long_formatter;
-	long_hash.serialize_length = long_hash_btree_node_serialize_length;
 	long_hash.serialize = long_hash_btree_node_serialize;
 	long_hash.deserialize = long_hash_btree_node_deserialize;
 }
