@@ -14,8 +14,8 @@ all: buildtest
 .c.o:
 	$(CC) $(ARCH) $(DEBUG) $(CFLAGS) -c $<
 
-librlite.a: btree.o
-	ar -cq librlite.a btree.o
+librlite.a: btree.o util.o
+	ar -cq librlite.a btree.o util.o
 
 buildtest: btree-test.o librlite.a
 	$(CC) $(DEBUG) $(CFLAGS) -o btree-test btree-test.o librlite.a -lm
