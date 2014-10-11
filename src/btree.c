@@ -133,10 +133,15 @@ void init_long_set()
 
 void init_long_hash()
 {
-	long_set.score_size = sizeof(long);
-	long_set.value_size = sizeof(void *);
-	long_set.cmp = long_cmp;
-	long_set.formatter = long_formatter;
+	long_hash.score_size = sizeof(long);
+	long_hash.value_size = sizeof(void *);
+	long_hash.cmp = long_cmp;
+	long_hash.formatter = long_formatter;
+	long_hash.serialize_length = long_set_btree_node_serialize_length;
+	long_hash.serialize = long_set_btree_node_serialize;
+	long_hash.deserialize = long_set_btree_node_deserialize;
+	long_hash.score_create = long_score_create;
+	long_hash.score_destroy = long_score_destroy;
 }
 
 rl_btree_node *rl_btree_node_create(rl_btree *btree)
@@ -214,7 +219,7 @@ int rl_btree_destroy(rl_btree *btree)
 	return 0;
 }
 
-long rl_btree_find_score(rl_btree *btree, void *score, rl_btree_node *** nodes, long **positions)
+long rl_btree_find_score(rl_btree *btree, void *score, void **value, rl_btree_node *** nodes, long **positions)
 {
 	rl_btree_node *node = btree->accessor->select(btree, btree->root);
 	if ((!nodes && positions) || (nodes && !positions)) {
@@ -233,6 +238,9 @@ long rl_btree_find_score(rl_btree *btree, void *score, rl_btree_node *** nodes, 
 			pos = (max - min) / 2 + min;
 			cmp = btree->type->cmp(score, node->scores[pos]);
 			if (cmp == 0) {
+				if (value && node->values) {
+					*value = node->values[pos];
+				}
 				if (nodes) {
 					if (positions) {
 						(*positions)[i] = pos;
@@ -279,7 +287,7 @@ int rl_btree_add_element(rl_btree *btree, void *score, void *value)
 	rl_btree_node **nodes = malloc(sizeof(rl_btree_node *) * btree->height);
 	long *positions = malloc(sizeof(long) * btree->height);
 	void *tmp;
-	long found = rl_btree_find_score(btree, score, &nodes, &positions);
+	long found = rl_btree_find_score(btree, score, NULL, &nodes, &positions);
 	long i, pos;
 	long child = -1;
 	int retval = 0;
@@ -333,6 +341,13 @@ int rl_btree_add_element(rl_btree *btree, void *score, void *value)
 				node->scores[pos] = score;
 				score = tmp;
 				memmove_dbg(right->scores, &node->scores[btree->max_size / 2], sizeof(void *) * btree->max_size / 2, __LINE__);
+				if (node->values) {
+					tmp = node->values[btree->max_size / 2 - 1];
+					memmove_dbg(&node->values[pos + 1], &node->values[pos], sizeof(void *) * (btree->max_size / 2 - 1 - pos), __LINE__);
+					node->values[pos] = value;
+					memmove_dbg(right->values, &node->values[btree->max_size / 2], sizeof(void *) * btree->max_size / 2, __LINE__);
+					value = tmp;
+				}
 			}
 
 			if (pos == btree->max_size / 2) {
@@ -341,6 +356,9 @@ int rl_btree_add_element(rl_btree *btree, void *score, void *value)
 					right->children[0] = child;
 				}
 				memmove_dbg(right->scores, &node->scores[btree->max_size / 2], sizeof(void *) * btree->max_size / 2, __LINE__);
+				if (node->values) {
+					memmove_dbg(right->values, &node->values[btree->max_size / 2], sizeof(void *) * btree->max_size / 2, __LINE__);
+				}
 			}
 
 			if (pos > btree->max_size / 2) {
@@ -354,6 +372,13 @@ int rl_btree_add_element(rl_btree *btree, void *score, void *value)
 				right->scores[pos - btree->max_size / 2 - 1] = score;
 				memmove_dbg(&right->scores[pos - btree->max_size / 2], &node->scores[pos], sizeof(void *) * (btree->max_size - pos), __LINE__);
 				score = tmp;
+				if (node->values) {
+					tmp = node->values[btree->max_size / 2];
+					memmove_dbg(right->values, &node->values[btree->max_size / 2 + 1], sizeof(void *) * (pos - btree->max_size / 2 - 1), __LINE__);
+					right->values[pos - btree->max_size / 2 - 1] = value;
+					memmove_dbg(&right->values[pos - btree->max_size / 2], &node->values[pos], sizeof(void *) * (btree->max_size - pos), __LINE__);
+					value = tmp;
+				}
 			}
 
 			node->size = right->size = btree->max_size / 2;
@@ -365,6 +390,9 @@ int rl_btree_add_element(rl_btree *btree, void *score, void *value)
 		node = rl_btree_node_create(btree);
 		node->size = 1;
 		node->scores[0] = score;
+		if (node->values) {
+			node->values[0] = value;
+		}
 		node->children = malloc(sizeof(long) * (btree->max_size + 1));
 		btree->accessor->update(btree, &node->children[0], old_root);
 		node->children[1] = child;
@@ -383,7 +411,7 @@ int rl_btree_remove_element(rl_btree *btree, void *score)
 {
 	rl_btree_node **nodes = malloc(sizeof(rl_btree_node *) * btree->height);
 	long *positions = malloc(sizeof(long) * btree->height);
-	long found = rl_btree_find_score(btree, score, &nodes, &positions);
+	long found = rl_btree_find_score(btree, score, NULL, &nodes, &positions);
 	long i, j;
 	int retval = 0;
 
@@ -660,6 +688,13 @@ void rl_print_btree_node(rl_btree *btree, rl_btree_node *node, long level)
 		btree->type->formatter(node->scores[i], &score, &size);
 		fwrite(score, sizeof(char), size, stdout);
 		free(score);
+		printf("\n");
+		if (node->values) {
+			for (j = 0; j < level; j++) {
+				putchar('*');
+			}
+			printf("%p\n", node->values[i]);
+		}
 		printf("\n");
 		if (node->children) {
 			rl_print_btree_node(btree, (rl_btree_node *)btree->accessor->select(btree, node->children[i + 1]), level + 1);

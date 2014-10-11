@@ -126,7 +126,7 @@ void context_destroy(rl_btree *btree, rl_test_context *context)
 	free(context);
 }
 
-rl_accessor *accessor_long_set_create(void *context)
+rl_accessor *accessor_create(void *context)
 {
 	rl_accessor *accessor = malloc(sizeof(rl_accessor));
 	if (accessor == NULL) {
@@ -150,7 +150,7 @@ int basic_set_serde_test()
 
 	init_long_set();
 	rl_test_context *context = context_create(100);
-	rl_accessor *accessor = accessor_long_set_create(context);
+	rl_accessor *accessor = accessor_create(context);
 	rl_btree *btree = rl_btree_create(&long_set, 10, accessor);
 
 	long **vals = malloc(sizeof(long *) * 7);
@@ -202,7 +202,7 @@ int basic_insert_set_test()
 	rl_test_context *context = context_create(100);
 
 	init_long_set();
-	rl_accessor *accessor = accessor_long_set_create(context);
+	rl_accessor *accessor = accessor_create(context);
 	rl_btree *btree = rl_btree_create(&long_set, 2, accessor);
 	long **vals = malloc(sizeof(long *) * 7);
 	long i;
@@ -222,14 +222,14 @@ int basic_insert_set_test()
 	}
 	// rl_print_btree(btree);
 	for (i = 0; i < 7; i++) {
-		if (1 != rl_btree_find_score(btree, vals[i], NULL, NULL)) {
+		if (1 != rl_btree_find_score(btree, vals[i], NULL, NULL, NULL)) {
 			fprintf(stderr, "Failed to find child %ld\n", i);
 			return 1;
 		}
 	}
 	long nonexistent_vals[2] = {0, 8};
 	for (i = 0; i < 2; i++) {
-		if (0 != rl_btree_find_score(btree, &nonexistent_vals[i], NULL, NULL)) {
+		if (0 != rl_btree_find_score(btree, &nonexistent_vals[i], NULL, NULL, NULL)) {
 			fprintf(stderr, "Failed to not find child %ld\n", i);
 			return 1;
 		}
@@ -242,13 +242,73 @@ int basic_insert_set_test()
 	return 0;
 }
 
+int basic_insert_hash_test()
+{
+	fprintf(stderr, "Start basic_insert_hash_test\n");
+	rl_test_context *context = context_create(100);
+
+	init_long_hash();
+	rl_accessor *accessor = accessor_create(context);
+	rl_btree *btree = rl_btree_create(&long_hash, 2, accessor);
+	long **keys = malloc(sizeof(long *) * 7);
+	long **vals = malloc(sizeof(long *) * 7);
+	long i;
+	for (i = 0; i < 7; i++) {
+		keys[i] = malloc(sizeof(long));
+		vals[i] = malloc(sizeof(long));
+		*keys[i] = i + 1;
+		*vals[i] = i * 10;
+	}
+	for (i = 0; i < 7; i++) {
+		if (0 != rl_btree_add_element(btree, keys[i], vals[i])) {
+			fprintf(stderr, "Failed to add child %ld\n", i);
+			return 1;
+		}
+		if (0 == rl_btree_is_balanced(btree)) {
+			fprintf(stderr, "Node is not balanced after adding child %ld\n", i);
+			return 1;
+		}
+	}
+
+	// rl_print_btree(btree);
+
+	void *val;
+	for (i = 0; i < 7; i++) {
+		if (1 != rl_btree_find_score(btree, keys[i], &val, NULL, NULL)) {
+			fprintf(stderr, "Failed to find child %ld\n", i);
+			return 1;
+		}
+		if (val != vals[i] || *(long *)val != i * 10) {
+			fprintf(stderr, "Wrong value in position %ld (%ld)\n", i, *(long *)val);
+			return 1;
+		}
+	}
+	long nonexistent_vals[2] = {0, 8};
+	for (i = 0; i < 2; i++) {
+		if (0 != rl_btree_find_score(btree, &nonexistent_vals[i], NULL, NULL, NULL)) {
+			fprintf(stderr, "Failed to not find child %ld\n", i);
+			return 1;
+		}
+	}
+	fprintf(stderr, "End basic_insert_set_test\n");
+	context_destroy(btree, context);
+	free(accessor);
+	for (i = 0; i < 7; i++) {
+		free(vals[i]);
+	}
+	free(vals);
+	free(keys);
+	free(btree);
+	return 0;
+}
+
 int basic_delete_set_test(long elements, long element_to_remove, char *name)
 {
 	fprintf(stderr, "Start basic_delete_set_test (%ld, %ld) (%s)\n", elements, element_to_remove, name);
 	rl_test_context *context = context_create(100);
 
 	init_long_set();
-	rl_accessor *accessor = accessor_long_set_create(context);
+	rl_accessor *accessor = accessor_create(context);
 	rl_btree *btree = rl_btree_create(&long_set, 2, accessor);
 	long abs_elements = labs(elements);
 	long pos_element_to_remove = abs_elements == elements ? element_to_remove : (-element_to_remove);
@@ -295,7 +355,7 @@ int basic_delete_set_test(long elements, long element_to_remove, char *name)
 			expected = 1;
 			*score = *vals[j];
 		}
-		if (expected != rl_btree_find_score(btree, score, NULL, NULL)) {
+		if (expected != rl_btree_find_score(btree, score, NULL, NULL, NULL)) {
 			fprintf(stderr, "Failed to %sfind child %ld (%ld) after deleting element %ld\n", expected == 0 ? "" : "not ", j, *vals[j], element_to_remove);
 			return 1;
 		}
@@ -324,7 +384,7 @@ int fuzzy_set_test(long size, long btree_node_size, int _commit)
 	fprintf(stderr, "Start fuzzy_set_test %ld %ld %d\n", size, btree_node_size, _commit);
 	rl_test_context *context = context_create(size);
 	init_long_set();
-	rl_accessor *accessor = accessor_long_set_create(context);
+	rl_accessor *accessor = accessor_create(context);
 	rl_btree *btree = rl_btree_create(&long_set, btree_node_size, accessor);
 
 	long i, element, *element_copy;
@@ -379,11 +439,11 @@ int fuzzy_set_test(long size, long btree_node_size, int _commit)
 	}
 
 	for (i = 0; i < size; i++) {
-		if (1 != rl_btree_find_score(btree, &elements[i], NULL, NULL)) {
+		if (1 != rl_btree_find_score(btree, &elements[i], NULL, NULL, NULL)) {
 			fprintf(stderr, "Failed to find child %ld (%ld)\n", i, elements[i]);
 			return 1;
 		}
-		if (0 != rl_btree_find_score(btree, &nonelements[i], NULL, NULL)) {
+		if (0 != rl_btree_find_score(btree, &nonelements[i], NULL, NULL, NULL)) {
 			fprintf(stderr, "Failed to not find child %ld\n", i);
 			return 1;
 		}
@@ -404,7 +464,7 @@ int fuzzy_set_delete_test(long size, long btree_node_size, int _commit)
 	fprintf(stderr, "Start fuzzy_set_delete_test %ld %ld %d\n", size, btree_node_size, _commit);
 	rl_test_context *context = context_create(size);
 	init_long_set();
-	rl_accessor *accessor = accessor_long_set_create(context);
+	rl_accessor *accessor = accessor_create(context);
 	rl_btree *btree = rl_btree_create(&long_set, btree_node_size, accessor);
 
 	long i, element, *element_copy;
@@ -469,6 +529,10 @@ int main()
 	int commit;
 	int retval = 0;
 	retval = basic_insert_set_test();
+	if (retval != 0) {
+		goto cleanup;
+	}
+	retval = basic_insert_hash_test();
 	if (retval != 0) {
 		goto cleanup;
 	}

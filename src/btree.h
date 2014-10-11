@@ -53,7 +53,7 @@ int rl_btree_destroy(rl_btree *btree);
 long rl_btree_node_destroy(rl_btree *btree, rl_btree_node *node);
 int rl_btree_add_element(rl_btree *btree, void *score, void *value);
 int rl_btree_remove_element(rl_btree *btree, void *score);
-long rl_btree_find_score(rl_btree *btree, void *score, rl_btree_node *** nodes, long **positions);
+long rl_btree_find_score(rl_btree *btree, void *score, void **values, rl_btree_node *** nodes, long **positions);
 void rl_print_btree(rl_btree *btree);
 int rl_btree_is_balanced(rl_btree *btree);
 void rl_flatten_btree(rl_btree *btree, void *** scores, long *size);
