@@ -1,3 +1,4 @@
 *.o
 *.a
 /src/btree-test
+/src/list-test

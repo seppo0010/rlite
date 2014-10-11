@@ -1,0 +1,645 @@
+#include "list.h"
+#include <stdlib.h>
+#include <stdio.h>
+#include <string.h>
+
+typedef struct rl_test_context {
+	long size;
+	unsigned char **serialized_nodes;
+	rl_list_node **active_nodes;
+} rl_test_context;
+
+static void *_select(void *_list, long _number)
+{
+	rl_list *list = (rl_list *)_list;
+	rl_test_context *context = (rl_test_context *)list->accessor->context;
+	long number = _number - 1;
+	if (!context->active_nodes[number]) {
+		void *node;
+		if (0 != list->type->deserialize(list, context->serialized_nodes[number], &node)) {
+			fprintf(stderr, "Failed to deserialize node %ld\n", number);
+			return NULL;
+		}
+		context->active_nodes[number] = (rl_list_node *)node;
+	}
+	return context->active_nodes[number];
+}
+
+static long insert(void *list, long *number, void *node)
+{
+	rl_test_context *context = (rl_test_context *)((rl_list *)list)->accessor->context;
+	context->active_nodes[context->size] = node;
+	*number = ++context->size;
+	return 0;
+}
+
+static long update(void *list, long *number, void *node)
+{
+	rl_test_context *context = (rl_test_context *)((rl_list *)list)->accessor->context;
+	long i;
+	for (i = 0; i < context->size; i++) {
+		if (context->active_nodes[i] == node) {
+			if (number) {
+				*number = i + 1;
+			}
+			return 0;
+		}
+	}
+	return -1;
+}
+
+static long _remove(void *list, void *node)
+{
+	rl_test_context *context = (rl_test_context *)((rl_list *)list)->accessor->context;
+	long i;
+	for (i = 0; i < context->size; i++) {
+		if (context->active_nodes[i] == node) {
+			context->active_nodes[i] = NULL;
+			free(context->serialized_nodes[i]);
+			context->serialized_nodes[i] = NULL;
+			return 0;
+		}
+	}
+	return -1;
+}
+
+static long list(void *list, rl_list_node *** nodes, long *size)
+{
+	rl_test_context *context = (rl_test_context *)((rl_list *)list)->accessor->context;
+	long i;
+	for (i = 0; i < context->size; i++) {
+		nodes[i] = _select(list, i);
+	}
+	*size = context->size;
+	return 0;
+}
+
+static long discard(void *list)
+{
+	rl_test_context *context = (rl_test_context *)((rl_list *)list)->accessor->context;
+	long i;
+	for (i = 0; i < context->size; i++) {
+		if (context->active_nodes[i]) {
+			rl_list_node_destroy(list, context->active_nodes[i]);
+			context->active_nodes[i] = NULL;
+		}
+	}
+	return 0;
+}
+
+static long commit(void *_list)
+{
+	rl_list *list = (rl_list *)_list;
+	rl_test_context *context = (rl_test_context *)list->accessor->context;
+	long i;
+	for (i = 0; i < context->size; i++) {
+		if (context->active_nodes[i]) {
+			if (context->serialized_nodes[i]) {
+				free(context->serialized_nodes[i]);
+			}
+			list->type->serialize(list, context->active_nodes[i], &context->serialized_nodes[i], NULL);
+			rl_list_node_destroy(list, context->active_nodes[i]);
+			context->active_nodes[i] = NULL;
+		}
+	}
+	return 0;
+}
+
+rl_test_context *context_create(long size)
+{
+	rl_test_context *context = malloc(sizeof(rl_test_context));
+	context->size = 0;
+	context->serialized_nodes = calloc(size, sizeof(unsigned char **));
+	context->active_nodes = calloc(size, sizeof(rl_list_node *));
+	return context;
+}
+
+void context_destroy(rl_list *list, rl_test_context *context)
+{
+	discard(list);
+	long i;
+	for (i = 0; i < context->size; i++) {
+		free(context->serialized_nodes[i]);
+	}
+	free(context->serialized_nodes);
+	free(context->active_nodes);
+	free(context);
+}
+
+rl_accessor *accessor_create(void *context)
+{
+	rl_accessor *accessor = malloc(sizeof(rl_accessor));
+	if (accessor == NULL) {
+		fprintf(stderr, "Failed to create accessor\n");
+		return NULL;
+	}
+	accessor->select = _select;
+	accessor->insert = insert;
+	accessor->update = update;
+	accessor->remove = _remove;
+	accessor->list = list;
+	accessor->commit = commit;
+	accessor->discard = discard;
+	accessor->context = context;
+	return accessor;
+}
+
+int basic_insert_list_test(int ascending)
+{
+	fprintf(stderr, "Start basic_insert_list_test %d\n", ascending);
+	rl_test_context *context = context_create(100);
+
+	init_long_list();
+	rl_accessor *accessor = accessor_create(context);
+	rl_list *list = rl_list_create(&long_list, 2, accessor);
+	long **vals = malloc(sizeof(long *) * 7);
+	long i, position;
+	for (i = 0; i < 7; i++) {
+		vals[i] = malloc(sizeof(long));
+		*vals[i] = i + 1;
+	}
+	for (i = 0; i < 7; i++) {
+		if (0 != rl_list_add_element(list, vals[i], ascending ? i : 0)) {
+			fprintf(stderr, "Failed to add child %ld\n", i);
+			return 1;
+		}
+		if (0 == rl_list_is_balanced(list)) {
+			fprintf(stderr, "Node is not balanced after adding child %ld\n", i);
+			return 1;
+		}
+	}
+
+	// rl_print_list(list);
+
+	for (i = 0; i < 7; i++) {
+		if (1 != rl_list_find_element(list, vals[i], &position)) {
+			fprintf(stderr, "Failed to find child %ld\n", i);
+			return 1;
+		}
+		if (position != (ascending ? i : (6 - i))) {
+			fprintf(stderr, "Unexpected position of item %ld, %ld\n", (ascending ? i : (6 - i)), position);
+			return 1;
+		}
+	}
+	long nonexistent_vals[2] = {0, 8};
+	for (i = 0; i < 2; i++) {
+		if (0 != rl_list_find_element(list, &nonexistent_vals[i], NULL)) {
+			fprintf(stderr, "Failed to not find child %ld\n", i);
+			return 1;
+		}
+	}
+	fprintf(stderr, "End basic_insert_list_test\n");
+	context_destroy(list, context);
+	free(accessor);
+	free(vals);
+	free(list);
+	return 0;
+}
+
+int basic_list_serde_test()
+{
+	fprintf(stderr, "Start basic_list_serde_test\n");
+
+	init_long_list();
+	rl_test_context *context = context_create(100);
+	rl_accessor *accessor = accessor_create(context);
+	rl_list *list = rl_list_create(&long_list, 10, accessor);
+
+	long **vals = malloc(sizeof(long *) * 7);
+	long i;
+	for (i = 0; i < 7; i++) {
+		vals[i] = malloc(sizeof(long));
+		*vals[i] = i;
+	}
+	for (i = 0; i < 7; i++) {
+		if (0 != rl_list_add_element(list, vals[i], i)) {
+			fprintf(stderr, "Failed to add child %ld\n", i);
+			return 1;
+		}
+		if (0 == rl_list_is_balanced(list)) {
+			fprintf(stderr, "Node is not balanced after adding child %ld\n", i);
+			return 1;
+		}
+	}
+
+	long data_size;
+	unsigned char *data;
+	list->type->serialize(list, _select(list, list->left), &data, &data_size);
+	unsigned char expected[128];
+	memset(expected, 0, 128);
+	expected[3] = 7; // length
+	for (i = 1; i < 8; i++) {
+		expected[4 * i + 15] = i;
+	}
+	for (i = 0; i < data_size; i++) {
+		if (data[i] != expected[i]) {
+			fprintf(stderr, "Unexpected value in position %ld (got %d, expected %d)\n", i, data[i], expected[i]);
+			return 1;
+		}
+	}
+	free(data);
+
+	fprintf(stderr, "End basic_list_serde_test\n");
+
+	context_destroy(list, context);
+	free(accessor);
+	free(vals);
+	free(list);
+	return 0;
+}
+/*
+
+int basic_insert_hash_test()
+{
+	fprintf(stderr, "Start basic_insert_hash_test\n");
+	rl_test_context *context = context_create(100);
+
+	init_long_hash();
+	rl_accessor *accessor = accessor_create(context);
+	rl_list *list = rl_list_create(&long_hash, 2, accessor);
+	long **keys = malloc(sizeof(long *) * 7);
+	long **vals = malloc(sizeof(long *) * 7);
+	long i;
+	for (i = 0; i < 7; i++) {
+		keys[i] = malloc(sizeof(long));
+		vals[i] = malloc(sizeof(long));
+		*keys[i] = i + 1;
+		*vals[i] = i * 10;
+	}
+	for (i = 0; i < 7; i++) {
+		if (0 != rl_list_add_element(list, keys[i], vals[i])) {
+			fprintf(stderr, "Failed to add child %ld\n", i);
+			return 1;
+		}
+		if (0 == rl_list_is_balanced(list)) {
+			fprintf(stderr, "Node is not balanced after adding child %ld\n", i);
+			return 1;
+		}
+	}
+
+	// rl_print_list(list);
+
+	void *val;
+	for (i = 0; i < 7; i++) {
+		if (1 != rl_list_find_score(list, keys[i], &val, NULL, NULL)) {
+			fprintf(stderr, "Failed to find child %ld\n", i);
+			return 1;
+		}
+		if (val != vals[i] || *(long *)val != i * 10) {
+			fprintf(stderr, "Wrong value in position %ld (%ld)\n", i, *(long *)val);
+			return 1;
+		}
+	}
+	long nonexistent_vals[2] = {0, 8};
+	for (i = 0; i < 2; i++) {
+		if (0 != rl_list_find_score(list, &nonexistent_vals[i], NULL, NULL, NULL)) {
+			fprintf(stderr, "Failed to not find child %ld\n", i);
+			return 1;
+		}
+	}
+	fprintf(stderr, "End basic_insert_set_test\n");
+	context_destroy(list, context);
+	free(accessor);
+	for (i = 0; i < 7; i++) {
+		free(vals[i]);
+	}
+	free(vals);
+	free(keys);
+	free(list);
+	return 0;
+}
+
+int basic_delete_set_test(long elements, long element_to_remove, char *name)
+{
+	fprintf(stderr, "Start basic_delete_set_test (%ld, %ld) (%s)\n", elements, element_to_remove, name);
+	rl_test_context *context = context_create(100);
+
+	init_long_set();
+	rl_accessor *accessor = accessor_create(context);
+	rl_list *list = rl_list_create(&long_set, 2, accessor);
+	long abs_elements = labs(elements);
+	long pos_element_to_remove = abs_elements == elements ? element_to_remove : (-element_to_remove);
+	long **vals = malloc(sizeof(long *) * abs_elements);
+	long i, j;
+	for (i = 0; i < abs_elements; i++) {
+		vals[i] = malloc(sizeof(long));
+		*vals[i] = elements == abs_elements ? i + 1 : (-i - 1);
+	}
+	for (i = 0; i < abs_elements; i++) {
+		if (0 != rl_list_add_element(list, vals[i], NULL)) {
+			fprintf(stderr, "Failed to add child %ld\n", i);
+			return 1;
+		}
+		if (0 == rl_list_is_balanced(list)) {
+			fprintf(stderr, "Node is not balanced after adding child %ld\n", i);
+			return 1;
+		}
+	}
+
+	// rl_print_list(list);
+
+	if (0 != rl_list_remove_element(list, vals[pos_element_to_remove - 1])) {
+		fprintf(stderr, "Failed to remove child %ld\n", element_to_remove - 1);
+		return 1;
+	}
+
+	// rl_print_list(list);
+
+	if (0 == rl_list_is_balanced(list)) {
+		fprintf(stderr, "Node is not balanced after removing child %ld\n", element_to_remove - 1);
+		return 1;
+	}
+
+	int expected;
+	long score[1];
+	for (j = 0; j < abs_elements; j++) {
+		expected = j == pos_element_to_remove - 1;
+		if (j == pos_element_to_remove - 1) {
+			expected = 0;
+			*score = element_to_remove;
+		}
+		else {
+			expected = 1;
+			*score = *vals[j];
+		}
+		if (expected != rl_list_find_score(list, score, NULL, NULL, NULL)) {
+			fprintf(stderr, "Failed to %sfind child %ld (%ld) after deleting element %ld\n", expected == 0 ? "" : "not ", j, *vals[j], element_to_remove);
+			return 1;
+		}
+	}
+
+	fprintf(stderr, "End basic_delete_set_test (%ld, %ld)\n", elements, element_to_remove);
+	context_destroy(list, context);
+	free(accessor);
+	free(vals);
+	free(list);
+	return 0;
+}
+
+int contains_element(long element, long *elements, long size)
+{
+	long i;
+	for (i = 0; i < size; i++) {
+		if (elements[i] == element) {
+			return 1;
+		}
+	}
+	return 0;
+}
+int fuzzy_set_test(long size, long list_node_size, int _commit)
+{
+	fprintf(stderr, "Start fuzzy_set_test %ld %ld %d\n", size, list_node_size, _commit);
+	rl_test_context *context = context_create(size);
+	init_long_set();
+	rl_accessor *accessor = accessor_create(context);
+	rl_list *list = rl_list_create(&long_set, list_node_size, accessor);
+
+	long i, element, *element_copy;
+	long *elements = malloc(sizeof(long) * size);
+	long *nonelements = malloc(sizeof(long) * size);
+
+	void **flatten_scores = malloc(sizeof(void *) * size);
+	long j, flatten_size;
+
+	for (i = 0; i < size; i++) {
+		element = rand();
+		if (contains_element(element, elements, i)) {
+			i--;
+			continue;
+		}
+		else {
+			elements[i] = element;
+			element_copy = malloc(sizeof(long));
+			*element_copy = element;
+			if (0 != rl_list_add_element(list, element_copy, NULL)) {
+				fprintf(stderr, "Failed to add child %ld\n", i);
+				return 1;
+			}
+			if (0 == rl_list_is_balanced(list)) {
+				fprintf(stderr, "Node is not balanced after adding child %ld\n", i);
+				return 1;
+			}
+		}
+		flatten_size = 0;
+		rl_flatten_list(list, &flatten_scores, &flatten_size);
+		for (j = 1; j < flatten_size; j++) {
+			if (*(long *)flatten_scores[j - 1] >= *(long *)flatten_scores[j]) {
+				fprintf(stderr, "Tree is in a bad state in element %ld after adding child %ld\n", j, i);
+				return 1;
+			}
+		}
+		if (_commit) {
+			commit(list);
+		}
+	}
+
+	// rl_print_list(list);
+
+	for (i = 0; i < size; i++) {
+		element = rand();
+		if (contains_element(element, elements, size) || contains_element(element, nonelements, i)) {
+			i--;
+		}
+		else {
+			nonelements[i] = element;
+		}
+	}
+
+	for (i = 0; i < size; i++) {
+		if (1 != rl_list_find_score(list, &elements[i], NULL, NULL, NULL)) {
+			fprintf(stderr, "Failed to find child %ld (%ld)\n", i, elements[i]);
+			return 1;
+		}
+		if (0 != rl_list_find_score(list, &nonelements[i], NULL, NULL, NULL)) {
+			fprintf(stderr, "Failed to not find child %ld\n", i);
+			return 1;
+		}
+	}
+	fprintf(stderr, "End fuzzy_set_test\n");
+
+	context_destroy(list, context);
+	free(elements);
+	free(nonelements);
+	free(flatten_scores);
+	free(accessor);
+	free(list);
+	return 0;
+}
+
+int fuzzy_hash_test(long size, long list_node_size, int _commit)
+{
+	fprintf(stderr, "Start fuzzy_hash_test %ld %ld %d\n", size, list_node_size, _commit);
+	rl_test_context *context = context_create(size);
+	init_long_hash();
+	rl_accessor *accessor = accessor_create(context);
+	rl_list *list = rl_list_create(&long_hash, list_node_size, accessor);
+
+	long i, element, value, *element_copy, *value_copy;
+	long *elements = malloc(sizeof(long) * size);
+	long *nonelements = malloc(sizeof(long) * size);
+	long *values = malloc(sizeof(long) * size);
+
+	void **flatten_scores = malloc(sizeof(void *) * size);
+	long j, flatten_size;
+
+	void *val;
+
+	for (i = 0; i < size; i++) {
+		element = rand();
+		value = rand();
+		if (contains_element(element, elements, i)) {
+			i--;
+			continue;
+		}
+		else {
+			elements[i] = element;
+			element_copy = malloc(sizeof(long));
+			*element_copy = element;
+			values[i] = value;
+			value_copy = malloc(sizeof(long));
+			*value_copy = value;
+			if (0 != rl_list_add_element(list, element_copy, value_copy)) {
+				fprintf(stderr, "Failed to add child %ld\n", i);
+				return 1;
+			}
+			if (0 == rl_list_is_balanced(list)) {
+				fprintf(stderr, "Node is not balanced after adding child %ld (%ld)\n", i, value);
+				return 1;
+			}
+		}
+		flatten_size = 0;
+		rl_flatten_list(list, &flatten_scores, &flatten_size);
+		for (j = 1; j < flatten_size; j++) {
+			if (*(long *)flatten_scores[j - 1] >= *(long *)flatten_scores[j]) {
+				fprintf(stderr, "Tree is in a bad state in element %ld after adding child %ld\n", j, i);
+				return 1;
+			}
+		}
+		if (_commit) {
+			commit(list);
+		}
+	}
+
+	// rl_print_list(list);
+
+	for (i = 0; i < size; i++) {
+		element = rand();
+		if (contains_element(element, elements, size) || contains_element(element, nonelements, i)) {
+			i--;
+		}
+		else {
+			nonelements[i] = element;
+		}
+	}
+
+	for (i = 0; i < size; i++) {
+		if (1 != rl_list_find_score(list, &elements[i], &val, NULL, NULL)) {
+			fprintf(stderr, "Failed to find child %ld (%ld)\n", i, elements[i]);
+			return 1;
+		}
+		if (*(long *)val != values[i]) {
+			fprintf(stderr, "Value doesn't match expected value at position %ld (%ld) (%ld != %ld)\n", i, elements[i], *(long *)val, values[i]);
+			return 1;
+		}
+		if (0 != rl_list_find_score(list, &nonelements[i], NULL, NULL, NULL)) {
+			fprintf(stderr, "Failed to not find child %ld\n", i);
+			return 1;
+		}
+	}
+	fprintf(stderr, "End fuzzy_hash_test\n");
+
+	context_destroy(list, context);
+	free(values);
+	free(elements);
+	free(nonelements);
+	free(flatten_scores);
+	free(accessor);
+	free(list);
+	return 0;
+}
+
+int fuzzy_set_delete_test(long size, long list_node_size, int _commit)
+{
+	fprintf(stderr, "Start fuzzy_set_delete_test %ld %ld %d\n", size, list_node_size, _commit);
+	rl_test_context *context = context_create(size);
+	init_long_set();
+	rl_accessor *accessor = accessor_create(context);
+	rl_list *list = rl_list_create(&long_set, list_node_size, accessor);
+
+	long i, element, *element_copy;
+	long *elements = malloc(sizeof(long) * size);
+
+	for (i = 0; i < size; i++) {
+		element = rand();
+		if (contains_element(element, elements, i)) {
+			i--;
+			continue;
+		}
+		else {
+			elements[i] = element;
+			element_copy = malloc(sizeof(long));
+			*element_copy = element;
+			if (0 != rl_list_add_element(list, element_copy, NULL)) {
+				fprintf(stderr, "Failed to add child %ld\n", i);
+				return 1;
+			}
+			if (0 == rl_list_is_balanced(list)) {
+				fprintf(stderr, "Node is not balanced after adding child %ld\n", i);
+				return 1;
+			}
+		}
+		if (_commit) {
+			commit(list);
+		}
+	}
+
+	// rl_print_list(list);
+
+	while (size > 0) {
+		i = (long)(((float)rand() / RAND_MAX) * size);
+		if (0 != rl_list_remove_element(list, &elements[i])) {
+			fprintf(stderr, "Failed to delete child %ld\n", elements[i]);
+			return 1;
+		}
+
+		// rl_print_list(list);
+
+		if (0 == rl_list_is_balanced(list)) {
+			fprintf(stderr, "Node is not balanced after deleting child %ld\n", i);
+			return 1;
+		}
+		elements[i] = elements[size - 1];
+		size--;
+	}
+	fprintf(stderr, "End fuzzy_set_delete_test\n");
+
+	context_destroy(list, context);
+	free(elements);
+	free(accessor);
+	free(list);
+	return 0;
+}
+
+*/
+int main()
+{
+	int i, j, k;
+	long size, list_node_size;
+	int commit;
+	int retval = 0;
+	retval = basic_insert_list_test(1);
+	if (retval != 0) {
+		goto cleanup;
+	}
+	retval = basic_insert_list_test(0);
+	if (retval != 0) {
+		goto cleanup;
+	}
+	retval = basic_list_serde_test();
+	if (retval != 0) {
+		goto cleanup;
+	}
+
+cleanup:
+	return retval;
+}

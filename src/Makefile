@@ -14,14 +14,15 @@ all: buildtest
 .c.o:
 	$(CC) $(ARCH) $(DEBUG) $(CFLAGS) -c $<
 
-librlite.a: btree.o util.o
-	ar -cq librlite.a btree.o util.o
+librlite.a: list.o btree.o util.o
+	ar -cq librlite.a list.o btree.o util.o
 
-buildtest: btree-test.o librlite.a
+buildtest: list-test.o btree-test.o librlite.a
 	$(CC) $(DEBUG) $(CFLAGS) -o btree-test btree-test.o librlite.a -lm
+	$(CC) $(DEBUG) $(CFLAGS) -o list-test list-test.o librlite.a -lm
 
 test: buildtest
-	./btree-test
+	./btree-test && ./list-test
 
 clean:
 	rm -rf btree-test *.o *.a rlite-*.dSYM
