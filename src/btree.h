@@ -4,8 +4,6 @@
 typedef struct {
 	int score_size;
 	int value_size;
-	void *(*score_create)(void *btree);
-	void (*score_destroy)(void *btree, void *score);
 	long (*serialize_length)(void *btree);
 	long (*serialize)(void *btree, void *node, unsigned char **data, long *data_size);
 	long (*deserialize)(void *btree, unsigned char *data, void **node);
