@@ -293,9 +293,6 @@ int basic_insert_hash_test()
 	fprintf(stderr, "End basic_insert_set_test\n");
 	context_destroy(btree, context);
 	free(accessor);
-	for (i = 0; i < 7; i++) {
-		free(vals[i]);
-	}
 	free(vals);
 	free(keys);
 	free(btree);
