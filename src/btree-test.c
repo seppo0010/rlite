@@ -620,71 +620,69 @@ int main()
 	long size, btree_node_size;
 	int commit;
 	int retval = 0;
-	/*
-		retval = basic_insert_set_test();
+	retval = basic_insert_set_test();
+	if (retval != 0) {
+		goto cleanup;
+	}
+	retval = basic_insert_hash_test();
+	if (retval != 0) {
+		goto cleanup;
+	}
+
+	long delete_tests[DELETE_TESTS_COUNT][2] = {
+		{8, 8},
+		{ -8, -5},
+		{8, 5},
+		{8, 3},
+		{ -8, -6},
+		{8, 6},
+		{15, 8},
+	};
+	char *delete_tests_name[DELETE_TESTS_COUNT] = {
+		"delete leaf node, no rebalance",
+		"delete leaf node, rebalance from sibling in the right",
+		"delete leaf node, rebalance from sibling in the left",
+		"delete leaf node, rebalance with merge, change root",
+		"delete internal node, no rebalance",
+		"delete internal node, rebalance leaf",
+		"delete internal node, rebalance two levels",
+	};
+	for (i = 0; i < DELETE_TESTS_COUNT; i++) {
+		retval = basic_delete_set_test(delete_tests[i][0], delete_tests[i][1], delete_tests_name[i]);
 		if (retval != 0) {
 			goto cleanup;
 		}
-		retval = basic_insert_hash_test();
-		if (retval != 0) {
-			goto cleanup;
-		}
+	}
 
-		long delete_tests[DELETE_TESTS_COUNT][2] = {
-			{8, 8},
-			{ -8, -5},
-			{8, 5},
-			{8, 3},
-			{ -8, -6},
-			{8, 6},
-			{15, 8},
-		};
-		char *delete_tests_name[DELETE_TESTS_COUNT] = {
-			"delete leaf node, no rebalance",
-			"delete leaf node, rebalance from sibling in the right",
-			"delete leaf node, rebalance from sibling in the left",
-			"delete leaf node, rebalance with merge, change root",
-			"delete internal node, no rebalance",
-			"delete internal node, rebalance leaf",
-			"delete internal node, rebalance two levels",
-		};
-		for (i = 0; i < DELETE_TESTS_COUNT; i++) {
-			retval = basic_delete_set_test(delete_tests[i][0], delete_tests[i][1], delete_tests_name[i]);
-			if (retval != 0) {
-				goto cleanup;
-			}
-		}
-
-		for (i = 0; i < 2; i++) {
-			size = i == 0 ? 100 : 200;
-			for (j = 0; j < 2; j++) {
-				btree_node_size = j == 0 ? 2 : 10;
-				for (k = 0; k < 2; k++) {
-					commit = k;
-					srand(1);
-					retval = fuzzy_set_test(size, btree_node_size, commit);
-					if (retval != 0) {
-						goto cleanup;
-					}
+	for (i = 0; i < 2; i++) {
+		size = i == 0 ? 100 : 200;
+		for (j = 0; j < 2; j++) {
+			btree_node_size = j == 0 ? 2 : 10;
+			for (k = 0; k < 2; k++) {
+				commit = k;
+				srand(1);
+				retval = fuzzy_set_test(size, btree_node_size, commit);
+				if (retval != 0) {
+					goto cleanup;
 				}
 			}
 		}
+	}
 
-		for (i = 0; i < 2; i++) {
-			size = i == 0 ? 100 : 200;
-			for (j = 0; j < 2; j++) {
-				btree_node_size = j == 0 ? 2 : 10;
-				for (k = 0; k < 2; k++) {
-					commit = k;
-					srand(1);
-					retval = fuzzy_set_delete_test(size, btree_node_size, commit);
-					if (retval != 0) {
-						goto cleanup;
-					}
+	for (i = 0; i < 2; i++) {
+		size = i == 0 ? 100 : 200;
+		for (j = 0; j < 2; j++) {
+			btree_node_size = j == 0 ? 2 : 10;
+			for (k = 0; k < 2; k++) {
+				commit = k;
+				srand(1);
+				retval = fuzzy_set_delete_test(size, btree_node_size, commit);
+				if (retval != 0) {
+					goto cleanup;
 				}
 			}
 		}
-	*/
+	}
 	for (i = 0; i < 2; i++) {
 		size = i == 0 ? 100 : 200;
 		for (j = 0; j < 2; j++) {
