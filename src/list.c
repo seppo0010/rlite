@@ -377,7 +377,7 @@ cleanup:
 
 int rl_list_is_balanced(rl_list *list)
 {
-	long j, i = 0, number = list->left, size = 0;
+	long i = 0, number = list->left, size = 0;
 	long prev_size;
 	long max_node = (list->size / list->max_node_size + 1) * 2;
 	long *right = malloc(sizeof(long) * max_node);
