@@ -269,8 +269,44 @@ int rl_list_remove_element(rl_list *list, long position)
 
 int rl_list_is_balanced(rl_list *list)
 {
-	list = list;
-	return 1;
+	long j, i = 0, number = list->left, size = 0;
+	long prev_size;
+	long max_node = (list->size / list->max_node_size + 1) * 2;
+	long *right = malloc(sizeof(long) * max_node);
+	long *left = malloc(sizeof(long) * max_node);
+	int retval = 1;
+	rl_list_node *node;
+	while (number != 0) {
+		node = list->accessor->select(list, number);
+		size += node->size;
+		left[i] = node->left;
+		right[i] = node->right;
+		if (i != 0) {
+			if (node->size + prev_size < list->max_node_size) {
+				fprintf(stderr, "Two continous node could be merged\n");
+				retval = 0;
+				goto cleanup;
+			}
+		}
+		prev_size = node->size;
+		number = node->right;
+		if (i >= 2 && right[i - 2] != left[i]) {
+			fprintf(stderr, "Left and right pointers mismatch at position %ld\n", i);
+			retval = 0;
+			goto cleanup;
+		}
+		i++;
+	}
+
+	if (size != list->size) {
+		fprintf(stderr, "Expected size %ld, got %ld\n", size, list->size);
+		retval = 0;
+		goto cleanup;
+	}
+cleanup:
+	free(right);
+	free(left);
+	return retval;
 }
 
 void rl_print_list(rl_list *list)
