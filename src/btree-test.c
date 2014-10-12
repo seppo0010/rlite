@@ -10,30 +10,31 @@ typedef struct rl_test_context {
 	rl_btree_node **active_nodes;
 } rl_test_context;
 
-static rl_btree_node *_select(rl_btree *btree, long _number)
+static int _select(rl_btree *btree, long _number, rl_btree_node **_node)
 {
 	rl_test_context *context = (rl_test_context *)btree->accessor->context;
 	long number = _number - 1;
 	if (!context->active_nodes[number]) {
 		rl_btree_node *node;
-		if (0 != btree->type->deserialize(btree, context->serialized_nodes[number], &node)) {
+		if (RL_OK != btree->type->deserialize(btree, context->serialized_nodes[number], &node)) {
 			fprintf(stderr, "Failed to deserialize node %ld\n", number);
-			return NULL;
+			return RL_INVALID_STATE;
 		}
 		context->active_nodes[number] = (rl_btree_node *)node;
 	}
-	return context->active_nodes[number];
+	*_node = context->active_nodes[number];
+	return RL_OK;
 }
 
-static long insert(rl_btree *btree, long *number, rl_btree_node *node)
+static int insert(rl_btree *btree, long *number, rl_btree_node *node)
 {
 	rl_test_context *context = (rl_test_context *)btree->accessor->context;
 	context->active_nodes[context->size] = node;
 	*number = ++context->size;
-	return 0;
+	return RL_OK;
 }
 
-static long update(rl_btree *btree, long *number, rl_btree_node *node)
+static int update(rl_btree *btree, long *number, rl_btree_node *node)
 {
 	rl_test_context *context = (rl_test_context *)btree->accessor->context;
 	long i;
@@ -42,13 +43,13 @@ static long update(rl_btree *btree, long *number, rl_btree_node *node)
 			if (number) {
 				*number = i + 1;
 			}
-			return 0;
+			return RL_OK;
 		}
 	}
-	return -1;
+	return RL_INVALID_PARAMETERS;
 }
 
-static long _remove(rl_btree *btree, rl_btree_node *node)
+static int _remove(rl_btree *btree, rl_btree_node *node)
 {
 	rl_test_context *context = (rl_test_context *)btree->accessor->context;
 	long i;
@@ -57,24 +58,28 @@ static long _remove(rl_btree *btree, rl_btree_node *node)
 			context->active_nodes[i] = NULL;
 			free(context->serialized_nodes[i]);
 			context->serialized_nodes[i] = NULL;
-			return 0;
+			return RL_OK;
 		}
 	}
-	return -1;
+	return RL_INVALID_PARAMETERS;
 }
 
-static long list(rl_btree *btree, rl_btree_node *** nodes, long *size)
+static int list(rl_btree *btree, rl_btree_node *** nodes, long *size)
 {
 	rl_test_context *context = (rl_test_context *)btree->accessor->context;
 	long i;
+	int retval = RL_OK;
 	for (i = 0; i < context->size; i++) {
-		*nodes[i] = _select(btree, i);
+		retval = _select(btree, i, nodes[i]);
+		if (retval != RL_OK) {
+			break;
+		}
 	}
 	*size = context->size;
-	return 0;
+	return retval;
 }
 
-static long discard(rl_btree *btree)
+static int discard(rl_btree *btree)
 {
 	rl_test_context *context = (rl_test_context *)btree->accessor->context;
 	long i;
@@ -84,10 +89,10 @@ static long discard(rl_btree *btree)
 			context->active_nodes[i] = NULL;
 		}
 	}
-	return 0;
+	return RL_OK;
 }
 
-static long commit(rl_btree *btree)
+static int commit(rl_btree *btree)
 {
 	rl_test_context *context = (rl_test_context *)btree->accessor->context;
 	long i;
@@ -101,15 +106,27 @@ static long commit(rl_btree *btree)
 			context->active_nodes[i] = NULL;
 		}
 	}
-	return 0;
+	return RL_OK;
 }
 
 rl_test_context *context_create(long size)
 {
 	rl_test_context *context = malloc(sizeof(rl_test_context));
+	if (!context) {
+		return NULL;
+	}
 	context->size = 0;
 	context->serialized_nodes = calloc(size, sizeof(unsigned char **));
+	if (!context->serialized_nodes) {
+		free(context);
+		return NULL;
+	}
 	context->active_nodes = calloc(size, sizeof(rl_btree_node *));
+	if (!context->active_nodes) {
+		free(context->serialized_nodes);
+		free(context);
+		return NULL;
+	}
 	return context;
 }
 
@@ -151,7 +168,10 @@ int basic_set_serde_test()
 	rl_test_context *context = context_create(100);
 	rl_accessor *accessor = accessor_create(context);
 	rl_btree *btree;
-	rl_btree_create(&btree, &long_set, 10, accessor);
+	rl_btree_node *node;
+	if (rl_btree_create(&btree, &long_set, 10, accessor) != RL_OK) {
+		return 1;
+	}
 
 	long **vals = malloc(sizeof(long *) * 7);
 	long i;
@@ -172,7 +192,12 @@ int basic_set_serde_test()
 
 	long data_size;
 	unsigned char *data;
-	btree->type->serialize(btree, _select(btree, btree->root), &data, &data_size);
+	if (_select(btree, btree->root, &node) != RL_OK) {
+		return 1;
+	}
+	if (btree->type->serialize(btree, node, &data, &data_size) != RL_OK) {
+		return 1;
+	}
 	unsigned char expected[128];
 	memset(expected, 0, 128);
 	expected[3] = 7; // length
@@ -204,7 +229,9 @@ int basic_insert_set_test()
 	init_long_set();
 	rl_accessor *accessor = accessor_create(context);
 	rl_btree *btree;
-	rl_btree_create(&btree, &long_set, 2, accessor);
+	if (rl_btree_create(&btree, &long_set, 2, accessor) != RL_OK) {
+		return 1;
+	}
 	long **vals = malloc(sizeof(long *) * 7);
 	long i;
 	for (i = 0; i < 7; i++) {
@@ -212,7 +239,7 @@ int basic_insert_set_test()
 		*vals[i] = i + 1;
 	}
 	for (i = 0; i < 7; i++) {
-		if (0 != rl_btree_add_element(btree, vals[i], NULL)) {
+		if (RL_OK != rl_btree_add_element(btree, vals[i], NULL)) {
 			fprintf(stderr, "Failed to add child %ld\n", i);
 			return 1;
 		}
@@ -251,7 +278,9 @@ int basic_insert_hash_test()
 	init_long_hash();
 	rl_accessor *accessor = accessor_create(context);
 	rl_btree *btree;
-	rl_btree_create(&btree, &long_hash, 2, accessor);
+	if (rl_btree_create(&btree, &long_hash, 2, accessor) != RL_OK) {
+		return 1;
+	}
 	long **keys = malloc(sizeof(long *) * 7);
 	long **vals = malloc(sizeof(long *) * 7);
 	long i;
@@ -262,7 +291,7 @@ int basic_insert_hash_test()
 		*vals[i] = i * 10;
 	}
 	for (i = 0; i < 7; i++) {
-		if (0 != rl_btree_add_element(btree, keys[i], vals[i])) {
+		if (RL_OK != rl_btree_add_element(btree, keys[i], vals[i])) {
 			fprintf(stderr, "Failed to add child %ld\n", i);
 			return 1;
 		}
@@ -309,7 +338,9 @@ int basic_delete_set_test(long elements, long element_to_remove, char *name)
 	init_long_set();
 	rl_accessor *accessor = accessor_create(context);
 	rl_btree *btree;
-	rl_btree_create(&btree, &long_set, 2, accessor);
+	if (rl_btree_create(&btree, &long_set, 2, accessor) != RL_OK) {
+		return 1;
+	}
 	long abs_elements = labs(elements);
 	long pos_element_to_remove = abs_elements == elements ? element_to_remove : (-element_to_remove);
 	long **vals = malloc(sizeof(long *) * abs_elements);
@@ -319,7 +350,7 @@ int basic_delete_set_test(long elements, long element_to_remove, char *name)
 		*vals[i] = elements == abs_elements ? i + 1 : (-i - 1);
 	}
 	for (i = 0; i < abs_elements; i++) {
-		if (0 != rl_btree_add_element(btree, vals[i], NULL)) {
+		if (RL_OK != rl_btree_add_element(btree, vals[i], NULL)) {
 			fprintf(stderr, "Failed to add child %ld\n", i);
 			return 1;
 		}
@@ -331,7 +362,7 @@ int basic_delete_set_test(long elements, long element_to_remove, char *name)
 
 	// rl_print_btree(btree);
 
-	if (0 != rl_btree_remove_element(btree, vals[pos_element_to_remove - 1])) {
+	if (RL_OK != rl_btree_remove_element(btree, vals[pos_element_to_remove - 1])) {
 		fprintf(stderr, "Failed to remove child %ld\n", element_to_remove - 1);
 		return 1;
 	}
@@ -386,7 +417,9 @@ int fuzzy_set_test(long size, long btree_node_size, int _commit)
 	init_long_set();
 	rl_accessor *accessor = accessor_create(context);
 	rl_btree *btree;
-	rl_btree_create(&btree, &long_set, btree_node_size, accessor);
+	if (rl_btree_create(&btree, &long_set, btree_node_size, accessor) != RL_OK) {
+		return 1;
+	}
 
 	long i, element, *element_copy;
 	long *elements = malloc(sizeof(long) * size);
@@ -405,7 +438,7 @@ int fuzzy_set_test(long size, long btree_node_size, int _commit)
 			elements[i] = element;
 			element_copy = malloc(sizeof(long));
 			*element_copy = element;
-			if (0 != rl_btree_add_element(btree, element_copy, NULL)) {
+			if (RL_OK != rl_btree_add_element(btree, element_copy, NULL)) {
 				fprintf(stderr, "Failed to add child %ld\n", i);
 				return 1;
 			}
@@ -426,7 +459,9 @@ int fuzzy_set_test(long size, long btree_node_size, int _commit)
 			}
 		}
 		if (_commit) {
-			commit(btree);
+			if (RL_OK != commit(btree)) {
+				return 1;
+			}
 		}
 	}
 
@@ -470,7 +505,9 @@ int fuzzy_hash_test(long size, long btree_node_size, int _commit)
 	init_long_hash();
 	rl_accessor *accessor = accessor_create(context);
 	rl_btree *btree;
-	rl_btree_create(&btree, &long_hash, btree_node_size, accessor);
+	if (rl_btree_create(&btree, &long_hash, btree_node_size, accessor) != RL_OK) {
+		return 1;
+	}
 
 	long i, element, value, *element_copy, *value_copy;
 	long *elements = malloc(sizeof(long) * size);
@@ -496,7 +533,7 @@ int fuzzy_hash_test(long size, long btree_node_size, int _commit)
 			values[i] = value;
 			value_copy = malloc(sizeof(long));
 			*value_copy = value;
-			if (0 != rl_btree_add_element(btree, element_copy, value_copy)) {
+			if (RL_OK != rl_btree_add_element(btree, element_copy, value_copy)) {
 				fprintf(stderr, "Failed to add child %ld\n", i);
 				return 1;
 			}
@@ -517,7 +554,9 @@ int fuzzy_hash_test(long size, long btree_node_size, int _commit)
 			}
 		}
 		if (_commit) {
-			commit(btree);
+			if (RL_OK != commit(btree)) {
+				return 1;
+			}
 		}
 	}
 
@@ -566,7 +605,9 @@ int fuzzy_set_delete_test(long size, long btree_node_size, int _commit)
 	init_long_set();
 	rl_accessor *accessor = accessor_create(context);
 	rl_btree *btree;
-	rl_btree_create(&btree, &long_set, btree_node_size, accessor);
+	if (rl_btree_create(&btree, &long_set, btree_node_size, accessor) != RL_OK) {
+		return 1;
+	}
 
 	long i, element, *element_copy;
 	long *elements = malloc(sizeof(long) * size);
@@ -581,7 +622,7 @@ int fuzzy_set_delete_test(long size, long btree_node_size, int _commit)
 			elements[i] = element;
 			element_copy = malloc(sizeof(long));
 			*element_copy = element;
-			if (0 != rl_btree_add_element(btree, element_copy, NULL)) {
+			if (RL_OK != rl_btree_add_element(btree, element_copy, NULL)) {
 				fprintf(stderr, "Failed to add child %ld\n", i);
 				return 1;
 			}
@@ -591,7 +632,9 @@ int fuzzy_set_delete_test(long size, long btree_node_size, int _commit)
 			}
 		}
 		if (_commit) {
-			commit(btree);
+			if (RL_OK != commit(btree)) {
+				return 1;
+			}
 		}
 	}
 
@@ -599,7 +642,7 @@ int fuzzy_set_delete_test(long size, long btree_node_size, int _commit)
 
 	while (size > 0) {
 		i = (long)(((float)rand() / RAND_MAX) * size);
-		if (0 != rl_btree_remove_element(btree, &elements[i])) {
+		if (RL_OK != rl_btree_remove_element(btree, &elements[i])) {
 			fprintf(stderr, "Failed to delete child %ld\n", elements[i]);
 			return 1;
 		}

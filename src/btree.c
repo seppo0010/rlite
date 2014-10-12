@@ -309,7 +309,11 @@ int rl_btree_find_score(rl_btree *btree, void *score, void **value, rl_btree_nod
 	if ((!nodes && positions) || (nodes && !positions)) {
 		return RL_INVALID_PARAMETERS;
 	}
-	rl_btree_node *node = btree->accessor->select(btree, btree->root);
+	rl_btree_node *node;
+	int retval = btree->accessor->select(btree, btree->root, &node);
+	if (retval != RL_OK) {
+		goto cleanup;
+	}
 	long i, pos, min, max;
 	int cmp = 0;
 	for (i = 0; i < btree->height; i++) {
@@ -334,7 +338,8 @@ int rl_btree_find_score(rl_btree *btree, void *score, void **value, rl_btree_nod
 						(*nodes)[i] = NULL;
 					}
 				}
-				return RL_FOUND;
+				retval = RL_FOUND;
+				goto cleanup;
 			}
 			else if (cmp > 0) {
 				if (max == pos) {
@@ -361,10 +366,15 @@ int rl_btree_find_score(rl_btree *btree, void *score, void **value, rl_btree_nod
 			(*positions)[i] = pos;
 		}
 		if (node->children) {
-			node = btree->accessor->select(btree, node->children[pos]);
+			retval = btree->accessor->select(btree, node->children[pos], &node);
+			if (retval != RL_OK) {
+				goto cleanup;
+			}
 		}
 	}
-	return RL_NOT_FOUND;
+	retval = RL_NOT_FOUND;
+cleanup:
+	return retval;
 }
 
 int rl_btree_add_element(rl_btree *btree, void *score, void *value)
@@ -503,7 +513,10 @@ int rl_btree_add_element(rl_btree *btree, void *score, void *value)
 			retval = RL_OUT_OF_MEMORY;
 			goto cleanup;
 		}
-		btree->accessor->update(btree, &node->children[0], old_root);
+		retval = btree->accessor->update(btree, &node->children[0], old_root);
+		if (retval != RL_OK) {
+			goto cleanup;
+		}
 		node->children[1] = child;
 		btree->accessor->insert(btree, &btree->root, node);
 		btree->height++;
@@ -550,7 +563,10 @@ int rl_btree_remove_element(rl_btree *btree, void *score)
 			j = i;
 			child_node = node;
 			for (; i < btree->height - 1; i++) {
-				child_node = btree->accessor->select(btree, child_node->children[positions[i]]);
+				retval = btree->accessor->select(btree, child_node->children[positions[i]], &child_node );
+				if (retval != RL_OK) {
+					goto cleanup;
+				}
 				nodes[i + 1] = child_node;
 				positions[i + 1] = child_node->size;
 			}
@@ -567,8 +583,14 @@ int rl_btree_remove_element(rl_btree *btree, void *score)
 			if (node->values) {
 				node->values[positions[j]] = child_node->values[child_node->size];
 			}
-			btree->accessor->update(btree, NULL, node);
-			btree->accessor->update(btree, NULL, child_node);
+			retval = btree->accessor->update(btree, NULL, node);
+			if (retval != RL_OK) {
+				goto cleanup;
+			}
+			retval = btree->accessor->update(btree, NULL, child_node);
+			if (retval != RL_OK) {
+				goto cleanup;
+			}
 			break;
 		}
 		else {
@@ -578,14 +600,27 @@ int rl_btree_remove_element(rl_btree *btree, void *score)
 			}
 
 			if (--node->size > 0) {
-				btree->accessor->update(btree, NULL, node);
+				retval = btree->accessor->update(btree, NULL, node);
+				if (retval != RL_OK) {
+					goto cleanup;
+				}
 			}
 			else {
 				if (i == 0 && node->children) {
 					// we have an empty root, promote the only child if any
 					btree->height--;
-					btree->accessor->update(btree, &btree->root, btree->accessor->select(btree, node->children[0]));
-					btree->accessor->remove(btree, node);
+					retval = btree->accessor->select(btree, node->children[0], &parent_node);
+					if (retval != RL_OK) {
+						goto cleanup;
+					}
+					retval = btree->accessor->update(btree, &btree->root, parent_node);
+					if (retval != RL_OK) {
+						goto cleanup;
+					}
+					retval = btree->accessor->remove(btree, node);
+					if (retval != RL_OK) {
+						goto cleanup;
+					}
 					retval = rl_btree_node_destroy(btree, node);
 					if (retval != RL_OK) {
 						goto cleanup;
@@ -618,7 +653,10 @@ int rl_btree_remove_element(rl_btree *btree, void *score)
 				goto cleanup;
 			}
 			if (positions[i - 1] > 0) {
-				sibling_node = btree->accessor->select(btree, parent_node->children[positions[i - 1] - 1]);
+				retval = btree->accessor->select(btree, parent_node->children[positions[i - 1] - 1], &sibling_node);
+				if (retval != RL_OK) {
+					goto cleanup;
+				}
 				if (sibling_node->size > btree->max_node_size / 2) {
 					memmove_dbg(&node->scores[1], &node->scores[0], sizeof(void *) * (node->size), __LINE__);
 					if (node->values) {
@@ -640,13 +678,22 @@ int rl_btree_remove_element(rl_btree *btree, void *score)
 
 					sibling_node->size--;
 					node->size++;
-					btree->accessor->update(btree, NULL, sibling_node);
-					btree->accessor->update(btree, NULL, node);
+					retval = btree->accessor->update(btree, NULL, sibling_node);
+					if (retval != RL_OK) {
+						goto cleanup;
+					}
+					retval = btree->accessor->update(btree, NULL, node);
+					if (retval != RL_OK) {
+						goto cleanup;
+					}
 					break;
 				}
 			}
 			if (positions[i - 1] < parent_node->size) {
-				sibling_node = btree->accessor->select(btree, parent_node->children[positions[i - 1] + 1]);
+				retval = btree->accessor->select(btree, parent_node->children[positions[i - 1] + 1], &sibling_node);
+				if (retval != RL_OK) {
+					return retval;
+				}
 				if (sibling_node->size > btree->max_node_size / 2) {
 					node->scores[node->size] = parent_node->scores[positions[i - 1]];
 					if (node->values) {
@@ -669,8 +716,14 @@ int rl_btree_remove_element(rl_btree *btree, void *score)
 
 					sibling_node->size--;
 					node->size++;
-					btree->accessor->update(btree, NULL, sibling_node);
-					btree->accessor->update(btree, NULL, node);
+					retval = btree->accessor->update(btree, NULL, sibling_node);
+					if (retval != RL_OK) {
+						goto cleanup;
+					}
+					retval = btree->accessor->update(btree, NULL, node);
+					if (retval != RL_OK) {
+						goto cleanup;
+					}
 					break;
 				}
 			}
@@ -678,7 +731,10 @@ int rl_btree_remove_element(rl_btree *btree, void *score)
 			// not taking from either slibing, need to merge with either
 			// if either of them exists, they have the minimum number of elements
 			if (positions[i - 1] > 0) {
-				sibling_node = btree->accessor->select(btree, parent_node->children[positions[i - 1] - 1]);
+				retval = btree->accessor->select(btree, parent_node->children[positions[i - 1] - 1], &sibling_node );
+				if (retval != RL_OK) {
+					goto cleanup;
+				}
 				sibling_node->scores[sibling_node->size] = parent_node->scores[positions[i - 1] - 1];
 				if (parent_node->values) {
 					sibling_node->values[sibling_node->size] = parent_node->values[positions[i - 1] - 1];
@@ -700,9 +756,18 @@ int rl_btree_remove_element(rl_btree *btree, void *score)
 				}
 				parent_node->size--;
 				sibling_node->size += 1 + node->size;
-				btree->accessor->update(btree, NULL, sibling_node);
-				btree->accessor->update(btree, NULL, parent_node);
-				btree->accessor->remove(btree, node);
+				retval = btree->accessor->update(btree, NULL, sibling_node);
+				if (retval != RL_OK) {
+					goto cleanup;
+				}
+				retval = btree->accessor->update(btree, NULL, parent_node);
+				if (retval != RL_OK) {
+					goto cleanup;
+				}
+				retval = btree->accessor->remove(btree, node);
+				if (retval != RL_OK) {
+					goto cleanup;
+				}
 				free(node->scores);
 				node->scores = NULL;
 				retval = rl_btree_node_destroy(btree, node);
@@ -712,7 +777,10 @@ int rl_btree_remove_element(rl_btree *btree, void *score)
 				continue;
 			}
 			if (positions[i - 1] < parent_node->size) {
-				sibling_node = btree->accessor->select(btree, parent_node->children[positions[i - 1] + 1]);
+				retval = btree->accessor->select(btree, parent_node->children[positions[i - 1] + 1], &sibling_node);
+				if (retval != RL_OK) {
+					goto cleanup;
+				}
 				node->scores[node->size] = parent_node->scores[positions[i - 1]];
 				if (parent_node->values) {
 					node->values[node->size] = parent_node->values[positions[i - 1]];
@@ -734,8 +802,14 @@ int rl_btree_remove_element(rl_btree *btree, void *score)
 
 				parent_node->size--;
 				node->size += 1 + sibling_node->size;
-				btree->accessor->update(btree, NULL, node);
-				btree->accessor->update(btree, NULL, parent_node);
+				retval = btree->accessor->update(btree, NULL, node);
+				if (retval != RL_OK) {
+					goto cleanup;
+				}
+				retval = btree->accessor->update(btree, NULL, parent_node);
+				if (retval != RL_OK) {
+					goto cleanup;
+				}
 				// freeing manually scores before calling destroy to avoid deleting scores that were handed over to `node`
 				free(sibling_node->scores);
 				sibling_node->scores = NULL;
@@ -768,9 +842,14 @@ int rl_btree_node_is_balanced(rl_btree *btree, rl_btree_node *node, int is_root)
 	}
 
 	int i, retval;
+	rl_btree_node *child;
 	for (i = 0; i < node->size + 1; i++) {
 		if (node->children) {
-			retval = rl_btree_node_is_balanced(btree, btree->accessor->select(btree, node->children[i]), 0);
+			retval = btree->accessor->select(btree, node->children[i], &child);
+			if (retval != RL_OK) {
+				break;
+			}
+			retval = rl_btree_node_is_balanced(btree, child, 0);
 			if (retval != RL_OK) {
 				break;
 			}
@@ -782,7 +861,12 @@ int rl_btree_node_is_balanced(rl_btree *btree, rl_btree_node *node, int is_root)
 int rl_btree_is_balanced(rl_btree *btree)
 {
 	void **scores = NULL;
-	int retval = rl_btree_node_is_balanced(btree, btree->accessor->select(btree, btree->root), 1);
+	rl_btree_node *node;
+	int retval = btree->accessor->select(btree, btree->root, &node);
+	if (retval != RL_OK) {
+		goto cleanup;
+	}
+	retval = rl_btree_node_is_balanced(btree, node, 1);
 	if (retval != RL_OK) {
 		goto cleanup;
 	}
@@ -813,8 +897,13 @@ int rl_print_btree_node(rl_btree *btree, rl_btree_node *node, long level)
 {
 	int retval = RL_OK;
 	long i, j;
+	rl_btree_node *child;
 	if (node->children) {
-		retval = rl_print_btree_node(btree, btree->accessor->select(btree, node->children[0]), level + 1);
+		retval = btree->accessor->select(btree, node->children[0], &child);
+		if (retval != RL_OK) {
+			goto cleanup;
+		}
+		retval = rl_print_btree_node(btree, child, level + 1);
 		if (retval != RL_OK) {
 			goto cleanup;
 		}
@@ -837,7 +926,11 @@ int rl_print_btree_node(rl_btree *btree, rl_btree_node *node, long level)
 		}
 		printf("\n");
 		if (node->children) {
-			retval = rl_print_btree_node(btree, btree->accessor->select(btree, node->children[i + 1]), level + 1);
+			retval = btree->accessor->select(btree, node->children[i + 1], &child);
+			if (retval != RL_OK) {
+				goto cleanup;
+			}
+			retval = rl_print_btree_node(btree, child, level + 1);
 			if (retval != RL_OK) {
 				goto cleanup;
 			}
@@ -849,8 +942,13 @@ cleanup:
 
 int rl_print_btree(rl_btree *btree)
 {
+	rl_btree_node *node;
+	int retval = btree->accessor->select(btree, btree->root, &node);
+	if (retval != RL_OK) {
+		return retval;
+	}
 	printf("-------\n");
-	int retval = rl_print_btree_node(btree, btree->accessor->select(btree, btree->root), 1);
+	retval = rl_print_btree_node(btree, node, 1);
 	printf("-------\n");
 	return retval;
 }
@@ -859,8 +957,13 @@ int rl_flatten_btree_node(rl_btree *btree, rl_btree_node *node, void *** scores,
 {
 	int retval = RL_OK;
 	long i;
+	rl_btree_node *child;
 	if (node->children) {
-		retval = rl_flatten_btree_node(btree, btree->accessor->select(btree, node->children[0]), scores, size);
+		retval = btree->accessor->select(btree, node->children[0], &child);
+		if (retval != RL_OK) {
+			goto cleanup;
+		}
+		retval = rl_flatten_btree_node(btree, child, scores, size);
 		if (retval != RL_OK) {
 			goto cleanup;
 		}
@@ -869,7 +972,11 @@ int rl_flatten_btree_node(rl_btree *btree, rl_btree_node *node, void *** scores,
 		(*scores)[*size] = node->scores[i];
 		(*size)++;
 		if (node->children) {
-			retval = rl_flatten_btree_node(btree, btree->accessor->select(btree, node->children[i + 1]), scores, size);
+			retval = btree->accessor->select(btree, node->children[i + 1], &child);
+			if (retval != RL_OK) {
+				goto cleanup;
+			}
+			retval = rl_flatten_btree_node(btree, child, scores, size);
 			if (retval != RL_OK) {
 				goto cleanup;
 			}
@@ -881,5 +988,10 @@ cleanup:
 
 int rl_flatten_btree(rl_btree *btree, void *** scores, long *size)
 {
-	return rl_flatten_btree_node(btree, btree->accessor->select(btree, btree->root), scores, size);
+	rl_btree_node *node;
+	int retval = btree->accessor->select(btree, btree->root, &node);
+	if (retval != RL_OK) {
+		return retval;
+	}
+	return rl_flatten_btree_node(btree, node, scores, size);
 }

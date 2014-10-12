@@ -31,13 +31,13 @@ typedef struct rl_btree_node {
 
 typedef struct rl_accessor {
 	void *context;
-	long (*commit)(struct rl_btree *btree);
-	long (*discard)(struct rl_btree *btree);
-	struct rl_btree_node *(*select)(struct rl_btree *btree, long number);
-	long (*update)(struct rl_btree *btree, long *number, struct rl_btree_node *node);
-	long (*insert)(struct rl_btree *btree, long *number, struct rl_btree_node *node);
-	long (*remove)(struct rl_btree *btree, struct rl_btree_node *node);
-	long (*list)(struct rl_btree *btree, rl_btree_node *** nodes, long *size);
+	int (*commit)(struct rl_btree *btree);
+	int (*discard)(struct rl_btree *btree);
+	int (*select)(struct rl_btree *btree, long number, struct rl_btree_node **_node);
+	int (*update)(struct rl_btree *btree, long *number, struct rl_btree_node *node);
+	int (*insert)(struct rl_btree *btree, long *number, struct rl_btree_node *node);
+	int (*remove)(struct rl_btree *btree, struct rl_btree_node *node);
+	int (*list)(struct rl_btree *btree, rl_btree_node *** nodes, long *size);
 } rl_accessor;
 
 typedef struct rl_btree {
