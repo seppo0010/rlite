@@ -1,7 +1,8 @@
-#include "list.h"
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
+#include "rlite.h"
+#include "list.h"
 
 typedef struct rl_test_context {
 	long size;
@@ -9,7 +10,7 @@ typedef struct rl_test_context {
 	rl_list_node **active_nodes;
 } rl_test_context;
 
-static rl_list_node *_select(rl_list *_list, long _number)
+static int _select(rl_list *_list, long _number, rl_list_node **_node)
 {
 	rl_list *list = (rl_list *)_list;
 	rl_test_context *context = (rl_test_context *)list->accessor->context;
@@ -18,14 +19,15 @@ static rl_list_node *_select(rl_list *_list, long _number)
 		rl_list_node *node;
 		if (0 != list->type->deserialize(list, context->serialized_nodes[number], &node)) {
 			fprintf(stderr, "Failed to deserialize node %ld\n", number);
-			return NULL;
+			return RL_INVALID_STATE;
 		}
 		context->active_nodes[number] = (rl_list_node *)node;
 	}
-	return context->active_nodes[number];
+	*_node = context->active_nodes[number];
+	return RL_OK;
 }
 
-static long insert(rl_list *list, long *number, rl_list_node *node)
+static int insert(rl_list *list, long *number, rl_list_node *node)
 {
 	rl_test_context *context = (rl_test_context *)list->accessor->context;
 	context->active_nodes[context->size] = node;
@@ -33,7 +35,7 @@ static long insert(rl_list *list, long *number, rl_list_node *node)
 	return 0;
 }
 
-static long update(rl_list *list, long *number, rl_list_node *node)
+static int update(rl_list *list, long *number, rl_list_node *node)
 {
 	rl_test_context *context = (rl_test_context *)list->accessor->context;
 	long i;
@@ -48,7 +50,7 @@ static long update(rl_list *list, long *number, rl_list_node *node)
 	return -1;
 }
 
-static long _remove(rl_list *list, rl_list_node *node)
+static int _remove(rl_list *list, rl_list_node *node)
 {
 	rl_test_context *context = (rl_test_context *)((rl_list *)list)->accessor->context;
 	long i;
@@ -63,18 +65,18 @@ static long _remove(rl_list *list, rl_list_node *node)
 	return -1;
 }
 
-static long list(rl_list *list, rl_list_node *** nodes, long *size)
+static int list(rl_list *list, rl_list_node *** nodes, long *size)
 {
 	rl_test_context *context = (rl_test_context *)((rl_list *)list)->accessor->context;
 	long i;
 	for (i = 0; i < context->size; i++) {
-		*nodes[i] = _select(list, i);
+		_select(list, i, nodes[i]);
 	}
 	*size = context->size;
 	return 0;
 }
 
-static long discard(rl_list *list)
+static int discard(rl_list *list)
 {
 	rl_test_context *context = (rl_test_context *)((rl_list *)list)->accessor->context;
 	long i;
@@ -87,7 +89,7 @@ static long discard(rl_list *list)
 	return 0;
 }
 
-static long commit(rl_list *list)
+static int commit(rl_list *list)
 {
 	rl_test_context *context = (rl_test_context *)list->accessor->context;
 	long i;
@@ -150,7 +152,11 @@ int basic_insert_list_test(int options)
 
 	init_long_list();
 	rl_accessor *accessor = accessor_create(context);
-	rl_list *list = rl_list_create(&long_list, 2, accessor);
+	rl_list *list;
+	if (RL_OK != rl_list_create(&list, &long_list, 2, accessor)) {
+		return 1;
+	}
+
 	long **vals = malloc(sizeof(long *) * 7);
 	long i, position;
 	for (i = 0; i < 7; i++) {
@@ -176,7 +182,7 @@ int basic_insert_list_test(int options)
 			fprintf(stderr, "Failed to add child %ld\n", i);
 			return 1;
 		}
-		if (0 == rl_list_is_balanced(list)) {
+		if (RL_OK != rl_list_is_balanced(list)) {
 			fprintf(stderr, "Node is not balanced after adding child %ld\n", i);
 			return 1;
 		}
@@ -216,7 +222,11 @@ int basic_list_serde_test()
 	init_long_list();
 	rl_test_context *context = context_create(100);
 	rl_accessor *accessor = accessor_create(context);
-	rl_list *list = rl_list_create(&long_list, 10, accessor);
+	rl_list *list;
+	if (RL_OK != rl_list_create(&list, &long_list, 10, accessor)) {
+		return 1;
+	}
+	rl_list_node *node;
 
 	long **vals = malloc(sizeof(long *) * 7);
 	long i;
@@ -229,7 +239,7 @@ int basic_list_serde_test()
 			fprintf(stderr, "Failed to add child %ld\n", i);
 			return 1;
 		}
-		if (0 == rl_list_is_balanced(list)) {
+		if (RL_OK != rl_list_is_balanced(list)) {
 			fprintf(stderr, "Node is not balanced after adding child %ld\n", i);
 			return 1;
 		}
@@ -237,7 +247,8 @@ int basic_list_serde_test()
 
 	long data_size;
 	unsigned char *data;
-	list->type->serialize(list, _select(list, list->left), &data, &data_size);
+	_select(list, list->left, &node);
+	list->type->serialize(list, node, &data, &data_size);
 	unsigned char expected[128];
 	memset(expected, 0, 128);
 	expected[3] = 7; // length
@@ -277,7 +288,10 @@ int fuzzy_list_test(long size, long list_node_size, int _commit)
 	rl_test_context *context = context_create(size);
 	init_long_list();
 	rl_accessor *accessor = accessor_create(context);
-	rl_list *list = rl_list_create(&long_list, list_node_size, accessor);
+	rl_list *list;
+	if (RL_OK != rl_list_create(&list, &long_list, list_node_size, accessor)) {
+		return 1;
+	}
 
 	long i, element, *element_copy;
 	long *elements = malloc(sizeof(long) * size);
@@ -310,7 +324,7 @@ int fuzzy_list_test(long size, long list_node_size, int _commit)
 			fprintf(stderr, "Failed to add child %ld\n", i);
 			return 1;
 		}
-		if (0 == rl_list_is_balanced(list)) {
+		if (RL_OK != rl_list_is_balanced(list)) {
 			fprintf(stderr, "Node is not balanced after adding child %ld\n", i);
 			return 1;
 		}
@@ -366,7 +380,10 @@ int basic_delete_list_test(long elements, long element_to_remove, char *name)
 
 	init_long_list();
 	rl_accessor *accessor = accessor_create(context);
-	rl_list *list = rl_list_create(&long_list, 2, accessor);
+	rl_list *list;
+	if (RL_OK != rl_list_create(&list, &long_list, 2, accessor)) {
+		return 1;
+	}
 	long pos_element_to_remove = element_to_remove >= 0 ? (element_to_remove) : (elements + element_to_remove);
 	long **vals = malloc(sizeof(long *) * elements);
 	long i, j;
@@ -379,7 +396,7 @@ int basic_delete_list_test(long elements, long element_to_remove, char *name)
 			fprintf(stderr, "Failed to add child %ld\n", i);
 			return 1;
 		}
-		if (0 == rl_list_is_balanced(list)) {
+		if (RL_OK != rl_list_is_balanced(list)) {
 			fprintf(stderr, "Node is not balanced after adding child %ld\n", i);
 			return 1;
 		}
@@ -394,7 +411,7 @@ int basic_delete_list_test(long elements, long element_to_remove, char *name)
 
 	// rl_print_list(list);
 
-	if (0 == rl_list_is_balanced(list)) {
+	if (RL_OK != rl_list_is_balanced(list)) {
 		fprintf(stderr, "Node is not balanced after removing child %ld\n", element_to_remove - 1);
 		return 1;
 	}
@@ -430,7 +447,10 @@ int fuzzy_list_delete_test(long size, long list_node_size, int _commit)
 	rl_test_context *context = context_create(size);
 	init_long_list();
 	rl_accessor *accessor = accessor_create(context);
-	rl_list *list = rl_list_create(&long_list, list_node_size, accessor);
+	rl_list *list;
+	if (RL_OK != rl_list_create(&list, &long_list, list_node_size, accessor)) {
+		return 1;
+	}
 
 	long i, element, *element_copy;
 	long *elements = malloc(sizeof(long) * size);
@@ -449,7 +469,7 @@ int fuzzy_list_delete_test(long size, long list_node_size, int _commit)
 				fprintf(stderr, "Failed to add child %ld\n", i);
 				return 1;
 			}
-			if (0 == rl_list_is_balanced(list)) {
+			if (RL_OK != rl_list_is_balanced(list)) {
 				fprintf(stderr, "Node is not balanced after adding child %ld\n", i);
 				return 1;
 			}
@@ -470,7 +490,7 @@ int fuzzy_list_delete_test(long size, long list_node_size, int _commit)
 
 		// rl_print_list(list);
 
-		if (0 == rl_list_is_balanced(list)) {
+		if (RL_OK != rl_list_is_balanced(list)) {
 			fprintf(stderr, "Node is not balanced after deleting child %ld\n", i);
 			return 1;
 		}
