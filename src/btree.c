@@ -838,10 +838,10 @@ cleanup:
 int rl_btree_node_is_balanced(rl_btree *btree, rl_btree_node *node, int is_root)
 {
 	if (!is_root && node->size < btree->max_node_size / 2) {
-		return RL_OK;
+		return RL_INVALID_STATE;
 	}
 
-	int i, retval;
+	int i, retval = RL_OK;
 	rl_btree_node *child;
 	for (i = 0; i < node->size + 1; i++) {
 		if (node->children) {
