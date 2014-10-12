@@ -1,7 +1,8 @@
-#include "btree.h"
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
+#include "btree.h"
+#include "rlite.h"
 
 typedef struct rl_test_context {
 	long size;
@@ -149,7 +150,8 @@ int basic_set_serde_test()
 	init_long_set();
 	rl_test_context *context = context_create(100);
 	rl_accessor *accessor = accessor_create(context);
-	rl_btree *btree = rl_btree_create(&long_set, 10, accessor);
+	rl_btree *btree;
+	rl_btree_create(&btree, &long_set, 10, accessor);
 
 	long **vals = malloc(sizeof(long *) * 7);
 	long i;
@@ -158,11 +160,11 @@ int basic_set_serde_test()
 		*vals[i] = i;
 	}
 	for (i = 0; i < 7; i++) {
-		if (0 != rl_btree_add_element(btree, vals[i], NULL)) {
+		if (RL_OK != rl_btree_add_element(btree, vals[i], NULL)) {
 			fprintf(stderr, "Failed to add child %ld\n", i);
 			return 1;
 		}
-		if (0 == rl_btree_is_balanced(btree)) {
+		if (RL_OK != rl_btree_is_balanced(btree)) {
 			fprintf(stderr, "Node is not balanced after adding child %ld\n", i);
 			return 1;
 		}
@@ -201,7 +203,8 @@ int basic_insert_set_test()
 
 	init_long_set();
 	rl_accessor *accessor = accessor_create(context);
-	rl_btree *btree = rl_btree_create(&long_set, 2, accessor);
+	rl_btree *btree;
+	rl_btree_create(&btree, &long_set, 2, accessor);
 	long **vals = malloc(sizeof(long *) * 7);
 	long i;
 	for (i = 0; i < 7; i++) {
@@ -213,21 +216,21 @@ int basic_insert_set_test()
 			fprintf(stderr, "Failed to add child %ld\n", i);
 			return 1;
 		}
-		if (0 == rl_btree_is_balanced(btree)) {
+		if (RL_OK != rl_btree_is_balanced(btree)) {
 			fprintf(stderr, "Node is not balanced after adding child %ld\n", i);
 			return 1;
 		}
 	}
 	// rl_print_btree(btree);
 	for (i = 0; i < 7; i++) {
-		if (1 != rl_btree_find_score(btree, vals[i], NULL, NULL, NULL)) {
+		if (RL_FOUND != rl_btree_find_score(btree, vals[i], NULL, NULL, NULL)) {
 			fprintf(stderr, "Failed to find child %ld\n", i);
 			return 1;
 		}
 	}
 	long nonexistent_vals[2] = {0, 8};
 	for (i = 0; i < 2; i++) {
-		if (0 != rl_btree_find_score(btree, &nonexistent_vals[i], NULL, NULL, NULL)) {
+		if (RL_NOT_FOUND != rl_btree_find_score(btree, &nonexistent_vals[i], NULL, NULL, NULL)) {
 			fprintf(stderr, "Failed to not find child %ld\n", i);
 			return 1;
 		}
@@ -247,7 +250,8 @@ int basic_insert_hash_test()
 
 	init_long_hash();
 	rl_accessor *accessor = accessor_create(context);
-	rl_btree *btree = rl_btree_create(&long_hash, 2, accessor);
+	rl_btree *btree;
+	rl_btree_create(&btree, &long_hash, 2, accessor);
 	long **keys = malloc(sizeof(long *) * 7);
 	long **vals = malloc(sizeof(long *) * 7);
 	long i;
@@ -262,7 +266,7 @@ int basic_insert_hash_test()
 			fprintf(stderr, "Failed to add child %ld\n", i);
 			return 1;
 		}
-		if (0 == rl_btree_is_balanced(btree)) {
+		if (RL_OK != rl_btree_is_balanced(btree)) {
 			fprintf(stderr, "Node is not balanced after adding child %ld\n", i);
 			return 1;
 		}
@@ -272,7 +276,7 @@ int basic_insert_hash_test()
 
 	void *val;
 	for (i = 0; i < 7; i++) {
-		if (1 != rl_btree_find_score(btree, keys[i], &val, NULL, NULL)) {
+		if (RL_FOUND != rl_btree_find_score(btree, keys[i], &val, NULL, NULL)) {
 			fprintf(stderr, "Failed to find child %ld\n", i);
 			return 1;
 		}
@@ -283,7 +287,7 @@ int basic_insert_hash_test()
 	}
 	long nonexistent_vals[2] = {0, 8};
 	for (i = 0; i < 2; i++) {
-		if (0 != rl_btree_find_score(btree, &nonexistent_vals[i], NULL, NULL, NULL)) {
+		if (RL_NOT_FOUND != rl_btree_find_score(btree, &nonexistent_vals[i], NULL, NULL, NULL)) {
 			fprintf(stderr, "Failed to not find child %ld\n", i);
 			return 1;
 		}
@@ -304,7 +308,8 @@ int basic_delete_set_test(long elements, long element_to_remove, char *name)
 
 	init_long_set();
 	rl_accessor *accessor = accessor_create(context);
-	rl_btree *btree = rl_btree_create(&long_set, 2, accessor);
+	rl_btree *btree;
+	rl_btree_create(&btree, &long_set, 2, accessor);
 	long abs_elements = labs(elements);
 	long pos_element_to_remove = abs_elements == elements ? element_to_remove : (-element_to_remove);
 	long **vals = malloc(sizeof(long *) * abs_elements);
@@ -318,7 +323,7 @@ int basic_delete_set_test(long elements, long element_to_remove, char *name)
 			fprintf(stderr, "Failed to add child %ld\n", i);
 			return 1;
 		}
-		if (0 == rl_btree_is_balanced(btree)) {
+		if (RL_OK != rl_btree_is_balanced(btree)) {
 			fprintf(stderr, "Node is not balanced after adding child %ld\n", i);
 			return 1;
 		}
@@ -333,7 +338,7 @@ int basic_delete_set_test(long elements, long element_to_remove, char *name)
 
 	// rl_print_btree(btree);
 
-	if (0 == rl_btree_is_balanced(btree)) {
+	if (RL_OK != rl_btree_is_balanced(btree)) {
 		fprintf(stderr, "Node is not balanced after removing child %ld\n", element_to_remove - 1);
 		return 1;
 	}
@@ -343,11 +348,11 @@ int basic_delete_set_test(long elements, long element_to_remove, char *name)
 	for (j = 0; j < abs_elements; j++) {
 		expected = j == pos_element_to_remove - 1;
 		if (j == pos_element_to_remove - 1) {
-			expected = 0;
+			expected = RL_NOT_FOUND;
 			*score = element_to_remove;
 		}
 		else {
-			expected = 1;
+			expected = RL_FOUND;
 			*score = *vals[j];
 		}
 		if (expected != rl_btree_find_score(btree, score, NULL, NULL, NULL)) {
@@ -380,7 +385,8 @@ int fuzzy_set_test(long size, long btree_node_size, int _commit)
 	rl_test_context *context = context_create(size);
 	init_long_set();
 	rl_accessor *accessor = accessor_create(context);
-	rl_btree *btree = rl_btree_create(&long_set, btree_node_size, accessor);
+	rl_btree *btree;
+	rl_btree_create(&btree, &long_set, btree_node_size, accessor);
 
 	long i, element, *element_copy;
 	long *elements = malloc(sizeof(long) * size);
@@ -403,13 +409,16 @@ int fuzzy_set_test(long size, long btree_node_size, int _commit)
 				fprintf(stderr, "Failed to add child %ld\n", i);
 				return 1;
 			}
-			if (0 == rl_btree_is_balanced(btree)) {
+			if (RL_OK != rl_btree_is_balanced(btree)) {
 				fprintf(stderr, "Node is not balanced after adding child %ld\n", i);
 				return 1;
 			}
 		}
 		flatten_size = 0;
-		rl_flatten_btree(btree, &flatten_scores, &flatten_size);
+		if (RL_OK != rl_flatten_btree(btree, &flatten_scores, &flatten_size)) {
+			fprintf(stderr, "Unable to flatten btree\n");
+			return 1;
+		}
 		for (j = 1; j < flatten_size; j++) {
 			if (*(long *)flatten_scores[j - 1] >= *(long *)flatten_scores[j]) {
 				fprintf(stderr, "Tree is in a bad state in element %ld after adding child %ld\n", j, i);
@@ -434,11 +443,11 @@ int fuzzy_set_test(long size, long btree_node_size, int _commit)
 	}
 
 	for (i = 0; i < size; i++) {
-		if (1 != rl_btree_find_score(btree, &elements[i], NULL, NULL, NULL)) {
+		if (RL_FOUND != rl_btree_find_score(btree, &elements[i], NULL, NULL, NULL)) {
 			fprintf(stderr, "Failed to find child %ld (%ld)\n", i, elements[i]);
 			return 1;
 		}
-		if (0 != rl_btree_find_score(btree, &nonelements[i], NULL, NULL, NULL)) {
+		if (RL_NOT_FOUND != rl_btree_find_score(btree, &nonelements[i], NULL, NULL, NULL)) {
 			fprintf(stderr, "Failed to not find child %ld\n", i);
 			return 1;
 		}
@@ -460,7 +469,8 @@ int fuzzy_hash_test(long size, long btree_node_size, int _commit)
 	rl_test_context *context = context_create(size);
 	init_long_hash();
 	rl_accessor *accessor = accessor_create(context);
-	rl_btree *btree = rl_btree_create(&long_hash, btree_node_size, accessor);
+	rl_btree *btree;
+	rl_btree_create(&btree, &long_hash, btree_node_size, accessor);
 
 	long i, element, value, *element_copy, *value_copy;
 	long *elements = malloc(sizeof(long) * size);
@@ -490,13 +500,16 @@ int fuzzy_hash_test(long size, long btree_node_size, int _commit)
 				fprintf(stderr, "Failed to add child %ld\n", i);
 				return 1;
 			}
-			if (0 == rl_btree_is_balanced(btree)) {
+			if (RL_OK != rl_btree_is_balanced(btree)) {
 				fprintf(stderr, "Node is not balanced after adding child %ld (%ld)\n", i, value);
 				return 1;
 			}
 		}
 		flatten_size = 0;
-		rl_flatten_btree(btree, &flatten_scores, &flatten_size);
+		if (RL_OK != rl_flatten_btree(btree, &flatten_scores, &flatten_size)) {
+			fprintf(stderr, "Unable to flatten btree\n");
+			return 1;
+		}
 		for (j = 1; j < flatten_size; j++) {
 			if (*(long *)flatten_scores[j - 1] >= *(long *)flatten_scores[j]) {
 				fprintf(stderr, "Tree is in a bad state in element %ld after adding child %ld\n", j, i);
@@ -521,7 +534,7 @@ int fuzzy_hash_test(long size, long btree_node_size, int _commit)
 	}
 
 	for (i = 0; i < size; i++) {
-		if (1 != rl_btree_find_score(btree, &elements[i], &val, NULL, NULL)) {
+		if (RL_FOUND != rl_btree_find_score(btree, &elements[i], &val, NULL, NULL)) {
 			fprintf(stderr, "Failed to find child %ld (%ld)\n", i, elements[i]);
 			return 1;
 		}
@@ -529,7 +542,7 @@ int fuzzy_hash_test(long size, long btree_node_size, int _commit)
 			fprintf(stderr, "Value doesn't match expected value at position %ld (%ld) (%ld != %ld)\n", i, elements[i], *(long *)val, values[i]);
 			return 1;
 		}
-		if (0 != rl_btree_find_score(btree, &nonelements[i], NULL, NULL, NULL)) {
+		if (RL_NOT_FOUND != rl_btree_find_score(btree, &nonelements[i], NULL, NULL, NULL)) {
 			fprintf(stderr, "Failed to not find child %ld\n", i);
 			return 1;
 		}
@@ -552,7 +565,8 @@ int fuzzy_set_delete_test(long size, long btree_node_size, int _commit)
 	rl_test_context *context = context_create(size);
 	init_long_set();
 	rl_accessor *accessor = accessor_create(context);
-	rl_btree *btree = rl_btree_create(&long_set, btree_node_size, accessor);
+	rl_btree *btree;
+	rl_btree_create(&btree, &long_set, btree_node_size, accessor);
 
 	long i, element, *element_copy;
 	long *elements = malloc(sizeof(long) * size);
@@ -571,7 +585,7 @@ int fuzzy_set_delete_test(long size, long btree_node_size, int _commit)
 				fprintf(stderr, "Failed to add child %ld\n", i);
 				return 1;
 			}
-			if (0 == rl_btree_is_balanced(btree)) {
+			if (RL_OK != rl_btree_is_balanced(btree)) {
 				fprintf(stderr, "Node is not balanced after adding child %ld\n", i);
 				return 1;
 			}
@@ -592,7 +606,7 @@ int fuzzy_set_delete_test(long size, long btree_node_size, int _commit)
 
 		// rl_print_btree(btree);
 
-		if (0 == rl_btree_is_balanced(btree)) {
+		if (RL_OK != rl_btree_is_balanced(btree)) {
 			fprintf(stderr, "Node is not balanced after deleting child %ld\n", i);
 			return 1;
 		}

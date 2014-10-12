@@ -7,10 +7,10 @@ struct rl_btree_node;
 typedef struct {
 	int score_size;
 	int value_size;
-	long (*serialize)(struct rl_btree *btree, struct rl_btree_node *node, unsigned char **data, long *data_size);
-	long (*deserialize)(struct rl_btree *btree, unsigned char *data, struct rl_btree_node **node);
+	int (*serialize)(struct rl_btree *btree, struct rl_btree_node *node, unsigned char **data, long *data_size);
+	int (*deserialize)(struct rl_btree *btree, unsigned char *data, struct rl_btree_node **node);
 	int (*cmp)(void *v1, void *v2);
-	void (*formatter)(void *v, char **str, int *size);
+	int (*formatter)(void *v, char **str, int *size);
 } rl_btree_type;
 
 rl_btree_type long_set;
@@ -48,14 +48,14 @@ typedef struct rl_btree {
 	rl_accessor *accessor;
 } rl_btree;
 
-rl_btree *rl_btree_create(rl_btree_type *type, long max_node_size, rl_accessor *accessor);
+int rl_btree_create(rl_btree **btree, rl_btree_type *type, long max_node_size, rl_accessor *accessor);
 int rl_btree_destroy(rl_btree *btree);
-long rl_btree_node_destroy(rl_btree *btree, rl_btree_node *node);
+int rl_btree_node_destroy(rl_btree *btree, rl_btree_node *node);
 int rl_btree_add_element(rl_btree *btree, void *score, void *value);
 int rl_btree_remove_element(rl_btree *btree, void *score);
-long rl_btree_find_score(rl_btree *btree, void *score, void **values, rl_btree_node *** nodes, long **positions);
-void rl_print_btree(rl_btree *btree);
+int rl_btree_find_score(rl_btree *btree, void *score, void **values, rl_btree_node *** nodes, long **positions);
+int rl_print_btree(rl_btree *btree);
 int rl_btree_is_balanced(rl_btree *btree);
-void rl_flatten_btree(rl_btree *btree, void *** scores, long *size);
+int rl_flatten_btree(rl_btree *btree, void *** scores, long *size);
 
 #endif
