@@ -1,11 +1,14 @@
 #ifndef _LIST_H
 #define _LIST_H
 
+struct rl_list;
+struct rl_list_node;
+
 typedef struct {
 	int element_size;
-	long (*serialize_length)(void *list);
-	long (*serialize)(void *list, void *node, unsigned char **data, long *data_size);
-	long (*deserialize)(void *list, unsigned char *data, void **node);
+	long (*serialize_length)(struct rl_list *list);
+	long (*serialize)(struct rl_list *list, struct rl_list_node *node, unsigned char **data, long *data_size);
+	long (*deserialize)(struct rl_list *list, unsigned char *data, struct rl_list_node **node);
 	int (*cmp)(void *v1, void *v2);
 	void (*formatter)(void *v, char **str, int *size);
 } rl_list_type;
@@ -14,7 +17,7 @@ rl_list_type long_list;
 
 void init_long_list();
 
-typedef struct {
+typedef struct rl_list_node {
 	long size;
 	long left;
 	long right;
@@ -23,16 +26,16 @@ typedef struct {
 
 typedef struct rl_accessor {
 	void *context;
-	long (*commit)(void *list);
-	long (*discard)(void *list);
-	void *(*select)(void *list, long number);
-	long (*update)(void *list, long *number, void *node);
-	long (*insert)(void *list, long *number, void *node);
-	long (*remove)(void *list, void *node);
-	long (*list)(void *list, rl_list_node *** nodes, long *size);
+	long (*commit)(struct rl_list *list);
+	long (*discard)(struct rl_list *list);
+	struct rl_list_node *(*select)(struct rl_list *list, long number);
+	long (*update)(struct rl_list *list, long *number, struct rl_list_node *node);
+	long (*insert)(struct rl_list *list, long *number, struct rl_list_node *node);
+	long (*remove)(struct rl_list *list, struct rl_list_node *node);
+	long (*list)(struct rl_list *list, rl_list_node *** nodes, long *size);
 } rl_accessor;
 
-typedef struct {
+typedef struct rl_list {
 	long max_node_size; // maximum number of elements in a node
 	long size;
 	rl_list_type *type;

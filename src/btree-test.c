@@ -9,13 +9,12 @@ typedef struct rl_test_context {
 	rl_btree_node **active_nodes;
 } rl_test_context;
 
-static void *_select(void *_btree, long _number)
+static rl_btree_node *_select(rl_btree *btree, long _number)
 {
-	rl_btree *btree = (rl_btree *)_btree;
 	rl_test_context *context = (rl_test_context *)btree->accessor->context;
 	long number = _number - 1;
 	if (!context->active_nodes[number]) {
-		void *node;
+		rl_btree_node *node;
 		if (0 != btree->type->deserialize(btree, context->serialized_nodes[number], &node)) {
 			fprintf(stderr, "Failed to deserialize node %ld\n", number);
 			return NULL;
@@ -25,17 +24,17 @@ static void *_select(void *_btree, long _number)
 	return context->active_nodes[number];
 }
 
-static long insert(void *btree, long *number, void *node)
+static long insert(rl_btree *btree, long *number, rl_btree_node *node)
 {
-	rl_test_context *context = (rl_test_context *)((rl_btree *)btree)->accessor->context;
+	rl_test_context *context = (rl_test_context *)btree->accessor->context;
 	context->active_nodes[context->size] = node;
 	*number = ++context->size;
 	return 0;
 }
 
-static long update(void *btree, long *number, void *node)
+static long update(rl_btree *btree, long *number, rl_btree_node *node)
 {
-	rl_test_context *context = (rl_test_context *)((rl_btree *)btree)->accessor->context;
+	rl_test_context *context = (rl_test_context *)btree->accessor->context;
 	long i;
 	for (i = 0; i < context->size; i++) {
 		if (context->active_nodes[i] == node) {
@@ -48,9 +47,9 @@ static long update(void *btree, long *number, void *node)
 	return -1;
 }
 
-static long _remove(void *btree, void *node)
+static long _remove(rl_btree *btree, rl_btree_node *node)
 {
-	rl_test_context *context = (rl_test_context *)((rl_btree *)btree)->accessor->context;
+	rl_test_context *context = (rl_test_context *)btree->accessor->context;
 	long i;
 	for (i = 0; i < context->size; i++) {
 		if (context->active_nodes[i] == node) {
@@ -63,20 +62,20 @@ static long _remove(void *btree, void *node)
 	return -1;
 }
 
-static long list(void *btree, rl_btree_node *** nodes, long *size)
+static long list(rl_btree *btree, rl_btree_node *** nodes, long *size)
 {
-	rl_test_context *context = (rl_test_context *)((rl_btree *)btree)->accessor->context;
+	rl_test_context *context = (rl_test_context *)btree->accessor->context;
 	long i;
 	for (i = 0; i < context->size; i++) {
-		nodes[i] = _select(btree, i);
+		*nodes[i] = _select(btree, i);
 	}
 	*size = context->size;
 	return 0;
 }
 
-static long discard(void *btree)
+static long discard(rl_btree *btree)
 {
-	rl_test_context *context = (rl_test_context *)((rl_btree *)btree)->accessor->context;
+	rl_test_context *context = (rl_test_context *)btree->accessor->context;
 	long i;
 	for (i = 0; i < context->size; i++) {
 		if (context->active_nodes[i]) {
@@ -87,9 +86,8 @@ static long discard(void *btree)
 	return 0;
 }
 
-static long commit(void *_btree)
+static long commit(rl_btree *btree)
 {
-	rl_btree *btree = (rl_btree *)_btree;
 	rl_test_context *context = (rl_test_context *)btree->accessor->context;
 	long i;
 	for (i = 0; i < context->size; i++) {
@@ -126,7 +124,7 @@ void context_destroy(rl_btree *btree, rl_test_context *context)
 	free(context);
 }
 
-rl_accessor *accessor_create(void *context)
+rl_accessor *accessor_create(rl_test_context *context)
 {
 	rl_accessor *accessor = malloc(sizeof(rl_accessor));
 	if (accessor == NULL) {

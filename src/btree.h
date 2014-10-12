@@ -1,11 +1,14 @@
 #ifndef _BTREE_H
 #define _BTREE_H
 
+struct rl_btree;
+struct rl_btree_node;
+
 typedef struct {
 	int score_size;
 	int value_size;
-	long (*serialize)(void *btree, void *node, unsigned char **data, long *data_size);
-	long (*deserialize)(void *btree, unsigned char *data, void **node);
+	long (*serialize)(struct rl_btree *btree, struct rl_btree_node *node, unsigned char **data, long *data_size);
+	long (*deserialize)(struct rl_btree *btree, unsigned char *data, struct rl_btree_node **node);
 	int (*cmp)(void *v1, void *v2);
 	void (*formatter)(void *v, char **str, int *size);
 } rl_btree_type;
@@ -28,16 +31,16 @@ typedef struct rl_btree_node {
 
 typedef struct rl_accessor {
 	void *context;
-	long (*commit)(void *btree);
-	long (*discard)(void *btree);
-	void *(*select)(void *btree, long number);
-	long (*update)(void *btree, long *number, void *node);
-	long (*insert)(void *btree, long *number, void *node);
-	long (*remove)(void *btree, void *node);
-	long (*list)(void *btree, rl_btree_node *** nodes, long *size);
+	long (*commit)(struct rl_btree *btree);
+	long (*discard)(struct rl_btree *btree);
+	struct rl_btree_node *(*select)(struct rl_btree *btree, long number);
+	long (*update)(struct rl_btree *btree, long *number, struct rl_btree_node *node);
+	long (*insert)(struct rl_btree *btree, long *number, struct rl_btree_node *node);
+	long (*remove)(struct rl_btree *btree, struct rl_btree_node *node);
+	long (*list)(struct rl_btree *btree, rl_btree_node *** nodes, long *size);
 } rl_accessor;
 
-typedef struct {
+typedef struct rl_btree {
 	long max_node_size; // maximum number of scores in a node
 	long height;
 	rl_btree_type *type;

@@ -17,10 +17,8 @@ int long_cmp(void *v1, void *v2)
 	return a > b ? 1 : -1;
 }
 
-long long_list_list_node_serialize(void *_list, void *_node, unsigned char **_data, long *data_size)
+long long_list_list_node_serialize(rl_list *list, rl_list_node *node, unsigned char **_data, long *data_size)
 {
-	rl_list *list = (rl_list *)_list;
-	rl_list_node *node = (rl_list_node *)_node;
 	unsigned char *data = malloc(sizeof(unsigned char) * ((4 * list->max_node_size) + 12));
 	put_4bytes(data, node->size);
 	put_4bytes(&data[4], node->left);
@@ -37,9 +35,8 @@ long long_list_list_node_serialize(void *_list, void *_node, unsigned char **_da
 	return 0;
 }
 
-long long_list_list_node_deserialize(void *_list, unsigned char *data, void **_node)
+long long_list_list_node_deserialize(rl_list *list, unsigned char *data, rl_list_node **_node)
 {
-	rl_list *list = (rl_list *)_list;
 	rl_list_node *node = rl_list_node_create(list);
 	if (!node) {
 		return 1;

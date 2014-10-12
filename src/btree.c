@@ -17,10 +17,8 @@ int long_cmp(void *v1, void *v2)
 	return a > b ? 1 : -1;
 }
 
-long long_set_btree_node_serialize(void *_btree, void *_node, unsigned char **_data, long *data_size)
+long long_set_btree_node_serialize(rl_btree *btree, rl_btree_node *node, unsigned char **_data, long *data_size)
 {
-	rl_btree *btree = (rl_btree *)_btree;
-	rl_btree_node *node = (rl_btree_node *)_node;
 	unsigned char *data = malloc(sizeof(unsigned char) * ((8 * btree->max_node_size) + 8));
 	put_4bytes(data, node->size);
 	long i, pos = 4;
@@ -37,9 +35,8 @@ long long_set_btree_node_serialize(void *_btree, void *_node, unsigned char **_d
 	return 0;
 }
 
-long long_set_btree_node_deserialize(void *_btree, unsigned char *data, void **_node)
+long long_set_btree_node_deserialize(rl_btree *btree, unsigned char *data, rl_btree_node **_node)
 {
-	rl_btree *btree = (rl_btree *)_btree;
 	rl_btree_node *node = rl_btree_node_create(btree);
 	if (!node) {
 		return 1;
@@ -70,10 +67,8 @@ long long_set_btree_node_deserialize(void *_btree, unsigned char *data, void **_
 	return 0;
 }
 
-long long_hash_btree_node_serialize(void *_btree, void *_node, unsigned char **_data, long *data_size)
+long long_hash_btree_node_serialize(rl_btree *btree, rl_btree_node *node, unsigned char **_data, long *data_size)
 {
-	rl_btree *btree = (rl_btree *)_btree;
-	rl_btree_node *node = (rl_btree_node *)_node;
 	unsigned char *data = malloc(sizeof(unsigned char) * (((btree->type->score_size + btree->type->value_size + 4) * btree->max_node_size) + 8));
 	put_4bytes(data, node->size);
 	long i, pos = 4;
@@ -91,9 +86,8 @@ long long_hash_btree_node_serialize(void *_btree, void *_node, unsigned char **_
 	return 0;
 }
 
-long long_hash_btree_node_deserialize(void *_btree, unsigned char *data, void **_node)
+long long_hash_btree_node_deserialize(rl_btree *btree, unsigned char *data, rl_btree_node **_node)
 {
-	rl_btree *btree = (rl_btree *)_btree;
 	rl_btree_node *node = rl_btree_node_create(btree);
 	if (!node) {
 		return 1;
