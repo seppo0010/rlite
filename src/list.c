@@ -150,8 +150,8 @@ int rl_list_find_element(rl_list *list, void *element, long *position)
 			if (list->type->cmp(node->elements[i], element) == 0) {
 				if (position) {
 					*position = pos + i;
-					return 1;
 				}
+				return 1;
 			}
 		}
 		pos += node->size;
@@ -171,7 +171,7 @@ int rl_list_add_element(rl_list *list, void *element, long position)
 		number = list->left;
 		do {
 			node = list->accessor->select(list, number);
-			if (pos + node->size >= position && position - pos < list->max_node_size) {
+			if (pos + node->size >= position) {
 				break;
 			}
 			number = node->right;
@@ -209,9 +209,14 @@ int rl_list_add_element(rl_list *list, void *element, long position)
 		if (node->left) {
 			sibling_node = list->accessor->select(list, node->left);
 			if (sibling_node->size != list->max_node_size) {
-				sibling_node->elements[sibling_node->size] = node->elements[0];
-				memmove_dbg(&node->elements[0], &node->elements[1], sizeof(void *) * position - pos - 1, __LINE__);
-				node->elements[position - pos - 1] = element;
+				if (position == pos) {
+					sibling_node->elements[sibling_node->size] = element;
+				}
+				else {
+					sibling_node->elements[sibling_node->size] = node->elements[0];
+					memmove_dbg(&node->elements[0], &node->elements[1], sizeof(void *) * (position - pos - 1), __LINE__);
+					node->elements[position - pos - 1] = element;
+				}
 				sibling_node->size++;
 				list->accessor->update(list, NULL, node);
 				list->accessor->update(list, NULL, sibling_node);
@@ -222,9 +227,14 @@ int rl_list_add_element(rl_list *list, void *element, long position)
 			sibling_node = list->accessor->select(list, node->right);
 			if (sibling_node->size != list->max_node_size) {
 				memmove_dbg(&sibling_node->elements[1], &sibling_node->elements[0], sizeof(void *) * sibling_node->size, __LINE__);
-				sibling_node->elements[0] = node->elements[node->size - 1];
-				memmove_dbg(&node->elements[position - pos + 1], &node->elements[position - pos], sizeof(void *) * (node->size - position + pos - 1), __LINE__);
-				node->elements[position - pos] = element;
+				if (position - pos == node->size) {
+					sibling_node->elements[0] = element;
+				}
+				else {
+					sibling_node->elements[0] = node->elements[node->size - 1];
+					memmove_dbg(&node->elements[position - pos + 1], &node->elements[position - pos], sizeof(void *) * (node->size - position + pos - 1), __LINE__);
+					node->elements[position - pos] = element;
+				}
 				sibling_node->size++;
 				list->accessor->update(list, NULL, node);
 				list->accessor->update(list, NULL, sibling_node);
@@ -336,7 +346,7 @@ void rl_flatten_list(rl_list *list, void *** scores)
 	while (number != 0) {
 		node = list->accessor->select(list, number);
 		for (i = 0; i < node->size; i++) {
-			*scores[pos++] = node->elements[i];
+			(*scores)[pos++] = node->elements[i];
 		}
 		number = node->right;
 	}

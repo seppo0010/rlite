@@ -261,27 +261,53 @@ int basic_list_serde_test()
 	free(list);
 	return 0;
 }
-/*
 
-int basic_insert_hash_test()
+int contains_element(long element, long *elements, long size)
 {
-	fprintf(stderr, "Start basic_insert_hash_test\n");
-	rl_test_context *context = context_create(100);
-
-	init_long_hash();
-	rl_accessor *accessor = accessor_create(context);
-	rl_list *list = rl_list_create(&long_hash, 2, accessor);
-	long **keys = malloc(sizeof(long *) * 7);
-	long **vals = malloc(sizeof(long *) * 7);
 	long i;
-	for (i = 0; i < 7; i++) {
-		keys[i] = malloc(sizeof(long));
-		vals[i] = malloc(sizeof(long));
-		*keys[i] = i + 1;
-		*vals[i] = i * 10;
+	for (i = 0; i < size; i++) {
+		if (elements[i] == element) {
+			return 1;
+		}
 	}
-	for (i = 0; i < 7; i++) {
-		if (0 != rl_list_add_element(list, keys[i], vals[i])) {
+	return 0;
+}
+int fuzzy_list_test(long size, long list_node_size, int _commit)
+{
+	fprintf(stderr, "Start fuzzy_list_test %ld %ld %d\n", size, list_node_size, _commit);
+	rl_test_context *context = context_create(size);
+	init_long_list();
+	rl_accessor *accessor = accessor_create(context);
+	rl_list *list = rl_list_create(&long_list, list_node_size, accessor);
+
+	long i, element, *element_copy;
+	long *elements = malloc(sizeof(long) * size);
+	long *nonelements = malloc(sizeof(long) * size);
+
+	void **flatten_elements = malloc(sizeof(void *) * size);
+	long j, position;
+	int positive;
+
+	for (i = 0; i < size; i++) {
+		element = rand();
+		if (contains_element(element, elements, i)) {
+			i--;
+			continue;
+		}
+		if (i == 0) {
+			position = 0;
+		}
+		else {
+			position = rand() % (i + 1);
+			if (position != i) {
+				memmove(&elements[position + 1], &elements[position], sizeof(long) * (i - position));
+			}
+		}
+		elements[position] = element;
+		element_copy = malloc(sizeof(long));
+		*element_copy = element;
+		positive = rand() % 2;
+		if (0 != rl_list_add_element(list, element_copy, positive ? position : (- i + position - 1))) {
 			fprintf(stderr, "Failed to add child %ld\n", i);
 			return 1;
 		}
@@ -289,39 +315,53 @@ int basic_insert_hash_test()
 			fprintf(stderr, "Node is not balanced after adding child %ld\n", i);
 			return 1;
 		}
+		rl_flatten_list(list, &flatten_elements);
+		for (j = 0; j < list->size; j++) {
+			if (*(long *)flatten_elements[j] != elements[j]) {
+				fprintf(stderr, "Unexpected value in position %ld after adding %ld (expected %ld, got %ld)\n", j, i, elements[j], *(long *)flatten_elements[j]);
+				return 1;
+			}
+		}
+		if (_commit) {
+			commit(list);
+		}
 	}
 
 	// rl_print_list(list);
 
-	void *val;
-	for (i = 0; i < 7; i++) {
-		if (1 != rl_list_find_score(list, keys[i], &val, NULL, NULL)) {
-			fprintf(stderr, "Failed to find child %ld\n", i);
-			return 1;
+	for (i = 0; i < size; i++) {
+		element = rand();
+		if (contains_element(element, elements, size) || contains_element(element, nonelements, i)) {
+			i--;
 		}
-		if (val != vals[i] || *(long *)val != i * 10) {
-			fprintf(stderr, "Wrong value in position %ld (%ld)\n", i, *(long *)val);
-			return 1;
+		else {
+			nonelements[i] = element;
 		}
 	}
-	long nonexistent_vals[2] = {0, 8};
-	for (i = 0; i < 2; i++) {
-		if (0 != rl_list_find_score(list, &nonexistent_vals[i], NULL, NULL, NULL)) {
+
+	for (i = 0; i < size; i++) {
+		if (1 != rl_list_find_element(list, &elements[i], NULL)) {
+			fprintf(stderr, "Failed to find child %ld (%ld)\n", i, elements[i]);
+			return 1;
+		}
+		if (0 != rl_list_find_element(list, &nonelements[i], NULL)) {
 			fprintf(stderr, "Failed to not find child %ld\n", i);
 			return 1;
 		}
 	}
-	fprintf(stderr, "End basic_insert_set_test\n");
+	fprintf(stderr, "End fuzzy_list_test\n");
+
 	context_destroy(list, context);
+	free(elements);
+	free(nonelements);
+	free(flatten_elements);
 	free(accessor);
-	for (i = 0; i < 7; i++) {
-		free(vals[i]);
-	}
-	free(vals);
-	free(keys);
 	free(list);
 	return 0;
 }
+
+/*
+
 
 int basic_delete_set_test(long elements, long element_to_remove, char *name)
 {
@@ -386,96 +426,6 @@ int basic_delete_set_test(long elements, long element_to_remove, char *name)
 	context_destroy(list, context);
 	free(accessor);
 	free(vals);
-	free(list);
-	return 0;
-}
-
-int contains_element(long element, long *elements, long size)
-{
-	long i;
-	for (i = 0; i < size; i++) {
-		if (elements[i] == element) {
-			return 1;
-		}
-	}
-	return 0;
-}
-int fuzzy_set_test(long size, long list_node_size, int _commit)
-{
-	fprintf(stderr, "Start fuzzy_set_test %ld %ld %d\n", size, list_node_size, _commit);
-	rl_test_context *context = context_create(size);
-	init_long_set();
-	rl_accessor *accessor = accessor_create(context);
-	rl_list *list = rl_list_create(&long_set, list_node_size, accessor);
-
-	long i, element, *element_copy;
-	long *elements = malloc(sizeof(long) * size);
-	long *nonelements = malloc(sizeof(long) * size);
-
-	void **flatten_scores = malloc(sizeof(void *) * size);
-	long j, flatten_size;
-
-	for (i = 0; i < size; i++) {
-		element = rand();
-		if (contains_element(element, elements, i)) {
-			i--;
-			continue;
-		}
-		else {
-			elements[i] = element;
-			element_copy = malloc(sizeof(long));
-			*element_copy = element;
-			if (0 != rl_list_add_element(list, element_copy, NULL)) {
-				fprintf(stderr, "Failed to add child %ld\n", i);
-				return 1;
-			}
-			if (0 == rl_list_is_balanced(list)) {
-				fprintf(stderr, "Node is not balanced after adding child %ld\n", i);
-				return 1;
-			}
-		}
-		flatten_size = 0;
-		rl_flatten_list(list, &flatten_scores, &flatten_size);
-		for (j = 1; j < flatten_size; j++) {
-			if (*(long *)flatten_scores[j - 1] >= *(long *)flatten_scores[j]) {
-				fprintf(stderr, "Tree is in a bad state in element %ld after adding child %ld\n", j, i);
-				return 1;
-			}
-		}
-		if (_commit) {
-			commit(list);
-		}
-	}
-
-	// rl_print_list(list);
-
-	for (i = 0; i < size; i++) {
-		element = rand();
-		if (contains_element(element, elements, size) || contains_element(element, nonelements, i)) {
-			i--;
-		}
-		else {
-			nonelements[i] = element;
-		}
-	}
-
-	for (i = 0; i < size; i++) {
-		if (1 != rl_list_find_score(list, &elements[i], NULL, NULL, NULL)) {
-			fprintf(stderr, "Failed to find child %ld (%ld)\n", i, elements[i]);
-			return 1;
-		}
-		if (0 != rl_list_find_score(list, &nonelements[i], NULL, NULL, NULL)) {
-			fprintf(stderr, "Failed to not find child %ld\n", i);
-			return 1;
-		}
-	}
-	fprintf(stderr, "End fuzzy_set_test\n");
-
-	context_destroy(list, context);
-	free(elements);
-	free(nonelements);
-	free(flatten_scores);
-	free(accessor);
 	free(list);
 	return 0;
 }
@@ -652,6 +602,20 @@ int main()
 		goto cleanup;
 	}
 
+	for (i = 0; i < 2; i++) {
+		size = i == 0 ? 100 : 200;
+		for (j = 0; j < 2; j++) {
+			list_node_size = j == 0 ? 2 : 10;
+			for (k = 0; k < 2; k++) {
+				commit = k;
+				srand(1);
+				retval = fuzzy_list_test(size, list_node_size, commit);
+				if (retval != 0) {
+					goto cleanup;
+				}
+			}
+		}
+	}
 cleanup:
 	return retval;
 }
