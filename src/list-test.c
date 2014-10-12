@@ -424,108 +424,14 @@ int basic_delete_list_test(long elements, long element_to_remove, char *name)
 	free(list);
 	return 0;
 }
-/*
 
-
-int fuzzy_hash_test(long size, long list_node_size, int _commit)
+int fuzzy_list_delete_test(long size, long list_node_size, int _commit)
 {
-	fprintf(stderr, "Start fuzzy_hash_test %ld %ld %d\n", size, list_node_size, _commit);
+	fprintf(stderr, "Start fuzzy_list_delete_test %ld %ld %d\n", size, list_node_size, _commit);
 	rl_test_context *context = context_create(size);
-	init_long_hash();
+	init_long_list();
 	rl_accessor *accessor = accessor_create(context);
-	rl_list *list = rl_list_create(&long_hash, list_node_size, accessor);
-
-	long i, element, value, *element_copy, *value_copy;
-	long *elements = malloc(sizeof(long) * size);
-	long *nonelements = malloc(sizeof(long) * size);
-	long *values = malloc(sizeof(long) * size);
-
-	void **flatten_scores = malloc(sizeof(void *) * size);
-	long j, flatten_size;
-
-	void *val;
-
-	for (i = 0; i < size; i++) {
-		element = rand();
-		value = rand();
-		if (contains_element(element, elements, i)) {
-			i--;
-			continue;
-		}
-		else {
-			elements[i] = element;
-			element_copy = malloc(sizeof(long));
-			*element_copy = element;
-			values[i] = value;
-			value_copy = malloc(sizeof(long));
-			*value_copy = value;
-			if (0 != rl_list_add_element(list, element_copy, value_copy)) {
-				fprintf(stderr, "Failed to add child %ld\n", i);
-				return 1;
-			}
-			if (0 == rl_list_is_balanced(list)) {
-				fprintf(stderr, "Node is not balanced after adding child %ld (%ld)\n", i, value);
-				return 1;
-			}
-		}
-		flatten_size = 0;
-		rl_flatten_list(list, &flatten_scores, &flatten_size);
-		for (j = 1; j < flatten_size; j++) {
-			if (*(long *)flatten_scores[j - 1] >= *(long *)flatten_scores[j]) {
-				fprintf(stderr, "Tree is in a bad state in element %ld after adding child %ld\n", j, i);
-				return 1;
-			}
-		}
-		if (_commit) {
-			commit(list);
-		}
-	}
-
-	// rl_print_list(list);
-
-	for (i = 0; i < size; i++) {
-		element = rand();
-		if (contains_element(element, elements, size) || contains_element(element, nonelements, i)) {
-			i--;
-		}
-		else {
-			nonelements[i] = element;
-		}
-	}
-
-	for (i = 0; i < size; i++) {
-		if (1 != rl_list_find_score(list, &elements[i], &val, NULL, NULL)) {
-			fprintf(stderr, "Failed to find child %ld (%ld)\n", i, elements[i]);
-			return 1;
-		}
-		if (*(long *)val != values[i]) {
-			fprintf(stderr, "Value doesn't match expected value at position %ld (%ld) (%ld != %ld)\n", i, elements[i], *(long *)val, values[i]);
-			return 1;
-		}
-		if (0 != rl_list_find_score(list, &nonelements[i], NULL, NULL, NULL)) {
-			fprintf(stderr, "Failed to not find child %ld\n", i);
-			return 1;
-		}
-	}
-	fprintf(stderr, "End fuzzy_hash_test\n");
-
-	context_destroy(list, context);
-	free(values);
-	free(elements);
-	free(nonelements);
-	free(flatten_scores);
-	free(accessor);
-	free(list);
-	return 0;
-}
-
-int fuzzy_set_delete_test(long size, long list_node_size, int _commit)
-{
-	fprintf(stderr, "Start fuzzy_set_delete_test %ld %ld %d\n", size, list_node_size, _commit);
-	rl_test_context *context = context_create(size);
-	init_long_set();
-	rl_accessor *accessor = accessor_create(context);
-	rl_list *list = rl_list_create(&long_set, list_node_size, accessor);
+	rl_list *list = rl_list_create(&long_list, list_node_size, accessor);
 
 	long i, element, *element_copy;
 	long *elements = malloc(sizeof(long) * size);
@@ -540,7 +446,7 @@ int fuzzy_set_delete_test(long size, long list_node_size, int _commit)
 			elements[i] = element;
 			element_copy = malloc(sizeof(long));
 			*element_copy = element;
-			if (0 != rl_list_add_element(list, element_copy, NULL)) {
+			if (0 != rl_list_add_element(list, element_copy, -1)) {
 				fprintf(stderr, "Failed to add child %ld\n", i);
 				return 1;
 			}
@@ -558,7 +464,7 @@ int fuzzy_set_delete_test(long size, long list_node_size, int _commit)
 
 	while (size > 0) {
 		i = (long)(((float)rand() / RAND_MAX) * size);
-		if (0 != rl_list_remove_element(list, &elements[i])) {
+		if (0 != rl_list_remove_element(list, i)) {
 			fprintf(stderr, "Failed to delete child %ld\n", elements[i]);
 			return 1;
 		}
@@ -572,7 +478,7 @@ int fuzzy_set_delete_test(long size, long list_node_size, int _commit)
 		elements[i] = elements[size - 1];
 		size--;
 	}
-	fprintf(stderr, "End fuzzy_set_delete_test\n");
+	fprintf(stderr, "End fuzzy_list_delete_test\n");
 
 	context_destroy(list, context);
 	free(elements);
@@ -581,8 +487,6 @@ int fuzzy_set_delete_test(long size, long list_node_size, int _commit)
 	return 0;
 }
 
-*/
-
 #define DELETE_TESTS_COUNT 5
 int main()
 {
@@ -590,6 +494,7 @@ int main()
 	long size, list_node_size;
 	int commit;
 	int retval = 0;
+	/*
 	for (i = 0; i < 4; i++) {
 		retval = basic_insert_list_test(i);
 		if (retval != 0) {
@@ -634,6 +539,21 @@ int main()
 		retval = basic_delete_list_test(delete_tests[i][0], delete_tests[i][1], delete_tests_name[i]);
 		if (retval != 0) {
 			goto cleanup;
+		}
+	}
+	*/
+	for (i = 0; i < 2; i++) {
+		size = i == 0 ? 100 : 200;
+		for (j = 0; j < 2; j++) {
+			list_node_size = j == 0 ? 2 : 10;
+			for (k = 0; k < 2; k++) {
+				commit = k;
+				srand(1);
+				retval = fuzzy_list_delete_test(size, list_node_size, commit);
+				if (retval != 0) {
+					goto cleanup;
+				}
+			}
 		}
 	}
 

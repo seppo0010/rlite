@@ -295,7 +295,6 @@ int rl_list_remove_element(rl_list *list, long position)
 		return retval;
 	}
 
-	// printf("position=%ld, pos=%ld, position-pos=%ld\n", position, pos, position-pos);
 	if (node->size - (position - pos + 1) > 0) {
 		free(node->elements[position - pos]);
 		memmove_dbg(&node->elements[position - pos], &node->elements[position - pos + 1], sizeof(void *) * (node->size - (position - pos + 1)), __LINE__);
@@ -322,8 +321,56 @@ int rl_list_remove_element(rl_list *list, long position)
 		rl_list_node_destroy(list, node);
 	}
 	else {
+		if (node->left) {
+			sibling_node = list->accessor->select(list, node->left);
+			if (sibling_node->size + node->size <= list->max_node_size) {
+				memmove_dbg(&sibling_node->elements[sibling_node->size], node->elements, sizeof(void *) * node->size, __LINE__);
+				sibling_node->right = node->right;
+				sibling_node->size += node->size;
+				list->accessor->update(list, NULL, sibling_node);
+				if (node->right) {
+					sibling_node = list->accessor->select(list, node->right);
+					sibling_node->left = node->left;
+					list->accessor->update(list, NULL, sibling_node);
+				}
+				else {
+					list->right = node->left;
+				}
+				list->accessor->remove(list, node);
+				// don't free each element
+				free(node->elements);
+				node->elements = NULL;
+				rl_list_node_destroy(list, node);
+				goto cleanup;
+			}
+		}
+		if (node->right) {
+			sibling_node = list->accessor->select(list, node->right);
+			if (sibling_node->size + node->size <= list->max_node_size) {
+				memmove_dbg(&sibling_node->elements[node->size], sibling_node->elements, sizeof(void *) * sibling_node->size, __LINE__);
+				memmove_dbg(sibling_node->elements, node->elements, sizeof(void *) * node->size, __LINE__);
+				sibling_node->left = node->left;
+				sibling_node->size += node->size;
+				list->accessor->update(list, NULL, sibling_node);
+				if (node->left) {
+					sibling_node = list->accessor->select(list, node->left);
+					sibling_node->right = node->right;
+					list->accessor->update(list, NULL, sibling_node);
+				}
+				else {
+					list->left = node->right;
+				}
+				list->accessor->remove(list, node);
+				// don't free each element
+				free(node->elements);
+				node->elements = NULL;
+				rl_list_node_destroy(list, node);
+				goto cleanup;
+			}
+		}
 		list->accessor->update(list, NULL, node);
 	}
+cleanup:
 	list->size--;
 	return 0;
 }
