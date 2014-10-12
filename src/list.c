@@ -160,18 +160,18 @@ int rl_list_find_element(rl_list *list, void *element, long *position)
 	return 0;
 }
 
-int rl_list_add_element(rl_list *list, void *element, long position)
+int rl_find_element_by_position(rl_list *list, long *position, long *_pos, rl_list_node **_node)
 {
 	rl_list_node *node;
 	long pos = 0, number;
-	if (position > list->size + 1 || position < - list->size - 1) {
+	if (*position > list->size + 1 || *position < - list->size - 1) {
 		return 1;
 	}
-	if (position >= 0) {
+	if (*position >= 0) {
 		number = list->left;
 		do {
 			node = list->accessor->select(list, number);
-			if (pos + node->size >= position) {
+			if (pos + node->size >= *position) {
 				break;
 			}
 			number = node->right;
@@ -179,21 +179,34 @@ int rl_list_add_element(rl_list *list, void *element, long position)
 				pos += node->size;
 			}
 		}
-		while (number != 0 && pos < position);
+		while (number != 0 && pos < *position);
 	}
 	else {
-		position = list->size + position + 1;
+		*position = list->size + *position + 1;
 		pos = list->size;
 		number = list->right;
 		do {
 			node = list->accessor->select(list, number);
 			pos -= node->size;
-			if (pos <= position) {
+			if (pos <= *position) {
 				break;
 			}
 			number = node->left;
 		}
 		while (number != 0);
+	}
+	*_pos = pos;
+	*_node = node;
+	return 0;
+}
+
+int rl_list_add_element(rl_list *list, void *element, long position)
+{
+	rl_list_node *node;
+	long pos;
+	int retval = rl_find_element_by_position(list, &position, &pos, &node);
+	if (retval != 0) {
+		return retval;
 	}
 
 	if (node->size != list->max_node_size) {
