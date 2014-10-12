@@ -360,27 +360,23 @@ int fuzzy_list_test(long size, long list_node_size, int _commit)
 	return 0;
 }
 
-/*
-
-
-int basic_delete_set_test(long elements, long element_to_remove, char *name)
+int basic_delete_list_test(long elements, long element_to_remove, char *name)
 {
-	fprintf(stderr, "Start basic_delete_set_test (%ld, %ld) (%s)\n", elements, element_to_remove, name);
+	fprintf(stderr, "Start basic_delete_list_test (%ld, %ld) (%s)\n", elements, element_to_remove, name);
 	rl_test_context *context = context_create(100);
 
-	init_long_set();
+	init_long_list();
 	rl_accessor *accessor = accessor_create(context);
-	rl_list *list = rl_list_create(&long_set, 2, accessor);
-	long abs_elements = labs(elements);
-	long pos_element_to_remove = abs_elements == elements ? element_to_remove : (-element_to_remove);
-	long **vals = malloc(sizeof(long *) * abs_elements);
+	rl_list *list = rl_list_create(&long_list, 2, accessor);
+	long pos_element_to_remove = element_to_remove >= 0 ? (element_to_remove) : (elements + element_to_remove);
+	long **vals = malloc(sizeof(long *) * elements);
 	long i, j;
-	for (i = 0; i < abs_elements; i++) {
+	for (i = 0; i < elements; i++) {
 		vals[i] = malloc(sizeof(long));
-		*vals[i] = elements == abs_elements ? i + 1 : (-i - 1);
+		*vals[i] = i;
 	}
-	for (i = 0; i < abs_elements; i++) {
-		if (0 != rl_list_add_element(list, vals[i], NULL)) {
+	for (i = 0; i < elements; i++) {
+		if (0 != rl_list_add_element(list, vals[i], i)) {
 			fprintf(stderr, "Failed to add child %ld\n", i);
 			return 1;
 		}
@@ -392,7 +388,7 @@ int basic_delete_set_test(long elements, long element_to_remove, char *name)
 
 	// rl_print_list(list);
 
-	if (0 != rl_list_remove_element(list, vals[pos_element_to_remove - 1])) {
+	if (0 != rl_list_remove_element(list, element_to_remove)) {
 		fprintf(stderr, "Failed to remove child %ld\n", element_to_remove - 1);
 		return 1;
 	}
@@ -405,30 +401,31 @@ int basic_delete_set_test(long elements, long element_to_remove, char *name)
 	}
 
 	int expected;
-	long score[1];
-	for (j = 0; j < abs_elements; j++) {
-		expected = j == pos_element_to_remove - 1;
-		if (j == pos_element_to_remove - 1) {
+	long element[1];
+	for (j = 0; j < elements; j++) {
+		if (j == pos_element_to_remove) {
 			expected = 0;
-			*score = element_to_remove;
+			*element = element_to_remove;
 		}
 		else {
 			expected = 1;
-			*score = *vals[j];
+			*element = *vals[j];
 		}
-		if (expected != rl_list_find_score(list, score, NULL, NULL, NULL)) {
+		if (expected != rl_list_find_element(list, element, NULL)) {
 			fprintf(stderr, "Failed to %sfind child %ld (%ld) after deleting element %ld\n", expected == 0 ? "" : "not ", j, *vals[j], element_to_remove);
 			return 1;
 		}
 	}
 
-	fprintf(stderr, "End basic_delete_set_test (%ld, %ld)\n", elements, element_to_remove);
+	fprintf(stderr, "End basic_delete_list_test (%ld, %ld)\n", elements, element_to_remove);
 	context_destroy(list, context);
 	free(accessor);
 	free(vals);
 	free(list);
 	return 0;
 }
+/*
+
 
 int fuzzy_hash_test(long size, long list_node_size, int _commit)
 {
@@ -585,6 +582,8 @@ int fuzzy_set_delete_test(long size, long list_node_size, int _commit)
 }
 
 */
+
+#define DELETE_TESTS_COUNT 5
 int main()
 {
 	int i, j, k;
@@ -616,6 +615,28 @@ int main()
 			}
 		}
 	}
+
+	long delete_tests[DELETE_TESTS_COUNT][2] = {
+		{8, 7},
+		{8, -1},
+		{7, -1},
+		{1, 0},
+		{3, 0},
+	};
+	char *delete_tests_name[DELETE_TESTS_COUNT] = {
+		"delete last element, positive index",
+		"delete last element, negative index",
+		"delete last element, deletes node, negative index",
+		"delete only element",
+		"delete element on page, merge and delete",
+	};
+	for (i = 0; i < DELETE_TESTS_COUNT; i++) {
+		retval = basic_delete_list_test(delete_tests[i][0], delete_tests[i][1], delete_tests_name[i]);
+		if (retval != 0) {
+			goto cleanup;
+		}
+	}
+
 cleanup:
 	return retval;
 }

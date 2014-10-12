@@ -160,7 +160,7 @@ int rl_list_find_element(rl_list *list, void *element, long *position)
 	return 0;
 }
 
-int rl_find_element_by_position(rl_list *list, long *position, long *_pos, rl_list_node **_node)
+int rl_find_element_by_position(rl_list *list, long *position, long *_pos, rl_list_node **_node, long *_number)
 {
 	rl_list_node *node;
 	long pos = 0, number;
@@ -197,6 +197,9 @@ int rl_find_element_by_position(rl_list *list, long *position, long *_pos, rl_li
 	}
 	*_pos = pos;
 	*_node = node;
+	if (_number) {
+		*_number = number;
+	}
 	return 0;
 }
 
@@ -204,7 +207,7 @@ int rl_list_add_element(rl_list *list, void *element, long position)
 {
 	rl_list_node *node;
 	long pos;
-	int retval = rl_find_element_by_position(list, &position, &pos, &node);
+	int retval = rl_find_element_by_position(list, &position, &pos, &node, NULL);
 	if (retval != 0) {
 		return retval;
 	}
@@ -285,9 +288,44 @@ cleanup:
 
 int rl_list_remove_element(rl_list *list, long position)
 {
-	list = list;
-	position = position;
-	return 1;
+	rl_list_node *node, *sibling_node;
+	long pos, number;
+	int retval = rl_find_element_by_position(list, &position, &pos, &node, &number);
+	if (retval != 0) {
+		return retval;
+	}
+
+	// printf("position=%ld, pos=%ld, position-pos=%ld\n", position, pos, position-pos);
+	if (node->size - (position - pos + 1) > 0) {
+		free(node->elements[position - pos]);
+		memmove_dbg(&node->elements[position - pos], &node->elements[position - pos + 1], sizeof(void *) * (node->size - (position - pos + 1)), __LINE__);
+	}
+	else {
+		free(node->elements[node->size - 1]);
+	}
+	if (--node->size == 0) {
+		if (list->left == number) {
+			list->left = node->right;
+		}
+		if (list->right == number) {
+			list->right = node->left;
+		}
+		if (node->left) {
+			sibling_node = list->accessor->select(list, node->left);
+			sibling_node->right = node->right;
+		}
+		if (node->right) {
+			sibling_node = list->accessor->select(list, node->right);
+			sibling_node->left = node->left;
+		}
+		list->accessor->remove(list, node);
+		rl_list_node_destroy(list, node);
+	}
+	else {
+		list->accessor->update(list, NULL, node);
+	}
+	list->size--;
+	return 0;
 }
 
 int rl_list_is_balanced(rl_list *list)
@@ -310,6 +348,11 @@ int rl_list_is_balanced(rl_list *list)
 				retval = 0;
 				goto cleanup;
 			}
+		}
+		if (node->size == 0) {
+			fprintf(stderr, "Empty node in list\n");
+			retval = 0;
+			goto cleanup;
 		}
 		prev_size = node->size;
 		number = node->right;
