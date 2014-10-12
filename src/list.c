@@ -164,21 +164,37 @@ int rl_list_add_element(rl_list *list, void *element, long position)
 {
 	rl_list_node *node;
 	long pos = 0, number;
-	if (position > list->size + 1) {
+	if (position > list->size + 1 || position < - list->size - 1) {
 		return 1;
 	}
-	number = list->left;
-	do {
-		node = list->accessor->select(list, number);
-		if (pos + node->size >= position && position - pos < list->max_node_size) {
-			break;
+	if (position >= 0) {
+		number = list->left;
+		do {
+			node = list->accessor->select(list, number);
+			if (pos + node->size >= position && position - pos < list->max_node_size) {
+				break;
+			}
+			number = node->right;
+			if (number != 0) {
+				pos += node->size;
+			}
 		}
-		number = node->right;
-		if (number != 0) {
-			pos += node->size;
-		}
+		while (number != 0 && pos < position);
 	}
-	while (number != 0 && pos < position);
+	else {
+		position = list->size + position + 1;
+		pos = list->size;
+		number = list->right;
+		do {
+			node = list->accessor->select(list, number);
+			pos -= node->size;
+			if (pos <= position) {
+				break;
+			}
+			number = node->left;
+		}
+		while (number != 0);
+	}
 
 	if (node->size != list->max_node_size) {
 		if (position - pos + 1 < list->max_node_size) {
@@ -233,6 +249,9 @@ int rl_list_add_element(rl_list *list, void *element, long position)
 			old_node = list->accessor->select(list, new_node->right);
 			old_node->left = node->right;
 			list->accessor->update(list, NULL, old_node);
+		}
+		else {
+			list->right = node->right;
 		}
 	}
 

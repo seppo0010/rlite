@@ -144,9 +144,9 @@ rl_accessor *accessor_create(void *context)
 	return accessor;
 }
 
-int basic_insert_list_test(int ascending)
+int basic_insert_list_test(int options)
 {
-	fprintf(stderr, "Start basic_insert_list_test %d\n", ascending);
+	fprintf(stderr, "Start basic_insert_list_test %d\n", options);
 	rl_test_context *context = context_create(100);
 
 	init_long_list();
@@ -159,7 +159,21 @@ int basic_insert_list_test(int ascending)
 		*vals[i] = i + 1;
 	}
 	for (i = 0; i < 7; i++) {
-		if (0 != rl_list_add_element(list, vals[i], ascending ? i : 0)) {
+		switch(options) {
+			case 0:
+				position = i;
+				break;
+			case 1:
+				position = 0;
+				break;
+			case 2:
+				position = -1;
+				break;
+			case 3:
+				position = - 1 - i;
+				break;
+		}
+		if (0 != rl_list_add_element(list, vals[i], position)) {
 			fprintf(stderr, "Failed to add child %ld\n", i);
 			return 1;
 		}
@@ -176,8 +190,8 @@ int basic_insert_list_test(int ascending)
 			fprintf(stderr, "Failed to find child %ld\n", i);
 			return 1;
 		}
-		if (position != (ascending ? i : (6 - i))) {
-			fprintf(stderr, "Unexpected position of item %ld, %ld\n", (ascending ? i : (6 - i)), position);
+		if (position != (options % 2 == 0 ? i : (6 - i))) {
+			fprintf(stderr, "Unexpected position of item %ld, %ld\n", (options % 2 == 0 ? i : (6 - i)), position);
 			return 1;
 		}
 	}
@@ -627,13 +641,11 @@ int main()
 	long size, list_node_size;
 	int commit;
 	int retval = 0;
-	retval = basic_insert_list_test(1);
-	if (retval != 0) {
-		goto cleanup;
-	}
-	retval = basic_insert_list_test(0);
-	if (retval != 0) {
-		goto cleanup;
+	for (i = 0; i < 4; i++) {
+		retval = basic_insert_list_test(i);
+		if (retval != 0) {
+			goto cleanup;
+		}
 	}
 	retval = basic_list_serde_test();
 	if (retval != 0) {
