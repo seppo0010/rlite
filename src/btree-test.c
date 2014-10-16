@@ -2,7 +2,7 @@
 #include <stdio.h>
 #include <string.h>
 #include "btree.h"
-#include "rlite.h"
+#include "status.h"
 
 typedef struct rl_test_context {
 	long size;

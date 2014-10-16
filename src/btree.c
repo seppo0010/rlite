@@ -2,9 +2,19 @@
 #include <string.h>
 #include <stdio.h>
 #include <math.h>
-#include "rlite.h"
+#include "status.h"
 #include "btree.h"
+#include "rlite.h"
 #include "util.h"
+
+rl_btree_type btree_hash_md5_long = {
+	sizeof(unsigned char) * 16,
+	sizeof(long),
+	0,
+	0,
+	md5_cmp,
+	md5_formatter,
+};
 
 int rl_print_btree_node(rl_btree *btree, rl_btree_node *node, long level);
 int rl_btree_node_create(rl_btree *btree, rl_btree_node **node);
@@ -18,7 +28,39 @@ int long_cmp(void *v1, void *v2)
 	return a > b ? 1 : -1;
 }
 
-int long_set_btree_node_serialize(rl_btree *btree, rl_btree_node *node, unsigned char **_data, long *data_size)
+int long_formatter(void *v2, char **formatted, int *size)
+{
+	*formatted = malloc(sizeof(char) * 22);
+	if (*formatted == NULL) {
+		return RL_OUT_OF_MEMORY;
+	}
+	*size = snprintf(*formatted, 22, "%ld", *(long *)v2);
+	return RL_OK;
+}
+
+int md5_cmp(void *v1, void *v2)
+{
+	return memcmp(v1, v2, sizeof(unsigned char) * 16);
+}
+
+int md5_formatter(void *v2, char **formatted, int *size)
+{
+	unsigned char *data = (unsigned char *)v2;
+	static const char *hex_lookup = "0123456789ABCDEF";
+	*formatted = malloc(sizeof(char) * 32);
+	if (*formatted == NULL) {
+		return RL_OUT_OF_MEMORY;
+	}
+	int i;
+	for (i = 0; i < 16; i++) {
+		*formatted[i * 2] = hex_lookup[data[i] & 0x0F];
+		*formatted[i * 2 + 1] = hex_lookup[(data[i] / 0x0F) & 0x0F];
+	}
+	*size = 32;
+	return RL_OK;
+}
+
+int rl_long_set_btree_node_serialize(rl_btree *btree, rl_btree_node *node, unsigned char **_data, long *data_size)
 {
 	unsigned char *data = malloc(sizeof(unsigned char) * ((8 * btree->max_node_size) + 8));
 	if (!data) {
@@ -39,7 +81,7 @@ int long_set_btree_node_serialize(rl_btree *btree, rl_btree_node *node, unsigned
 	return RL_OK;
 }
 
-int long_set_btree_node_deserialize(rl_btree *btree, unsigned char *data, rl_btree_node **_node)
+int rl_long_set_btree_node_deserialize(rl_btree *btree, unsigned char *data, rl_btree_node **_node)
 {
 	rl_btree_node *node;
 	long i, pos = 4, child;
@@ -84,7 +126,7 @@ cleanup:
 	return retval;
 }
 
-int long_hash_btree_node_serialize(rl_btree *btree, rl_btree_node *node, unsigned char **_data, long *data_size)
+int rl_long_hash_btree_node_serialize(rl_btree *btree, rl_btree_node *node, unsigned char **_data, long *data_size)
 {
 	int retval = RL_OK;
 	unsigned char *data = malloc(sizeof(unsigned char) * (((btree->type->score_size + btree->type->value_size + 4) * btree->max_node_size) + 8));
@@ -109,7 +151,7 @@ cleanup:
 	return retval;
 }
 
-int long_hash_btree_node_deserialize(rl_btree *btree, unsigned char *data, rl_btree_node **_node)
+int rl_long_hash_btree_node_deserialize(rl_btree *btree, unsigned char *data, rl_btree_node **_node)
 {
 	rl_btree_node *node;
 	long i, pos = 4, child;
@@ -161,24 +203,14 @@ cleanup:
 	return retval;
 }
 
-int long_formatter(void *v2, char **formatted, int *size)
-{
-	*formatted = malloc(sizeof(char) * 22);
-	if (*formatted == NULL) {
-		return RL_OUT_OF_MEMORY;
-	}
-	*size = snprintf(*formatted, 22, "%ld", *(long *)v2);
-	return RL_OK;
-}
-
 void init_long_set()
 {
 	long_set.score_size = sizeof(long);
 	long_set.value_size = 0;
 	long_set.cmp = long_cmp;
 	long_set.formatter = long_formatter;
-	long_set.serialize = long_set_btree_node_serialize;
-	long_set.deserialize = long_set_btree_node_deserialize;
+	long_set.serialize = rl_long_set_btree_node_serialize;
+	long_set.deserialize = rl_long_set_btree_node_deserialize;
 }
 
 void init_long_hash()
@@ -187,8 +219,8 @@ void init_long_hash()
 	long_hash.value_size = sizeof(void *);
 	long_hash.cmp = long_cmp;
 	long_hash.formatter = long_formatter;
-	long_hash.serialize = long_hash_btree_node_serialize;
-	long_hash.deserialize = long_hash_btree_node_deserialize;
+	long_hash.serialize = rl_long_hash_btree_node_serialize;
+	long_hash.deserialize = rl_long_hash_btree_node_deserialize;
 }
 
 int rl_btree_node_create(rl_btree *btree, rl_btree_node **_node)
@@ -994,4 +1026,103 @@ int rl_flatten_btree(rl_btree *btree, void *** scores, long *size)
 		return retval;
 	}
 	return rl_flatten_btree_node(btree, node, scores, size);
+}
+
+int rl_serialize_btree_hash_md5_long(rlite *db, void *obj, unsigned char *data)
+{
+	db = db;
+	rl_btree *btree = (rl_btree *)obj;
+	put_4bytes(data, btree->height);
+	put_4bytes(&data[4], btree->root);
+	return RL_OK;
+}
+
+int rl_deserialize_btree_hash_md5_long(rlite *db, void **obj, void *context, unsigned char *data)
+{
+	db = db;
+	context = context;
+	rl_btree *btree = malloc(sizeof(rl_btree));
+	if (btree == NULL) {
+		return RL_OUT_OF_MEMORY;
+	}
+	btree->height = (long)get_4bytes(data);
+	btree->root = (long)get_4bytes(&data[4]);
+	btree->type = &btree_hash_md5_long;
+	*obj = btree;
+	return RL_OK;
+}
+int rl_serialize_btree_node_hash_md5_long(rlite *db, void *obj, unsigned char *data)
+{
+	db = db;
+	rl_btree_node *node = (rl_btree_node *)obj;
+	put_4bytes(data, node->size);
+	long i, pos = 4;
+	for (i = 0; i < node->size; i++) {
+		memcpy(&data[pos], node->scores[i], sizeof(unsigned char *) * 16);
+		put_4bytes(&data[pos + 16], *(long *)node->values[i]);
+		put_4bytes(&data[pos + 20], node->children ? node->children[i] : 0);
+		pos += 24;
+	}
+	put_4bytes(&data[pos], node->children ? node->children[node->size] : 0);
+	return RL_OK;
+}
+int rl_deserialize_btree_node_hash_md5_long(rlite *db, void **obj, void *context, unsigned char *data)
+{
+	db = db;
+	rl_btree_node *node;
+	rl_btree *btree = (rl_btree *) context;
+	int retval = rl_btree_node_create(btree, &node);
+	if (retval != RL_OK) {
+		return retval;
+	}
+	node->size = (long)get_4bytes(data);
+	long i, pos = 4, child;
+	for (i = 0; i < node->size; i++) {
+		node->scores[i] = malloc(sizeof(long));
+		if (!node->scores[i]) {
+			node->size = i;
+			retval = RL_OUT_OF_MEMORY;
+			goto cleanup;
+		}
+		node->scores[i] = malloc(sizeof(unsigned char) * 16);
+		if (!node->scores[i]) {
+			node->size = i;
+			retval = RL_OUT_OF_MEMORY;
+			goto cleanup;
+		}
+		memcpy(node->scores[i], &data[pos], sizeof(unsigned char) * 16);
+		node->values[i] = malloc(sizeof(long));
+		if (!node->values[i]) {
+			free(node->scores[i]);
+			node->size = i;
+			retval = RL_OUT_OF_MEMORY;
+			goto cleanup;
+		}
+		*(long *)node->values[i] = get_4bytes(&data[pos + 16]);
+		child = get_4bytes(&data[pos + 20]);
+		if (child != 0) {
+			if (!node->children) {
+				node->children = malloc(sizeof(long) * (btree->max_node_size + 1));
+				if (!node->children) {
+					free(node->scores[i]);
+					free(node->values[i]);
+					node->size = i;
+					retval = RL_OUT_OF_MEMORY;
+					goto cleanup;
+				}
+			}
+			node->children[i] = child;
+		}
+		pos += 24;
+	}
+	child = get_4bytes(&data[pos]);
+	if (child != 0) {
+		node->children[node->size] = child;
+	}
+	*obj = node;
+cleanup:
+	if (retval != RL_OK && node) {
+		rl_btree_node_destroy(btree, node);
+	}
+	return retval;
 }

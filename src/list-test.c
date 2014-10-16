@@ -1,7 +1,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
-#include "rlite.h"
+#include "status.h"
 #include "list.h"
 
 typedef struct rl_test_context {

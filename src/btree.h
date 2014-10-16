@@ -1,6 +1,7 @@
 #ifndef _BTREE_H
 #define _BTREE_H
 
+struct rlite;
 struct rl_btree;
 struct rl_btree_node;
 
@@ -13,8 +14,12 @@ typedef struct {
 	int (*formatter)(void *v, char **str, int *size);
 } rl_btree_type;
 
+int md5_cmp(void *v1, void *v2);
+int md5_formatter(void *v, char **str, int *size);
+
 rl_btree_type long_set;
 rl_btree_type long_hash;
+rl_btree_type btree_hash_md5_long;
 
 void init_long_set();
 void init_long_hash();
@@ -57,5 +62,10 @@ int rl_btree_find_score(rl_btree *btree, void *score, void **values, rl_btree_no
 int rl_print_btree(rl_btree *btree);
 int rl_btree_is_balanced(rl_btree *btree);
 int rl_flatten_btree(rl_btree *btree, void *** scores, long *size);
+
+int rl_serialize_btree_hash_md5_long(struct rlite *db, void *obj, unsigned char *data);
+int rl_deserialize_btree_hash_md5_long(struct rlite *db, void **obj, void *context, unsigned char *data);
+int rl_serialize_btree_node_hash_md5_long(struct rlite *db, void *obj, unsigned char *data);
+int rl_deserialize_btree_node_hash_md5_long(struct rlite *db, void **obj, void *context, unsigned char *data);
 
 #endif

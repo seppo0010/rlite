@@ -2,3 +2,5 @@
 *.a
 /src/btree-test
 /src/list-test
+/src/rlite-test
+/src/rlite-test.rld
