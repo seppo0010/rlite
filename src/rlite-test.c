@@ -56,12 +56,28 @@ int test_has_key()
 		goto cleanup;
 	}
 	const char *key = "random key";
-	retval = rl_has_key(db, key, strlen(key));
+	long value = 529, value2;
+	retval = rl_get_key(db, key, strlen(key), NULL);
 	if (retval == RL_NOT_FOUND) {
 		retval = RL_OK;
 	}
 	else {
-		fprintf(stderr, "Failed to not find unexisting key\n");
+		fprintf(stderr, "Failed to not find unexisting key (%d)\n", retval);
+		goto cleanup;
+	}
+	retval = rl_set_key(db, key, strlen(key), value);
+	if (retval != RL_OK) {
+		fprintf(stderr, "Failed to set key (%d)\n", retval);
+		goto cleanup;
+	}
+	retval = rl_get_key(db, key, strlen(key), &value2);
+	if (retval != RL_FOUND) {
+		fprintf(stderr, "Failed to find existing key (%d)\n", retval);
+		goto cleanup;
+	}
+	if (value2 != value) {
+		fprintf(stderr, "Expected value2 (%ld) to be equal to value (%ld)\n", value2, value);
+		retval = 1;
 		goto cleanup;
 	}
 	retval = rl_close(db);

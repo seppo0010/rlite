@@ -3,8 +3,8 @@
 #include <unistd.h>
 #include <errno.h>
 #include <openssl/md5.h>
-#include "rlite.h"
 #include "btree.h"
+#include "rlite.h"
 #include "util.h"
 
 #define DEFAULT_READ_PAGES_LEN 16
@@ -14,9 +14,9 @@ int rl_serialize_header(struct rlite *db, void *obj, unsigned char *data);
 int rl_deserialize_header(struct rlite *db, void **obj, void *context, unsigned char *data);
 int rl_has_flag(rlite *db, int flag);
 
-rl_data_type rl_data_type_btree_hash_md5_long = {"btree_hash_md5_long", rl_serialize_btree_hash_md5_long, rl_deserialize_btree_hash_md5_long};
-rl_data_type rl_data_type_btree_node_hash_md5_long = {"btree_node_hash_md5_long", rl_serialize_btree_node_hash_md5_long, rl_deserialize_btree_node_hash_md5_long};
-rl_data_type rl_data_type_header = {"header", rl_serialize_header, rl_deserialize_header};
+rl_data_type rl_data_type_btree_hash_md5_long = {"btree_hash_md5_long", rl_serialize_btree_hash_md5_long, rl_deserialize_btree_hash_md5_long, rl_btree_destroy};
+rl_data_type rl_data_type_btree_node_hash_md5_long = {"btree_node_hash_md5_long", rl_serialize_btree_node_hash_md5_long, rl_deserialize_btree_node_hash_md5_long, rl_btree_node_destroy};
+rl_data_type rl_data_type_header = {"header", rl_serialize_header, rl_deserialize_header, NULL};
 
 static const char *identifier = "rlite0.0";
 
@@ -70,6 +70,7 @@ static int rl_ensure_pages(rlite *db)
 
 int rl_open(const char *filename, rlite **_db, int flags)
 {
+	rl_btree_init();
 	int retval = RL_OK;
 	rlite *db = malloc(sizeof(rlite));
 	if (db == NULL) {
@@ -151,6 +152,19 @@ int rl_close(rlite *db)
 		free(driver->filename);
 		free(db->driver);
 	}
+	long i;
+	for (i = 0; i < db->read_pages_len; i++) {
+		if (db->read_pages[i]->type->destroy) {
+			db->read_pages[i]->type->destroy(db, db->read_pages[i]->obj);
+		}
+		free(db->read_pages[i]);
+	}
+	for (i = 0; i < db->write_pages_len; i++) {
+		if (db->write_pages[i]->type->destroy) {
+			db->write_pages[i]->type->destroy(db, db->write_pages[i]->obj);
+		}
+		free(db->write_pages[i]);
+	}
 	free(db->read_pages);
 	free(db->write_pages);
 	free(db);
@@ -169,6 +183,13 @@ int rl_has_flag(rlite *db, int flag)
 int rl_create_db(rlite *db)
 {
 	int retval = rl_ensure_pages(db);
+	db->next_empty_page = 2;
+	rl_btree *btree;
+	long max_node_size = (db->page_size - 8) / 8; // TODO: this should be in the type
+	retval = rl_btree_create(db, &btree, &btree_hash_md5_long, max_node_size);
+	if (retval == RL_OK) {
+		retval = rl_write(db, &rl_data_type_btree_hash_md5_long, 1, btree);
+	}
 	return retval;
 }
 
@@ -187,7 +208,7 @@ cleanup:
 	return retval;
 }
 
-static int rl_search_cache(rlite *db, rl_data_type *type, long page_number, void **obj, rl_page **pages, long page_len)
+static int rl_search_cache(rlite *db, rl_data_type *type, long page_number, void **obj, long *position, rl_page **pages, long page_len)
 {
 	db = db;
 
@@ -202,7 +223,12 @@ static int rl_search_cache(rlite *db, rl_data_type *type, long page_number, void
 					fprintf(stderr, "Type of page in cache (%s) doesn't match the asked one (%s)\n", page->type->name, type->name);
 					return RL_UNEXPECTED;
 				}
-				*obj = page->obj;
+				if (obj) {
+					*obj = page->obj;
+				}
+				if (position) {
+					*position = pos;
+				}
 				return RL_FOUND;
 			}
 			else if (page->page_number > page_number) {
@@ -213,15 +239,26 @@ static int rl_search_cache(rlite *db, rl_data_type *type, long page_number, void
 			}
 		}
 		while (max >= min);
+		if (position) {
+			if (pages[pos]->page_number > page_number) {
+				pos--;
+			}
+			*position = pos;
+		}
+	}
+	else {
+		if (position) {
+			*position = 0;
+		}
 	}
 	return RL_NOT_FOUND;
 }
 
 int rl_read_from_cache(rlite *db, rl_data_type *type, long page_number, void **obj)
 {
-	int retval = rl_search_cache(db, type, page_number, obj, db->write_pages, db->write_pages_len);
+	int retval = rl_search_cache(db, type, page_number, obj, NULL, db->write_pages, db->write_pages_len);
 	if (retval == RL_NOT_FOUND) {
-		retval = rl_search_cache(db, type, page_number, obj, db->read_pages, db->read_pages_len);
+		retval = rl_search_cache(db, type, page_number, obj, NULL, db->read_pages, db->read_pages_len);
 	}
 	return retval;
 }
@@ -266,6 +303,34 @@ cleanup:
 	return retval;
 }
 
+int rl_write(struct rlite *db, rl_data_type *type, long page_number, void *obj)
+{
+	long pos;
+	int retval = rl_search_cache(db, type, page_number, NULL, &pos, db->write_pages, db->write_pages_len);
+	if (retval == RL_FOUND) {
+		db->write_pages[pos]->obj = obj;
+	}
+	else if (retval == RL_NOT_FOUND) {
+		rl_ensure_pages(db);
+		rl_page *page = malloc(sizeof(rl_page));
+		if (page == NULL) {
+			return RL_OUT_OF_MEMORY;
+		}
+		page->page_number = page_number;
+		page->type = type;
+		page->obj = obj;
+		if (pos < db->write_pages_len) {
+			memmove_dbg(&db->write_pages[pos + 1], &db->write_pages[pos], sizeof(rl_page *) * (db->write_pages_len - pos), __LINE__);
+		}
+		db->write_pages[pos] = page;
+		db->write_pages_len++;
+		if (page_number == db->next_empty_page) {
+			db->next_empty_page++;
+		}
+	}
+	return RL_OK;
+}
+
 static int md5(const char *data, long datalen, unsigned char digest[16])
 {
 	MD5_CTX md5;
@@ -275,7 +340,31 @@ static int md5(const char *data, long datalen, unsigned char digest[16])
 	return RL_OK;
 }
 
-int rl_has_key(rlite *db, const char *key, long keylen)
+int rl_set_key(rlite *db, const char *key, long keylen, long value)
+{
+	unsigned char *digest = malloc(sizeof(unsigned char) * 16);
+	int retval = md5(key, keylen, digest);
+	if (retval != RL_OK) {
+		goto cleanup;
+	}
+	void *_btree;
+	retval = rl_read(db, &rl_data_type_btree_hash_md5_long, 1, NULL, &_btree);
+	if (retval != RL_FOUND) {
+		goto cleanup;
+	}
+	rl_btree *btree = (rl_btree *)_btree;
+	long *val = malloc(sizeof(long));
+	if (!val) {
+		retval = RL_OUT_OF_MEMORY;
+		goto cleanup;
+	}
+	*val = value;
+	retval = rl_btree_add_element(db, btree, digest, val);
+cleanup:
+	return retval;
+}
+
+int rl_get_key(rlite *db, const char *key, long keylen, long *value)
 {
 	unsigned char digest[16];
 	int retval = md5(key, keylen, digest);
@@ -284,11 +373,15 @@ int rl_has_key(rlite *db, const char *key, long keylen)
 	}
 	void *_btree;
 	retval = rl_read(db, &rl_data_type_btree_hash_md5_long, 1, NULL, &_btree);
-	if (retval != RL_OK) {
+	if (retval != RL_FOUND) {
 		goto cleanup;
 	}
 	rl_btree *btree = (rl_btree *)_btree;
-	retval = rl_btree_find_score(btree, digest, NULL, NULL, NULL);
+	void *val;
+	retval = rl_btree_find_score(db, btree, digest, &val, NULL, NULL);
+	if (retval == RL_FOUND && value) {
+		*value = *(long *)val;
+	}
 cleanup:
 	return retval;
 }

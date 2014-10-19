@@ -18,10 +18,16 @@ all: buildtest
 librlite.a: rlite.o list.o btree.o util.o
 	ar -cq librlite.a rlite.o list.o btree.o util.o
 
-buildtest: rlite-test.o list-test.o btree-test.o librlite.a
-	$(CC) $(DEBUG) $(CFLAGS) -o btree-test btree-test.o librlite.a $(LIBS)
-	$(CC) $(DEBUG) $(CFLAGS) -o list-test list-test.o librlite.a $(LIBS)
+rlite-test: rlite-test.o librlite.a
 	$(CC) $(DEBUG) $(CFLAGS) -o rlite-test rlite-test.o librlite.a $(LIBS)
+
+btree-test: btree-test.o librlite.a
+	$(CC) $(DEBUG) $(CFLAGS) -o btree-test btree-test.o librlite.a $(LIBS)
+
+list-test: list-test.o librlite.a
+	$(CC) $(DEBUG) $(CFLAGS) -o list-test list-test.o librlite.a $(LIBS)
+
+buildtest: rlite-test btree-test list-test
 
 test: buildtest
 	./btree-test && ./list-test && ./rlite-test
