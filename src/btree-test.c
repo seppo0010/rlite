@@ -5,70 +5,6 @@
 #include "btree.h"
 #include "status.h"
 
-int basic_set_serde_test()
-{
-	fprintf(stderr, "Start basic_set_serde_test\n");
-
-	rlite *db;
-	if (rl_open(":memory:", &db, RLITE_OPEN_READWRITE | RLITE_OPEN_CREATE) != RL_OK) {
-		fprintf(stderr, "Unable to open rlite\n");
-		return 1;
-	}
-	rl_btree *btree;
-	// rl_btree_node *node;
-	if (rl_btree_create(db, &btree, &long_set, 10) != RL_OK) {
-		return 1;
-	}
-
-	long **vals = malloc(sizeof(long *) * 7);
-	long i;
-	for (i = 0; i < 7; i++) {
-		vals[i] = malloc(sizeof(long));
-		*vals[i] = i;
-	}
-	for (i = 0; i < 7; i++) {
-		if (RL_OK != rl_btree_add_element(db, btree, vals[i], NULL)) {
-			fprintf(stderr, "Failed to add child %ld\n", i);
-			return 1;
-		}
-		if (RL_OK != rl_btree_is_balanced(db, btree)) {
-			fprintf(stderr, "Node is not balanced after adding child %ld\n", i);
-			return 1;
-		}
-	}
-
-	/* TODO: restore test
-	long data_size;
-	unsigned char *data;
-	if (_select(btree, btree->root, &node) != RL_OK) {
-		return 1;
-	}
-	if (btree->type->serialize(btree, node, &data, &data_size) != RL_OK) {
-		return 1;
-	}
-	unsigned char expected[128];
-	memset(expected, 0, 128);
-	expected[3] = 7; // length
-	for (i = 1; i < 8; i++) {
-		expected[8 * i - 1] = i;
-	}
-	for (i = 0; i < data_size; i++) {
-		if (data[i] != expected[i]) {
-			fprintf(stderr, "Unexpected value in position %ld (got %d, expected %d)\n", i, data[i], expected[i]);
-			return 1;
-		}
-	}
-	free(data);
-
-	fprintf(stderr, "End basic_set_serde_test\n");
-
-	free(accessor);
-	free(vals);
-	free(btree);
-	*/
-	return 0;
-}
-
 int basic_insert_set_test()
 {
 	fprintf(stderr, "Start basic_insert_set_test\n");
@@ -115,6 +51,7 @@ int basic_insert_set_test()
 	fprintf(stderr, "End basic_insert_set_test\n");
 	free(vals);
 	free(btree);
+	rl_close(db);
 	return 0;
 }
 
@@ -175,6 +112,7 @@ int basic_insert_hash_test()
 	free(vals);
 	free(keys);
 	free(btree);
+	rl_close(db);
 	return 0;
 }
 
@@ -227,7 +165,6 @@ int basic_delete_set_test(long elements, long element_to_remove, char *name)
 	int expected;
 	long score[1];
 	for (j = 0; j < abs_elements; j++) {
-		expected = j == pos_element_to_remove - 1;
 		if (j == pos_element_to_remove - 1) {
 			expected = RL_NOT_FOUND;
 			*score = element_to_remove;
@@ -237,7 +174,7 @@ int basic_delete_set_test(long elements, long element_to_remove, char *name)
 			*score = *vals[j];
 		}
 		if (expected != rl_btree_find_score(db, btree, score, NULL, NULL, NULL)) {
-			fprintf(stderr, "Failed to %sfind child %ld (%ld) after deleting element %ld\n", expected == 0 ? "" : "not ", j, *vals[j], element_to_remove);
+			fprintf(stderr, "Failed to %sfind child %ld (%ld) after deleting element %ld\n", expected == RL_FOUND ? "" : "not ", j, *vals[j], element_to_remove);
 			return 1;
 		}
 	}
@@ -245,6 +182,7 @@ int basic_delete_set_test(long elements, long element_to_remove, char *name)
 	fprintf(stderr, "End basic_delete_set_test (%ld, %ld)\n", elements, element_to_remove);
 	free(vals);
 	free(btree);
+	rl_close(db);
 	return 0;
 }
 
@@ -258,6 +196,7 @@ int contains_element(long element, long *elements, long size)
 	}
 	return 0;
 }
+
 int fuzzy_set_test(long size, long btree_node_size, int _commit)
 {
 	fprintf(stderr, "Start fuzzy_set_test %ld %ld %d\n", size, btree_node_size, _commit);
@@ -344,6 +283,7 @@ int fuzzy_set_test(long size, long btree_node_size, int _commit)
 	free(nonelements);
 	free(flatten_scores);
 	free(btree);
+	rl_close(db);
 	return 0;
 }
 
@@ -445,6 +385,7 @@ int fuzzy_hash_test(long size, long btree_node_size, int _commit)
 	free(nonelements);
 	free(flatten_scores);
 	free(btree);
+	rl_close(db);
 	return 0;
 }
 
@@ -513,6 +454,7 @@ int fuzzy_set_delete_test(long size, long btree_node_size, int _commit)
 
 	free(elements);
 	free(btree);
+	rl_close(db);
 	return 0;
 }
 

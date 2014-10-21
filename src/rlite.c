@@ -14,9 +14,48 @@ int rl_serialize_header(struct rlite *db, void *obj, unsigned char *data);
 int rl_deserialize_header(struct rlite *db, void **obj, void *context, unsigned char *data);
 int rl_has_flag(rlite *db, int flag);
 
-rl_data_type rl_data_type_btree_hash_md5_long = {"btree_hash_md5_long", rl_serialize_btree_hash_md5_long, rl_deserialize_btree_hash_md5_long, rl_btree_destroy};
-rl_data_type rl_data_type_btree_node_hash_md5_long = {"btree_node_hash_md5_long", rl_serialize_btree_node_hash_md5_long, rl_deserialize_btree_node_hash_md5_long, rl_btree_node_destroy};
-rl_data_type rl_data_type_header = {"header", rl_serialize_header, rl_deserialize_header, NULL};
+rl_data_type rl_data_type_btree_hash_md5_long = {
+	"btree_hash_md5_long",
+	rl_serialize_btree,
+	rl_deserialize_btree,
+	rl_btree_destroy,
+};
+rl_data_type rl_data_type_btree_node_hash_md5_long = {
+	"btree_node_hash_md5_long",
+	rl_serialize_btree_node_hash_md5_long,
+	rl_deserialize_btree_node_hash_md5_long,
+	rl_btree_node_destroy,
+};
+rl_data_type rl_data_type_header = {
+	"header",
+	rl_serialize_header,
+	rl_deserialize_header,
+	NULL
+};
+rl_data_type rl_data_type_btree_set_long = {
+	"btree_set_long",
+	rl_serialize_btree,
+	rl_deserialize_btree,
+	rl_btree_destroy,
+};
+rl_data_type rl_data_type_btree_node_set_long = {
+	"btree_node_set_long",
+	rl_serialize_btree_node_set_long,
+	rl_deserialize_btree_node_set_long,
+	rl_btree_node_destroy,
+};
+rl_data_type rl_data_type_btree_hash_long_long = {
+	"btree_hash_long_long",
+	rl_serialize_btree,
+	rl_deserialize_btree,
+	rl_btree_destroy,
+};
+rl_data_type rl_data_type_btree_node_hash_long_long = {
+	"btree_node_hash_long_long",
+	rl_serialize_btree_node_hash_long_long,
+	rl_deserialize_btree_node_hash_long_long,
+	rl_btree_node_destroy,
+};
 
 static const char *identifier = "rlite0.0";
 
@@ -97,7 +136,10 @@ int rl_open(const char *filename, rlite **_db, int flags)
 		db->write_pages_alloc = 0;
 	}
 
-	if (memcmp(filename, ":memory:", 9) != 0) {
+	if (memcmp(filename, ":memory:", 9) == 0) {
+		db->driver_type = RL_MEMORY_DRIVER;
+	}
+	else {
 		if ((flags & RLITE_OPEN_CREATE) == 0) {
 			int _access_flags;
 			if ((flags & RLITE_OPEN_READWRITE) != 0) {
@@ -160,7 +202,7 @@ int rl_close(rlite *db)
 		free(db->read_pages[i]);
 	}
 	for (i = 0; i < db->write_pages_len; i++) {
-		if (db->write_pages[i]->type->destroy) {
+		if (db->write_pages[i]->type->destroy && db->write_pages[i]->obj) {
 			db->write_pages[i]->type->destroy(db, db->write_pages[i]->obj);
 		}
 		free(db->write_pages[i]);
@@ -175,6 +217,9 @@ int rl_has_flag(rlite *db, int flag)
 {
 	if (db->driver_type == RL_FILE_DRIVER) {
 		return (((rl_file_driver *)db->driver)->mode & flag) > 0;
+	}
+	else if (db->driver_type == RL_MEMORY_DRIVER) {
+		return 1;
 	}
 	fprintf(stderr, "Unknown driver_type %d\n", db->driver_type);
 	return RL_UNEXPECTED;
@@ -197,11 +242,20 @@ int rl_read_header(rlite *db)
 {
 	db->page_size = 100;
 	void *header;
-	int retval = rl_read(db, &rl_data_type_header, 0, NULL, &header);
-	if (retval == RL_NOT_FOUND && rl_has_flag(db, RLITE_OPEN_CREATE)) {
+	int retval;
+	if (db->driver_type == RL_MEMORY_DRIVER) {
 		retval = rl_create_db(db);
 		if (retval != RL_OK) {
 			goto cleanup;
+		}
+	}
+	else {
+		retval = rl_read(db, &rl_data_type_header, 0, NULL, &header);
+		if (retval == RL_NOT_FOUND && rl_has_flag(db, RLITE_OPEN_CREATE)) {
+			retval = rl_create_db(db);
+			if (retval != RL_OK) {
+				goto cleanup;
+			}
 		}
 	}
 cleanup:
@@ -219,7 +273,7 @@ static int rl_search_cache(rlite *db, rl_data_type *type, long page_number, void
 			pos = min + (max - min) / 2;
 			page = pages[pos];
 			if (page->page_number == page_number) {
-				if (page->type != type) {
+				if (type != NULL && page->type != type) {
 					fprintf(stderr, "Type of page in cache (%s) doesn't match the asked one (%s)\n", page->type->name, type->name);
 					return RL_UNEXPECTED;
 				}
@@ -295,7 +349,7 @@ int rl_read(rlite *db, rl_data_type *type, long page, void *context, void **obj)
 		retval = RL_NOT_IMPLEMENTED;
 		goto cleanup;
 	}
-	retval = type->deserialize(db, obj, context, data);
+	retval = type->deserialize(db, obj, context ? context : type, data);
 cleanup:
 	if (retval != RL_OK) {
 		free(data);
@@ -306,6 +360,10 @@ cleanup:
 int rl_write(struct rlite *db, rl_data_type *type, long page_number, void *obj)
 {
 	long pos;
+	if (page_number == 0) {
+		fprintf(stderr, "Unable to write to page number 0\n");
+		return RL_UNEXPECTED;
+	}
 	int retval = rl_search_cache(db, type, page_number, NULL, &pos, db->write_pages, db->write_pages_len);
 	if (retval == RL_FOUND) {
 		db->write_pages[pos]->obj = obj;
@@ -329,6 +387,17 @@ int rl_write(struct rlite *db, rl_data_type *type, long page_number, void *obj)
 		}
 	}
 	return RL_OK;
+}
+
+int rl_delete(struct rlite *db, long page_number)
+{
+	long pos;
+	int retval = rl_search_cache(db, NULL, page_number, NULL, &pos, db->write_pages, db->write_pages_len);
+	if (retval == RL_FOUND) {
+		db->write_pages[pos]->obj = NULL;
+		retval = RL_OK;
+	}
+	return retval;
 }
 
 static int md5(const char *data, long datalen, unsigned char digest[16])

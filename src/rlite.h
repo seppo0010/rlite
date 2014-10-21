@@ -5,6 +5,7 @@
 #include "status.h"
 #include "btree.h"
 
+#define RL_MEMORY_DRIVER 0
 #define RL_FILE_DRIVER 1
 
 #define RLITE_OPEN_READONLY  0x00000001
@@ -52,6 +53,7 @@ int rl_close(rlite *db);
 int rl_read_header(rlite *db);
 int rl_read(struct rlite *db, rl_data_type *type, long page, void *context, void **obj);
 int rl_write(struct rlite *db, rl_data_type *type, long page, void *obj);
+int rl_delete(struct rlite *db, long page);
 int rl_commit(struct rlite *db);
 int rl_discard(struct rlite *db);
 
@@ -61,5 +63,9 @@ int rl_get_key(rlite *db, const char *key, long keylen, long *value);
 extern rl_data_type rl_data_type_header;
 extern rl_data_type rl_data_type_btree_hash_md5_long;
 extern rl_data_type rl_data_type_btree_node_hash_md5_long;
+extern rl_data_type rl_data_type_btree_set_long;
+extern rl_data_type rl_data_type_btree_node_set_long;
+extern rl_data_type rl_data_type_btree_hash_long_long;
+extern rl_data_type rl_data_type_btree_node_hash_long_long;
 
 #endif
