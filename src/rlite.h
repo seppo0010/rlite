@@ -69,5 +69,6 @@ extern rl_data_type rl_data_type_btree_hash_long_long;
 extern rl_data_type rl_data_type_btree_node_hash_long_long;
 extern rl_data_type rl_data_type_list_long;
 extern rl_data_type rl_data_type_list_node_long;
+extern rl_data_type rl_data_type_string;
 
 #endif

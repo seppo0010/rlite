@@ -7,6 +7,7 @@
 #include "list.h"
 #include "rlite.h"
 #include "util.h"
+#include "page_string.h"
 
 #define DEFAULT_READ_PAGES_LEN 16
 #define DEFAULT_WRITE_PAGES_LEN 8
@@ -68,6 +69,13 @@ rl_data_type rl_data_type_list_node_long = {
 	rl_serialize_list_node_long,
 	rl_deserialize_list_node_long,
 	rl_list_node_destroy,
+};
+
+rl_data_type rl_data_type_string = {
+	"string",
+	rl_serialize_string,
+	rl_deserialize_string,
+	rl_destroy_string,
 };
 
 static const char *identifier = "rlite0.0";

@@ -1,6 +1,4 @@
 *.o
 *.a
-/src/btree-test
-/src/list-test
-/src/rlite-test
+/src/*-test
 /src/rlite-test.rld

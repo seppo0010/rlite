@@ -1,4 +1,3 @@
-string page
 key (list of full key string, type, value)
 zset (zadd, zrange, zrem, zscore)
 string (set, get, append)
