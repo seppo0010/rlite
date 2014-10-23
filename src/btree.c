@@ -7,47 +7,6 @@
 #include "rlite.h"
 #include "util.h"
 
-int long_cmp(void *v1, void *v2)
-{
-	long a = *((long *)v1), b = *((long *)v2);
-	if (a == b) {
-		return 0;
-	}
-	return a > b ? 1 : -1;
-}
-
-int long_formatter(void *v2, char **formatted, int *size)
-{
-	*formatted = malloc(sizeof(char) * 22);
-	if (*formatted == NULL) {
-		return RL_OUT_OF_MEMORY;
-	}
-	*size = snprintf(*formatted, 22, "%ld", *(long *)v2);
-	return RL_OK;
-}
-
-int md5_cmp(void *v1, void *v2)
-{
-	return memcmp(v1, v2, sizeof(unsigned char) * 16);
-}
-
-int md5_formatter(void *v2, char **formatted, int *size)
-{
-	unsigned char *data = (unsigned char *)v2;
-	static const char *hex_lookup = "0123456789ABCDEF";
-	*formatted = malloc(sizeof(char) * 32);
-	if (*formatted == NULL) {
-		return RL_OUT_OF_MEMORY;
-	}
-	int i;
-	for (i = 0; i < 16; i++) {
-		*formatted[i * 2] = hex_lookup[data[i] & 0x0F];
-		*formatted[i * 2 + 1] = hex_lookup[(data[i] / 0x0F) & 0x0F];
-	}
-	*size = 32;
-	return RL_OK;
-}
-
 rl_btree_type btree_hash_md5_long = {
 	0,
 	0,

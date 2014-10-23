@@ -4,6 +4,7 @@
 #include <errno.h>
 #include <openssl/md5.h>
 #include "btree.h"
+#include "list.h"
 #include "rlite.h"
 #include "util.h"
 
@@ -55,6 +56,18 @@ rl_data_type rl_data_type_btree_node_hash_long_long = {
 	rl_serialize_btree_node_hash_long_long,
 	rl_deserialize_btree_node_hash_long_long,
 	rl_btree_node_destroy,
+};
+rl_data_type rl_data_type_list_long = {
+	"list_long",
+	rl_serialize_list_long,
+	rl_deserialize_list_long,
+	rl_list_destroy,
+};
+rl_data_type rl_data_type_list_node_long = {
+	"list_node_long",
+	rl_serialize_list_node_long,
+	rl_deserialize_list_node_long,
+	rl_list_node_destroy,
 };
 
 static const char *identifier = "rlite0.0";
@@ -110,6 +123,7 @@ static int rl_ensure_pages(rlite *db)
 int rl_open(const char *filename, rlite **_db, int flags)
 {
 	rl_btree_init();
+	rl_list_init();
 	int retval = RL_OK;
 	rlite *db = malloc(sizeof(rlite));
 	if (db == NULL) {

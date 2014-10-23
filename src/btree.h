@@ -23,9 +23,6 @@ rl_btree_type long_set;
 rl_btree_type long_hash;
 rl_btree_type btree_hash_md5_long;
 
-void init_long_set();
-void init_long_hash();
-
 typedef struct rl_btree_node {
 	void **scores;
 	// children is null when the node is a leaf
