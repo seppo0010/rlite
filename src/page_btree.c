@@ -3,7 +3,7 @@
 #include <stdio.h>
 #include <math.h>
 #include "status.h"
-#include "btree.h"
+#include "page_btree.h"
 #include "rlite.h"
 #include "util.h"
 
@@ -44,7 +44,7 @@ void rl_btree_init()
 	long_set.btree_node_type = &rl_data_type_btree_node_set_long;
 }
 
-int rl_serialize_btree(struct rlite *db, void *obj, unsigned char *data)
+int rl_btree_serialize(struct rlite *db, void *obj, unsigned char *data)
 {
 	db = db;
 	rl_btree *tree = obj;
@@ -54,7 +54,7 @@ int rl_serialize_btree(struct rlite *db, void *obj, unsigned char *data)
 	return RL_OK;
 }
 
-int rl_deserialize_btree(struct rlite *db, void **obj, void *context, unsigned char *data)
+int rl_btree_deserialize(struct rlite *db, void **obj, void *context, unsigned char *data)
 {
 	rl_btree *btree;
 	int retval = rl_btree_create(db, &btree, context, 0);
@@ -943,7 +943,7 @@ int rl_flatten_btree(rlite *db, rl_btree *btree, void *** scores, long *size)
 	return rl_flatten_btree_node(db, btree, node, scores, size);
 }
 
-int rl_serialize_btree_node_hash_md5_long(rlite *db, void *obj, unsigned char *data)
+int rl_btree_node_serialize_hash_md5_long(rlite *db, void *obj, unsigned char *data)
 {
 	db = db;
 	rl_btree_node *node = (rl_btree_node *)obj;
@@ -959,7 +959,7 @@ int rl_serialize_btree_node_hash_md5_long(rlite *db, void *obj, unsigned char *d
 	return RL_OK;
 }
 
-int rl_deserialize_btree_node_hash_md5_long(rlite *db, void **obj, void *context, unsigned char *data)
+int rl_btree_node_deserialize_hash_md5_long(rlite *db, void **obj, void *context, unsigned char *data)
 {
 	db = db;
 	rl_btree_node *node;
@@ -1020,7 +1020,7 @@ cleanup:
 	return retval;
 }
 
-int rl_serialize_btree_node_set_long(struct rlite *db, void *obj, unsigned char *data)
+int rl_btree_node_serialize_set_long(struct rlite *db, void *obj, unsigned char *data)
 {
 	db = db;
 	rl_btree_node *node = obj;
@@ -1035,7 +1035,7 @@ int rl_serialize_btree_node_set_long(struct rlite *db, void *obj, unsigned char 
 	return RL_OK;
 }
 
-int rl_deserialize_btree_node_set_long(struct rlite *db, void **obj, void *context, unsigned char *data)
+int rl_btree_node_deserialize_set_long(struct rlite *db, void **obj, void *context, unsigned char *data)
 {
 	rl_btree *btree = context;
 	rl_btree_node *node;
@@ -1081,7 +1081,7 @@ cleanup:
 	return retval;
 }
 
-int rl_serialize_btree_node_hash_long_long(struct rlite *db, void *obj, unsigned char *data)
+int rl_btree_node_serialize_hash_long_long(struct rlite *db, void *obj, unsigned char *data)
 {
 	db = db;
 	rl_btree_node *node = obj;
@@ -1103,7 +1103,7 @@ cleanup:
 	return retval;
 }
 
-int rl_deserialize_btree_node_hash_long_long(struct rlite *db, void **obj, void *context, unsigned char *data)
+int rl_btree_node_deserialize_hash_long_long(struct rlite *db, void **obj, void *context, unsigned char *data)
 {
 	rl_btree *btree = context;
 	rl_btree_node *node;

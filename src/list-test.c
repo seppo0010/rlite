@@ -3,7 +3,7 @@
 #include <string.h>
 #include "rlite.h"
 #include "status.h"
-#include "list.h"
+#include "page_list.h"
 
 
 int basic_insert_list_test(int options)

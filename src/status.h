@@ -1,5 +1,5 @@
-#ifndef _STATUS_H
-#define _STATUS_H
+#ifndef _RL_STATUS_H
+#define _RL_STATUS_H
 
 #define RL_OK 0
 #define RL_INVALID_STATE 1

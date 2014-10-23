@@ -2,7 +2,7 @@
 #include <stdio.h>
 #include <string.h>
 #include "rlite.h"
-#include "btree.h"
+#include "page_btree.h"
 #include "status.h"
 
 int basic_insert_set_test()

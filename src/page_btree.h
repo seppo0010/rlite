@@ -1,5 +1,5 @@
-#ifndef _BTREE_H
-#define _BTREE_H
+#ifndef _RL_PAGE_BTREE_H
+#define _RL_PAGE_BTREE_H
 
 #include "rlite.h"
 
@@ -52,16 +52,16 @@ int rl_print_btree(struct rlite *db, rl_btree *btree);
 int rl_btree_is_balanced(struct rlite *db, rl_btree *btree);
 int rl_flatten_btree(struct rlite *db, rl_btree *btree, void *** scores, long *size);
 
-int rl_serialize_btree(struct rlite *db, void *obj, unsigned char *data);
-int rl_deserialize_btree(struct rlite *db, void **obj, void *context, unsigned char *data);
+int rl_btree_serialize(struct rlite *db, void *obj, unsigned char *data);
+int rl_btree_deserialize(struct rlite *db, void **obj, void *context, unsigned char *data);
 
-int rl_serialize_btree_node_hash_md5_long(struct rlite *db, void *obj, unsigned char *data);
-int rl_deserialize_btree_node_hash_md5_long(struct rlite *db, void **obj, void *context, unsigned char *data);
+int rl_btree_node_serialize_hash_md5_long(struct rlite *db, void *obj, unsigned char *data);
+int rl_btree_node_deserialize_hash_md5_long(struct rlite *db, void **obj, void *context, unsigned char *data);
 
-int rl_serialize_btree_node_set_long(struct rlite *db, void *obj, unsigned char *data);
-int rl_deserialize_btree_node_set_long(struct rlite *db, void **obj, void *context, unsigned char *data);
+int rl_btree_node_serialize_set_long(struct rlite *db, void *obj, unsigned char *data);
+int rl_btree_node_deserialize_set_long(struct rlite *db, void **obj, void *context, unsigned char *data);
 
-int rl_serialize_btree_node_hash_long_long(struct rlite *db, void *obj, unsigned char *data);
-int rl_deserialize_btree_node_hash_long_long(struct rlite *db, void **obj, void *context, unsigned char *data);
+int rl_btree_node_serialize_hash_long_long(struct rlite *db, void *obj, unsigned char *data);
+int rl_btree_node_deserialize_hash_long_long(struct rlite *db, void **obj, void *context, unsigned char *data);
 
 #endif

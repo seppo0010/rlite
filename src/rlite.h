@@ -3,7 +3,7 @@
 
 #include <stdio.h>
 #include "status.h"
-#include "btree.h"
+#include "page_btree.h"
 
 #define RL_MEMORY_DRIVER 0
 #define RL_FILE_DRIVER 1

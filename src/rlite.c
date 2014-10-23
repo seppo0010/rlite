@@ -3,84 +3,84 @@
 #include <unistd.h>
 #include <errno.h>
 #include <openssl/md5.h>
-#include "btree.h"
-#include "list.h"
+#include "page_btree.h"
+#include "page_list.h"
+#include "page_string.h"
 #include "rlite.h"
 #include "util.h"
-#include "page_string.h"
 
 #define DEFAULT_READ_PAGES_LEN 16
 #define DEFAULT_WRITE_PAGES_LEN 8
 
-int rl_serialize_header(struct rlite *db, void *obj, unsigned char *data);
-int rl_deserialize_header(struct rlite *db, void **obj, void *context, unsigned char *data);
+int rl_header_serialize(struct rlite *db, void *obj, unsigned char *data);
+int rl_header_deserialize(struct rlite *db, void **obj, void *context, unsigned char *data);
 int rl_has_flag(rlite *db, int flag);
 
 rl_data_type rl_data_type_btree_hash_md5_long = {
 	"btree_hash_md5_long",
-	rl_serialize_btree,
-	rl_deserialize_btree,
+	rl_btree_serialize,
+	rl_btree_deserialize,
 	rl_btree_destroy,
 };
 rl_data_type rl_data_type_btree_node_hash_md5_long = {
 	"btree_node_hash_md5_long",
-	rl_serialize_btree_node_hash_md5_long,
-	rl_deserialize_btree_node_hash_md5_long,
+	rl_btree_node_serialize_hash_md5_long,
+	rl_btree_node_deserialize_hash_md5_long,
 	rl_btree_node_destroy,
 };
 rl_data_type rl_data_type_header = {
 	"header",
-	rl_serialize_header,
-	rl_deserialize_header,
+	rl_header_serialize,
+	rl_header_deserialize,
 	NULL
 };
 rl_data_type rl_data_type_btree_set_long = {
 	"btree_set_long",
-	rl_serialize_btree,
-	rl_deserialize_btree,
+	rl_btree_serialize,
+	rl_btree_deserialize,
 	rl_btree_destroy,
 };
 rl_data_type rl_data_type_btree_node_set_long = {
 	"btree_node_set_long",
-	rl_serialize_btree_node_set_long,
-	rl_deserialize_btree_node_set_long,
+	rl_btree_node_serialize_set_long,
+	rl_btree_node_deserialize_set_long,
 	rl_btree_node_destroy,
 };
 rl_data_type rl_data_type_btree_hash_long_long = {
 	"btree_hash_long_long",
-	rl_serialize_btree,
-	rl_deserialize_btree,
+	rl_btree_serialize,
+	rl_btree_deserialize,
 	rl_btree_destroy,
 };
 rl_data_type rl_data_type_btree_node_hash_long_long = {
 	"btree_node_hash_long_long",
-	rl_serialize_btree_node_hash_long_long,
-	rl_deserialize_btree_node_hash_long_long,
+	rl_btree_node_serialize_hash_long_long,
+	rl_btree_node_deserialize_hash_long_long,
 	rl_btree_node_destroy,
 };
 rl_data_type rl_data_type_list_long = {
 	"list_long",
-	rl_serialize_list_long,
-	rl_deserialize_list_long,
+	rl_list_serialize_long,
+	rl_list_deserialize_long,
 	rl_list_destroy,
 };
 rl_data_type rl_data_type_list_node_long = {
 	"list_node_long",
-	rl_serialize_list_node_long,
-	rl_deserialize_list_node_long,
+	rl_list_node_serialize_long,
+	rl_list_node_deserialize_long,
 	rl_list_node_destroy,
 };
 
 rl_data_type rl_data_type_string = {
 	"string",
-	rl_serialize_string,
-	rl_deserialize_string,
-	rl_destroy_string,
+	rl_string_serialize,
+	rl_string_deserialize,
+	rl_string_destroy,
 };
 
 static const char *identifier = "rlite0.0";
 
-int rl_serialize_header(struct rlite *db, void *obj, unsigned char *data)
+int rl_header_serialize(struct rlite *db, void *obj, unsigned char *data)
 {
 	obj = obj;
 	int retval = RL_OK;
@@ -90,7 +90,7 @@ int rl_serialize_header(struct rlite *db, void *obj, unsigned char *data)
 	return retval;
 }
 
-int rl_deserialize_header(struct rlite *db, void **obj, void *context, unsigned char *data)
+int rl_header_deserialize(struct rlite *db, void **obj, void *context, unsigned char *data)
 {
 	obj = obj;
 	context = context;

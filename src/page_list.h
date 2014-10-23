@@ -1,5 +1,5 @@
-#ifndef _LIST_H
-#define _LIST_H
+#ifndef _RL_PAGE_LIST_H
+#define _RL_PAGE_LIST_H
 
 struct rlite;
 struct rl_list;
@@ -41,10 +41,10 @@ int rl_print_list(struct rlite *db, rl_list *list);
 int rl_list_is_balanced(struct rlite *db, rl_list *list);
 int rl_flatten_list(struct rlite *db, rl_list *list, void *** elements);
 
-int rl_serialize_list_long(struct rlite *db, void *obj, unsigned char *data);
-int rl_deserialize_list_long(struct rlite *db, void **obj, void *context, unsigned char *data);
-int rl_serialize_list_node_long(struct rlite *db, void *obj, unsigned char *data);
-int rl_deserialize_list_node_long(struct rlite *db, void **obj, void *context, unsigned char *data);
+int rl_list_serialize_long(struct rlite *db, void *obj, unsigned char *data);
+int rl_list_deserialize_long(struct rlite *db, void **obj, void *context, unsigned char *data);
+int rl_list_node_serialize_long(struct rlite *db, void *obj, unsigned char *data);
+int rl_list_node_deserialize_long(struct rlite *db, void **obj, void *context, unsigned char *data);
 
 
 #endif

@@ -4,7 +4,7 @@
 #include <math.h>
 #include "rlite.h"
 #include "status.h"
-#include "list.h"
+#include "page_list.h"
 #include "util.h"
 
 int rl_print_list_node(rl_list *list, rl_list_node *node);
@@ -18,7 +18,7 @@ rl_list_type list_long = {
 	long_formatter,
 };
 
-int rl_serialize_list_long(rlite *db, void *obj, unsigned char *data)
+int rl_list_serialize_long(rlite *db, void *obj, unsigned char *data)
 {
 	db = db;
 	rl_list *list = obj;
@@ -29,7 +29,7 @@ int rl_serialize_list_long(rlite *db, void *obj, unsigned char *data)
 	return RL_OK;
 }
 
-int rl_deserialize_list_long(rlite *db, void **obj, void *context, unsigned char *data)
+int rl_list_deserialize_long(rlite *db, void **obj, void *context, unsigned char *data)
 {
 	rl_list *list;
 	int retval = rl_list_create(db, &list, context, 0);
@@ -44,7 +44,7 @@ int rl_deserialize_list_long(rlite *db, void **obj, void *context, unsigned char
 	return retval;
 }
 
-int rl_serialize_list_node_long(rlite *db, void *obj, unsigned char *data)
+int rl_list_node_serialize_long(rlite *db, void *obj, unsigned char *data)
 {
 	db = db;
 	rl_list_node *node = obj;
@@ -66,7 +66,7 @@ cleanup:
 	return retval;
 }
 
-int rl_deserialize_list_node_long(rlite *db, void **obj, void *context, unsigned char *data)
+int rl_list_node_deserialize_long(rlite *db, void **obj, void *context, unsigned char *data)
 {
 	rl_list *list = context;
 	rl_list_node *node;

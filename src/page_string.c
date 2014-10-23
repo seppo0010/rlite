@@ -3,13 +3,13 @@
 #include "rlite.h"
 #include "page_string.h"
 
-int rl_serialize_string(rlite *db, void *obj, unsigned char *data)
+int rl_string_serialize(rlite *db, void *obj, unsigned char *data)
 {
 	memcpy(data, obj, sizeof(char) * db->page_size);
 	return RL_OK;
 }
 
-int rl_deserialize_string(rlite *db, void **obj, void *context, unsigned char *data)
+int rl_string_deserialize(rlite *db, void **obj, void *context, unsigned char *data)
 {
 	context = context;
 	unsigned char *new_data = malloc(sizeof(char) * db->page_size);
@@ -21,7 +21,7 @@ int rl_deserialize_string(rlite *db, void **obj, void *context, unsigned char *d
 	return RL_OK;
 }
 
-int rl_destroy_string(rlite *db, void *obj)
+int rl_string_destroy(rlite *db, void *obj)
 {
 	db = db;
 	free(obj);

@@ -15,8 +15,8 @@ all: buildtest
 .c.o:
 	$(CC) $(ARCH) $(DEBUG) $(CFLAGS) -c $<
 
-librlite.a: rlite.o page_string.o list.o btree.o util.o
-	ar -cq librlite.a rlite.o page_string.o list.o btree.o util.o
+librlite.a: rlite.o page_string.o page_list.o page_btree.o util.o
+	ar -cq librlite.a rlite.o page_string.o page_list.o page_btree.o util.o
 
 rlite-test: rlite-test.o librlite.a
 	$(CC) $(DEBUG) $(CFLAGS) -o rlite-test rlite-test.o librlite.a $(LIBS)

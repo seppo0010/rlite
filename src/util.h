@@ -1,5 +1,5 @@
-#ifndef _UTIL_H
-#define _UTIL_H
+#ifndef _RL_UTIL_H
+#define _RL_UTIL_H
 
 void *memmove_dbg(void *dest, void *src, size_t n, int flag);
 int get_4bytes(const unsigned char *p);
