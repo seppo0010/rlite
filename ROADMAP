@@ -1,6 +1,7 @@
-fuzzy test
-serialize/deserialize
-delete score
-store in filesystem
-hashmap
-linked list
+string page
+key (list of full key string, type, value)
+zset (zadd, zrange, zrem, zscore)
+string (set, get, append)
+hash (hset, hdel, hkeys, hlen, hget)
+set (sadd, scard, srem, spop)
+list (rpush, lpush, rpop, lpop, lindex, linsert, llen, lrange)
