@@ -15,8 +15,8 @@ all: buildtest
 .c.o:
 	$(CC) $(ARCH) $(DEBUG) $(CFLAGS) -c $<
 
-librlite.a: rlite.o page_string.o page_list.o page_btree.o util.o
-	ar -cq librlite.a rlite.o page_string.o page_list.o page_btree.o util.o
+librlite.a: rlite.o page_string.o page_list.o page_btree.o obj_string.o util.o
+	ar -cq librlite.a rlite.o page_string.o page_list.o page_btree.o obj_string.o util.o
 
 rlite-test: rlite-test.o librlite.a
 	$(CC) $(DEBUG) $(CFLAGS) -o rlite-test rlite-test.o librlite.a $(LIBS)
@@ -30,10 +30,17 @@ list-test: list-test.o librlite.a
 string-test: string-test.o librlite.a
 	$(CC) $(DEBUG) $(CFLAGS) -o string-test string-test.o librlite.a $(LIBS)
 
-buildtest: rlite-test btree-test list-test string-test
+obj_string-test: obj_string-test.o librlite.a
+	$(CC) $(DEBUG) $(CFLAGS) -o obj_string-test obj_string-test.o librlite.a $(LIBS)
+
+buildtest: rlite-test btree-test list-test string-test obj_string-test
 
 test: buildtest
-	./btree-test && ./list-test && ./rlite-test && ./string-test
+	./btree-test
+	./list-test
+	./rlite-test
+	./string-test
+	./obj_string-test
 
 clean:
 	rm -rf *-test *.o *.a *.dSYM

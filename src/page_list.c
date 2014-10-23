@@ -5,6 +5,7 @@
 #include "rlite.h"
 #include "status.h"
 #include "page_list.h"
+#include "page_string.h"
 #include "util.h"
 
 int rl_print_list_node(rl_list *list, rl_list_node *node);

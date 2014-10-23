@@ -46,5 +46,4 @@ int rl_list_deserialize_long(struct rlite *db, void **obj, void *context, unsign
 int rl_list_node_serialize_long(struct rlite *db, void *obj, unsigned char *data);
 int rl_list_node_deserialize_long(struct rlite *db, void **obj, void *context, unsigned char *data);
 
-
 #endif
