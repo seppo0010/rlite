@@ -13,6 +13,7 @@
 #define RLITE_OPEN_CREATE    0x00000004
 
 struct rlite;
+struct rl_btree;
 
 typedef struct rl_data_type {
 	const char *name;
@@ -52,13 +53,14 @@ int rl_close(rlite *db);
 
 int rl_read_header(rlite *db);
 int rl_read(struct rlite *db, rl_data_type *type, long page, void *context, void **obj);
+int rl_get_key_btree(rlite *db, struct rl_btree **btree);
 int rl_write(struct rlite *db, rl_data_type *type, long page, void *obj);
 int rl_delete(struct rlite *db, long page);
 int rl_commit(struct rlite *db);
 int rl_discard(struct rlite *db);
 
-int rl_set_key(rlite *db, const char *key, long keylen, long value);
-int rl_get_key(rlite *db, const char *key, long keylen, long *value);
+int rl_set_key(rlite *db, const unsigned char *key, long keylen, long value);
+int rl_get_key(rlite *db, const unsigned char *key, long keylen, long *value);
 
 extern rl_data_type rl_data_type_header;
 extern rl_data_type rl_data_type_btree_hash_md5_long;
@@ -69,6 +71,8 @@ extern rl_data_type rl_data_type_btree_hash_long_long;
 extern rl_data_type rl_data_type_btree_node_hash_long_long;
 extern rl_data_type rl_data_type_list_long;
 extern rl_data_type rl_data_type_list_node_long;
+extern rl_data_type rl_data_type_list_key;
+extern rl_data_type rl_data_type_list_node_key;
 extern rl_data_type rl_data_type_string;
 
 #endif

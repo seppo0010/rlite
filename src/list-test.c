@@ -17,7 +17,8 @@ int basic_insert_list_test(int options)
 	}
 
 	rl_list *list;
-	if (RL_OK != rl_list_create(db, &list, &list_long, 2)) {
+	db->page_size = sizeof(long) * 2 + 12;
+	if (RL_OK != rl_list_create(db, &list, &list_long)) {
 		return 1;
 	}
 
@@ -57,7 +58,7 @@ int basic_insert_list_test(int options)
 	// rl_print_list(list);
 
 	for (i = 0; i < 7; i++) {
-		retval = rl_list_find_element(db, list, vals[i], &position);
+		retval = rl_list_find_element(db, list, vals[i], NULL, &position);
 		if (RL_FOUND != retval) {
 			fprintf(stderr, "Failed to find child %ld (%d)\n", i, retval);
 			return 1;
@@ -69,7 +70,7 @@ int basic_insert_list_test(int options)
 	}
 	long nonexistent_vals[2] = {0, 8};
 	for (i = 0; i < 2; i++) {
-		if (RL_NOT_FOUND != rl_list_find_element(db, list, &nonexistent_vals[i], NULL)) {
+		if (RL_NOT_FOUND != rl_list_find_element(db, list, &nonexistent_vals[i], NULL, NULL)) {
 			fprintf(stderr, "Failed to not find child %ld\n", i);
 			return 1;
 		}
@@ -102,7 +103,8 @@ int fuzzy_list_test(long size, long list_node_size, int _commit)
 	}
 
 	rl_list *list;
-	if (RL_OK != rl_list_create(db, &list, &list_long, list_node_size)) {
+	db->page_size = sizeof(long) * list_node_size + 12;
+	if (RL_OK != rl_list_create(db, &list, &list_long)) {
 		return 1;
 	}
 
@@ -167,11 +169,11 @@ int fuzzy_list_test(long size, long list_node_size, int _commit)
 	}
 
 	for (i = 0; i < size; i++) {
-		if (RL_FOUND != rl_list_find_element(db, list, &elements[i], NULL)) {
+		if (RL_FOUND != rl_list_find_element(db, list, &elements[i], NULL, NULL)) {
 			fprintf(stderr, "Failed to find child %ld (%ld)\n", i, elements[i]);
 			return 1;
 		}
-		if (RL_NOT_FOUND != rl_list_find_element(db, list, &nonelements[i], NULL)) {
+		if (RL_NOT_FOUND != rl_list_find_element(db, list, &nonelements[i], NULL, NULL)) {
 			fprintf(stderr, "Failed to not find child %ld\n", i);
 			return 1;
 		}
@@ -197,7 +199,8 @@ int basic_delete_list_test(long elements, long element_to_remove, char *name)
 	}
 
 	rl_list *list;
-	if (RL_OK != rl_list_create(db, &list, &list_long, 2)) {
+	db->page_size = sizeof(long) * 2 + 12;
+	if (RL_OK != rl_list_create(db, &list, &list_long)) {
 		return 1;
 	}
 	long pos_element_to_remove = element_to_remove >= 0 ? (element_to_remove) : (elements + element_to_remove);
@@ -243,7 +246,7 @@ int basic_delete_list_test(long elements, long element_to_remove, char *name)
 			expected = RL_FOUND;
 			*element = *vals[j];
 		}
-		if (expected != rl_list_find_element(db, list, element, NULL)) {
+		if (expected != rl_list_find_element(db, list, element, NULL, NULL)) {
 			fprintf(stderr, "Failed to %sfind child %ld (%ld) after deleting element %ld\n", expected == 0 ? "" : "not ", j, *vals[j], element_to_remove);
 			return 1;
 		}
@@ -267,7 +270,8 @@ int fuzzy_list_delete_test(long size, long list_node_size, int _commit)
 	}
 
 	rl_list *list;
-	if (RL_OK != rl_list_create(db, &list, &list_long, list_node_size)) {
+	db->page_size = sizeof(long) * list_node_size + 12;
+	if (RL_OK != rl_list_create(db, &list, &list_long)) {
 		return 1;
 	}
 

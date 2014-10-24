@@ -14,6 +14,13 @@ typedef struct {
 } rl_list_type;
 
 rl_list_type list_long;
+rl_list_type list_key;
+
+typedef struct rl_key {
+	unsigned char type;
+	long string_page;
+	long value_page;
+} rl_key;
 
 typedef struct rl_list_node {
 	long size;
@@ -31,19 +38,23 @@ typedef struct rl_list {
 } rl_list;
 
 void rl_list_init();
-int rl_list_create(struct rlite *db, rl_list **_list, rl_list_type *type, long max_size);
+int rl_list_create(struct rlite *db, rl_list **_list, rl_list_type *type);
 int rl_list_destroy(struct rlite *db, void *list);
 int rl_list_node_destroy(struct rlite *db, void *node);
 int rl_list_add_element(struct rlite *db, rl_list *list, void *element, long position);
 int rl_list_remove_element(struct rlite *db, rl_list *list, long position);
-int rl_list_find_element(struct rlite *db, rl_list *list, void *element, long *position);
+int rl_list_find_element(struct rlite *db, rl_list *list, void *element, void **found_element, long *position);
 int rl_print_list(struct rlite *db, rl_list *list);
 int rl_list_is_balanced(struct rlite *db, rl_list *list);
 int rl_flatten_list(struct rlite *db, rl_list *list, void *** elements);
 
-int rl_list_serialize_long(struct rlite *db, void *obj, unsigned char *data);
-int rl_list_deserialize_long(struct rlite *db, void **obj, void *context, unsigned char *data);
+int rl_list_serialize(struct rlite *db, void *obj, unsigned char *data);
+int rl_list_deserialize(struct rlite *db, void **obj, void *context, unsigned char *data);
+
 int rl_list_node_serialize_long(struct rlite *db, void *obj, unsigned char *data);
 int rl_list_node_deserialize_long(struct rlite *db, void **obj, void *context, unsigned char *data);
+
+int rl_list_node_serialize_key(rlite *db, void *obj, unsigned char *data);
+int rl_list_node_deserialize_key(rlite *db, void **obj, void *context, unsigned char *data);
 
 #endif

@@ -53,7 +53,7 @@ cleanup:
 int rl_obj_string_set(struct rlite *db, long *number, unsigned char *data, long size)
 {
 	rl_list *list;
-	int retval = rl_list_create(db, &list, &list_long, (db->page_size - 12) / 4);
+	int retval = rl_list_create(db, &list, &list_long);
 	if (retval != RL_OK) {
 		return retval;
 	}

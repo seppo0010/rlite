@@ -55,9 +55,10 @@ int test_has_key()
 		fprintf(stderr, "Failed to open file\n");
 		goto cleanup;
 	}
-	const char *key = "random key";
+	const unsigned char *key = (unsigned char *)"random key";
+	long keylen = strlen((char *) key);
 	long value = 529, value2;
-	retval = rl_get_key(db, key, strlen(key), NULL);
+	retval = rl_get_key(db, key, keylen, NULL);
 	if (retval == RL_NOT_FOUND) {
 		retval = RL_OK;
 	}
@@ -65,12 +66,12 @@ int test_has_key()
 		fprintf(stderr, "Failed to not find unexisting key (%d)\n", retval);
 		goto cleanup;
 	}
-	retval = rl_set_key(db, key, strlen(key), value);
+	retval = rl_set_key(db, key, keylen, value);
 	if (retval != RL_OK) {
 		fprintf(stderr, "Failed to set key (%d)\n", retval);
 		goto cleanup;
 	}
-	retval = rl_get_key(db, key, strlen(key), &value2);
+	retval = rl_get_key(db, key, keylen, &value2);
 	if (retval != RL_FOUND) {
 		fprintf(stderr, "Failed to find existing key (%d)\n", retval);
 		goto cleanup;

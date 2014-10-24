@@ -6,6 +6,7 @@
 #include "status.h"
 #include "page_list.h"
 #include "page_string.h"
+#include "obj_key.h"
 #include "util.h"
 
 int rl_print_list_node(rl_list *list, rl_list_node *node);
@@ -19,7 +20,15 @@ rl_list_type list_long = {
 	long_formatter,
 };
 
-int rl_list_serialize_long(rlite *db, void *obj, unsigned char *data)
+rl_list_type list_key = {
+	0,
+	0,
+	sizeof(rl_key),
+	key_cmp,
+	0,
+};
+
+int rl_list_serialize(rlite *db, void *obj, unsigned char *data)
 {
 	db = db;
 	rl_list *list = obj;
@@ -30,10 +39,10 @@ int rl_list_serialize_long(rlite *db, void *obj, unsigned char *data)
 	return RL_OK;
 }
 
-int rl_list_deserialize_long(rlite *db, void **obj, void *context, unsigned char *data)
+int rl_list_deserialize(rlite *db, void **obj, void *context, unsigned char *data)
 {
 	rl_list *list;
-	int retval = rl_list_create(db, &list, context, 0);
+	int retval = rl_list_create(db, &list, context);
 	if (retval != RL_OK) {
 		return retval;
 	}
@@ -89,10 +98,64 @@ cleanup:
 	return retval;
 }
 
+int rl_list_node_serialize_key(rlite *db, void *obj, unsigned char *data)
+{
+	db = db;
+	rl_list_node *node = obj;
+	rl_key *key;
+
+	int retval = RL_OK;
+	if (!data) {
+		retval = RL_OUT_OF_MEMORY;
+		goto cleanup;
+	}
+	put_4bytes(data, node->size);
+	put_4bytes(&data[4], node->left);
+	put_4bytes(&data[8], node->right);
+	long i, pos = 12;
+	for (i = 0; i < node->size; i++) {
+		key = node->elements[i];
+		data[pos] = key->type;
+		put_4bytes(&data[pos + 1], key->string_page);
+		put_4bytes(&data[pos + 5], key->value_page);
+		pos += 9;
+	}
+cleanup:
+	return retval;
+}
+
+int rl_list_node_deserialize_key(rlite *db, void **obj, void *context, unsigned char *data)
+{
+	rl_list *list = context;
+	rl_list_node *node;
+	rl_key *key;
+	int retval = rl_list_node_create(db, list, &node);
+	if (retval != RL_OK) {
+		goto cleanup;
+	}
+	node->size = (long)get_4bytes(data);
+	node->left = (long)get_4bytes(&data[4]);
+	node->right = (long)get_4bytes(&data[8]);
+	long i, pos = 12;
+	for (i = 0; i < node->size; i++) {
+		key = malloc(sizeof(rl_key));
+		key->type = data[pos];
+		key->string_page = get_4bytes(&data[pos + 1]);
+		key->value_page = get_4bytes(&data[pos + 5]);
+		node->elements[i] = key;
+		pos += 9;
+	}
+	*obj = node;
+cleanup:
+	return retval;
+}
+
 void rl_list_init()
 {
 	list_long.list_type = &rl_data_type_list_long;
 	list_long.list_node_type = &rl_data_type_list_node_long;
+	list_key.list_type = &rl_data_type_list_key;
+	list_key.list_node_type = &rl_data_type_list_node_key;
 }
 
 int rl_list_node_create(rlite *db, rl_list *list, rl_list_node **_node)
@@ -127,14 +190,14 @@ int rl_list_node_destroy(rlite *db, void *_node)
 	return 0;
 }
 
-int rl_list_create(rlite *db, rl_list **_list, rl_list_type *type, long max_node_size)
+int rl_list_create(rlite *db, rl_list **_list, rl_list_type *type)
 {
 	rl_list *list = malloc(sizeof(rl_list));
 	if (!list) {
 		return RL_OUT_OF_MEMORY;
 	}
 	int retval;
-	list->max_node_size = max_node_size;
+	list->max_node_size = (db->page_size - 12) / type->element_size;
 	list->type = type;
 	rl_list_node *node;
 	retval = rl_list_node_create(db, list, &node);
@@ -165,8 +228,12 @@ int rl_list_destroy(rlite *db, void *list)
 	return RL_OK;
 }
 
-int rl_list_find_element(rlite *db, rl_list *list, void *element, long *position)
+int rl_list_find_element(rlite *db, rl_list *list, void *element, void **found_element, long *position)
 {
+	if (!list->type->cmp) {
+		fprintf(stderr, "Trying to find an element without cmp\n");
+		return RL_UNEXPECTED;
+	}
 	void *_node;
 	rl_list_node *node;
 	long pos = 0, i, number = list->left;
@@ -179,6 +246,9 @@ int rl_list_find_element(rlite *db, rl_list *list, void *element, long *position
 		node = _node;
 		for (i = 0; i < node->size; i++) {
 			if (list->type->cmp(node->elements[i], element) == 0) {
+				if (found_element) {
+					*found_element = node->elements[i];
+				}
 				if (position) {
 					*position = pos + i;
 				}
@@ -590,6 +660,10 @@ cleanup:
 
 int rl_print_list(rlite *db, rl_list *list)
 {
+	if (!list->type->formatter) {
+		fprintf(stderr, "Trying to print an element without formatter\n");
+		return RL_UNEXPECTED;
+	}
 	printf("-------\n");
 	rl_list_node *node;
 	void *_node;

@@ -60,14 +60,26 @@ rl_data_type rl_data_type_btree_node_hash_long_long = {
 };
 rl_data_type rl_data_type_list_long = {
 	"list_long",
-	rl_list_serialize_long,
-	rl_list_deserialize_long,
+	rl_list_serialize,
+	rl_list_deserialize,
 	rl_list_destroy,
 };
 rl_data_type rl_data_type_list_node_long = {
 	"list_node_long",
 	rl_list_node_serialize_long,
 	rl_list_node_deserialize_long,
+	rl_list_node_destroy,
+};
+rl_data_type rl_data_type_list_key = {
+	"list_key",
+	rl_list_serialize,
+	rl_list_deserialize,
+	rl_list_destroy,
+};
+rl_data_type rl_data_type_list_node_key = {
+	"list_node_key",
+	rl_list_node_serialize_key,
+	rl_list_node_deserialize_key,
 	rl_list_node_destroy,
 };
 
@@ -78,13 +90,13 @@ rl_data_type rl_data_type_string = {
 	rl_string_destroy,
 };
 
-static const char *identifier = "rlite0.0";
+static const unsigned char *identifier = (unsigned char *)"rlite0.0";
 
 int rl_header_serialize(struct rlite *db, void *obj, unsigned char *data)
 {
 	obj = obj;
 	int retval = RL_OK;
-	int identifier_len = strlen(identifier);
+	int identifier_len = strlen((char *)identifier);
 	memcpy(data, identifier, identifier_len);
 	put_4bytes(&data[identifier_len], db->page_size);
 	return retval;
@@ -95,7 +107,7 @@ int rl_header_deserialize(struct rlite *db, void **obj, void *context, unsigned 
 	obj = obj;
 	context = context;
 	int retval = RL_OK;
-	int identifier_len = strlen(identifier);
+	int identifier_len = strlen((char *)identifier);
 	if (memcmp(data, identifier, identifier_len) != 0) {
 		fprintf(stderr, "Unexpected header, expecting %s\n", identifier);
 		return RL_INVALID_STATE;
@@ -260,6 +272,19 @@ int rl_create_db(rlite *db)
 	return retval;
 }
 
+int rl_get_key_btree(rlite *db, rl_btree **btree)
+{
+	void *_btree;
+	int retval = rl_read(db, &rl_data_type_btree_hash_md5_long, 1, NULL, &_btree);
+	if (retval != RL_FOUND) {
+		goto cleanup;
+	}
+	*btree = _btree;
+	retval = RL_OK;
+cleanup:
+	return RL_OK;
+}
+
 int rl_read_header(rlite *db)
 {
 	db->page_size = 100;
@@ -319,6 +344,9 @@ static int rl_search_cache(rlite *db, rl_data_type *type, long page_number, void
 			if (pages[pos]->page_number > page_number) {
 				pos--;
 			}
+			if (pages[pos]->page_number < page_number) {
+				pos++;
+			}
 			*position = pos;
 		}
 	}
@@ -368,7 +396,8 @@ int rl_read(rlite *db, rl_data_type *type, long page, void *context, void **obj)
 		}
 	}
 	else {
-		retval = RL_NOT_IMPLEMENTED;
+		fprintf(stderr, "Unexpected driver %d when asking for page %ld\n", db->driver_type, page);
+		retval = RL_UNEXPECTED;
 		goto cleanup;
 	}
 	retval = type->deserialize(db, obj, context ? context : type, data);
@@ -422,7 +451,7 @@ int rl_delete(struct rlite *db, long page_number)
 	return retval;
 }
 
-static int md5(const char *data, long datalen, unsigned char digest[16])
+static int md5(const unsigned char *data, long datalen, unsigned char digest[16])
 {
 	MD5_CTX md5;
 	MD5_Init(&md5);
@@ -431,7 +460,7 @@ static int md5(const char *data, long datalen, unsigned char digest[16])
 	return RL_OK;
 }
 
-int rl_set_key(rlite *db, const char *key, long keylen, long value)
+int rl_set_key(rlite *db, const unsigned char *key, long keylen, long value)
 {
 	unsigned char *digest = malloc(sizeof(unsigned char) * 16);
 	int retval = md5(key, keylen, digest);
@@ -455,7 +484,7 @@ cleanup:
 	return retval;
 }
 
-int rl_get_key(rlite *db, const char *key, long keylen, long *value)
+int rl_get_key(rlite *db, const unsigned char *key, long keylen, long *value)
 {
 	unsigned char digest[16];
 	int retval = md5(key, keylen, digest);
