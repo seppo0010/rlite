@@ -48,6 +48,7 @@ int rl_list_deserialize(rlite *db, void **obj, void *context, unsigned char *dat
 	if (retval != RL_OK) {
 		return retval;
 	}
+	list->type = context;
 	list->left = get_4bytes(data);
 	list->right = get_4bytes(&data[4]);
 	list->max_node_size = get_4bytes(&data[8]);
@@ -230,7 +231,7 @@ int rl_list_destroy(rlite *db, void *list)
 	return RL_OK;
 }
 
-int rl_list_find_element(rlite *db, rl_list *list, void *element, void **found_element, long *position)
+int rl_list_find_element(rlite *db, rl_list *list, void *element, void **found_element, long *position, rl_list_node **found_node, long *found_node_page)
 {
 	if (!list->type->cmp) {
 		fprintf(stderr, "Trying to find an element without cmp\n");
@@ -248,6 +249,12 @@ int rl_list_find_element(rlite *db, rl_list *list, void *element, void **found_e
 		node = _node;
 		for (i = 0; i < node->size; i++) {
 			if (list->type->cmp(node->elements[i], element) == 0) {
+				if (found_node_page) {
+					*found_node_page = number;
+				}
+				if (found_node) {
+					*found_node = node;
+				}
 				if (found_element) {
 					*found_element = node->elements[i];
 				}
@@ -316,6 +323,19 @@ int rl_find_element_by_position(rlite *db, rl_list *list, long *position, long *
 	if (_number) {
 		*_number = number;
 	}
+cleanup:
+	return retval;
+}
+
+int rl_list_get_element(struct rlite *db, rl_list *list, void **element, long position)
+{
+	long pos;
+	rl_list_node *node;
+	int retval = rl_find_element_by_position(db, list, &position, &pos, &node, NULL);
+	if (retval != RL_FOUND) {
+		goto cleanup;
+	}
+	*element = node->elements[position - pos];
 cleanup:
 	return retval;
 }

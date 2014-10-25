@@ -8,5 +8,10 @@ int long_cmp(void *v1, void *v2);
 int long_formatter(void *v2, char **formatted, int *size);
 int md5_cmp(void *v1, void *v2);
 int md5_formatter(void *v2, char **formatted, int *size);
+int double_cmp(void *v1, void *v2);
+int double_formatter(void *v2, char **formatted, int *size);
+double get_double(const unsigned char *p);
+void put_double(unsigned char *p, double v);
+int md5(const unsigned char *data, long datalen, unsigned char digest[16]);
 
 #endif

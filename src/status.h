@@ -9,6 +9,7 @@
 #define RL_INVALID_PARAMETERS 5
 #define RL_UNEXPECTED 6
 #define RL_NOT_IMPLEMENTED 7
+#define RL_WRONG_TYPE 8
 
 
 #endif

@@ -84,7 +84,7 @@ int rl_obj_key_get(struct rlite *db, unsigned char *key, long keylen, unsigned c
 	search_key.keylen = keylen;
 	search_key.key = key;
 	void *_element;
-	retval = rl_list_find_element(db, list, &search_key, &_element, NULL);
+	retval = rl_list_find_element(db, list, &search_key, &_element, NULL, NULL, NULL);
 	if (retval != RL_FOUND) {
 		goto cleanup;
 	}
@@ -107,6 +107,25 @@ int rl_obj_key_set(struct rlite *db, unsigned char *key, long keylen, unsigned c
 		goto cleanup;
 	}
 
+	struct obj_key search_key;
+	search_key.db = db;
+	search_key.keylen = keylen;
+	search_key.key = key;
+	void *_element;
+	rl_list_node *node;
+	long node_page;
+	retval = rl_list_find_element(db, list, &search_key, &_element, NULL, &node, &node_page);
+	if (retval == RL_FOUND) {
+		rl_key *element = _element;
+		element->value_page = page;
+		rl_write(db, list->type->list_node_type, node_page, node);
+		retval = RL_OK;
+		goto cleanup;
+	}
+	else if (retval != RL_NOT_FOUND) {
+		goto cleanup;
+	}
+
 	long string_page;
 	retval = rl_obj_string_set(db, &string_page, key, keylen);
 	if (retval != RL_OK) {
@@ -122,6 +141,27 @@ int rl_obj_key_set(struct rlite *db, unsigned char *key, long keylen, unsigned c
 		goto cleanup;
 	}
 cleanup:
+	return retval;
+}
+
+int rl_obj_key_get_or_create(struct rlite *db, unsigned char *key, long keylen, unsigned char type, long *page)
+{
+	unsigned char existing_type;
+	int retval = rl_obj_key_get(db, key, keylen, &existing_type, page);
+	if (retval == RL_FOUND) {
+		if (existing_type != type) {
+			return RL_WRONG_TYPE;
+		}
+	}
+	else if (retval == RL_NOT_FOUND) {
+		rl_alloc_page_number(db, page);
+		retval = rl_obj_key_set(db, key, keylen, type, *page);
+		if (retval != RL_OK) {
+			return retval;
+		}
+		retval = RL_NOT_FOUND;
+
+	}
 	return retval;
 }
 
@@ -142,7 +182,7 @@ int rl_obj_key_delete(struct rlite *db, unsigned char *key, long keylen)
 	search_key.key = key;
 	void *_element;
 	long position;
-	retval = rl_list_find_element(db, list, &search_key, &_element, &position);
+	retval = rl_list_find_element(db, list, &search_key, &_element, &position, NULL, NULL);
 	if (retval != RL_FOUND) {
 		goto cleanup;
 	}

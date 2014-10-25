@@ -3,6 +3,7 @@
 
 struct rlite;
 
+int rl_obj_key_get_or_create(struct rlite *db, unsigned char *key, long keylen, unsigned char type, long *page);
 int rl_obj_key_get(struct rlite *db, unsigned char *key, long keylen, unsigned char *type, long *page);
 int rl_obj_key_set(struct rlite *db, unsigned char *key, long keylen, unsigned char type, long page);
 int rl_obj_key_delete(struct rlite *db, unsigned char *key, long keylen);

@@ -2,7 +2,6 @@
 #include <string.h>
 #include <unistd.h>
 #include <errno.h>
-#include <openssl/md5.h>
 #include "page_btree.h"
 #include "page_list.h"
 #include "page_string.h"
@@ -13,11 +12,24 @@
 #define DEFAULT_WRITE_PAGES_LEN 8
 #define DEFAULT_PAGE_SIZE 1024
 #define HEADER_SIZE 100
+#define GLOBAL_KEY_BTREE 1
 
 int rl_header_serialize(struct rlite *db, void *obj, unsigned char *data);
 int rl_header_deserialize(struct rlite *db, void **obj, void *context, unsigned char *data);
 int rl_has_flag(rlite *db, int flag);
 
+rl_data_type rl_data_type_btree_hash_md5_double = {
+	"btree_hash_md5_double",
+	rl_btree_serialize,
+	rl_btree_deserialize,
+	rl_btree_destroy,
+};
+rl_data_type rl_data_type_btree_node_hash_md5_double = {
+	"btree_node_hash_md5_double",
+	rl_btree_node_serialize_hash_md5_double,
+	rl_btree_node_deserialize_hash_md5_double,
+	rl_btree_node_destroy,
+};
 rl_data_type rl_data_type_btree_hash_md5_long = {
 	"btree_hash_md5_long",
 	rl_btree_serialize,
@@ -58,6 +70,18 @@ rl_data_type rl_data_type_btree_node_hash_long_long = {
 	"btree_node_hash_long_long",
 	rl_btree_node_serialize_hash_long_long,
 	rl_btree_node_deserialize_hash_long_long,
+	rl_btree_node_destroy,
+};
+rl_data_type rl_data_type_btree_hash_double_long = {
+	"btree_hash_double_long",
+	rl_btree_serialize,
+	rl_btree_deserialize,
+	rl_btree_destroy,
+};
+rl_data_type rl_data_type_btree_node_hash_double_long = {
+	"btree_node_hash_double_long",
+	rl_btree_node_serialize_hash_double_long,
+	rl_btree_node_deserialize_hash_double_long,
 	rl_btree_node_destroy,
 };
 rl_data_type rl_data_type_list_long = {
@@ -298,7 +322,7 @@ int rl_create_db(rlite *db)
 	long max_node_size = (db->page_size - 8) / 8; // TODO: this should be in the type
 	retval = rl_btree_create(db, &btree, &btree_hash_md5_long, max_node_size);
 	if (retval == RL_OK) {
-		retval = rl_write(db, &rl_data_type_btree_hash_md5_long, 1, btree);
+		retval = rl_write(db, &rl_data_type_btree_hash_md5_long, GLOBAL_KEY_BTREE, btree);
 	}
 	return retval;
 }
@@ -306,7 +330,7 @@ int rl_create_db(rlite *db)
 int rl_get_key_btree(rlite *db, rl_btree **btree)
 {
 	void *_btree;
-	int retval = rl_read(db, &rl_data_type_btree_hash_md5_long, 1, &btree_hash_md5_long, &_btree);
+	int retval = rl_read(db, &rl_data_type_btree_hash_md5_long, GLOBAL_KEY_BTREE, &btree_hash_md5_long, &_btree);
 	if (retval != RL_FOUND) {
 		goto cleanup;
 	}
@@ -562,6 +586,12 @@ cleanup:
 	return retval;
 }
 
+int rl_alloc_page_number(rlite *db, long *page_number)
+{
+	*page_number = db->next_empty_page++;
+	return RL_OK;
+}
+
 int rl_write(struct rlite *db, rl_data_type *type, long page_number, void *obj)
 {
 	long pos;
@@ -751,15 +781,6 @@ cleanup:
 	return retval;
 }
 
-static int md5(const unsigned char *data, long datalen, unsigned char digest[16])
-{
-	MD5_CTX md5;
-	MD5_Init(&md5);
-	MD5_Update(&md5, data, datalen);
-	MD5_Final(digest, &md5);
-	return RL_OK;
-}
-
 int rl_set_key(rlite *db, const unsigned char *key, long keylen, long value)
 {
 	unsigned char *digest = malloc(sizeof(unsigned char) * 16);
@@ -767,12 +788,11 @@ int rl_set_key(rlite *db, const unsigned char *key, long keylen, long value)
 	if (retval != RL_OK) {
 		goto cleanup;
 	}
-	void *_btree;
-	retval = rl_read(db, &rl_data_type_btree_hash_md5_long, 1, &btree_hash_md5_long, &_btree);
-	if (retval != RL_FOUND) {
+	rl_btree *btree;
+	retval = rl_get_key_btree(db, &btree);
+	if (retval != RL_OK) {
 		goto cleanup;
 	}
-	rl_btree *btree = (rl_btree *)_btree;
 	long *val = malloc(sizeof(long));
 	if (!val) {
 		retval = RL_OUT_OF_MEMORY;
@@ -791,12 +811,11 @@ int rl_get_key(rlite *db, const unsigned char *key, long keylen, long *value)
 	if (retval != RL_OK) {
 		goto cleanup;
 	}
-	void *_btree;
-	retval = rl_read(db, &rl_data_type_btree_hash_md5_long, 1, &btree_hash_md5_long, &_btree);
-	if (retval != RL_FOUND) {
+	rl_btree *btree;
+	retval = rl_get_key_btree(db, &btree);
+	if (retval != RL_OK) {
 		goto cleanup;
 	}
-	rl_btree *btree = (rl_btree *)_btree;
 	void *val;
 	retval = rl_btree_find_score(db, btree, digest, &val, NULL, NULL);
 	if (retval == RL_FOUND && value) {

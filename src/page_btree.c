@@ -34,6 +34,24 @@ rl_btree_type long_hash = {
 	long_formatter,
 };
 
+rl_btree_type hash_double_long = {
+	0,
+	0,
+	sizeof(long),
+	sizeof(void *),
+	double_cmp,
+	double_formatter,
+};
+
+rl_btree_type hash_md5_double = {
+	0,
+	0,
+	sizeof(long),
+	sizeof(void *),
+	md5_cmp,
+	md5_formatter,
+};
+
 void rl_btree_init()
 {
 	btree_hash_md5_long.btree_type = &rl_data_type_btree_hash_md5_long;
@@ -42,6 +60,10 @@ void rl_btree_init()
 	long_hash.btree_node_type = &rl_data_type_btree_node_hash_long_long;
 	long_set.btree_type = &rl_data_type_btree_set_long;
 	long_set.btree_node_type = &rl_data_type_btree_node_set_long;
+	hash_double_long.btree_type = &rl_data_type_btree_hash_double_long;
+	hash_double_long.btree_node_type = &rl_data_type_btree_node_hash_double_long;
+	hash_md5_double.btree_type = &rl_data_type_btree_hash_md5_double;
+	hash_md5_double.btree_node_type = &rl_data_type_btree_node_hash_md5_double;
 }
 
 int rl_btree_serialize(struct rlite *db, void *obj, unsigned char *data)
@@ -72,7 +94,6 @@ int rl_btree_deserialize(struct rlite *db, void **obj, void *context, unsigned c
 #ifdef DEBUG
 int rl_print_btree_node(rlite *db, rl_btree *btree, rl_btree_node *node, long level);
 #endif
-int rl_btree_node_create(rlite *db, rl_btree *btree, rl_btree_node **node);
 
 
 int rl_btree_node_create(rlite *db, rl_btree *btree, rl_btree_node **_node)
@@ -145,6 +166,7 @@ int rl_btree_create(rlite *db, rl_btree **_btree, rl_btree_type *type, long max_
 		retval = RL_OUT_OF_MEMORY;
 		goto cleanup;
 	}
+	btree->number_of_elements = 0;
 	btree->max_node_size = max_node_size;
 	btree->type = type;
 	btree->db = db;
@@ -415,7 +437,7 @@ int rl_btree_add_element(rlite *db, rl_btree *btree, void *score, void *value)
 		}
 		btree->height++;
 	}
-
+	btree->number_of_elements++;
 cleanup:
 	free(nodes);
 	free(positions);
@@ -770,6 +792,7 @@ int rl_btree_remove_element(rlite *db, rl_btree *btree, void *score)
 		}
 	}
 
+	btree->number_of_elements--;
 cleanup:
 	free(nodes);
 	free(positions);
@@ -1163,6 +1186,156 @@ int rl_btree_node_deserialize_hash_long_long(struct rlite *db, void **obj, void 
 		}
 		*(long *)node->values[i] = get_4bytes(&data[pos + 8]);
 		pos += 12;
+	}
+	child = get_4bytes(&data[pos]);
+	if (child != 0) {
+		node->children[node->size] = child;
+	}
+	*obj = node;
+cleanup:
+	if (retval != RL_OK && node) {
+		rl_btree_node_destroy(db, node);
+	}
+	return retval;
+}
+
+int rl_btree_node_serialize_hash_double_long(struct rlite *db, void *obj, unsigned char *data)
+{
+	db = db;
+	rl_btree_node *node = obj;
+	int retval = RL_OK;
+	if (!data) {
+		retval = RL_OUT_OF_MEMORY;
+		goto cleanup;
+	}
+	long i, pos = 4;
+	put_4bytes(data, node->size);
+	for (i = 0; i < node->size; i++) {
+		put_double(&data[pos], *(double *)(node->scores[i]));
+		put_4bytes(&data[pos + 8], node->children ? node->children[i] : 0);
+		put_4bytes(&data[pos + 12], *(long *)node->values[i]);
+		pos += 16;
+	}
+	put_4bytes(&data[pos], node->children ? node->children[node->size] : 0);
+cleanup:
+	return retval;
+}
+
+int rl_btree_node_deserialize_hash_double_long(struct rlite *db, void **obj, void *context, unsigned char *data)
+{
+	rl_btree *btree = context;
+	rl_btree_node *node;
+	long i, pos = 4, child;
+	int retval = rl_btree_node_create(db, btree, &node);
+	if (retval != RL_OK) {
+		goto cleanup;
+	}
+	node->size = (long)get_4bytes(data);
+	for (i = 0; i < node->size; i++) {
+		node->scores[i] = malloc(sizeof(double));
+		if (!node->scores[i]) {
+			node->size = i;
+			retval = RL_OUT_OF_MEMORY;
+			goto cleanup;
+		}
+		*(double *)node->scores[i] = get_double(&data[pos]);
+		child = get_4bytes(&data[pos + 8]);
+		if (child != 0) {
+			if (!node->children) {
+				node->children = malloc(sizeof(long) * (btree->max_node_size + 1));
+				if (!node->children) {
+					free(node->scores[i]);
+					node->size = i;
+					retval = RL_OUT_OF_MEMORY;
+					goto cleanup;
+				}
+			}
+			node->children[i] = child;
+		}
+		node->values[i] = malloc(sizeof(long));
+		if (!node->values[i]) {
+			free(node->scores[i]);
+			node->size = i;
+			retval = RL_OUT_OF_MEMORY;
+			goto cleanup;
+		}
+		*(long *)node->values[i] = get_4bytes(&data[pos + 12]);
+		pos += 16;
+	}
+	child = get_4bytes(&data[pos]);
+	if (child != 0) {
+		node->children[node->size] = child;
+	}
+	*obj = node;
+cleanup:
+	if (retval != RL_OK && node) {
+		rl_btree_node_destroy(db, node);
+	}
+	return retval;
+}
+
+int rl_btree_node_serialize_hash_md5_double(struct rlite *db, void *obj, unsigned char *data)
+{
+	db = db;
+	rl_btree_node *node = obj;
+	int retval = RL_OK;
+	if (!data) {
+		retval = RL_OUT_OF_MEMORY;
+		goto cleanup;
+	}
+	long i, pos = 4;
+	put_4bytes(data, node->size);
+	for (i = 0; i < node->size; i++) {
+		memcpy(&data[pos], node->scores[i], sizeof(unsigned char) * 16);
+		put_double(&data[pos + 16], *(double *)(node->values[i]));
+		put_4bytes(&data[pos + 24], node->children ? node->children[node->size] : 0);
+		pos += 28;
+	}
+	put_4bytes(&data[pos], node->children ? node->children[node->size] : 0);
+cleanup:
+	return retval;
+}
+
+int rl_btree_node_deserialize_hash_md5_double(struct rlite *db, void **obj, void *context, unsigned char *data)
+{
+	rl_btree *btree = context;
+	rl_btree_node *node;
+	long i, pos = 4, child;
+	int retval = rl_btree_node_create(db, btree, &node);
+	if (retval != RL_OK) {
+		goto cleanup;
+	}
+	node->size = (long)get_4bytes(data);
+	for (i = 0; i < node->size; i++) {
+		node->scores[i] = malloc(sizeof(unsigned char) * 16);
+		if (!node->scores[i]) {
+			node->size = i;
+			retval = RL_OUT_OF_MEMORY;
+			goto cleanup;
+		}
+		memcpy(node->scores[i], &data[pos], sizeof(unsigned char) * 16);
+		node->values[i] = malloc(sizeof(double));
+		if (!node->values[i]) {
+			free(node->scores[i]);
+			node->size = i;
+			retval = RL_OUT_OF_MEMORY;
+			goto cleanup;
+		}
+		*(double *)node->values[i] = get_double(&data[pos + 16]);
+		child = get_4bytes(&data[pos + 24]);
+		if (child != 0) {
+			if (!node->children) {
+				node->children = malloc(sizeof(long) * (btree->max_node_size + 1));
+				if (!node->children) {
+					free(node->scores[i]);
+					node->size = i;
+					retval = RL_OUT_OF_MEMORY;
+					goto cleanup;
+				}
+			}
+			node->children[i] = child;
+		}
+		pos += 28;
 	}
 	child = get_4bytes(&data[pos]);
 	if (child != 0) {

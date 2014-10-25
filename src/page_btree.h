@@ -22,6 +22,8 @@ int md5_formatter(void *v, char **str, int *size);
 rl_btree_type long_set;
 rl_btree_type long_hash;
 rl_btree_type btree_hash_md5_long;
+rl_btree_type hash_double_long;
+rl_btree_type hash_md5_double;
 
 typedef struct rl_btree_node {
 	void **scores;
@@ -39,6 +41,7 @@ typedef struct rl_btree {
 	long height;
 	rl_btree_type *type;
 	long root;
+	long number_of_elements;
 } rl_btree;
 
 void rl_btree_init();
@@ -47,7 +50,7 @@ int rl_btree_destroy(struct rlite *db, void *btree);
 int rl_btree_node_destroy(struct rlite *db, void *node);
 int rl_btree_add_element(struct rlite *db, rl_btree *btree, void *score, void *value);
 int rl_btree_remove_element(struct rlite *db, rl_btree *btree, void *score);
-int rl_btree_find_score(struct rlite *db, rl_btree *btree, void *score, void **values, rl_btree_node *** nodes, long **positions);
+int rl_btree_find_score(struct rlite *db, rl_btree *btree, void *score, void **value, rl_btree_node *** nodes, long **positions);
 int rl_print_btree(struct rlite *db, rl_btree *btree);
 int rl_btree_is_balanced(struct rlite *db, rl_btree *btree);
 int rl_flatten_btree(struct rlite *db, rl_btree *btree, void *** scores, long *size);
@@ -63,5 +66,11 @@ int rl_btree_node_deserialize_set_long(struct rlite *db, void **obj, void *conte
 
 int rl_btree_node_serialize_hash_long_long(struct rlite *db, void *obj, unsigned char *data);
 int rl_btree_node_deserialize_hash_long_long(struct rlite *db, void **obj, void *context, unsigned char *data);
+
+int rl_btree_node_serialize_hash_double_long(struct rlite *db, void *obj, unsigned char *data);
+int rl_btree_node_deserialize_hash_double_long(struct rlite *db, void **obj, void *context, unsigned char *data);
+
+int rl_btree_node_serialize_hash_md5_double(struct rlite *db, void *obj, unsigned char *data);
+int rl_btree_node_deserialize_hash_md5_double(struct rlite *db, void **obj, void *context, unsigned char *data);
 
 #endif

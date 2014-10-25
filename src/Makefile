@@ -27,8 +27,8 @@ lcov: gcov
 .c.o:
 	$(CC) $(ARCH) $(DEBUG) $(CFLAGS) -c $<
 
-librlite.a: rlite.o page_string.o page_list.o page_btree.o obj_key.o obj_string.o util.o
-	ar -cq librlite.a rlite.o page_string.o page_list.o page_btree.o obj_key.o obj_string.o util.o
+librlite.a: rlite.o page_string.o page_list.o page_btree.o obj_key.o obj_string.o type_zset.o util.o
+	ar -cq librlite.a rlite.o page_string.o page_list.o page_btree.o obj_key.o type_zset.o obj_string.o util.o
 
 rlite-test: test/rlite-test.o test/test_util.o librlite.a
 	$(CC) $(DEBUG) $(CFLAGS) -o rlite-test rlite-test.o test_util.o librlite.a $(LIBS)
@@ -48,7 +48,10 @@ obj_string-test: test/obj_string-test.o test/test_util.o librlite.a
 obj_key-test: test/obj_key-test.o test/test_util.o librlite.a
 	$(CC) $(DEBUG) $(CFLAGS) -o obj_key-test obj_key-test.o test_util.o librlite.a $(LIBS)
 
-buildtest: rlite-test btree-test list-test string-test obj_string-test obj_key-test
+type_zset-test: test/type_zset-test.o test/test_util.o librlite.a
+	$(CC) $(DEBUG) $(CFLAGS) -o type_zset-test type_zset-test.o test_util.o librlite.a $(LIBS)
+
+buildtest: rlite-test btree-test list-test string-test obj_string-test obj_key-test type_zset-test
 
 test: buildtest
 	./btree-test
@@ -57,6 +60,7 @@ test: buildtest
 	./string-test
 	./obj_string-test
 	./obj_key-test
+	./type_zset-test
 
 vtest: buildtest
 	valgrind --track-origins=yes --leak-check=full --show-reachable=yes ./btree-test
@@ -65,6 +69,7 @@ vtest: buildtest
 	valgrind --track-origins=yes --leak-check=full --show-reachable=yes ./string-test
 	valgrind --track-origins=yes --leak-check=full --show-reachable=yes ./obj_string-test
 	valgrind --track-origins=yes --leak-check=full --show-reachable=yes ./obj_key-test
+	valgrind --track-origins=yes --leak-check=full --show-reachable=yes ./type_zset-test
 
 clean:
 	rm -rf *-test *.o *.a *.dSYM *.gcda *.gcno
