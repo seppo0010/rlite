@@ -1,8 +1,8 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
-#include "obj_key.h"
-#include "rlite.h"
+#include "../obj_key.h"
+#include "../rlite.h"
 
 #define COLLISION_KEY_SIZE 128
 static void get_test_key(unsigned char *data, char *filename)

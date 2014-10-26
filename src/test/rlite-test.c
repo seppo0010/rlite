@@ -2,7 +2,7 @@
 #include <errno.h>
 #include <string.h>
 #include <stdlib.h>
-#include "rlite.h"
+#include "../rlite.h"
 
 int test_rlite_page_cache()
 {

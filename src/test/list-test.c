@@ -2,9 +2,9 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
-#include "rlite.h"
-#include "status.h"
-#include "page_list.h"
+#include "../rlite.h"
+#include "../status.h"
+#include "../page_list.h"
 
 static rlite *setup_db(int file)
 {

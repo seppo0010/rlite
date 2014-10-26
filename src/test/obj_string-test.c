@@ -1,8 +1,8 @@
 #include <stdlib.h>
 #include <string.h>
 #include <limits.h>
-#include "rlite.h"
-#include "obj_string.h"
+#include "../rlite.h"
+#include "../obj_string.h"
 
 int main()
 {

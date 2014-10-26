@@ -2,9 +2,9 @@
 #include <stdio.h>
 #include <string.h>
 #include <limits.h>
-#include "rlite.h"
-#include "status.h"
-#include "page_string.h"
+#include "../rlite.h"
+#include "../status.h"
+#include "../page_string.h"
 
 int main()
 {
