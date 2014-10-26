@@ -10,7 +10,7 @@ int rl_obj_string_get(struct rlite *db, long number, unsigned char **_data, long
 	rl_list *list;
 	rl_list_node *node;
 	void *_list, *_node;
-	int retval = rl_read(db, &rl_data_type_list_long, number, NULL, &_list);
+	int retval = rl_read(db, &rl_data_type_list_long, number, &list_long, &_list);
 	if (retval != RL_FOUND) {
 		return retval;
 	}

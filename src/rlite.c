@@ -281,7 +281,7 @@ int rl_create_db(rlite *db)
 int rl_get_key_btree(rlite *db, rl_btree **btree)
 {
 	void *_btree;
-	int retval = rl_read(db, &rl_data_type_btree_hash_md5_long, 1, NULL, &_btree);
+	int retval = rl_read(db, &rl_data_type_btree_hash_md5_long, 1, &btree_hash_md5_long, &_btree);
 	if (retval != RL_FOUND) {
 		goto cleanup;
 	}
@@ -304,7 +304,7 @@ int rl_read_header(rlite *db)
 		}
 	}
 	else {
-		retval = rl_read(db, &rl_data_type_header, 0, NULL, &header);
+		retval = rl_read(db, &rl_data_type_header, 0, &btree_hash_md5_long, &header);
 		if (retval == RL_NOT_FOUND && rl_has_flag(db, RLITE_OPEN_CREATE)) {
 			db->page_size = DEFAULT_PAGE_SIZE;
 			retval = rl_create_db(db);
@@ -694,7 +694,7 @@ int rl_set_key(rlite *db, const unsigned char *key, long keylen, long value)
 		goto cleanup;
 	}
 	void *_btree;
-	retval = rl_read(db, &rl_data_type_btree_hash_md5_long, 1, NULL, &_btree);
+	retval = rl_read(db, &rl_data_type_btree_hash_md5_long, 1, &btree_hash_md5_long, &_btree);
 	if (retval != RL_FOUND) {
 		goto cleanup;
 	}
@@ -718,7 +718,7 @@ int rl_get_key(rlite *db, const unsigned char *key, long keylen, long *value)
 		goto cleanup;
 	}
 	void *_btree;
-	retval = rl_read(db, &rl_data_type_btree_hash_md5_long, 1, NULL, &_btree);
+	retval = rl_read(db, &rl_data_type_btree_hash_md5_long, 1, &btree_hash_md5_long, &_btree);
 	if (retval != RL_FOUND) {
 		goto cleanup;
 	}

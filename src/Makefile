@@ -57,11 +57,11 @@ test: buildtest
 	./obj_key-test
 
 vtest: buildtest
-	valgrind --track-origins=yes --leak-check=full --show-reachable=yes ./btree-test
-	valgrind --track-origins=yes --leak-check=full --show-reachable=yes ./list-test
-	valgrind --track-origins=yes --leak-check=full --show-reachable=yes ./rlite-test
-	valgrind --track-origins=yes --leak-check=full --show-reachable=yes ./string-test
-	valgrind --track-origins=yes --leak-check=full --show-reachable=yes ./obj_string-test
+#	valgrind --track-origins=yes --leak-check=full --show-reachable=yes ./btree-test
+#	valgrind --track-origins=yes --leak-check=full --show-reachable=yes ./list-test
+#	valgrind --track-origins=yes --leak-check=full --show-reachable=yes ./rlite-test
+#	valgrind --track-origins=yes --leak-check=full --show-reachable=yes ./string-test
+#	valgrind --track-origins=yes --leak-check=full --show-reachable=yes ./obj_string-test
 	valgrind --track-origins=yes --leak-check=full --show-reachable=yes ./obj_key-test
 
 clean:

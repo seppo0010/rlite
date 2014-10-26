@@ -30,7 +30,7 @@ int rl_string_destroy(rlite *db, void *obj)
 
 int rl_string_create(rlite *db, unsigned char **_data, long *number)
 {
-	unsigned char *data = malloc(sizeof(char) * db->page_size);
+	unsigned char *data = calloc(db->page_size, sizeof(char));
 	if (!data) {
 		return RL_OUT_OF_MEMORY;
 	}

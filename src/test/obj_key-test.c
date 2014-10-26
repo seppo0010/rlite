@@ -1,6 +1,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
+#include "test_util.h"
 #include "../obj_key.h"
 #include "../rlite.h"
 
@@ -44,17 +45,12 @@ static int expect_key(rlite *db, unsigned char *key, long keylen, char type, lon
 	return 0;
 }
 
-int basic_test_set_get()
+int basic_test_set_get(int _commit)
 {
 	int retval = 0;
-	fprintf(stderr, "Start basic_test_set_get\n");
+	fprintf(stderr, "Start basic_test_set_get %d\n", _commit);
 
-	rlite *db;
-	if (rl_open(":memory:", &db, RLITE_OPEN_READWRITE | RLITE_OPEN_CREATE) != RL_OK) {
-		fprintf(stderr, "Unable to open rlite\n");
-		return 1;
-	}
-
+	rlite *db = setup_db(_commit);
 	unsigned char *key = (unsigned char *)"my key";
 	long keylen = strlen((char *)key);
 	unsigned char type = 'A';
@@ -63,6 +59,10 @@ int basic_test_set_get()
 	if (retval != RL_OK) {
 		fprintf(stderr, "Unable to set key %d\n", retval);
 		return 1;
+	}
+
+	if (_commit) {
+		rl_commit(db);
 	}
 
 	retval = expect_key(db, key, keylen, type, page);
@@ -77,11 +77,7 @@ int basic_test_get_unexisting()
 	int retval = 0;
 	fprintf(stderr, "Start basic_test_get_unexisting\n");
 
-	rlite *db;
-	if (rl_open(":memory:", &db, RLITE_OPEN_READWRITE | RLITE_OPEN_CREATE) != RL_OK) {
-		fprintf(stderr, "Unable to open rlite\n");
-		return 1;
-	}
+	rlite *db = setup_db(0);
 
 	unsigned char *key = (unsigned char *)"my key";
 	long keylen = strlen((char *)key);
@@ -96,6 +92,41 @@ int basic_test_get_unexisting()
 	return 0;
 }
 
+int basic_test_set_delete()
+{
+	int retval = 0;
+	fprintf(stderr, "Start basic_test_set_delete\n");
+
+	rlite *db = setup_db(0);
+
+	unsigned char *key = (unsigned char *)"my key";
+	long keylen = strlen((char *)key);
+	unsigned char type = 'A';
+	long page = 23;
+	retval = rl_obj_key_set(db, key, keylen, type, page);
+	if (retval != RL_OK) {
+		fprintf(stderr, "Unable to set key %d\n", retval);
+		return 1;
+	}
+
+	retval = rl_obj_key_delete(db, key, keylen);
+	if (retval != RL_OK) {
+		fprintf(stderr, "Unable to delete key %d\n", retval);
+		return 1;
+	}
+
+	retval = rl_obj_key_get(db, key, keylen, NULL, NULL);
+	if (retval == RL_NOT_FOUND) {
+		retval = RL_OK;
+	} else {
+		fprintf(stderr, "Expected not to find key, got %d instead\n", retval);
+	}
+
+	fprintf(stderr, "End basic_test_set_delete\n");
+	rl_close(db);
+	return 0;
+}
+
 int basic_test_set_collision()
 {
 	int retval = 0;
@@ -103,11 +134,7 @@ int basic_test_set_collision()
 	unsigned char key2[128];
 	fprintf(stderr, "Start basic_test_set_collision\n");
 
-	rlite *db;
-	if (rl_open(":memory:", &db, RLITE_OPEN_READWRITE | RLITE_OPEN_CREATE) != RL_OK) {
-		fprintf(stderr, "Unable to open rlite\n");
-		return 1;
-	}
+	rlite *db = setup_db(0);
 
 	get_test_key(key1, "test/collision1");
 	unsigned char type1 = 'A';
@@ -140,7 +167,11 @@ int basic_test_set_collision()
 
 int main()
 {
-	int retval = basic_test_set_get();
+	int retval = basic_test_set_get(0);
+	if (retval != 0) {
+		goto cleanup;
+	}
+	retval = basic_test_set_get(1);
 	if (retval != 0) {
 		goto cleanup;
 	}
@@ -149,6 +180,10 @@ int main()
 		goto cleanup;
 	}
 	retval = basic_test_set_collision();
+	if (retval != 0) {
+		goto cleanup;
+	}
+	retval = basic_test_set_delete();
 	if (retval != 0) {
 		goto cleanup;
 	}
