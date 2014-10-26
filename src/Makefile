@@ -12,6 +12,12 @@ LIBS=-lm -lssl -lcrypto
 
 all: buildtest
 
+gcov: CFLAGS += -fprofile-arcs -ftest-coverage
+gcov: clean test
+
+debug: CFLAGS += -DDEBUG=1
+debug: clean vtest
+
 .c.o:
 	$(CC) $(ARCH) $(DEBUG) $(CFLAGS) -c $<
 
@@ -47,12 +53,12 @@ test: buildtest
 	./obj_key-test
 
 vtest: buildtest
-	valgrind ./btree-test
-	valgrind ./list-test
-	valgrind ./rlite-test
-	valgrind ./string-test
-	valgrind ./obj_string-test
-	valgrind ./obj_key-test
+	valgrind --track-origins=yes --leak-check=full --show-reachable=yes ./btree-test
+	valgrind --track-origins=yes --leak-check=full --show-reachable=yes ./list-test
+	valgrind --track-origins=yes --leak-check=full --show-reachable=yes ./rlite-test
+	valgrind --track-origins=yes --leak-check=full --show-reachable=yes ./string-test
+	valgrind --track-origins=yes --leak-check=full --show-reachable=yes ./obj_string-test
+	valgrind --track-origins=yes --leak-check=full --show-reachable=yes ./obj_key-test
 
 clean:
 	rm -rf *-test *.o *.a *.dSYM

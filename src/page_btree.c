@@ -302,6 +302,7 @@ int rl_btree_add_element(rlite *db, rl_btree *btree, void *score, void *value)
 			}
 			node->size++;
 			score = NULL;
+			retval = rl_write(db, btree->type->btree_node_type, node_page, node);
 			break;
 		}
 		else {
@@ -374,6 +375,10 @@ int rl_btree_add_element(rlite *db, rl_btree *btree, void *score, void *value)
 
 			node->size = right->size = btree->max_node_size / 2;
 			child = db->next_empty_page;
+			retval = rl_write(db, btree->type->btree_node_type, node_page, node);
+			if (retval != RL_OK) {
+				goto cleanup;
+			}
 			retval = rl_write(db, btree->type->btree_node_type, child, right);
 		}
 	}
@@ -470,7 +475,7 @@ int rl_btree_remove_element(rlite *db, rl_btree *btree, void *score)
 
 			if (child_node->children) {
 				fprintf(stderr, "last child_node mustn't have children\n");
-				retval = 1;
+				retval = RL_UNEXPECTED;
 				goto cleanup;
 			}
 
@@ -559,7 +564,7 @@ int rl_btree_remove_element(rlite *db, rl_btree *btree, void *score)
 			parent_node = nodes[i - 1];
 			if (parent_node->size == 0) {
 				fprintf(stderr, "Empty parent\n");
-				retval = 1;
+				retval = RL_UNEXPECTED;
 				goto cleanup;
 			}
 			if (positions[i - 1] > 0) {
@@ -782,7 +787,6 @@ int rl_btree_node_is_balanced(rlite *db, rl_btree *btree, rl_btree_node *node, i
 		if (node->children) {
 			retval = rl_read(db, btree->type->btree_node_type, node->children[i], btree, &tmp);
 			if (retval != RL_FOUND) {
-				fprintf(stderr, "Unable to read page %ld\n", node->children[i]);
 				break;
 			}
 			child = tmp;
@@ -822,7 +826,21 @@ int rl_btree_is_balanced(rlite *db, rl_btree *btree)
 	long i, j;
 	for (i = 0; i < size; i++) {
 		for (j = i + 1; j < size; j++) {
-			if (btree->type->cmp(scores[i], scores[j]) == 0) {
+			if (btree->type->cmp(scores[i], scores[j]) >= 0) {
+				rl_print_btree(db, btree);
+				fprintf(stderr, "btree is not sorted (");
+				char *str = malloc(sizeof(char) * 100);
+				if (str == NULL) {
+					retval = RL_OUT_OF_MEMORY;
+					goto cleanup;
+				}
+				int strlen;
+				btree->type->formatter(scores[i], &str, &strlen);
+				str[strlen] = 0;
+				fprintf(stderr, "%s >= ", str);
+				btree->type->formatter(scores[j], &str, &strlen);
+				str[strlen] = 0;
+				fprintf(stderr, "%s)\n", str);
 				retval = RL_INVALID_STATE;
 				goto cleanup;
 			}

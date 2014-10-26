@@ -32,6 +32,9 @@ typedef struct {
 	long page_number;
 	rl_data_type *type;
 	void *obj;
+#ifdef DEBUG
+	unsigned char *serialized_data;
+#endif
 } rl_page;
 
 typedef struct rlite {

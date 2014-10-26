@@ -2,3 +2,6 @@
 *.a
 /src/*-test
 /src/rlite-test.rld
+*.gcov
+*.gcda
+*.gcno

@@ -1,3 +1,4 @@
+#include <unistd.h>
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
@@ -5,15 +6,25 @@
 #include "page_btree.h"
 #include "status.h"
 
+static rlite *setup_db(int file)
+{
+	const char *filepath = "rlite-test.rld";
+	if (access(filepath, F_OK) == 0) {
+		unlink(filepath);
+	}
+	rlite *db;
+	if (rl_open(file ? filepath : ":memory:", &db, RLITE_OPEN_READWRITE | RLITE_OPEN_CREATE) != RL_OK) {
+		fprintf(stderr, "Unable to open rlite\n");
+		return NULL;
+	}
+	return db;
+}
+
 int basic_insert_set_test()
 {
 	fprintf(stderr, "Start basic_insert_set_test\n");
 
-	rlite *db;
-	if (rl_open(":memory:", &db, RLITE_OPEN_READWRITE | RLITE_OPEN_CREATE) != RL_OK) {
-		fprintf(stderr, "Unable to open rlite\n");
-		return 1;
-	}
+	rlite *db = setup_db(0);
 	rl_btree *btree;
 	if (rl_btree_create(db, &btree, &long_set, 2) != RL_OK) {
 		return 1;
@@ -30,7 +41,7 @@ int basic_insert_set_test()
 			return 1;
 		}
 		if (RL_OK != rl_btree_is_balanced(db, btree)) {
-			fprintf(stderr, "Node is not balanced after adding child %ld\n", i);
+			fprintf(stderr, "Node is not balanced after adding child %ld (%d)\n", i, __LINE__);
 			return 1;
 		}
 	}
@@ -60,11 +71,7 @@ int basic_insert_hash_test()
 	fprintf(stderr, "Start basic_insert_hash_test\n");
 
 	rl_btree *btree;
-	rlite *db;
-	if (rl_open(":memory:", &db, RLITE_OPEN_READWRITE | RLITE_OPEN_CREATE) != RL_OK) {
-		fprintf(stderr, "Unable to open rlite\n");
-		return 1;
-	}
+	rlite *db = setup_db(0);
 	if (rl_btree_create(db, &btree, &long_hash, 2) != RL_OK) {
 		return 1;
 	}
@@ -83,7 +90,7 @@ int basic_insert_hash_test()
 			return 1;
 		}
 		if (RL_OK != rl_btree_is_balanced(db, btree)) {
-			fprintf(stderr, "Node is not balanced after adding child %ld\n", i);
+			fprintf(stderr, "Node is not balanced after adding child %ld (%d)\n", i, __LINE__);
 			return 1;
 		}
 	}
@@ -120,11 +127,7 @@ int basic_delete_set_test(long elements, long element_to_remove, char *name)
 {
 	fprintf(stderr, "Start basic_delete_set_test (%ld, %ld) (%s)\n", elements, element_to_remove, name);
 
-	rlite *db;
-	if (rl_open(":memory:", &db, RLITE_OPEN_READWRITE | RLITE_OPEN_CREATE) != RL_OK) {
-		fprintf(stderr, "Unable to open rlite\n");
-		return 1;
-	}
+	rlite *db = setup_db(0);
 	rl_btree *btree;
 	if (rl_btree_create(db, &btree, &long_set, 2) != RL_OK) {
 		return 1;
@@ -143,7 +146,7 @@ int basic_delete_set_test(long elements, long element_to_remove, char *name)
 			return 1;
 		}
 		if (RL_OK != rl_btree_is_balanced(db, btree)) {
-			fprintf(stderr, "Node is not balanced after adding child %ld\n", i);
+			fprintf(stderr, "Node is not balanced after adding child %ld (%d)\n", i, __LINE__);
 			return 1;
 		}
 	}
@@ -200,11 +203,7 @@ int contains_element(long element, long *elements, long size)
 int fuzzy_set_test(long size, long btree_node_size, int _commit)
 {
 	fprintf(stderr, "Start fuzzy_set_test %ld %ld %d\n", size, btree_node_size, _commit);
-	rlite *db;
-	if (rl_open(":memory:", &db, RLITE_OPEN_READWRITE | RLITE_OPEN_CREATE) != RL_OK) {
-		fprintf(stderr, "Unable to open rlite\n");
-		return 1;
-	}
+	rlite *db = setup_db(_commit);
 	rl_btree *btree;
 	if (rl_btree_create(db, &btree, &long_set, btree_node_size) != RL_OK) {
 		return 1;
@@ -232,7 +231,7 @@ int fuzzy_set_test(long size, long btree_node_size, int _commit)
 				return 1;
 			}
 			if (RL_OK != rl_btree_is_balanced(db, btree)) {
-				fprintf(stderr, "Node is not balanced after adding child %ld\n", i);
+				fprintf(stderr, "Node is not balanced after adding child %ld (%d)\n", i, __LINE__);
 				return 1;
 			}
 		}
@@ -248,10 +247,9 @@ int fuzzy_set_test(long size, long btree_node_size, int _commit)
 			}
 		}
 		if (_commit) {
-			// TODO: restore commit
-			// if (RL_OK != commit(btree)) {
-			//	return 1;
-			//}
+			if (RL_OK != rl_commit(db)) {
+				return 1;
+			}
 		}
 	}
 
@@ -290,11 +288,7 @@ int fuzzy_set_test(long size, long btree_node_size, int _commit)
 int fuzzy_hash_test(long size, long btree_node_size, int _commit)
 {
 	fprintf(stderr, "Start fuzzy_hash_test %ld %ld %d\n", size, btree_node_size, _commit);
-	rlite *db;
-	if (rl_open(":memory:", &db, RLITE_OPEN_READWRITE | RLITE_OPEN_CREATE) != RL_OK) {
-		fprintf(stderr, "Unable to open rlite\n");
-		return 1;
-	}
+	rlite *db = setup_db(_commit);
 	rl_btree *btree;
 	if (rl_btree_create(db, &btree, &long_hash, btree_node_size) != RL_OK) {
 		return 1;
@@ -345,10 +339,9 @@ int fuzzy_hash_test(long size, long btree_node_size, int _commit)
 			}
 		}
 		if (_commit) {
-			// TODO: restore commit
-			// if (RL_OK != commit(btree)) {
-			//	return 1;
-			//}
+			if (RL_OK != rl_commit(db)) {
+				return 1;
+			}
 		}
 	}
 
@@ -392,11 +385,7 @@ int fuzzy_hash_test(long size, long btree_node_size, int _commit)
 int fuzzy_set_delete_test(long size, long btree_node_size, int _commit)
 {
 	fprintf(stderr, "Start fuzzy_set_delete_test %ld %ld %d\n", size, btree_node_size, _commit);
-	rlite *db;
-	if (rl_open(":memory:", &db, RLITE_OPEN_READWRITE | RLITE_OPEN_CREATE) != RL_OK) {
-		fprintf(stderr, "Unable to open rlite\n");
-		return 1;
-	}
+	rlite *db = setup_db(_commit);
 	rl_btree *btree;
 	if (rl_btree_create(db, &btree, &long_set, btree_node_size) != RL_OK) {
 		return 1;
@@ -420,15 +409,14 @@ int fuzzy_set_delete_test(long size, long btree_node_size, int _commit)
 				return 1;
 			}
 			if (RL_OK != rl_btree_is_balanced(db, btree)) {
-				fprintf(stderr, "Node is not balanced after adding child %ld\n", i);
+				fprintf(stderr, "Node is not balanced after adding child %ld (%d)\n", i, __LINE__);
 				return 1;
 			}
 		}
 		if (_commit) {
-			// TODO: restore test
-			//if (RL_OK != commit(btree)) {
-			//	return 1;
-			//}
+			if (RL_OK != rl_commit(db)) {
+				return 1;
+			}
 		}
 	}
 
