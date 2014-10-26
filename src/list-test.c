@@ -1,3 +1,4 @@
+#include <unistd.h>
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
@@ -5,17 +6,25 @@
 #include "status.h"
 #include "page_list.h"
 
+static rlite *setup_db(int file)
+{
+	const char *filepath = "rlite-test.rld";
+	if (access(filepath, F_OK) == 0) {
+		unlink(filepath);
+	}
+	rlite *db;
+	if (rl_open(file ? filepath : ":memory:", &db, RLITE_OPEN_READWRITE | RLITE_OPEN_CREATE) != RL_OK) {
+		fprintf(stderr, "Unable to open rlite\n");
+		return NULL;
+	}
+	return db;
+}
 
 int basic_insert_list_test(int options)
 {
 	fprintf(stderr, "Start basic_insert_list_test %d\n", options);
 
-	rlite *db;
-	if (rl_open(":memory:", &db, RLITE_OPEN_READWRITE | RLITE_OPEN_CREATE) != RL_OK) {
-		fprintf(stderr, "Unable to open rlite\n");
-		return 1;
-	}
-
+	rlite *db = setup_db(0);
 	rl_list *list;
 	db->page_size = sizeof(long) * 2 + 12;
 	if (RL_OK != rl_list_create(db, &list, &list_long)) {
@@ -96,12 +105,7 @@ int fuzzy_list_test(long size, long list_node_size, int _commit)
 {
 	fprintf(stderr, "Start fuzzy_list_test %ld %ld %d\n", size, list_node_size, _commit);
 
-	rlite *db;
-	if (rl_open(":memory:", &db, RLITE_OPEN_READWRITE | RLITE_OPEN_CREATE) != RL_OK) {
-		fprintf(stderr, "Unable to open rlite\n");
-		return 1;
-	}
-
+	rlite *db = setup_db(_commit);
 	rl_list *list;
 	db->page_size = sizeof(long) * list_node_size + 12;
 	if (RL_OK != rl_list_create(db, &list, &list_long)) {
@@ -151,8 +155,9 @@ int fuzzy_list_test(long size, long list_node_size, int _commit)
 			}
 		}
 		if (_commit) {
-			// TODO: restore commit
-			// commit(list);
+			if (RL_OK != rl_commit(db)) {
+				return 1;
+			}
 		}
 	}
 
@@ -192,12 +197,7 @@ int basic_delete_list_test(long elements, long element_to_remove, char *name)
 {
 	fprintf(stderr, "Start basic_delete_list_test (%ld, %ld) (%s)\n", elements, element_to_remove, name);
 
-	rlite *db;
-	if (rl_open(":memory:", &db, RLITE_OPEN_READWRITE | RLITE_OPEN_CREATE) != RL_OK) {
-		fprintf(stderr, "Unable to open rlite\n");
-		return 1;
-	}
-
+	rlite *db = setup_db(0);
 	rl_list *list;
 	db->page_size = sizeof(long) * 2 + 12;
 	if (RL_OK != rl_list_create(db, &list, &list_long)) {
@@ -263,12 +263,7 @@ int fuzzy_list_delete_test(long size, long list_node_size, int _commit)
 {
 	fprintf(stderr, "Start fuzzy_list_delete_test %ld %ld %d\n", size, list_node_size, _commit);
 
-	rlite *db;
-	if (rl_open(":memory:", &db, RLITE_OPEN_READWRITE | RLITE_OPEN_CREATE) != RL_OK) {
-		fprintf(stderr, "Unable to open rlite\n");
-		return 1;
-	}
-
+	rlite *db = setup_db(_commit);
 	rl_list *list;
 	db->page_size = sizeof(long) * list_node_size + 12;
 	if (RL_OK != rl_list_create(db, &list, &list_long)) {
@@ -297,9 +292,8 @@ int fuzzy_list_delete_test(long size, long list_node_size, int _commit)
 				return 1;
 			}
 		}
-		if (_commit) {
-			// TODO: restore commit
-			// commit(list);
+		if (RL_OK != rl_commit(db)) {
+			return 1;
 		}
 	}
 
