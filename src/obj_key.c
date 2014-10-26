@@ -150,9 +150,7 @@ int rl_obj_key_delete(struct rlite *db, unsigned char *key, long keylen)
 	if (retval != RL_FOUND) {
 		goto cleanup;
 	}
-	rl_key *element = _element;
-	rl_obj_string_delete(db, element->string_page);
-	// TODO: delete value
+	// TODO: delete value, key string
 cleanup:
 	return RL_OK;
 }

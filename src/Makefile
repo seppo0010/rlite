@@ -15,8 +15,10 @@ all: buildtest
 gcov: CFLAGS += -fprofile-arcs -ftest-coverage
 gcov: clean test
 
-debug: CFLAGS += -DDEBUG=1
-debug: clean vtest
+builddebug: CFLAGS += -DDEBUG=1
+builddebug: clean buildtest
+
+debug: builddebug vtest
 
 lcov: gcov
 	lcov --directory . --capture --output-file lcov/app.info
@@ -57,12 +59,12 @@ test: buildtest
 	./obj_key-test
 
 vtest: buildtest
-#	valgrind --track-origins=yes --leak-check=full --show-reachable=yes ./btree-test
-#	valgrind --track-origins=yes --leak-check=full --show-reachable=yes ./list-test
-#	valgrind --track-origins=yes --leak-check=full --show-reachable=yes ./rlite-test
-#	valgrind --track-origins=yes --leak-check=full --show-reachable=yes ./string-test
-#	valgrind --track-origins=yes --leak-check=full --show-reachable=yes ./obj_string-test
+	valgrind --track-origins=yes --leak-check=full --show-reachable=yes ./btree-test
+	valgrind --track-origins=yes --leak-check=full --show-reachable=yes ./list-test
+	valgrind --track-origins=yes --leak-check=full --show-reachable=yes ./rlite-test
+	valgrind --track-origins=yes --leak-check=full --show-reachable=yes ./string-test
+	valgrind --track-origins=yes --leak-check=full --show-reachable=yes ./obj_string-test
 	valgrind --track-origins=yes --leak-check=full --show-reachable=yes ./obj_key-test
 
 clean:
-	rm -rf *-test *.o *.a *.dSYM
+	rm -rf *-test *.o *.a *.dSYM *.gcda *.gcno

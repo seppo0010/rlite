@@ -50,7 +50,7 @@ int basic_test_set_get(int _commit)
 	int retval = 0;
 	fprintf(stderr, "Start basic_test_set_get %d\n", _commit);
 
-	rlite *db = setup_db(_commit);
+	rlite *db = setup_db(_commit, 1);
 	unsigned char *key = (unsigned char *)"my key";
 	long keylen = strlen((char *)key);
 	unsigned char type = 'A';
@@ -77,7 +77,7 @@ int basic_test_get_unexisting()
 	int retval = 0;
 	fprintf(stderr, "Start basic_test_get_unexisting\n");
 
-	rlite *db = setup_db(0);
+	rlite *db = setup_db(0, 1);
 
 	unsigned char *key = (unsigned char *)"my key";
 	long keylen = strlen((char *)key);
@@ -97,7 +97,7 @@ int basic_test_set_delete()
 	int retval = 0;
 	fprintf(stderr, "Start basic_test_set_delete\n");
 
-	rlite *db = setup_db(0);
+	rlite *db = setup_db(0, 1);
 
 	unsigned char *key = (unsigned char *)"my key";
 	long keylen = strlen((char *)key);
@@ -134,7 +134,7 @@ int basic_test_set_collision()
 	unsigned char key2[128];
 	fprintf(stderr, "Start basic_test_set_collision\n");
 
-	rlite *db = setup_db(0);
+	rlite *db = setup_db(0, 1);
 
 	get_test_key(key1, "test/collision1");
 	unsigned char type1 = 'A';

@@ -11,7 +11,7 @@ int basic_insert_list_test(int options)
 {
 	fprintf(stderr, "Start basic_insert_list_test %d\n", options);
 
-	rlite *db = setup_db(0);
+	rlite *db = setup_db(0, 1);
 	rl_list *list;
 	db->page_size = sizeof(long) * 2 + 12;
 	if (RL_OK != rl_list_create(db, &list, &list_long)) {
@@ -92,7 +92,7 @@ int fuzzy_list_test(long size, long list_node_size, int _commit)
 {
 	fprintf(stderr, "Start fuzzy_list_test %ld %ld %d\n", size, list_node_size, _commit);
 
-	rlite *db = setup_db(_commit);
+	rlite *db = setup_db(_commit, 1);
 	rl_list *list;
 	db->page_size = sizeof(long) * list_node_size + 12;
 	if (RL_OK != rl_list_create(db, &list, &list_long)) {
@@ -184,7 +184,7 @@ int basic_delete_list_test(long elements, long element_to_remove, char *name)
 {
 	fprintf(stderr, "Start basic_delete_list_test (%ld, %ld) (%s)\n", elements, element_to_remove, name);
 
-	rlite *db = setup_db(0);
+	rlite *db = setup_db(0, 1);
 	rl_list *list;
 	db->page_size = sizeof(long) * 2 + 12;
 	if (RL_OK != rl_list_create(db, &list, &list_long)) {
@@ -250,7 +250,7 @@ int fuzzy_list_delete_test(long size, long list_node_size, int _commit)
 {
 	fprintf(stderr, "Start fuzzy_list_delete_test %ld %ld %d\n", size, list_node_size, _commit);
 
-	rlite *db = setup_db(_commit);
+	rlite *db = setup_db(_commit, 1);
 	rl_list *list;
 	db->page_size = sizeof(long) * list_node_size + 12;
 	if (RL_OK != rl_list_create(db, &list, &list_long)) {

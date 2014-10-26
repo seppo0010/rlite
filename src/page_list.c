@@ -9,7 +9,9 @@
 #include "obj_key.h"
 #include "util.h"
 
+#ifdef DEBUG
 int rl_print_list_node(rl_list *list, rl_list_node *node);
+#endif
 int rl_list_node_create(rlite *db, rl_list *list, rl_list_node **node);
 
 rl_list_type list_long = {
@@ -658,6 +660,7 @@ cleanup:
 	return retval;
 }
 
+#ifdef DEBUG
 int rl_print_list(rlite *db, rl_list *list)
 {
 	if (!list->type->formatter) {
@@ -692,6 +695,7 @@ int rl_print_list(rlite *db, rl_list *list)
 cleanup:
 	return retval;
 }
+#endif
 
 int rl_flatten_list(rlite *db, rl_list *list, void *** scores)
 {

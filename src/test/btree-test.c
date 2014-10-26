@@ -10,7 +10,7 @@ int basic_insert_set_test()
 {
 	fprintf(stderr, "Start basic_insert_set_test\n");
 
-	rlite *db = setup_db(0);
+	rlite *db = setup_db(0, 1);
 	rl_btree *btree;
 	if (rl_btree_create(db, &btree, &long_set, 2) != RL_OK) {
 		return 1;
@@ -57,7 +57,7 @@ int basic_insert_hash_test()
 	fprintf(stderr, "Start basic_insert_hash_test\n");
 
 	rl_btree *btree;
-	rlite *db = setup_db(0);
+	rlite *db = setup_db(0, 1);
 	if (rl_btree_create(db, &btree, &long_hash, 2) != RL_OK) {
 		return 1;
 	}
@@ -113,7 +113,7 @@ int basic_delete_set_test(long elements, long element_to_remove, char *name)
 {
 	fprintf(stderr, "Start basic_delete_set_test (%ld, %ld) (%s)\n", elements, element_to_remove, name);
 
-	rlite *db = setup_db(0);
+	rlite *db = setup_db(0, 1);
 	rl_btree *btree;
 	if (rl_btree_create(db, &btree, &long_set, 2) != RL_OK) {
 		return 1;
@@ -189,7 +189,7 @@ int contains_element(long element, long *elements, long size)
 int fuzzy_set_test(long size, long btree_node_size, int _commit)
 {
 	fprintf(stderr, "Start fuzzy_set_test %ld %ld %d\n", size, btree_node_size, _commit);
-	rlite *db = setup_db(_commit);
+	rlite *db = setup_db(_commit, 1);
 	rl_btree *btree;
 	if (rl_btree_create(db, &btree, &long_set, btree_node_size) != RL_OK) {
 		return 1;
@@ -236,6 +236,8 @@ int fuzzy_set_test(long size, long btree_node_size, int _commit)
 			if (RL_OK != rl_commit(db)) {
 				return 1;
 			}
+			rl_close(db);
+			db = setup_db(_commit, 0);
 		}
 	}
 
@@ -274,7 +276,7 @@ int fuzzy_set_test(long size, long btree_node_size, int _commit)
 int fuzzy_hash_test(long size, long btree_node_size, int _commit)
 {
 	fprintf(stderr, "Start fuzzy_hash_test %ld %ld %d\n", size, btree_node_size, _commit);
-	rlite *db = setup_db(_commit);
+	rlite *db = setup_db(_commit, 1);
 	rl_btree *btree;
 	if (rl_btree_create(db, &btree, &long_hash, btree_node_size) != RL_OK) {
 		return 1;
@@ -371,7 +373,7 @@ int fuzzy_hash_test(long size, long btree_node_size, int _commit)
 int fuzzy_set_delete_test(long size, long btree_node_size, int _commit)
 {
 	fprintf(stderr, "Start fuzzy_set_delete_test %ld %ld %d\n", size, btree_node_size, _commit);
-	rlite *db = setup_db(_commit);
+	rlite *db = setup_db(_commit, 1);
 	rl_btree *btree;
 	if (rl_btree_create(db, &btree, &long_set, btree_node_size) != RL_OK) {
 		return 1;

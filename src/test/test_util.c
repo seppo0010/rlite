@@ -1,10 +1,10 @@
 #include <unistd.h>
 #include "../rlite.h"
 
-rlite *setup_db(int file)
+rlite *setup_db(int file, int del)
 {
 	const char *filepath = "rlite-test.rld";
-	if (access(filepath, F_OK) == 0) {
+	if (del && access(filepath, F_OK) == 0) {
 		unlink(filepath);
 	}
 	rlite *db;

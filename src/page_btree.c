@@ -69,7 +69,9 @@ int rl_btree_deserialize(struct rlite *db, void **obj, void *context, unsigned c
 	return retval;
 }
 
+#ifdef DEBUG
 int rl_print_btree_node(rlite *db, rl_btree *btree, rl_btree_node *node, long level);
+#endif
 int rl_btree_node_create(rlite *db, rl_btree *btree, rl_btree_node **node);
 
 
@@ -829,7 +831,9 @@ int rl_btree_is_balanced(rlite *db, rl_btree *btree)
 	for (i = 0; i < size; i++) {
 		for (j = i + 1; j < size; j++) {
 			if (btree->type->cmp(scores[i], scores[j]) >= 0) {
+#ifdef DEBUG
 				rl_print_btree(db, btree);
+#endif
 				fprintf(stderr, "btree is not sorted (");
 				char *str = malloc(sizeof(char) * 100);
 				if (str == NULL) {
@@ -853,6 +857,7 @@ cleanup:
 	return retval;
 }
 
+#ifdef DEBUG
 int rl_print_btree_node(rlite *db, rl_btree *btree, rl_btree_node *node, long level)
 {
 	int retval = RL_OK;
@@ -916,6 +921,7 @@ int rl_print_btree(rlite *db, rl_btree *btree)
 	printf("-------\n");
 	return retval;
 }
+#endif
 
 int rl_flatten_btree_node(rlite *db, rl_btree *btree, rl_btree_node *node, void *** scores, long *size)
 {

@@ -100,11 +100,3 @@ int rl_obj_string_set(struct rlite *db, long *number, unsigned char *data, long 
 cleanup:
 	return retval;
 }
-
-int rl_obj_string_delete(struct rlite *db, long number)
-{
-	db = db;
-	number = number;
-	return RL_UNEXPECTED;
-}
-
