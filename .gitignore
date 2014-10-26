@@ -5,3 +5,5 @@
 *.gcov
 *.gcda
 *.gcno
+/src/lcov/app.info
+/src/lcov/html

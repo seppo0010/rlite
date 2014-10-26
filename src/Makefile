@@ -18,6 +18,10 @@ gcov: clean test
 debug: CFLAGS += -DDEBUG=1
 debug: clean vtest
 
+lcov: gcov
+	lcov --directory . --capture --output-file lcov/app.info
+	genhtml  lcov/app.info -o lcov/html
+
 .c.o:
 	$(CC) $(ARCH) $(DEBUG) $(CFLAGS) -c $<
 
