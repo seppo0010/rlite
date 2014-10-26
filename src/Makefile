@@ -28,23 +28,23 @@ lcov: gcov
 librlite.a: rlite.o page_string.o page_list.o page_btree.o obj_key.o obj_string.o util.o
 	ar -cq librlite.a rlite.o page_string.o page_list.o page_btree.o obj_key.o obj_string.o util.o
 
-rlite-test: test/rlite-test.o librlite.a
-	$(CC) $(DEBUG) $(CFLAGS) -o rlite-test rlite-test.o librlite.a $(LIBS)
+rlite-test: test/rlite-test.o test/test_util.o librlite.a
+	$(CC) $(DEBUG) $(CFLAGS) -o rlite-test rlite-test.o test_util.o librlite.a $(LIBS)
 
-btree-test: test/btree-test.o librlite.a
-	$(CC) $(DEBUG) $(CFLAGS) -o btree-test btree-test.o librlite.a $(LIBS)
+btree-test: test/btree-test.o test/test_util.o librlite.a
+	$(CC) $(DEBUG) $(CFLAGS) -o btree-test btree-test.o test_util.o librlite.a $(LIBS)
 
-list-test: test/list-test.o librlite.a
-	$(CC) $(DEBUG) $(CFLAGS) -o list-test list-test.o librlite.a $(LIBS)
+list-test: test/list-test.o test/test_util.o librlite.a
+	$(CC) $(DEBUG) $(CFLAGS) -o list-test list-test.o test_util.o librlite.a $(LIBS)
 
-string-test: test/string-test.o librlite.a
-	$(CC) $(DEBUG) $(CFLAGS) -o string-test string-test.o librlite.a $(LIBS)
+string-test: test/string-test.o test/test_util.o librlite.a
+	$(CC) $(DEBUG) $(CFLAGS) -o string-test string-test.o test_util.o librlite.a $(LIBS)
 
-obj_string-test: test/obj_string-test.o librlite.a
-	$(CC) $(DEBUG) $(CFLAGS) -o obj_string-test obj_string-test.o librlite.a $(LIBS)
+obj_string-test: test/obj_string-test.o test/test_util.o librlite.a
+	$(CC) $(DEBUG) $(CFLAGS) -o obj_string-test obj_string-test.o test_util.o librlite.a $(LIBS)
 
-obj_key-test: test/obj_key-test.o librlite.a
-	$(CC) $(DEBUG) $(CFLAGS) -o obj_key-test obj_key-test.o librlite.a $(LIBS)
+obj_key-test: test/obj_key-test.o test/test_util.o librlite.a
+	$(CC) $(DEBUG) $(CFLAGS) -o obj_key-test obj_key-test.o test_util.o librlite.a $(LIBS)
 
 buildtest: rlite-test btree-test list-test string-test obj_string-test obj_key-test
 
