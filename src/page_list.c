@@ -717,7 +717,7 @@ cleanup:
 }
 #endif
 
-int rl_flatten_list(rlite *db, rl_list *list, void *** scores)
+int rl_flatten_list(rlite *db, rl_list *list, void **scores)
 {
 	long i, number = list->left, pos = 0;
 	rl_list_node *node;
@@ -730,10 +730,11 @@ int rl_flatten_list(rlite *db, rl_list *list, void *** scores)
 		}
 		node = _node;
 		for (i = 0; i < node->size; i++) {
-			(*scores)[pos++] = node->elements[i];
+			scores[pos++] = node->elements[i];
 		}
 		number = node->right;
 	}
+	retval = RL_OK;
 cleanup:
 	return retval;
 }

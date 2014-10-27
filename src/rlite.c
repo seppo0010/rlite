@@ -5,6 +5,7 @@
 #include "page_btree.h"
 #include "page_list.h"
 #include "page_string.h"
+#include "page_skiplist.h"
 #include "rlite.h"
 #include "util.h"
 
@@ -115,6 +116,22 @@ rl_data_type rl_data_type_string = {
 	rl_string_deserialize,
 	rl_string_destroy,
 };
+
+rl_data_type rl_data_type_skiplist = {
+	"rl_data_type_skiplist",
+	rl_skiplist_serialize,
+	rl_skiplist_deserialize,
+	rl_skiplist_destroy,
+};
+
+rl_data_type rl_data_type_skiplist_node = {
+	"rl_data_type_skiplist_node",
+	rl_skiplist_node_serialize,
+	rl_skiplist_node_deserialize,
+	rl_skiplist_node_destroy,
+};
+
+rl_data_type rl_data_type_skiplist_node;
 
 static const unsigned char *identifier = (unsigned char *)"rlite0.0";
 
@@ -598,6 +615,7 @@ int rl_write(struct rlite *db, rl_data_type *type, long page_number, void *obj)
 	int retval = rl_search_cache(db, type, page_number, NULL, &pos, db->write_pages, db->write_pages_len);
 	if (retval == RL_FOUND) {
 		db->write_pages[pos]->obj = obj;
+		retval = RL_OK;
 	}
 	else if (retval == RL_NOT_FOUND) {
 		rl_ensure_pages(db);
@@ -636,7 +654,7 @@ int rl_write(struct rlite *db, rl_data_type *type, long page_number, void *obj)
 		}
 		return retval;
 	}
-	return RL_OK;
+	return retval;
 }
 
 int rl_delete(struct rlite *db, long page_number)

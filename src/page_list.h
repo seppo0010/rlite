@@ -47,7 +47,7 @@ int rl_list_remove_element(struct rlite *db, rl_list *list, long position);
 int rl_list_find_element(rlite *db, rl_list *list, void *element, void **found_element, long *position, rl_list_node **found_node, long *found_node_page);
 int rl_print_list(struct rlite *db, rl_list *list);
 int rl_list_is_balanced(struct rlite *db, rl_list *list);
-int rl_flatten_list(struct rlite *db, rl_list *list, void *** elements);
+int rl_flatten_list(struct rlite *db, rl_list *list, void **elements);
 
 int rl_list_serialize(struct rlite *db, void *obj, unsigned char *data);
 int rl_list_deserialize(struct rlite *db, void **obj, void *context, unsigned char *data);

@@ -134,7 +134,7 @@ int fuzzy_list_test(long size, long list_node_size, int _commit)
 			fprintf(stderr, "Node is not balanced after adding child %ld\n", i);
 			return 1;
 		}
-		rl_flatten_list(db, list, &flatten_elements);
+		rl_flatten_list(db, list, flatten_elements);
 		for (j = 0; j < list->size; j++) {
 			if (*(long *)flatten_elements[j] != elements[j]) {
 				fprintf(stderr, "Unexpected value in position %ld after adding %ld (expected %ld, got %ld)\n", j, i, elements[j], *(long *)flatten_elements[j]);

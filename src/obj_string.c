@@ -5,6 +5,78 @@
 #include "page_string.h"
 #include "obj_string.h"
 
+int rl_obj_string_cmp(struct rlite *db, long p1, long p2, int *cmp)
+{
+	rl_list *list1, *list2;
+	rl_list_node *node1, *node2;
+	void *_list, *_node;
+	unsigned char *str1, *str2;
+
+	int retval = rl_read(db, &rl_data_type_list_long, p1, &list_long, &_list);
+	if (retval != RL_FOUND) {
+		goto cleanup;
+	}
+	list1 = _list;
+	retval = rl_read(db, &rl_data_type_list_long, p2, &list_long, &_list);
+	if (retval != RL_FOUND) {
+		goto cleanup;
+	}
+	list2 = _list;
+
+	long node_number1 = list1->left, node_number2 = list2->left, i;
+	int first = 1;
+	while (1) {
+		if (node_number1 == 0 || node_number2 == 0) {
+			if (node_number1 == 0 && node_number2 == 0) {
+				*cmp = 0;
+			}
+			else if (node_number1 == 0) {
+				*cmp = -1;
+			}
+			else {
+				*cmp = 1;
+			}
+			retval = RL_OK;
+			goto cleanup;
+		}
+		retval = rl_read(db, list1->type->list_node_type, node_number1, list1, &_node);
+		if (retval != RL_FOUND) {
+			goto cleanup;
+		}
+		node1 = _node;
+		retval = rl_read(db, list2->type->list_node_type, node_number2, list2, &_node);
+		if (retval != RL_FOUND) {
+			goto cleanup;
+		}
+		node2 = _node;
+		for (i = first ? 1 : 0; i < node1->size; i++) {
+			first = 0;
+			retval = rl_string_get(db, &str1, *(long *)node1->elements[i]);
+			if (retval != RL_OK) {
+				goto cleanup;
+			}
+			retval = rl_string_get(db, &str2, *(long *)node2->elements[i]);
+			if (retval != RL_OK) {
+				goto cleanup;
+			}
+			*cmp = memcmp(str1, str2, db->page_size);
+			if (*cmp != 0) {
+				if (*cmp < 0) {
+					*cmp = -1;
+				}
+				else {
+					*cmp = 1;
+				}
+				goto cleanup;
+			}
+		}
+		node_number1 = node1->right;
+		node_number2 = node2->right;
+	}
+cleanup:
+	return retval;
+}
+
 int rl_obj_string_get(struct rlite *db, long number, unsigned char **_data, long *size)
 {
 	rl_list *list;
