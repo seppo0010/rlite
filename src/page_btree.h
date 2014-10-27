@@ -19,11 +19,11 @@ typedef struct {
 int md5_cmp(void *v1, void *v2);
 int md5_formatter(void *v, char **str, int *size);
 
-rl_btree_type long_set;
-rl_btree_type long_hash;
-rl_btree_type btree_hash_md5_long;
-rl_btree_type hash_double_long;
-rl_btree_type hash_md5_double;
+rl_btree_type rl_btree_type_set_long;
+rl_btree_type rl_btree_type_hash_long_long;
+rl_btree_type rl_btree_type_hash_md5_long;
+rl_btree_type rl_btree_type_hash_double_long;
+rl_btree_type rl_btree_type_hash_md5_double;
 
 typedef struct rl_btree_node {
 	void **scores;

@@ -12,7 +12,7 @@ int basic_insert_set_test()
 
 	rlite *db = setup_db(0, 1);
 	rl_btree *btree;
-	if (rl_btree_create(db, &btree, &long_set, 2) != RL_OK) {
+	if (rl_btree_create(db, &btree, &rl_btree_type_set_long, 2) != RL_OK) {
 		return 1;
 	}
 	long **vals = malloc(sizeof(long *) * 7);
@@ -58,7 +58,7 @@ int basic_insert_hash_test()
 
 	rl_btree *btree;
 	rlite *db = setup_db(0, 1);
-	if (rl_btree_create(db, &btree, &long_hash, 2) != RL_OK) {
+	if (rl_btree_create(db, &btree, &rl_btree_type_hash_long_long, 2) != RL_OK) {
 		return 1;
 	}
 	long **keys = malloc(sizeof(long *) * 7);
@@ -115,7 +115,7 @@ int basic_delete_set_test(long elements, long element_to_remove, char *name)
 
 	rlite *db = setup_db(0, 1);
 	rl_btree *btree;
-	if (rl_btree_create(db, &btree, &long_set, 2) != RL_OK) {
+	if (rl_btree_create(db, &btree, &rl_btree_type_set_long, 2) != RL_OK) {
 		return 1;
 	}
 	long abs_elements = labs(elements);
@@ -191,7 +191,7 @@ int fuzzy_set_test(long size, long btree_node_size, int _commit)
 	fprintf(stderr, "Start fuzzy_set_test %ld %ld %d\n", size, btree_node_size, _commit);
 	rlite *db = setup_db(_commit, 1);
 	rl_btree *btree;
-	if (rl_btree_create(db, &btree, &long_set, btree_node_size) != RL_OK) {
+	if (rl_btree_create(db, &btree, &rl_btree_type_set_long, btree_node_size) != RL_OK) {
 		return 1;
 	}
 
@@ -278,7 +278,7 @@ int fuzzy_hash_test(long size, long btree_node_size, int _commit)
 	fprintf(stderr, "Start fuzzy_hash_test %ld %ld %d\n", size, btree_node_size, _commit);
 	rlite *db = setup_db(_commit, 1);
 	rl_btree *btree;
-	if (rl_btree_create(db, &btree, &long_hash, btree_node_size) != RL_OK) {
+	if (rl_btree_create(db, &btree, &rl_btree_type_hash_long_long, btree_node_size) != RL_OK) {
 		return 1;
 	}
 
@@ -375,7 +375,7 @@ int fuzzy_set_delete_test(long size, long btree_node_size, int _commit)
 	fprintf(stderr, "Start fuzzy_set_delete_test %ld %ld %d\n", size, btree_node_size, _commit);
 	rlite *db = setup_db(_commit, 1);
 	rl_btree *btree;
-	if (rl_btree_create(db, &btree, &long_set, btree_node_size) != RL_OK) {
+	if (rl_btree_create(db, &btree, &rl_btree_type_set_long, btree_node_size) != RL_OK) {
 		return 1;
 	}
 

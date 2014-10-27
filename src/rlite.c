@@ -19,98 +19,98 @@ int rl_header_deserialize(struct rlite *db, void **obj, void *context, unsigned 
 int rl_has_flag(rlite *db, int flag);
 
 rl_data_type rl_data_type_btree_hash_md5_double = {
-	"btree_hash_md5_double",
+	"rl_data_type_btree_hash_md5_double",
 	rl_btree_serialize,
 	rl_btree_deserialize,
 	rl_btree_destroy,
 };
 rl_data_type rl_data_type_btree_node_hash_md5_double = {
-	"btree_node_hash_md5_double",
+	"rl_data_type_btree_node_hash_md5_double",
 	rl_btree_node_serialize_hash_md5_double,
 	rl_btree_node_deserialize_hash_md5_double,
 	rl_btree_node_destroy,
 };
 rl_data_type rl_data_type_btree_hash_md5_long = {
-	"btree_hash_md5_long",
+	"rl_data_type_btree_hash_md5_long",
 	rl_btree_serialize,
 	rl_btree_deserialize,
 	rl_btree_destroy,
 };
 rl_data_type rl_data_type_btree_node_hash_md5_long = {
-	"btree_node_hash_md5_long",
+	"rl_data_type_btree_node_hash_md5_long",
 	rl_btree_node_serialize_hash_md5_long,
 	rl_btree_node_deserialize_hash_md5_long,
 	rl_btree_node_destroy,
 };
 rl_data_type rl_data_type_header = {
-	"header",
+	"rl_data_type_header",
 	rl_header_serialize,
 	rl_header_deserialize,
 	NULL
 };
 rl_data_type rl_data_type_btree_set_long = {
-	"btree_set_long",
+	"rl_data_type_btree_set_long",
 	rl_btree_serialize,
 	rl_btree_deserialize,
 	rl_btree_destroy,
 };
 rl_data_type rl_data_type_btree_node_set_long = {
-	"btree_node_set_long",
+	"rl_data_type_btree_node_set_long",
 	rl_btree_node_serialize_set_long,
 	rl_btree_node_deserialize_set_long,
 	rl_btree_node_destroy,
 };
 rl_data_type rl_data_type_btree_hash_long_long = {
-	"btree_hash_long_long",
+	"rl_data_type_btree_hash_long_long",
 	rl_btree_serialize,
 	rl_btree_deserialize,
 	rl_btree_destroy,
 };
 rl_data_type rl_data_type_btree_node_hash_long_long = {
-	"btree_node_hash_long_long",
+	"rl_data_type_btree_node_hash_long_long",
 	rl_btree_node_serialize_hash_long_long,
 	rl_btree_node_deserialize_hash_long_long,
 	rl_btree_node_destroy,
 };
 rl_data_type rl_data_type_btree_hash_double_long = {
-	"btree_hash_double_long",
+	"rl_data_type_btree_hash_double_long",
 	rl_btree_serialize,
 	rl_btree_deserialize,
 	rl_btree_destroy,
 };
 rl_data_type rl_data_type_btree_node_hash_double_long = {
-	"btree_node_hash_double_long",
+	"rl_data_type_btree_node_hash_double_long",
 	rl_btree_node_serialize_hash_double_long,
 	rl_btree_node_deserialize_hash_double_long,
 	rl_btree_node_destroy,
 };
 rl_data_type rl_data_type_list_long = {
-	"list_long",
+	"rl_data_type_list_long",
 	rl_list_serialize,
 	rl_list_deserialize,
 	rl_list_destroy,
 };
 rl_data_type rl_data_type_list_node_long = {
-	"list_node_long",
+	"rl_data_type_list_node_long",
 	rl_list_node_serialize_long,
 	rl_list_node_deserialize_long,
 	rl_list_node_destroy,
 };
 rl_data_type rl_data_type_list_key = {
-	"list_key",
+	"rl_data_type_list_key",
 	rl_list_serialize,
 	rl_list_deserialize,
 	rl_list_destroy,
 };
 rl_data_type rl_data_type_list_node_key = {
-	"list_node_key",
+	"rl_data_type_list_node_key",
 	rl_list_node_serialize_key,
 	rl_list_node_deserialize_key,
 	rl_list_node_destroy,
 };
 
 rl_data_type rl_data_type_string = {
-	"string",
+	"rl_data_type_string",
 	rl_string_serialize,
 	rl_string_deserialize,
 	rl_string_destroy,
@@ -320,7 +320,7 @@ int rl_create_db(rlite *db)
 	db->next_empty_page = 2;
 	rl_btree *btree;
 	long max_node_size = (db->page_size - 8) / 8; // TODO: this should be in the type
-	retval = rl_btree_create(db, &btree, &btree_hash_md5_long, max_node_size);
+	retval = rl_btree_create(db, &btree, &rl_btree_type_hash_md5_long, max_node_size);
 	if (retval == RL_OK) {
 		retval = rl_write(db, &rl_data_type_btree_hash_md5_long, GLOBAL_KEY_BTREE, btree);
 	}
@@ -330,7 +330,7 @@ int rl_create_db(rlite *db)
 int rl_get_key_btree(rlite *db, rl_btree **btree)
 {
 	void *_btree;
-	int retval = rl_read(db, &rl_data_type_btree_hash_md5_long, GLOBAL_KEY_BTREE, &btree_hash_md5_long, &_btree);
+	int retval = rl_read(db, &rl_data_type_btree_hash_md5_long, GLOBAL_KEY_BTREE, &rl_btree_type_hash_md5_long, &_btree);
 	if (retval != RL_FOUND) {
 		goto cleanup;
 	}

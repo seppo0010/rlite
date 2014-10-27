@@ -7,7 +7,7 @@
 #include "rlite.h"
 #include "util.h"
 
-rl_btree_type btree_hash_md5_long = {
+rl_btree_type rl_btree_type_hash_md5_long = {
 	0,
 	0,
 	sizeof(unsigned char) * 16,
@@ -16,7 +16,7 @@ rl_btree_type btree_hash_md5_long = {
 	md5_formatter,
 };
 
-rl_btree_type long_set = {
+rl_btree_type rl_btree_type_set_long = {
 	0,
 	0,
 	sizeof(long),
@@ -25,7 +25,7 @@ rl_btree_type long_set = {
 	long_formatter,
 };
 
-rl_btree_type long_hash = {
+rl_btree_type rl_btree_type_hash_long_long = {
 	0,
 	0,
 	sizeof(long),
@@ -34,7 +34,7 @@ rl_btree_type long_hash = {
 	long_formatter,
 };
 
-rl_btree_type hash_double_long = {
+rl_btree_type rl_btree_type_hash_double_long = {
 	0,
 	0,
 	sizeof(long),
@@ -43,7 +43,7 @@ rl_btree_type hash_double_long = {
 	double_formatter,
 };
 
-rl_btree_type hash_md5_double = {
+rl_btree_type rl_btree_type_hash_md5_double = {
 	0,
 	0,
 	sizeof(long),
@@ -54,16 +54,16 @@ rl_btree_type hash_md5_double = {
 
 void rl_btree_init()
 {
-	btree_hash_md5_long.btree_type = &rl_data_type_btree_hash_md5_long;
-	btree_hash_md5_long.btree_node_type = &rl_data_type_btree_node_hash_md5_long;
-	long_hash.btree_type = &rl_data_type_btree_hash_long_long;
-	long_hash.btree_node_type = &rl_data_type_btree_node_hash_long_long;
-	long_set.btree_type = &rl_data_type_btree_set_long;
-	long_set.btree_node_type = &rl_data_type_btree_node_set_long;
-	hash_double_long.btree_type = &rl_data_type_btree_hash_double_long;
-	hash_double_long.btree_node_type = &rl_data_type_btree_node_hash_double_long;
-	hash_md5_double.btree_type = &rl_data_type_btree_hash_md5_double;
-	hash_md5_double.btree_node_type = &rl_data_type_btree_node_hash_md5_double;
+	rl_btree_type_hash_md5_long.btree_type = &rl_data_type_btree_hash_md5_long;
+	rl_btree_type_hash_md5_long.btree_node_type = &rl_data_type_btree_node_hash_md5_long;
+	rl_btree_type_hash_long_long.btree_type = &rl_data_type_btree_hash_long_long;
+	rl_btree_type_hash_long_long.btree_node_type = &rl_data_type_btree_node_hash_long_long;
+	rl_btree_type_set_long.btree_type = &rl_data_type_btree_set_long;
+	rl_btree_type_set_long.btree_node_type = &rl_data_type_btree_node_set_long;
+	rl_btree_type_hash_double_long.btree_type = &rl_data_type_btree_hash_double_long;
+	rl_btree_type_hash_double_long.btree_node_type = &rl_data_type_btree_node_hash_double_long;
+	rl_btree_type_hash_md5_double.btree_type = &rl_data_type_btree_hash_md5_double;
+	rl_btree_type_hash_md5_double.btree_node_type = &rl_data_type_btree_node_hash_md5_double;
 }
 
 int rl_btree_serialize(struct rlite *db, void *obj, unsigned char *data)

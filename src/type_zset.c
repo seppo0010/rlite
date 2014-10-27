@@ -21,7 +21,7 @@ static int rl_zset_get_scores_btree(rlite *db, unsigned char *key, long keylen, 
 		}
 		else if (retval == RL_NOT_FOUND) {
 			long max_node_size = (db->page_size - 8) / 24;
-			retval = rl_btree_create(db, &scores, &hash_md5_double, max_node_size);
+			retval = rl_btree_create(db, &scores, &rl_btree_type_hash_md5_double, max_node_size);
 			if (retval != RL_OK) {
 				goto cleanup;
 			}
@@ -56,7 +56,7 @@ static int rl_zset_get_scores_btree(rlite *db, unsigned char *key, long keylen, 
 				goto cleanup;
 			}
 			scores_page_number = *(long *)tmp;
-			retval = rl_read(db, &rl_data_type_btree_hash_md5_double, scores_page_number, &hash_md5_double, &tmp);
+			retval = rl_read(db, &rl_data_type_btree_hash_md5_double, scores_page_number, &rl_btree_type_hash_md5_double, &tmp);
 			if (retval != RL_FOUND) {
 				goto cleanup;
 			}
@@ -83,7 +83,7 @@ static int rl_zset_get_scores_btree(rlite *db, unsigned char *key, long keylen, 
 			goto cleanup;
 		}
 		scores_page_number = *(long *)tmp;
-		retval = rl_read(db, &rl_data_type_btree_hash_md5_double, scores_page_number, &hash_md5_double, &tmp);
+		retval = rl_read(db, &rl_data_type_btree_hash_md5_double, scores_page_number, &rl_btree_type_hash_md5_double, &tmp);
 		if (retval != RL_FOUND) {
 			goto cleanup;
 		}
