@@ -12,6 +12,7 @@ typedef struct {
 	long value;
 	double score;
 	long left;
+	long num_levels;
 	struct rl_skiplist_node_level {
 		long right;
 		long span;

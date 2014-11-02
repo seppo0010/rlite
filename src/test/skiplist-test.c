@@ -6,11 +6,11 @@
 #include "../page_skiplist.h"
 #include "../obj_string.h"
 
-int basic_skiplist_test(int sign)
+int basic_skiplist_test(int sign, int commit)
 {
-	fprintf(stderr, "Start basic_skiplist_test %d\n", sign);
+	fprintf(stderr, "Start basic_skiplist_test %d %d\n", sign, commit);
 
-	rlite *db = setup_db(0, 1);
+	rlite *db = setup_db(commit, 1);
 	rl_skiplist *skiplist;
 	if (rl_skiplist_create(db, &skiplist) != RL_OK) {
 		return 1;
@@ -35,6 +35,9 @@ int basic_skiplist_test(int sign)
 		if (retval != RL_OK) {
 			fprintf(stderr, "Skiplist is not balanced after item %ld\n", i);
 			return 1;
+		}
+		if (commit) {
+			rl_commit(db);
 		}
 	}
 	rl_skiplist_destroy(db, skiplist);
@@ -125,17 +128,14 @@ int basic_skiplist_first_node_test()
 int main()
 {
 	int retval = 0;
-	retval = basic_skiplist_test(0);
-	if (retval != 0) {
-		goto cleanup;
-	}
-	retval = basic_skiplist_test(1);
-	if (retval != 0) {
-		goto cleanup;
-	}
-	retval = basic_skiplist_test(-1);
-	if (retval != 0) {
-		goto cleanup;
+	int i, j;
+	for (i = -1; i <= 1; i++) {
+		for (j = 0; j < 2; j++) {
+			retval = basic_skiplist_test(i, j);
+			if (retval != 0) {
+				goto cleanup;
+			}
+		}
 	}
 	retval = basic_skiplist_first_node_test();
 	if (retval != 0) {
