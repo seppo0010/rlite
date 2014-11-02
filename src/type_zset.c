@@ -5,13 +5,17 @@
 #include "type_zset.h"
 #include "page_btree.h"
 #include "page_list.h"
+#include "page_skiplist.h"
 #include "util.h"
 
-static int rl_zset_create(rlite *db, long levels_page_number, rl_btree **btree)
+static int rl_zset_create(rlite *db, long levels_page_number, rl_btree **btree, rl_skiplist **_skiplist)
 {
 	rl_list *levels;
 	rl_btree *scores;
+	rl_skiplist *skiplist;
 	long scores_page_number;
+	long skiplist_page_number;
+
 	long max_node_size = (db->page_size - 8) / 24;
 	int retval = rl_btree_create(db, &scores, &rl_btree_type_hash_md5_double, max_node_size);
 	if (retval != RL_OK) {
@@ -22,13 +26,18 @@ static int rl_zset_create(rlite *db, long levels_page_number, rl_btree **btree)
 	if (retval != RL_OK) {
 		goto cleanup;
 	}
-	retval = rl_list_create(db, &levels, &list_long);
+
+	retval = rl_skiplist_create(db, &skiplist);
 	if (retval != RL_OK) {
 		goto cleanup;
 	}
-	long *element = malloc(sizeof(long));
-	*element = scores_page_number;
-	retval = rl_list_add_element(db, levels, element, 0);
+	skiplist_page_number = db->next_empty_page;
+	retval = rl_write(db, &rl_data_type_skiplist, skiplist_page_number, skiplist);
+	if (retval != RL_OK) {
+		goto cleanup;
+	}
+
+	retval = rl_list_create(db, &levels, &list_long);
 	if (retval != RL_OK) {
 		goto cleanup;
 	}
@@ -36,41 +45,71 @@ static int rl_zset_create(rlite *db, long levels_page_number, rl_btree **btree)
 	if (retval != RL_OK) {
 		goto cleanup;
 	}
+
+	long *scores_element = malloc(sizeof(long));
+	*scores_element = scores_page_number;
+	retval = rl_list_add_element(db, levels, scores_element, 0);
+	if (retval != RL_OK) {
+		goto cleanup;
+	}
+
+	long *skiplist_element = malloc(sizeof(long));
+	*skiplist_element = skiplist_page_number;
+	retval = rl_list_add_element(db, levels, skiplist_element, 1);
+	if (retval != RL_OK) {
+		goto cleanup;
+	}
+
 	if (btree) {
 		*btree = scores;
+	}
+	if (_skiplist) {
+		*_skiplist = skiplist;
 	}
 cleanup:
 	return retval;
 }
 
-static int rl_zset_read(rlite *db, long levels_page_number, rl_btree **btree)
+static int rl_zset_read(rlite *db, long levels_page_number, rl_btree **btree, rl_skiplist **skiplist)
 {
 	void *tmp;
-	long scores_page_number;
+	long scores_page_number, skiplist_page_number;
 	rl_list *levels;
 	int retval = rl_read(db, &rl_data_type_list_long, levels_page_number, &list_long, &tmp);
 	if (retval != RL_FOUND) {
 		goto cleanup;
 	}
 	levels = tmp;
-	retval = rl_list_get_element(db, levels, &tmp, 0);
-	if (retval != RL_FOUND) {
-		goto cleanup;
-	}
-	scores_page_number = *(long *)tmp;
-	retval = rl_read(db, &rl_data_type_btree_hash_md5_double, scores_page_number, &rl_btree_type_hash_md5_double, &tmp);
-	if (retval != RL_FOUND) {
-		goto cleanup;
-	}
 	if (btree) {
+		retval = rl_list_get_element(db, levels, &tmp, 0);
+		if (retval != RL_FOUND) {
+			goto cleanup;
+		}
+		scores_page_number = *(long *)tmp;
+		retval = rl_read(db, &rl_data_type_btree_hash_md5_double, scores_page_number, &rl_btree_type_hash_md5_double, &tmp);
+		if (retval != RL_FOUND) {
+			goto cleanup;
+		}
 		*btree = tmp;
+	}
+	if (skiplist) {
+		retval = rl_list_get_element(db, levels, &tmp, 1);
+		if (retval != RL_FOUND) {
+			goto cleanup;
+		}
+		skiplist_page_number = *(long *)tmp;
+		retval = rl_read(db, &rl_data_type_skiplist, skiplist_page_number, NULL, &tmp);
+		if (retval != RL_FOUND) {
+			goto cleanup;
+		}
+		*skiplist = tmp;
 	}
 	retval = RL_OK;
 cleanup:
 	return retval;
 }
 
-static int rl_zset_get_objects(rlite *db, unsigned char *key, long keylen, rl_btree **btree, int create)
+static int rl_zset_get_objects(rlite *db, unsigned char *key, long keylen, rl_btree **btree, rl_skiplist **skiplist, int create)
 {
 	long levels_page_number;
 	int retval;
@@ -80,10 +119,10 @@ static int rl_zset_get_objects(rlite *db, unsigned char *key, long keylen, rl_bt
 			goto cleanup;
 		}
 		else if (retval == RL_NOT_FOUND) {
-			retval = rl_zset_create(db, levels_page_number, btree);
+			retval = rl_zset_create(db, levels_page_number, btree, skiplist);
 		}
 		else {
-			retval = rl_zset_read(db, levels_page_number, btree);
+			retval = rl_zset_read(db, levels_page_number, btree, skiplist);
 		}
 	}
 	else {
@@ -96,7 +135,7 @@ static int rl_zset_get_objects(rlite *db, unsigned char *key, long keylen, rl_bt
 			retval = RL_WRONG_TYPE;
 			goto cleanup;
 		}
-		retval = rl_zset_read(db, levels_page_number, btree);
+		retval = rl_zset_read(db, levels_page_number, btree, skiplist);
 	}
 cleanup:
 	return retval;
@@ -105,7 +144,7 @@ cleanup:
 int rl_zadd(rlite *db, unsigned char *key, long keylen, double score, unsigned char *data, long datalen)
 {
 	rl_btree *scores;
-	int retval = rl_zset_get_objects(db, key, keylen, &scores, 1);
+	int retval = rl_zset_get_objects(db, key, keylen, &scores, NULL, 1);
 	if (retval != RL_OK) {
 		goto cleanup;
 	}
@@ -128,7 +167,7 @@ int rl_zscore(rlite *db, unsigned char *key, long keylen, unsigned char *data, l
 {
 	unsigned char *digest = NULL;
 	rl_btree *scores;
-	int retval = rl_zset_get_objects(db, key, keylen, &scores, 0);
+	int retval = rl_zset_get_objects(db, key, keylen, &scores, NULL, 0);
 	if (retval != RL_OK) {
 		goto cleanup;
 	}
