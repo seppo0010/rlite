@@ -93,6 +93,10 @@ int basic_skiplist_first_node_test()
 			fprintf(stderr, "Expected node score to be 2.0, got %lf instead\n", node->score);
 			return 1;
 		}
+		if (rank != 3) {
+			fprintf(stderr, "Expected rank to be 3, got %ld instead\n", rank);
+			return 1;
+		}
 
 		retval = rl_obj_string_get(db, node->value, &data2, &size);
 		if (retval != RL_OK) {

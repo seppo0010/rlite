@@ -80,16 +80,15 @@ int rl_skiplist_node_destroy(rlite *db, void *node)
 	return RL_OK;
 }
 
-int rl_skiplist_add(rlite *db, rl_skiplist *skiplist, double score, long value)
+static int rl_skiplist_get_update(rlite *db, rl_skiplist *skiplist, double score, long value, rl_skiplist_node *update_node[RL_SKIPLIST_MAXLEVEL], long update_node_page[RL_SKIPLIST_MAXLEVEL], long rank[RL_SKIPLIST_MAXLEVEL])
 {
-	rl_skiplist_node *update_node[RL_SKIPLIST_MAXLEVEL];
-	long update_node_page[RL_SKIPLIST_MAXLEVEL];
-	long rank[RL_SKIPLIST_MAXLEVEL];
 	void *_node;
 	rl_skiplist_node *node, *next_node;
-	long i, level, node_page, tmp;
-	for (i = 0; i < RL_SKIPLIST_MAXLEVEL; i++) {
-		update_node_page[i] = 0;
+	long i, node_page, tmp;
+	if (update_node_page) {
+		for (i = 0; i < RL_SKIPLIST_MAXLEVEL; i++) {
+			update_node_page[i] = 0;
+		}
 	}
 
 	node_page = skiplist->left;
@@ -97,12 +96,16 @@ int rl_skiplist_add(rlite *db, rl_skiplist *skiplist, double score, long value)
 	if (retval != RL_FOUND) {
 		goto cleanup;
 	}
-	update_node_page[0] = skiplist->left;
+	if (update_node_page) {
+		update_node_page[0] = skiplist->left;
+	}
 	node_page = skiplist->left;
 	node = _node;
 
 	for (i = skiplist->level - 1; i >= 0; i--) {
-		rank[i] = i == (skiplist->level - 1) ? 0 : rank[i + 1];
+		if (rank) {
+			rank[i] = i == (skiplist->level - 1) ? 0 : rank[i + 1];
+		}
 		while (1) {
 			tmp = node->level[i].right;
 			if (tmp == 0) {
@@ -119,6 +122,9 @@ int rl_skiplist_add(rlite *db, rl_skiplist *skiplist, double score, long value)
 					break;
 				}
 				if (next_node->score == score) {
+					if (value == 0) {
+						break;
+					}
 					retval = rl_obj_string_cmp(db, next_node->value, value, &cmp);
 					if (retval != RL_OK) {
 						goto cleanup;
@@ -128,15 +134,36 @@ int rl_skiplist_add(rlite *db, rl_skiplist *skiplist, double score, long value)
 					}
 				}
 			}
-			rank[i] += node->level[i].span;
+			if (rank) {
+				rank[i] += node->level[i].span;
+			}
 			node = next_node;
 			node_page = tmp;
 		}
 		update_node[i] = node;
-		update_node_page[i] = node_page;
+		if (update_node_page) {
+			update_node_page[i] = node_page;
+		}
+	}
+	retval = RL_OK;
+cleanup:
+	return retval;
+}
+
+int rl_skiplist_add(rlite *db, rl_skiplist *skiplist, double score, long value)
+{
+	void *_node;
+	rl_skiplist_node *node;
+	long node_page, tmp;
+	long rank[RL_SKIPLIST_MAXLEVEL];
+	rl_skiplist_node *update_node[RL_SKIPLIST_MAXLEVEL];
+	long update_node_page[RL_SKIPLIST_MAXLEVEL];
+	int retval = rl_skiplist_get_update(db, skiplist, score, value, update_node, update_node_page, rank);
+	if (retval != RL_OK) {
+		goto cleanup;
 	}
 
-	level = rl_skiplist_random_level();
+	long i, level = rl_skiplist_random_level();
 	if (level > skiplist->level) {
 		for (i = skiplist->level; i < level; i++) {
 			rank[i] = 0;
@@ -203,46 +230,17 @@ cleanup:
 
 int rl_skiplist_first_node(rlite *db, rl_skiplist *skiplist, double score, rl_skiplist_node **retnode, long *_rank)
 {
-	long i, page = skiplist->left;
-	int retval;
-	void *_node;
-	long rank = 0;
-	rl_skiplist_node *node = NULL, *next_node;
-	for (i = skiplist->level - 1; i >= 0; i--) {
-		do {
-			if (node) {
-				page = node->level[i].right;
-			}
-			if (page == 0) {
-				break;
-			}
-			retval = rl_read(db, &rl_data_type_skiplist_node, page, skiplist, &_node);
-			if (retval != RL_FOUND) {
-				goto cleanup;
-			}
-			next_node = _node;
-			if (next_node->value != 0 && next_node->score > score) {
-				if (i == 0 && node->score < score) {
-					node = next_node;
-					rank++;
-				}
-				break;
-			}
-			if (node) {
-				rank += node->level[i].span;
-			}
-			node = next_node;
-		}
-		while (page > 0);
+	rl_skiplist_node *update_node[RL_SKIPLIST_MAXLEVEL];
+	long rank[RL_SKIPLIST_MAXLEVEL];
+	int retval = rl_skiplist_get_update(db, skiplist, score, 0, update_node, NULL, rank);
+	if (retval != RL_OK) {
+		goto cleanup;
 	}
-	if (node && node->score >= score) {
-		if (retnode) {
-			*retnode = node;
+	if (update_node[0]->level[0].right) {
+		retval = rl_read(db, &rl_data_type_skiplist_node, update_node[0]->level[0].right, skiplist, (void **)retnode);
+		if (retval == RL_FOUND && _rank) {
+			*_rank = rank[0] + 1;
 		}
-		if (_rank) {
-			*_rank = rank;
-		}
-		retval = RL_FOUND;
 	}
 	else {
 		retval = RL_NOT_FOUND;
