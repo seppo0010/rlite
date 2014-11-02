@@ -77,6 +77,61 @@ cleanup:
 	return retval;
 }
 
+int rl_obj_string_cmp_str(struct rlite *db, long p1, unsigned char *str, long len, int *cmp)
+{
+	rl_list *list1;
+	rl_list_node *node1;
+	void *_list, *_node;
+	unsigned char *str1;
+
+	int retval = rl_read(db, &rl_data_type_list_long, p1, &list_long, &_list);
+	if (retval != RL_FOUND) {
+		goto cleanup;
+	}
+	list1 = _list;
+
+	long node_number1 = list1->left, i, pos = 0;
+	int first = 1;
+	long cmplen;
+	while (1) {
+		if (node_number1 == 0) {
+			*cmp = 0;
+			break;
+		}
+		retval = rl_read(db, list1->type->list_node_type, node_number1, list1, &_node);
+		if (retval != RL_FOUND) {
+			goto cleanup;
+		}
+		node1 = _node;
+		for (i = first ? 1 : 0; i < node1->size; i++) {
+			retval = rl_string_get(db, &str1, *(long *)node1->elements[i]);
+			if (retval != RL_OK) {
+				goto cleanup;
+			}
+			cmplen = db->page_size < len - pos ? db->page_size : len - pos;
+			if (cmplen == 0) {
+				// finished with str, the obj_string starts with str
+				*cmp = 1;
+				goto cleanup;
+			}
+			*cmp = memcmp(str1, &str[pos], cmplen);
+			if (*cmp != 0) {
+				if (*cmp < 0) {
+					*cmp = -1;
+				}
+				else {
+					*cmp = 1;
+				}
+				goto cleanup;
+			}
+			pos += db->page_size;
+		}
+		first = 0;
+		node_number1 = node1->right;
+	}
+cleanup:
+	return retval;
+}
 int rl_obj_string_get(struct rlite *db, long number, unsigned char **_data, long *size)
 {
 	rl_list *list;

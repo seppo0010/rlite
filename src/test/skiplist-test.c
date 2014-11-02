@@ -17,16 +17,11 @@ int basic_skiplist_test(int sign, int commit)
 	}
 
 	int retval;
-	long i, page;
+	long i;
 	unsigned char *data = malloc(sizeof(unsigned char) * 1);
 	for (i = 0; i < 200; i++) {
 		data[0] = i;
-		retval = rl_obj_string_set(db, &page, data, 1);
-		if (retval != RL_OK) {
-			fprintf(stderr, "Unable to set %ld string, got %d\n", i, retval);
-			return 1;
-		}
-		retval = rl_skiplist_add(db, skiplist, 5.2 * i * sign, page);
+		retval = rl_skiplist_add(db, skiplist, 5.2 * i * sign, data, 1);
 		if (retval != RL_OK) {
 			fprintf(stderr, "Unable to add item %ld to skiplist, got %d\n", i, retval);
 			return 1;
@@ -60,17 +55,12 @@ int basic_skiplist_first_node_test()
 	}
 
 	int retval;
-	long i, page, size;
+	long i, size;
 	unsigned char *data = malloc(sizeof(unsigned char) * 1);
 	unsigned char *data2;
 	for (i = 0; i < 10; i++) {
 		data[0] = i;
-		retval = rl_obj_string_set(db, &page, data, 1);
-		if (retval != RL_OK) {
-			fprintf(stderr, "Unable to set %ld string, got %d\n", i, retval);
-			return 1;
-		}
-		retval = rl_skiplist_add(db, skiplist, i, page);
+		retval = rl_skiplist_add(db, skiplist, i, data, 1);
 		if (retval != RL_OK) {
 			fprintf(stderr, "Unable to add item %ld to skiplist, got %d\n", i, retval);
 			return 1;
@@ -141,17 +131,12 @@ int basic_skiplist_delete_node_test(int commit)
 
 	int retval;
 	long i;
-	long values[10];
-	unsigned char *data = malloc(sizeof(unsigned char) * 1);
+	unsigned char *data[10];
 	for (i = 0; i < 10; i++) {
-		data[0] = i;
-		retval = rl_obj_string_set(db, &values[i], data, 1);
-		if (retval != RL_OK) {
-			fprintf(stderr, "Unable to set %ld string, got %d\n", i, retval);
-			return 1;
-		}
+		data[i] = malloc(sizeof(unsigned char) * 1);
+		data[i][0] = i;
 		// using i / 2 to have some score collisions because i is int
-		retval = rl_skiplist_add(db, skiplist, i / 2, values[i]);
+		retval = rl_skiplist_add(db, skiplist, i / 2, data[i], 1);
 		if (retval != RL_OK) {
 			fprintf(stderr, "Unable to add item %ld to skiplist, got %d\n", i, retval);
 			return 1;
@@ -169,9 +154,9 @@ int basic_skiplist_delete_node_test(int commit)
 	}
 
 	for (i = 0; i < 10; i++) {
-		retval = rl_skiplist_delete(db, skiplist, i / 2, values[i]);
+		retval = rl_skiplist_delete(db, skiplist, i / 2, data[i], 1);
 		if (retval != RL_OK) {
-			fprintf(stderr, "Failed to delete node at position %ld with score %lf and value %ld, got %d\n", i, (double)(i / 2), values[i], retval);
+			fprintf(stderr, "Failed to delete node at position %ld with score %lf and value %u, got %d\n", i, (double)(i / 2), *data[i], retval);
 			return 1;
 		}
 
@@ -189,7 +174,9 @@ int basic_skiplist_delete_node_test(int commit)
 	}
 
 	rl_skiplist_destroy(db, skiplist);
-	free(data);
+	for (i = 0; i < 10; i++) {
+		free(data[i]);
+	}
 	rl_close(db);
 	fprintf(stderr, "End basic_skiplist_delete_node_test\n");
 	return 0;

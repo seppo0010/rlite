@@ -80,7 +80,7 @@ int rl_skiplist_node_destroy(rlite *db, void *node)
 	return RL_OK;
 }
 
-static int rl_skiplist_get_update(rlite *db, rl_skiplist *skiplist, double score, long value, rl_skiplist_node *update_node[RL_SKIPLIST_MAXLEVEL], long update_node_page[RL_SKIPLIST_MAXLEVEL], long rank[RL_SKIPLIST_MAXLEVEL])
+static int rl_skiplist_get_update(rlite *db, rl_skiplist *skiplist, double score, unsigned char *value, long valuelen, rl_skiplist_node *update_node[RL_SKIPLIST_MAXLEVEL], long update_node_page[RL_SKIPLIST_MAXLEVEL], long rank[RL_SKIPLIST_MAXLEVEL])
 {
 	void *_node;
 	rl_skiplist_node *node, *next_node;
@@ -120,10 +120,10 @@ static int rl_skiplist_get_update(rlite *db, rl_skiplist *skiplist, double score
 				break;
 			}
 			if (next_node->score == score) {
-				if (value == 0) {
+				if (value == NULL) {
 					break;
 				}
-				retval = rl_obj_string_cmp(db, next_node->value, value, &cmp);
+				retval = rl_obj_string_cmp_str(db, next_node->value, value, valuelen, &cmp);
 				if (retval != RL_OK) {
 					goto cleanup;
 				}
@@ -147,7 +147,7 @@ cleanup:
 	return retval;
 }
 
-int rl_skiplist_add(rlite *db, rl_skiplist *skiplist, double score, long value)
+int rl_skiplist_add(rlite *db, rl_skiplist *skiplist, double score, unsigned char *value, long valuelen)
 {
 	void *_node;
 	rl_skiplist_node *node;
@@ -155,7 +155,12 @@ int rl_skiplist_add(rlite *db, rl_skiplist *skiplist, double score, long value)
 	long rank[RL_SKIPLIST_MAXLEVEL];
 	rl_skiplist_node *update_node[RL_SKIPLIST_MAXLEVEL];
 	long update_node_page[RL_SKIPLIST_MAXLEVEL];
-	int retval = rl_skiplist_get_update(db, skiplist, score, value, update_node, update_node_page, rank);
+	long value_page;
+	int retval = rl_obj_string_set(db, &value_page, value, valuelen);
+	if (retval != RL_OK) {
+		goto cleanup;
+	}
+	retval = rl_skiplist_get_update(db, skiplist, score, value, valuelen, update_node, update_node_page, rank);
 	if (retval != RL_OK) {
 		goto cleanup;
 	}
@@ -174,7 +179,7 @@ int rl_skiplist_add(rlite *db, rl_skiplist *skiplist, double score, long value)
 		}
 		skiplist->level = level;
 	}
-	retval = rl_skiplist_node_create(db, &node, level, score, value);
+	retval = rl_skiplist_node_create(db, &node, level, score, value_page);
 	if (retval != RL_OK) {
 		goto cleanup;
 	}
@@ -229,7 +234,7 @@ int rl_skiplist_first_node(rlite *db, rl_skiplist *skiplist, double score, rl_sk
 {
 	rl_skiplist_node *update_node[RL_SKIPLIST_MAXLEVEL];
 	long rank[RL_SKIPLIST_MAXLEVEL];
-	int retval = rl_skiplist_get_update(db, skiplist, score, 0, update_node, NULL, rank);
+	int retval = rl_skiplist_get_update(db, skiplist, score, NULL, 0, update_node, NULL, rank);
 	if (retval != RL_OK) {
 		goto cleanup;
 	}
@@ -247,11 +252,11 @@ cleanup:
 
 }
 
-int rl_skiplist_delete(rlite *db, rl_skiplist *skiplist, double score, long value)
+int rl_skiplist_delete(rlite *db, rl_skiplist *skiplist, double score, unsigned char *value, long valuelen)
 {
 	rl_skiplist_node *update_node[RL_SKIPLIST_MAXLEVEL];
 	long update_node_page[RL_SKIPLIST_MAXLEVEL];
-	int retval = rl_skiplist_get_update(db, skiplist, score, value, update_node, update_node_page, NULL);
+	int retval = rl_skiplist_get_update(db, skiplist, score, value, valuelen, update_node, update_node_page, NULL);
 	if (retval != RL_OK) {
 		goto cleanup;
 	}
@@ -264,7 +269,14 @@ int rl_skiplist_delete(rlite *db, rl_skiplist *skiplist, double score, long valu
 		goto cleanup;
 	}
 	node = _node;
-	if (node->score != score || node->value != value) {
+
+	int cmp;
+	retval = rl_obj_string_cmp_str(db, node->value, value, valuelen, &cmp);
+	if (retval != RL_OK) {
+		goto cleanup;
+	}
+
+	if (node->score != score || cmp != 0) {
 		retval = RL_NOT_FOUND;
 		goto cleanup;
 	}
