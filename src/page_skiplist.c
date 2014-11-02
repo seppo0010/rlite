@@ -116,22 +116,19 @@ static int rl_skiplist_get_update(rlite *db, rl_skiplist *skiplist, double score
 				goto cleanup;
 			}
 			next_node = _node;
-			// next_node->value = 0 when next_node is the root node
-			if (next_node->value != 0) {
-				if (next_node->score > score) {
+			if (next_node->score > score) {
+				break;
+			}
+			if (next_node->score == score) {
+				if (value == 0) {
 					break;
 				}
-				if (next_node->score == score) {
-					if (value == 0) {
-						break;
-					}
-					retval = rl_obj_string_cmp(db, next_node->value, value, &cmp);
-					if (retval != RL_OK) {
-						goto cleanup;
-					}
-					if (cmp < 0) {
-						break;
-					}
+				retval = rl_obj_string_cmp(db, next_node->value, value, &cmp);
+				if (retval != RL_OK) {
+					goto cleanup;
+				}
+				if (cmp >= 0) {
+					break;
 				}
 			}
 			if (rank) {
@@ -250,6 +247,83 @@ cleanup:
 
 }
 
+int rl_skiplist_delete(rlite *db, rl_skiplist *skiplist, double score, long value)
+{
+	rl_skiplist_node *update_node[RL_SKIPLIST_MAXLEVEL];
+	long update_node_page[RL_SKIPLIST_MAXLEVEL];
+	int retval = rl_skiplist_get_update(db, skiplist, score, value, update_node, update_node_page, NULL);
+	if (retval != RL_OK) {
+		goto cleanup;
+	}
+
+	void *_node;
+	rl_skiplist_node *node, *next_node;
+	long node_page = update_node[0]->level[0].right;
+	retval = rl_read(db, &rl_data_type_skiplist_node, node_page, skiplist, &_node);
+	if (retval != RL_FOUND) {
+		goto cleanup;
+	}
+	node = _node;
+	if (node->score != score || node->value != value) {
+		retval = RL_NOT_FOUND;
+		goto cleanup;
+	}
+
+	long i;
+	for (i = 0; i < skiplist->level; i++) {
+		if (update_node[i]->level[i].right == node_page) {
+			update_node[i]->level[i].span += node->level[i].span - 1;
+			update_node[i]->level[i].right = node->level[i].right;
+		}
+		else {
+			update_node[i]->level[i].span--;
+		}
+		retval = rl_write(db, &rl_data_type_skiplist_node, update_node_page[i], update_node[i]);
+		if (retval != RL_OK) {
+			goto cleanup;
+		}
+	}
+
+	long next_node_page = node->level[0].right;
+	if (next_node_page) {
+		retval = rl_read(db, &rl_data_type_skiplist_node, next_node_page, skiplist, &_node);
+		if (retval != RL_FOUND) {
+			goto cleanup;
+		}
+		next_node = _node;
+		next_node->left = node->left;
+		retval = rl_write(db, &rl_data_type_skiplist_node, next_node_page, next_node);
+		if (retval != RL_OK) {
+			goto cleanup;
+		}
+	}
+	else {
+		skiplist->right = node->left;
+	}
+
+	retval = rl_skiplist_node_destroy(db, node);
+	if (retval != RL_OK) {
+		goto cleanup;
+	}
+	retval = rl_delete(db, node_page);
+	if (retval != RL_OK) {
+		goto cleanup;
+	}
+
+	retval = rl_read(db, &rl_data_type_skiplist_node, skiplist->left, skiplist, &_node);
+	if (retval != RL_FOUND) {
+		goto cleanup;
+	}
+	node = _node;
+	while (skiplist->level > 0 && node->level[skiplist->level - 1].right == 0) {
+		skiplist->level--;
+	}
+	skiplist->size--;
+	retval = RL_OK;
+cleanup:
+	return retval;
+}
+
 #ifdef DEBUG
 int rl_skiplist_print(rlite *db, rl_skiplist *skiplist)
 {
@@ -272,7 +346,7 @@ int rl_skiplist_print(rlite *db, rl_skiplist *skiplist)
 		}
 		node = _node;
 		printf("page: %ld, value: %ld, score: %lf, left: %ld", page, node->value, node->score, node->left);
-		for (i = 0; i < RL_SKIPLIST_MAXLEVEL; i++) {
+		for (i = 0; i < node->num_levels; i++) {
 			if (node->level[i].right) {
 				printf(", level[%ld].right: %ld, level[%ld].span: %ld", i, node->level[i].right, i, node->level[i].span);
 			}
@@ -329,7 +403,7 @@ int rl_skiplist_is_balanced(rlite *db, rl_skiplist *skiplist)
 			if (retval != RL_OK) {
 				goto cleanup;
 			}
-			if (cmp < 0) {
+			if (cmp > 0) {
 				fprintf(stderr, "skiplist score is not sorted at position %ld (same score, cmp is %d)\n", i, cmp);
 				retval = RL_UNEXPECTED;
 				goto cleanup;
@@ -348,6 +422,11 @@ int rl_skiplist_is_balanced(rlite *db, rl_skiplist *skiplist)
 	long pos;
 	for (i = 1; i < skiplist->level; i++) {
 		node = nodes[0];
+		if (node->level[i].right == 0) {
+			fprintf(stderr, "There has to be at least one node in level %ld\n", i);
+			retval = RL_UNEXPECTED;
+			goto cleanup;
+		}
 		page = 1;
 		pos = 0;
 		while (1) {

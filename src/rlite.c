@@ -659,21 +659,7 @@ int rl_write(struct rlite *db, rl_data_type *type, long page_number, void *obj)
 
 int rl_delete(struct rlite *db, long page_number)
 {
-	long pos;
-	int retval = rl_search_cache(db, NULL, page_number, NULL, &pos, db->write_pages, db->write_pages_len);
-	if (retval == RL_FOUND) {
-		db->write_pages[pos]->obj = NULL;
-		retval = RL_OK;
-	}
-	else if (retval == RL_NOT_FOUND) {
-		// TODO: clear page, reuse
-		retval = rl_search_cache(db, NULL, page_number, NULL, &pos, db->read_pages, db->read_pages_len);
-		if (retval == RL_FOUND) {
-			db->read_pages[pos]->obj = NULL;
-		}
-		retval = RL_OK;
-	}
-	return retval;
+	return rl_write(db, NULL, page_number, NULL);
 }
 
 int rl_commit(struct rlite *db)
@@ -725,7 +711,9 @@ int rl_commit(struct rlite *db)
 			page = db->write_pages[i];
 			page_number = page->page_number;
 			memset(data, 0, db->page_size);
-			retval = page->type->serialize(db, page->obj, data);
+			if (page->type) {
+				retval = page->type->serialize(db, page->obj, data);
+			}
 			fseek(driver->fp, page_number * db->page_size, SEEK_SET);
 			if ((size_t)db->page_size != fwrite(data, sizeof(unsigned char), db->page_size, driver->fp)) {
 #ifdef DEBUG
@@ -764,7 +752,7 @@ int rl_discard(struct rlite *db)
 	}
 	for (i = 0; i < db->write_pages_len; i++) {
 		page = db->write_pages[i];
-		if (page->type->destroy && page->obj) {
+		if (page->type && page->type->destroy && page->obj) {
 			page->type->destroy(db, page->obj);
 		}
 #ifdef DEBUG

@@ -129,6 +129,72 @@ int basic_skiplist_first_node_test()
 	return 0;
 }
 
+int basic_skiplist_delete_node_test(int commit)
+{
+	fprintf(stderr, "Start basic_skiplist_delete_node_test %d\n", commit);
+
+	rlite *db = setup_db(commit, 1);
+	rl_skiplist *skiplist;
+	if (rl_skiplist_create(db, &skiplist) != RL_OK) {
+		return 1;
+	}
+
+	int retval;
+	long i;
+	long values[10];
+	unsigned char *data = malloc(sizeof(unsigned char) * 1);
+	for (i = 0; i < 10; i++) {
+		data[0] = i;
+		retval = rl_obj_string_set(db, &values[i], data, 1);
+		if (retval != RL_OK) {
+			fprintf(stderr, "Unable to set %ld string, got %d\n", i, retval);
+			return 1;
+		}
+		// using i / 2 to have some score collisions because i is int
+		retval = rl_skiplist_add(db, skiplist, i / 2, values[i]);
+		if (retval != RL_OK) {
+			fprintf(stderr, "Unable to add item %ld to skiplist, got %d\n", i, retval);
+			return 1;
+		}
+		retval = rl_skiplist_is_balanced(db, skiplist);
+		if (retval != RL_OK) {
+			fprintf(stderr, "Skiplist is not balanced after item %ld\n", i);
+			return 1;
+		}
+		if (commit) {
+			if (RL_OK != rl_commit(db)) {
+				fprintf(stderr, "Failed to commit in line %d\n", __LINE__);
+			}
+		}
+	}
+
+	for (i = 0; i < 10; i++) {
+		retval = rl_skiplist_delete(db, skiplist, i / 2, values[i]);
+		if (retval != RL_OK) {
+			fprintf(stderr, "Failed to delete node at position %ld with score %lf and value %ld, got %d\n", i, (double)(i / 2), values[i], retval);
+			return 1;
+		}
+
+		retval = rl_skiplist_is_balanced(db, skiplist);
+		if (retval != RL_OK) {
+			fprintf(stderr, "Skiplist is not balanced after removing item %ld\n", i);
+			return 1;
+		}
+
+		if (commit) {
+			if (RL_OK != rl_commit(db)) {
+				fprintf(stderr, "Failed to commit in line %d\n", __LINE__);
+			}
+		}
+	}
+
+	rl_skiplist_destroy(db, skiplist);
+	free(data);
+	rl_close(db);
+	fprintf(stderr, "End basic_skiplist_delete_node_test\n");
+	return 0;
+}
+
 int main()
 {
 	int retval = 0;
@@ -144,6 +210,12 @@ int main()
 	retval = basic_skiplist_first_node_test();
 	if (retval != 0) {
 		goto cleanup;
+	}
+	for (i = 0; i < 2; i++) {
+		retval = basic_skiplist_delete_node_test(i);
+		if (retval != 0) {
+			goto cleanup;
+		}
 	}
 cleanup:
 	return retval;
