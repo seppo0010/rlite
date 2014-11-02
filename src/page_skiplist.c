@@ -201,6 +201,57 @@ cleanup:
 	return retval;
 }
 
+int rl_skiplist_first_node(rlite *db, rl_skiplist *skiplist, double score, rl_skiplist_node **retnode, long *_rank)
+{
+	long i, page = skiplist->left;
+	int retval;
+	void *_node;
+	long rank = 0;
+	rl_skiplist_node *node = NULL, *next_node;
+	for (i = skiplist->level - 1; i >= 0; i--) {
+		do {
+			if (node) {
+				page = node->level[i].right;
+			}
+			if (page == 0) {
+				break;
+			}
+			retval = rl_read(db, &rl_data_type_skiplist_node, page, skiplist, &_node);
+			if (retval != RL_FOUND) {
+				goto cleanup;
+			}
+			next_node = _node;
+			if (next_node->value != 0 && next_node->score > score) {
+				if (i == 0 && node->score < score) {
+					node = next_node;
+					rank++;
+				}
+				break;
+			}
+			if (node) {
+				rank += node->level[i].span;
+			}
+			node = next_node;
+		}
+		while (page > 0);
+	}
+	if (node && node->score >= score) {
+		if (retnode) {
+			*retnode = node;
+		}
+		if (_rank) {
+			*_rank = rank;
+		}
+		retval = RL_FOUND;
+	}
+	else {
+		retval = RL_NOT_FOUND;
+	}
+cleanup:
+	return retval;
+
+}
+
 #ifdef DEBUG
 int rl_skiplist_print(rlite *db, rl_skiplist *skiplist)
 {
