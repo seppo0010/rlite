@@ -1,7 +1,7 @@
 #include <string.h>
 #include <stdlib.h>
 #include "page_skiplist.h"
-#include "obj_string.h"
+#include "page_multi_string.h"
 #include "util.h"
 
 static int rl_skiplist_random_level()
@@ -123,7 +123,7 @@ static int rl_skiplist_get_update(rlite *db, rl_skiplist *skiplist, double score
 				if (value == NULL) {
 					break;
 				}
-				retval = rl_obj_string_cmp_str(db, next_node->value, value, valuelen, &cmp);
+				retval = rl_multi_string_cmp_str(db, next_node->value, value, valuelen, &cmp);
 				if (retval != RL_OK) {
 					goto cleanup;
 				}
@@ -156,7 +156,7 @@ int rl_skiplist_add(rlite *db, rl_skiplist *skiplist, double score, unsigned cha
 	rl_skiplist_node *update_node[RL_SKIPLIST_MAXLEVEL];
 	long update_node_page[RL_SKIPLIST_MAXLEVEL];
 	long value_page;
-	int retval = rl_obj_string_set(db, &value_page, value, valuelen);
+	int retval = rl_multi_string_set(db, &value_page, value, valuelen);
 	if (retval != RL_OK) {
 		goto cleanup;
 	}
@@ -274,7 +274,7 @@ int rl_skiplist_delete(rlite *db, rl_skiplist *skiplist, double score, unsigned 
 	node = _node;
 
 	int cmp;
-	retval = rl_obj_string_cmp_str(db, node->value, value, valuelen, &cmp);
+	retval = rl_multi_string_cmp_str(db, node->value, value, valuelen, &cmp);
 	if (retval != RL_OK) {
 		goto cleanup;
 	}
@@ -414,7 +414,7 @@ int rl_skiplist_is_balanced(rlite *db, rl_skiplist *skiplist)
 			goto cleanup;
 		}
 		else if (nodes[i - 1]->score == nodes[i]->score) {
-			retval = rl_obj_string_cmp(db, nodes[i - 1]->value, nodes[i]->value, &cmp);
+			retval = rl_multi_string_cmp(db, nodes[i - 1]->value, nodes[i]->value, &cmp);
 			if (retval != RL_OK) {
 				goto cleanup;
 			}

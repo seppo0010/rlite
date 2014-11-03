@@ -4,7 +4,7 @@
 #include "test_util.h"
 #include "../rlite.h"
 #include "../page_skiplist.h"
-#include "../obj_string.h"
+#include "../page_multi_string.h"
 
 int basic_skiplist_test(int sign, int commit)
 {
@@ -88,7 +88,7 @@ int basic_skiplist_first_node_test()
 			return 1;
 		}
 
-		retval = rl_obj_string_get(db, node->value, &data2, &size);
+		retval = rl_multi_string_get(db, node->value, &data2, &size);
 		if (retval != RL_OK) {
 			fprintf(stderr, "Error fetching string value %d\n", retval);
 			return 1;

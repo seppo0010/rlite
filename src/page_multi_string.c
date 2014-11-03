@@ -3,9 +3,9 @@
 #include "rlite.h"
 #include "page_list.h"
 #include "page_string.h"
-#include "obj_string.h"
+#include "page_multi_string.h"
 
-int rl_obj_string_cmp(struct rlite *db, long p1, long p2, int *cmp)
+int rl_multi_string_cmp(struct rlite *db, long p1, long p2, int *cmp)
 {
 	rl_list *list1, *list2;
 	rl_list_node *node1, *node2;
@@ -77,7 +77,7 @@ cleanup:
 	return retval;
 }
 
-int rl_obj_string_cmp_str(struct rlite *db, long p1, unsigned char *str, long len, int *cmp)
+int rl_multi_string_cmp_str(struct rlite *db, long p1, unsigned char *str, long len, int *cmp)
 {
 	rl_list *list1;
 	rl_list_node *node1;
@@ -110,7 +110,7 @@ int rl_obj_string_cmp_str(struct rlite *db, long p1, unsigned char *str, long le
 			}
 			cmplen = db->page_size < len - pos ? db->page_size : len - pos;
 			if (cmplen == 0) {
-				// finished with str, the obj_string starts with str
+				// finished with str, the page_multi_string starts with str
 				*cmp = 1;
 				goto cleanup;
 			}
@@ -132,7 +132,7 @@ int rl_obj_string_cmp_str(struct rlite *db, long p1, unsigned char *str, long le
 cleanup:
 	return retval;
 }
-int rl_obj_string_get(struct rlite *db, long number, unsigned char **_data, long *size)
+int rl_multi_string_get(struct rlite *db, long number, unsigned char **_data, long *size)
 {
 	rl_list *list;
 	rl_list_node *node;
@@ -177,7 +177,7 @@ cleanup:
 	return retval;
 }
 
-int rl_obj_string_set(struct rlite *db, long *number, unsigned char *data, long size)
+int rl_multi_string_set(struct rlite *db, long *number, unsigned char *data, long size)
 {
 	rl_list *list;
 	int retval = rl_list_create(db, &list, &list_long);

@@ -4,7 +4,7 @@
 #include "page_btree.h"
 #include "page_list.h"
 #include "page_key.h"
-#include "obj_string.h"
+#include "page_multi_string.h"
 
 struct page_key {
 	rlite *db;
@@ -127,7 +127,7 @@ int rl_key_set(struct rlite *db, unsigned char *key, long keylen, unsigned char 
 	}
 
 	long string_page;
-	retval = rl_obj_string_set(db, &string_page, key, keylen);
+	retval = rl_multi_string_set(db, &string_page, key, keylen);
 	if (retval != RL_OK) {
 		goto cleanup;
 	}
@@ -203,7 +203,7 @@ int key_cmp(void *v1, void *v2)
 
 	unsigned char *data;
 	long size;
-	int retval = rl_obj_string_get(db, key1->string_page, &data, &size);
+	int retval = rl_multi_string_get(db, key1->string_page, &data, &size);
 	if (retval != RL_OK) {
 		data = NULL;
 		fprintf(stderr, "Failed to read string value to cmp\n");

@@ -1,7 +1,7 @@
 #include <stdlib.h>
 #include "rlite.h"
 #include "page_key.h"
-#include "obj_string.h"
+#include "page_multi_string.h"
 #include "type_zset.h"
 #include "page_btree.h"
 #include "page_list.h"
