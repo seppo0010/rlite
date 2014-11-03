@@ -77,4 +77,4 @@ vtest: buildtest
 	valgrind --track-origins=yes --leak-check=full --show-reachable=yes ./skiplist-test
 
 clean:
-	rm -rf *-test *.o *.a *.dSYM *.gcda *.gcno
+	rm -rf *-test *.o *.a *.dSYM *.gcda *.gcno lcov
