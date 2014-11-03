@@ -10,6 +10,7 @@
 #define RL_UNEXPECTED 6
 #define RL_NOT_IMPLEMENTED 7
 #define RL_WRONG_TYPE 8
+#define RL_END 9
 
 
 #endif

@@ -223,6 +223,174 @@ int basic_skiplist_node_by_rank()
 	return 0;
 }
 
+int basic_skiplist_iterator_test(int commit)
+{
+	fprintf(stderr, "Start basic_skiplist_iterator_test %d\n", commit);
+
+	rlite *db = setup_db(commit, 1);
+	rl_skiplist_iterator *iterator;
+	rl_skiplist *skiplist;
+	rl_skiplist_node *node;
+	if (rl_skiplist_create(db, &skiplist) != RL_OK) {
+		return 1;
+	}
+
+	int retval, cmp;
+	long i;
+	unsigned char *data = malloc(sizeof(unsigned char) * 1);
+	for (i = 0; i < 200; i++) {
+		data[0] = i;
+		retval = rl_skiplist_add(db, skiplist, 5.2 * i, data, 1);
+		if (retval != RL_OK) {
+			fprintf(stderr, "Unable to add item %ld to skiplist, got %d\n", i, retval);
+			return 1;
+		}
+	}
+
+	retval = rl_skiplist_iterator_create(db, &iterator, skiplist, 0, 0, 0);
+	if (retval != RL_OK) {
+		fprintf(stderr, "Unable to create iterator, got %d\n", retval);
+		return 1;
+	}
+
+	long hundredth_node;
+	i = 0;
+	while ((retval = rl_skiplist_iterator_next(iterator, &node)) == RL_OK) {
+		if (i == 99) {
+			hundredth_node = iterator->node_page;
+		}
+		if (node->score != 5.2 * i) {
+			fprintf(stderr, "Expected score at position %ld to be %lf, got %lf instead\n", i, 5.2 * i, node->score);
+			return 1;
+		}
+		data[0] = i;
+		if (RL_OK != rl_multi_string_cmp_str(db, node->value, data, 1, &cmp)) {
+			fprintf(stderr, "Unable to compare node vale\n");
+			return 1;
+		}
+		if (cmp != 0) {
+			fprintf(stderr, "Expected value at position %ld to match %d, cmp got %d\n", i, data[0], cmp);
+			return 1;
+		}
+		i++;
+	}
+	if (retval != RL_END) {
+		fprintf(stderr, "Expected skiplist last return value to be %d after %ld iterations, got %d instead\n", RL_END, i, retval);
+		return 1;
+	}
+	if (i != 200) {
+		fprintf(stderr, "Expected iterator to have %d iterations, got %ld instead\n", 200, i);
+		return 1;
+	}
+	rl_skiplist_iterator_destroy(db, iterator);
+
+	retval = rl_skiplist_iterator_create(db, &iterator, skiplist, 0, -1, 0);
+	if (retval != RL_OK) {
+		fprintf(stderr, "Unable to create iterator, got %d\n", retval);
+		return 1;
+	}
+
+	i = 199;
+	while ((retval = rl_skiplist_iterator_next(iterator, &node)) == RL_OK) {
+		if (node->score != 5.2 * i) {
+			fprintf(stderr, "Expected score at position %ld to be %lf, got %lf instead\n", i, 5.2 * i, node->score);
+			return 1;
+		}
+		data[0] = i;
+		if (RL_OK != rl_multi_string_cmp_str(db, node->value, data, 1, &cmp)) {
+			fprintf(stderr, "Unable to compare node vale\n");
+			return 1;
+		}
+		if (cmp != 0) {
+			fprintf(stderr, "Expected value at position %ld to match %d, cmp got %d\n", i, data[0], cmp);
+			return 1;
+		}
+		i--;
+	}
+	if (retval != RL_END) {
+		fprintf(stderr, "Expected skiplist last return value to be %d after %ld iterations, got %d instead\n", RL_END, i, retval);
+		return 1;
+	}
+	if (i != -1) {
+		fprintf(stderr, "Expected iterator to have %d iterations, got %ld instead\n", -1, i);
+		return 1;
+	}
+	rl_skiplist_iterator_destroy(db, iterator);
+
+	retval = rl_skiplist_iterator_create(db, &iterator, skiplist, 0, -1, 1);
+	if (retval != RL_OK) {
+		fprintf(stderr, "Unable to create iterator, got %d\n", retval);
+		return 1;
+	}
+
+	i = 199;
+	while ((retval = rl_skiplist_iterator_next(iterator, &node)) == RL_OK) {
+		if (node->score != 5.2 * i) {
+			fprintf(stderr, "Expected score at position %ld to be %lf, got %lf instead\n", i, 5.2 * i, node->score);
+			return 1;
+		}
+		data[0] = i;
+		if (RL_OK != rl_multi_string_cmp_str(db, node->value, data, 1, &cmp)) {
+			fprintf(stderr, "Unable to compare node vale\n");
+			return 1;
+		}
+		if (cmp != 0) {
+			fprintf(stderr, "Expected value at position %ld to match %d, cmp got %d\n", i, data[0], cmp);
+			return 1;
+		}
+		i--;
+	}
+	if (retval != RL_END) {
+		fprintf(stderr, "Expected skiplist last return value to be %d after %ld iterations, got %d instead\n", RL_END, i, retval);
+		return 1;
+	}
+	if (i != 198) {
+		fprintf(stderr, "Expected iterator to have %d iterations, got %ld instead\n", 198, i);
+		return 1;
+	}
+	rl_skiplist_iterator_destroy(db, iterator);
+
+	retval = rl_skiplist_iterator_create(db, &iterator, skiplist, hundredth_node, 1, 5);
+	if (retval != RL_OK) {
+		fprintf(stderr, "Unable to create iterator, got %d\n", retval);
+		return 1;
+	}
+
+	i = 100;
+	while ((retval = rl_skiplist_iterator_next(iterator, &node)) == RL_OK) {
+		if (node->score != 5.2 * i) {
+			fprintf(stderr, "Expected score at position %ld to be %lf, got %lf instead\n", i, 5.2 * i, node->score);
+			return 1;
+		}
+		data[0] = i;
+		if (RL_OK != rl_multi_string_cmp_str(db, node->value, data, 1, &cmp)) {
+			fprintf(stderr, "Unable to compare node vale\n");
+			return 1;
+		}
+		if (cmp != 0) {
+			fprintf(stderr, "Expected value at position %ld to match %d, cmp got %d\n", i, data[0], cmp);
+			return 1;
+		}
+		i++;
+	}
+	if (retval != RL_END) {
+		fprintf(stderr, "Expected skiplist last return value to be %d after %ld iterations, got %d instead\n", RL_END, i, retval);
+		return 1;
+	}
+	if (i != 105) {
+		fprintf(stderr, "Expected iterator to have %d iterations, got %ld instead\n", 105, i);
+		return 1;
+	}
+	rl_skiplist_iterator_destroy(db, iterator);
+
+
+	rl_skiplist_destroy(db, skiplist);
+	free(data);
+	rl_close(db);
+	fprintf(stderr, "End basic_skiplist_iterator_test\n");
+	return 0;
+}
+
 int main()
 {
 	int retval = 0;
@@ -241,6 +409,11 @@ int main()
 	}
 	for (i = 0; i < 2; i++) {
 		retval = basic_skiplist_delete_node_test(i);
+		if (retval != 0) {
+			goto cleanup;
+		}
+
+		retval = basic_skiplist_iterator_test(i);
 		if (retval != 0) {
 			goto cleanup;
 		}

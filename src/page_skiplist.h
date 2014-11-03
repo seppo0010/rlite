@@ -25,10 +25,22 @@ typedef struct {
 	long level;
 } rl_skiplist;
 
+typedef struct {
+	rlite *db;
+	rl_skiplist *skiplist;
+	long node_page;
+	int direction; // 1 for right, -1 for left
+	int position;
+	int size;
+} rl_skiplist_iterator;
+
 int rl_skiplist_create(rlite *db, rl_skiplist **skiplist);
 int rl_skiplist_destroy(rlite *db, void *skiplist);
 int rl_skiplist_node_create(rlite *db, rl_skiplist_node **_node, long level, double score, long value);
 int rl_skiplist_node_destroy(rlite *db, void *node);
+int rl_skiplist_iterator_create(rlite *db, rl_skiplist_iterator **iterator, rl_skiplist *skiplist, long node_page, int direction, int size);
+int rl_skiplist_iterator_destroy(rlite *db, rl_skiplist_iterator *iterator);
+int rl_skiplist_iterator_next(rl_skiplist_iterator *iterator, rl_skiplist_node **node);
 int rl_skiplist_add(rlite *db, rl_skiplist *skiplist, double score, unsigned char *value, long valuelen);
 int rl_skiplist_first_node(rlite *db, rl_skiplist *skiplist, double score, unsigned char *value, long valuelen, rl_skiplist_node **node, long *rank);
 int rl_skiplist_node_by_rank(rlite *db, rl_skiplist *skiplist, long rank, rl_skiplist_node **node);

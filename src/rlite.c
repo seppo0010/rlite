@@ -489,6 +489,10 @@ int rl_read(rlite *db, rl_data_type *type, long page, void *context, void **obj)
 #ifdef DEBUG
 	int keep = 0;
 	long initial_page_size = db->page_size;
+	if (page == 0 && type != &rl_data_type_header) {
+		context = malloc(9999);
+		return RL_UNEXPECTED;
+	}
 #endif
 	int retval = rl_read_from_cache(db, type, page, obj);
 	if (retval != RL_NOT_FOUND) {

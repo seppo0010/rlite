@@ -80,6 +80,81 @@ int rl_skiplist_node_destroy(rlite *db, void *node)
 	return RL_OK;
 }
 
+int rl_skiplist_iterator_create(rlite *db, rl_skiplist_iterator **_iterator, rl_skiplist *skiplist, long next_node_page, int direction, int size)
+{
+	rl_skiplist_iterator *iterator = malloc(sizeof(rl_skiplist_iterator));
+	if (!iterator) {
+		return RL_OUT_OF_MEMORY;
+	}
+	iterator->db = db;
+	iterator->skiplist = skiplist;
+	if (direction == -1) {
+		iterator->direction = -1;
+	}
+	else {
+		iterator->direction = 1;
+	}
+	if (next_node_page) {
+		iterator->node_page = next_node_page;
+	}
+	else {
+		if (iterator->direction == 1) {
+			iterator->node_page = skiplist->left;
+			iterator->size = 1;
+			iterator->position = 0;
+			// first node_page is the index node, skip it
+			int retval = rl_skiplist_iterator_next(iterator, NULL);
+			if (retval != RL_OK) {
+				free(iterator);
+				return retval;
+			}
+		}
+		else {
+			iterator->node_page = skiplist->right;
+		}
+	}
+	if (size) {
+		iterator->size = size;
+	}
+	else {
+		iterator->size = skiplist->size;
+	}
+	iterator->position = 0;
+	*_iterator = iterator;
+	return RL_OK;
+}
+
+int rl_skiplist_iterator_destroy(rlite *db, rl_skiplist_iterator *iterator)
+{
+	db = db;
+	free(iterator);
+	return RL_OK;
+}
+int rl_skiplist_iterator_next(rl_skiplist_iterator *iterator, rl_skiplist_node **retnode)
+{
+	if (!iterator->node_page || iterator->position == iterator->size) {
+		return RL_END;
+	}
+	void *_node;
+	rl_skiplist_node *node;
+	int retval = rl_read(iterator->db, &rl_data_type_skiplist_node, iterator->node_page, iterator->skiplist, &_node);
+	if (retval != RL_FOUND) {
+		return retval;
+	}
+	node = _node;
+	if (iterator->direction == 1) {
+		iterator->node_page = node->level[0].right;
+	}
+	else {
+		iterator->node_page = node->left;
+	}
+	if (retnode) {
+		*retnode = node;
+	}
+	iterator->position++;
+	return RL_OK;
+}
+
 static int rl_skiplist_get_update(rlite *db, rl_skiplist *skiplist, double score, unsigned char *value, long valuelen, rl_skiplist_node *update_node[RL_SKIPLIST_MAXLEVEL], long update_node_page[RL_SKIPLIST_MAXLEVEL], long rank[RL_SKIPLIST_MAXLEVEL])
 {
 	void *_node;
