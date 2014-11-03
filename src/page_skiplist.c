@@ -536,3 +536,45 @@ int rl_skiplist_node_deserialize(struct rlite *db, void **obj, void *context, un
 cleanup:
 	return retval;
 }
+
+int rl_skiplist_node_by_rank(rlite *db, rl_skiplist *skiplist, long rank, rl_skiplist_node **retnode)
+{
+	void *_node;
+	rl_skiplist_node *node;
+	long i, pos = 0;
+
+	// increment the rank in 1 to ignore the first node thats not actually a data node
+	rank++;
+
+	int retval = rl_read(db, &rl_data_type_skiplist_node, skiplist->left, skiplist, &_node);
+	if (retval != RL_FOUND) {
+		goto cleanup;
+	}
+	node = _node;
+
+	for (i = skiplist->level - 1; i >= 0; i--) {
+		if (pos == rank) {
+			break;
+		}
+		while (1) {
+			if (node->level[i].right == 0 || pos + node->level[i].span > rank) {
+				break;
+			}
+			pos += node->level[i].span;
+			retval = rl_read(db, &rl_data_type_skiplist_node, node->level[i].right, skiplist, &_node);
+			if (retval != RL_FOUND) {
+				goto cleanup;
+			}
+			node = _node;
+		}
+	}
+	if (rank != pos) {
+		retval = RL_NOT_FOUND;
+	}
+	else {
+		*retnode = node;
+		retval = RL_OK;
+	}
+cleanup:
+	return retval;
+}

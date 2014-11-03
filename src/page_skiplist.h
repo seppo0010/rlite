@@ -7,7 +7,6 @@
 #define RL_SKIPLIST_PROBABILITY 0.25
 
 struct rl_data_type;
-
 typedef struct {
 	long value;
 	double score;
@@ -32,6 +31,7 @@ int rl_skiplist_node_create(rlite *db, rl_skiplist_node **_node, long level, dou
 int rl_skiplist_node_destroy(rlite *db, void *node);
 int rl_skiplist_add(rlite *db, rl_skiplist *skiplist, double score, unsigned char *value, long valuelen);
 int rl_skiplist_first_node(rlite *db, rl_skiplist *skiplist, double score, unsigned char *value, long valuelen, rl_skiplist_node **node, long *rank);
+int rl_skiplist_node_by_rank(rlite *db, rl_skiplist *skiplist, long rank, rl_skiplist_node **node);
 int rl_skiplist_delete(rlite *db, rl_skiplist *skiplist, double score, unsigned char *value, long valuelen);
 
 int rl_skiplist_is_balanced(rlite *db, rl_skiplist *skiplist);

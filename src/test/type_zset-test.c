@@ -1,12 +1,13 @@
+#include <stdlib.h>
 #include <string.h>
 #include "../rlite.h"
 #include "../type_zset.h"
 #include "test_util.h"
 
-int basic_test_zadd_zrange(int _commit)
+int basic_test_zadd_zscore(int _commit)
 {
 	int retval = 0;
-	fprintf(stderr, "Start basic_test_zadd_zrange %d\n", _commit);
+	fprintf(stderr, "Start basic_test_zadd_zscore %d\n", _commit);
 
 	rlite *db = setup_db(_commit, 1);
 	unsigned char *key = (unsigned char *)"my key";
@@ -36,7 +37,7 @@ int basic_test_zadd_zrange(int _commit)
 		return 1;
 	}
 
-	fprintf(stderr, "End basic_test_zadd_zrange\n");
+	fprintf(stderr, "End basic_test_zadd_zscore\n");
 	rl_close(db);
 	return 0;
 }
@@ -185,11 +186,80 @@ int basic_test_zadd_zrank(int _commit)
 	return 0;
 }
 
+int basic_test_zadd_zrange()
+{
+	int retval = 0;
+	fprintf(stderr, "Start basic_test_zadd_zrange\n");
+
+	rlite *db = setup_db(0, 1);
+
+	unsigned char *key = (unsigned char *)"my key";
+	long keylen = strlen((char *)key);
+
+	long i, setdatalen = 1;
+	unsigned char setdata[1];
+	for (i = 0; i < 200; i++) {
+		setdata[0] = i;
+
+		retval = rl_zadd(db, key, keylen, i * 10.5, setdata, setdatalen);
+		if (retval != RL_OK) {
+			fprintf(stderr, "Unable to zadd %d\n", retval);
+			return 1;
+		}
+	}
+
+	unsigned char **data;
+	long *datalen, size;
+	double *scores;
+	retval = rl_zrange(db, key, keylen, 0, -1, &data, &datalen, &scores, &size);
+	if (retval != RL_OK) {
+		fprintf(stderr, "Unable to zrange %d\n", retval);
+		return 1;
+	}
+	if (size != 200) {
+		fprintf(stderr, "Expected size to be 200, got %ld instead\n", size);
+		return 1;
+	}
+
+	for (i = 0; i < 200; i++) {
+		free(data[i]);
+	}
+	free(data);
+	free(scores);
+	free(datalen);
+
+	retval = rl_zrange(db, key, keylen, 0, 0, &data, &datalen, &scores, &size);
+	if (retval != RL_OK) {
+		fprintf(stderr, "Unable to zrange %d\n", retval);
+		return 1;
+	}
+	if (size != 1) {
+		fprintf(stderr, "Expected size to be 1, got %ld instead\n", size);
+		return 1;
+	}
+	if (data[0][0] != 0) {
+		fprintf(stderr, "Expected data to be 0, got %d instead\n", data[0][0]);
+		return 1;
+	}
+	if (datalen[0] != 1) {
+		fprintf(stderr, "Expected data to be 1, got %ld instead\n", datalen[0]);
+		return 1;
+	}
+	free(data[0]);
+	free(data);
+	free(scores);
+	free(datalen);
+
+	rl_close(db);
+	fprintf(stderr, "End basic_test_zadd_zrange\n");
+	return 0;
+}
+
 int main()
 {
 	int retval, i;
 	for (i = 0; i < 2; i++) {
-		retval = basic_test_zadd_zrange(i);
+		retval = basic_test_zadd_zscore(i);
 		if (retval != 0) {
 			goto cleanup;
 		}
@@ -201,6 +271,10 @@ int main()
 		if (retval != 0) {
 			goto cleanup;
 		}
+	}
+	retval = basic_test_zadd_zrange();
+	if (retval != 0) {
+		goto cleanup;
 	}
 cleanup:
 	return retval;

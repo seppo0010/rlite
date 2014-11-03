@@ -182,6 +182,47 @@ int basic_skiplist_delete_node_test(int commit)
 	return 0;
 }
 
+int basic_skiplist_node_by_rank()
+{
+	fprintf(stderr, "Start basic_skiplist_node_by_rank\n");
+
+	rlite *db = setup_db(0, 1);
+	rl_skiplist *skiplist;
+	rl_skiplist_node *node;
+	if (rl_skiplist_create(db, &skiplist) != RL_OK) {
+		return 1;
+	}
+
+	int retval;
+	long i;
+	unsigned char *data = malloc(sizeof(unsigned char) * 1);
+	for (i = 0; i < 200; i++) {
+		data[0] = i;
+		retval = rl_skiplist_add(db, skiplist, 5.2 * i, data, 1);
+		if (retval != RL_OK) {
+			fprintf(stderr, "Unable to add item %ld to skiplist, got %d\n", i, retval);
+			return 1;
+		}
+	}
+
+	for (i = 0; i < 200; i++) {
+		retval = rl_skiplist_node_by_rank(db, skiplist, i, &node);
+		if (retval != RL_OK) {
+			fprintf(stderr, "Unable to get %ld node by rank, got %d\n", i, retval);
+			return 1;
+		}
+		if (node->score != 5.2 * i) {
+			fprintf(stderr, "Expected %ld node score to be %lf, got %lf\n", i, 5.2 * i, node->score);
+			return 1;
+		}
+	}
+	rl_skiplist_destroy(db, skiplist);
+	free(data);
+	rl_close(db);
+	fprintf(stderr, "End basic_skiplist_node_by_rank\n");
+	return 0;
+}
+
 int main()
 {
 	int retval = 0;
@@ -203,6 +244,11 @@ int main()
 		if (retval != 0) {
 			goto cleanup;
 		}
+	}
+
+	retval = basic_skiplist_node_by_rank();
+	if (retval != 0) {
+		goto cleanup;
 	}
 cleanup:
 	return retval;

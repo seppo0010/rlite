@@ -1,3 +1,4 @@
+#include <math.h>
 #include <stdlib.h>
 #include "rlite.h"
 #include "page_key.h"
@@ -257,4 +258,78 @@ int rl_zcard(rlite *db, unsigned char *key, long keylen, long *card)
 	}
 	*card = skiplist->size;
 	return RL_OK;
+}
+
+int rl_zrange(rlite *db, unsigned char *key, long keylen, long start, long end, unsigned char ***data, long **datalen, double **scores, long *size)
+{
+	void *_node;
+	long card, i;
+	rl_skiplist_node *node;
+	rl_skiplist *skiplist;
+	if ((data && !datalen) || (datalen && !data)) {
+		fprintf(stderr, "Expected both or neither data and datalen\n");
+		return RL_UNEXPECTED;
+	}
+
+	int retval = rl_zcard(db, key, keylen, &card);
+	if (retval != RL_OK) {
+		return retval;
+	}
+
+	retval = rl_zset_get_objects(db, key, keylen, NULL, NULL, &skiplist, NULL, 0);
+	if (start < 0) {
+		start += card;
+		if (start < 0) {
+			start = 0;
+		}
+	}
+	if (end < 0) {
+		end += card;
+	}
+	if (start > end || start >= card) {
+		*size = 0;
+		goto cleanup;
+	}
+	if (end >= card) {
+		end = card - 1;
+	}
+
+	*size = end - start + 1;
+
+	retval = rl_skiplist_node_by_rank(db, skiplist, start, &node);
+	if (retval != RL_OK) {
+		goto cleanup;
+	}
+
+	if (scores) {
+		*scores = malloc(sizeof(double) * *size);
+	}
+
+	if (data) {
+		*data = malloc(sizeof(unsigned char *) * *size);
+		*datalen = malloc(sizeof(long) * *size);
+	}
+
+	for (i = start; ; i++) {
+		if (scores) {
+			(*scores)[i - start] = node->score;
+		}
+		if (data) {
+			retval = rl_multi_string_get(db, node->value, &(*data)[i], &(*datalen)[i]);
+			if (retval != RL_OK) {
+				goto cleanup;
+			}
+		}
+		if (i == end) {
+			break;
+		}
+		retval = rl_read(db, &rl_data_type_skiplist_node, node->level[0].right, skiplist, &_node);
+		if (retval != RL_FOUND) {
+			goto cleanup;
+		}
+		node = _node;
+	}
+	retval = RL_OK;
+cleanup:
+	return retval;
 }
