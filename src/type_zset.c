@@ -1,6 +1,6 @@
 #include <stdlib.h>
 #include "rlite.h"
-#include "obj_key.h"
+#include "page_key.h"
 #include "obj_string.h"
 #include "type_zset.h"
 #include "page_btree.h"
@@ -130,7 +130,7 @@ static int rl_zset_get_objects(rlite *db, unsigned char *key, long keylen, rl_bt
 	long levels_page_number;
 	int retval;
 	if (create) {
-		retval = rl_obj_key_get_or_create(db, key, keylen, RL_TYPE_ZSET, &levels_page_number);
+		retval = rl_key_get_or_create(db, key, keylen, RL_TYPE_ZSET, &levels_page_number);
 		if (retval != RL_FOUND && retval != RL_NOT_FOUND) {
 			goto cleanup;
 		}
@@ -143,7 +143,7 @@ static int rl_zset_get_objects(rlite *db, unsigned char *key, long keylen, rl_bt
 	}
 	else {
 		unsigned char type;
-		retval = rl_obj_key_get(db, key, keylen, &type, &levels_page_number);
+		retval = rl_key_get(db, key, keylen, &type, &levels_page_number);
 		if (retval != RL_FOUND) {
 			goto cleanup;
 		}

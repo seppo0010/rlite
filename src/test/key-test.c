@@ -2,7 +2,7 @@
 #include <stdio.h>
 #include <string.h>
 #include "test_util.h"
-#include "../obj_key.h"
+#include "../page_key.h"
 #include "../rlite.h"
 
 #define COLLISION_KEY_SIZE 128
@@ -27,7 +27,7 @@ static int expect_key(rlite *db, unsigned char *key, long keylen, char type, lon
 {
 	unsigned char type2;
 	long page2;
-	int retval = rl_obj_key_get(db, key, keylen, &type2, &page2);
+	int retval = rl_key_get(db, key, keylen, &type2, &page2);
 	if (retval != RL_FOUND) {
 		fprintf(stderr, "Unable to get key %d\n", retval);
 		return 1;
@@ -55,7 +55,7 @@ int basic_test_set_get(int _commit)
 	long keylen = strlen((char *)key);
 	unsigned char type = 'A';
 	long page = 23;
-	retval = rl_obj_key_set(db, key, keylen, type, page);
+	retval = rl_key_set(db, key, keylen, type, page);
 	if (retval != RL_OK) {
 		fprintf(stderr, "Unable to set key %d\n", retval);
 		return 1;
@@ -81,7 +81,7 @@ int basic_test_get_unexisting()
 
 	unsigned char *key = (unsigned char *)"my key";
 	long keylen = strlen((char *)key);
-	retval = rl_obj_key_get(db, key, keylen, NULL, NULL);
+	retval = rl_key_get(db, key, keylen, NULL, NULL);
 	if (retval != RL_NOT_FOUND) {
 		fprintf(stderr, "Expected not to found key %d\n", retval);
 		return 1;
@@ -103,19 +103,19 @@ int basic_test_set_delete()
 	long keylen = strlen((char *)key);
 	unsigned char type = 'A';
 	long page = 23;
-	retval = rl_obj_key_set(db, key, keylen, type, page);
+	retval = rl_key_set(db, key, keylen, type, page);
 	if (retval != RL_OK) {
 		fprintf(stderr, "Unable to set key %d\n", retval);
 		return 1;
 	}
 
-	retval = rl_obj_key_delete(db, key, keylen);
+	retval = rl_key_delete(db, key, keylen);
 	if (retval != RL_OK) {
 		fprintf(stderr, "Unable to delete key %d\n", retval);
 		return 1;
 	}
 
-	retval = rl_obj_key_get(db, key, keylen, NULL, NULL);
+	retval = rl_key_get(db, key, keylen, NULL, NULL);
 	if (retval == RL_NOT_FOUND) {
 		retval = RL_OK;
 	} else {
@@ -139,7 +139,7 @@ int basic_test_set_collision()
 	get_test_key(key1, "test/collision1");
 	unsigned char type1 = 'A';
 	long page1 = 23;
-	retval = rl_obj_key_set(db, key1, COLLISION_KEY_SIZE, type1, page1);
+	retval = rl_key_set(db, key1, COLLISION_KEY_SIZE, type1, page1);
 	if (retval != RL_OK) {
 		fprintf(stderr, "Unable to set key %d\n", retval);
 		return 1;
@@ -149,7 +149,7 @@ int basic_test_set_collision()
 	unsigned char type2 = 'B';
 	long page2 = 25;
 
-	retval = rl_obj_key_set(db, key2, COLLISION_KEY_SIZE, type2, page2);
+	retval = rl_key_set(db, key2, COLLISION_KEY_SIZE, type2, page2);
 	if (retval != RL_OK) {
 		fprintf(stderr, "Unable to set key %d\n", retval);
 		return 1;
@@ -175,7 +175,7 @@ int basic_test_get_or_create(int _commit)
 	long keylen = strlen((char *)key);
 	unsigned char type = 'A';
 	long page = 100, page2 = 200; // set dummy values for != assert
-	retval = rl_obj_key_get_or_create(db, key, keylen, type, &page);
+	retval = rl_key_get_or_create(db, key, keylen, type, &page);
 	if (retval != RL_NOT_FOUND) {
 		fprintf(stderr, "Unable to set key %d\n", retval);
 		return 1;
@@ -185,7 +185,7 @@ int basic_test_get_or_create(int _commit)
 		rl_commit(db);
 	}
 
-	retval = rl_obj_key_get_or_create(db, key, keylen, type, &page2);
+	retval = rl_key_get_or_create(db, key, keylen, type, &page2);
 	if (retval != RL_FOUND) {
 		fprintf(stderr, "Unable to find existing key %d\n", retval);
 		return 1;
@@ -199,7 +199,7 @@ int basic_test_get_or_create(int _commit)
 		rl_commit(db);
 	}
 
-	retval = rl_obj_key_get_or_create(db, key, keylen, type + 1, &page2);
+	retval = rl_key_get_or_create(db, key, keylen, type + 1, &page2);
 	if (retval != RL_WRONG_TYPE) {
 		fprintf(stderr, "Expected get_or_create to return wrong type, got %d instead\n", retval);
 		return 1;

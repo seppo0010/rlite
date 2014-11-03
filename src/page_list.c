@@ -6,7 +6,7 @@
 #include "status.h"
 #include "page_list.h"
 #include "page_string.h"
-#include "obj_key.h"
+#include "page_key.h"
 #include "util.h"
 
 #ifdef DEBUG

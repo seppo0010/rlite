@@ -3,16 +3,16 @@
 #include "rlite.h"
 #include "page_btree.h"
 #include "page_list.h"
-#include "obj_key.h"
+#include "page_key.h"
 #include "obj_string.h"
 
-struct obj_key {
+struct page_key {
 	rlite *db;
 	long keylen;
 	unsigned char *key;
 };
 
-static int rl_obj_key_get_list(rlite *db, unsigned char *key, long keylen, int create, rl_list **list)
+static int rl_key_get_list(rlite *db, unsigned char *key, long keylen, int create, rl_list **list)
 {
 	rl_btree *btree;
 	void *_list;
@@ -68,10 +68,10 @@ cleanup:
 	return retval;
 }
 
-int rl_obj_key_get(struct rlite *db, unsigned char *key, long keylen, unsigned char *type, long *page)
+int rl_key_get(struct rlite *db, unsigned char *key, long keylen, unsigned char *type, long *page)
 {
 	rl_list *list = NULL;
-	int retval = rl_obj_key_get_list(db, key, keylen, 0, &list);
+	int retval = rl_key_get_list(db, key, keylen, 0, &list);
 	if (retval != RL_OK) {
 		goto cleanup;
 	}
@@ -79,7 +79,7 @@ int rl_obj_key_get(struct rlite *db, unsigned char *key, long keylen, unsigned c
 		retval = RL_UNEXPECTED;
 		goto cleanup;
 	}
-	struct obj_key search_key;
+	struct page_key search_key;
 	search_key.db = db;
 	search_key.keylen = keylen;
 	search_key.key = key;
@@ -95,10 +95,10 @@ cleanup:
 	return retval;
 }
 
-int rl_obj_key_set(struct rlite *db, unsigned char *key, long keylen, unsigned char type, long page)
+int rl_key_set(struct rlite *db, unsigned char *key, long keylen, unsigned char type, long page)
 {
 	rl_list *list = NULL;
-	int retval = rl_obj_key_get_list(db, key, keylen, 1, &list);
+	int retval = rl_key_get_list(db, key, keylen, 1, &list);
 	if (retval != RL_OK) {
 		goto cleanup;
 	}
@@ -107,7 +107,7 @@ int rl_obj_key_set(struct rlite *db, unsigned char *key, long keylen, unsigned c
 		goto cleanup;
 	}
 
-	struct obj_key search_key;
+	struct page_key search_key;
 	search_key.db = db;
 	search_key.keylen = keylen;
 	search_key.key = key;
@@ -144,10 +144,10 @@ cleanup:
 	return retval;
 }
 
-int rl_obj_key_get_or_create(struct rlite *db, unsigned char *key, long keylen, unsigned char type, long *page)
+int rl_key_get_or_create(struct rlite *db, unsigned char *key, long keylen, unsigned char type, long *page)
 {
 	unsigned char existing_type;
-	int retval = rl_obj_key_get(db, key, keylen, &existing_type, page);
+	int retval = rl_key_get(db, key, keylen, &existing_type, page);
 	if (retval == RL_FOUND) {
 		if (existing_type != type) {
 			return RL_WRONG_TYPE;
@@ -155,7 +155,7 @@ int rl_obj_key_get_or_create(struct rlite *db, unsigned char *key, long keylen, 
 	}
 	else if (retval == RL_NOT_FOUND) {
 		rl_alloc_page_number(db, page);
-		retval = rl_obj_key_set(db, key, keylen, type, *page);
+		retval = rl_key_set(db, key, keylen, type, *page);
 		if (retval != RL_OK) {
 			return retval;
 		}
@@ -165,10 +165,10 @@ int rl_obj_key_get_or_create(struct rlite *db, unsigned char *key, long keylen, 
 	return retval;
 }
 
-int rl_obj_key_delete(struct rlite *db, unsigned char *key, long keylen)
+int rl_key_delete(struct rlite *db, unsigned char *key, long keylen)
 {
 	rl_list *list = NULL;
-	int retval = rl_obj_key_get_list(db, key, keylen, 0, &list);
+	int retval = rl_key_get_list(db, key, keylen, 0, &list);
 	if (retval != RL_OK) {
 		goto cleanup;
 	}
@@ -176,7 +176,7 @@ int rl_obj_key_delete(struct rlite *db, unsigned char *key, long keylen)
 		retval = RL_UNEXPECTED;
 		goto cleanup;
 	}
-	struct obj_key search_key;
+	struct page_key search_key;
 	search_key.db = db;
 	search_key.keylen = keylen;
 	search_key.key = key;
@@ -198,7 +198,7 @@ cleanup:
 int key_cmp(void *v1, void *v2)
 {
 	rl_key *key1 = v1;
-	struct obj_key *key2 = v2;
+	struct page_key *key2 = v2;
 	rlite *db = key2->db;
 
 	unsigned char *data;
