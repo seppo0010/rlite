@@ -13,11 +13,15 @@ typedef struct {
 	int score_size;
 	int value_size;
 	int (*cmp)(void *v1, void *v2);
+#ifdef DEBUG
 	int (*formatter)(void *v, char **str, int *size);
+#endif
 } rl_btree_type;
 
 int md5_cmp(void *v1, void *v2);
+#ifdef DEBUG
 int md5_formatter(void *v, char **str, int *size);
+#endif
 
 rl_btree_type rl_btree_type_set_long;
 rl_btree_type rl_btree_type_hash_long_long;

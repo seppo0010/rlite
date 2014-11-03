@@ -71,6 +71,21 @@ int long_cmp(void *v1, void *v2)
 	return a > b ? 1 : -1;
 }
 
+int double_cmp(void *v1, void *v2)
+{
+	double a = *((double *)v1), b = *((double *)v2);
+	if (a == b) {
+		return 0;
+	}
+	return a > b ? 1 : -1;
+}
+
+int md5_cmp(void *v1, void *v2)
+{
+	return memcmp(v1, v2, sizeof(unsigned char) * 16);
+}
+
+#ifdef DEBUG
 int long_formatter(void *v2, char **formatted, int *size)
 {
 	*formatted = malloc(sizeof(char) * 22);
@@ -81,15 +96,6 @@ int long_formatter(void *v2, char **formatted, int *size)
 	return RL_OK;
 }
 
-int double_cmp(void *v1, void *v2)
-{
-	double a = *((double *)v1), b = *((double *)v2);
-	if (a == b) {
-		return 0;
-	}
-	return a > b ? 1 : -1;
-}
-
 int double_formatter(void *v2, char **formatted, int *size)
 {
 	*formatted = malloc(sizeof(char) * 22);
@@ -98,11 +104,6 @@ int double_formatter(void *v2, char **formatted, int *size)
 	}
 	*size = snprintf(*formatted, 22, "%lf", *(double *)v2);
 	return RL_OK;
-}
-
-int md5_cmp(void *v1, void *v2)
-{
-	return memcmp(v1, v2, sizeof(unsigned char) * 16);
 }
 
 int md5_formatter(void *v2, char **formatted, int *size)
@@ -121,6 +122,8 @@ int md5_formatter(void *v2, char **formatted, int *size)
 	*size = 32;
 	return RL_OK;
 }
+
+#endif
 
 // Code for serialize/deserialize double comes from
 // http://beej.us/guide/bgnet/output/html/singlepage/bgnet.html#serialization

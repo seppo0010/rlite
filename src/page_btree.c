@@ -13,7 +13,9 @@ rl_btree_type rl_btree_type_hash_md5_long = {
 	sizeof(unsigned char) * 16,
 	sizeof(long),
 	md5_cmp,
+#ifdef DEBUG
 	md5_formatter,
+#endif
 };
 
 rl_btree_type rl_btree_type_set_long = {
@@ -22,7 +24,9 @@ rl_btree_type rl_btree_type_set_long = {
 	sizeof(long),
 	0,
 	long_cmp,
+#ifdef DEBUG
 	long_formatter,
+#endif
 };
 
 rl_btree_type rl_btree_type_hash_long_long = {
@@ -31,7 +35,9 @@ rl_btree_type rl_btree_type_hash_long_long = {
 	sizeof(long),
 	sizeof(void *),
 	long_cmp,
+#ifdef DEBUG
 	long_formatter,
+#endif
 };
 
 rl_btree_type rl_btree_type_hash_double_long = {
@@ -40,7 +46,9 @@ rl_btree_type rl_btree_type_hash_double_long = {
 	sizeof(long),
 	sizeof(void *),
 	double_cmp,
+#ifdef DEBUG
 	double_formatter,
+#endif
 };
 
 rl_btree_type rl_btree_type_hash_md5_double = {
@@ -49,7 +57,9 @@ rl_btree_type rl_btree_type_hash_md5_double = {
 	sizeof(long),
 	sizeof(void *),
 	md5_cmp,
+#ifdef DEBUG
 	md5_formatter,
+#endif
 };
 
 void rl_btree_init()
@@ -857,12 +867,14 @@ int rl_btree_is_balanced(rlite *db, rl_btree *btree)
 #ifdef DEBUG
 				rl_print_btree(db, btree);
 #endif
-				fprintf(stderr, "btree is not sorted (");
+				fprintf(stderr, "btree is not sorted");
 				char *str = malloc(sizeof(char) * 100);
 				if (str == NULL) {
 					retval = RL_OUT_OF_MEMORY;
 					goto cleanup;
 				}
+#ifdef DEBUG
+				fprintf(stderr, " (");
 				int strlen;
 				btree->type->formatter(scores[i], &str, &strlen);
 				str[strlen] = 0;
@@ -870,6 +882,9 @@ int rl_btree_is_balanced(rlite *db, rl_btree *btree)
 				btree->type->formatter(scores[j], &str, &strlen);
 				str[strlen] = 0;
 				fprintf(stderr, "%s)\n", str);
+#else
+				fprintf(stderr, "\n");
+#endif
 				retval = RL_INVALID_STATE;
 				goto cleanup;
 			}

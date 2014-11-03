@@ -19,7 +19,9 @@ rl_list_type list_long = {
 	0,
 	sizeof(long),
 	long_cmp,
+#ifdef DEBUG
 	long_formatter,
+#endif
 };
 
 rl_list_type list_key = {
@@ -27,7 +29,9 @@ rl_list_type list_key = {
 	0,
 	sizeof(rl_key),
 	key_cmp,
+#ifdef DEBUG
 	0,
+#endif
 };
 
 int rl_list_serialize(rlite *db, void *obj, unsigned char *data)
