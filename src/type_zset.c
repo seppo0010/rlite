@@ -247,3 +247,14 @@ int rl_zrank(rlite *db, unsigned char *key, long keylen, unsigned char *data, lo
 	}
 	return retval;
 }
+
+int rl_zcard(rlite *db, unsigned char *key, long keylen, long *card)
+{
+	rl_skiplist *skiplist;
+	int retval = rl_zset_get_objects(db, key, keylen, NULL, NULL, &skiplist, NULL, 0);
+	if (retval != RL_OK) {
+		return retval;
+	}
+	*card = skiplist->size;
+	return RL_OK;
+}

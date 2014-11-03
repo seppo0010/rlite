@@ -54,6 +54,7 @@ int basic_test_zadd_zscore2(int _commit)
 	long datalen = strlen((char *)data);
 	unsigned char *data2 = (unsigned char *)"my data2";
 	long datalen2 = strlen((char *)data2);
+	long card;
 
 	retval = rl_zadd(db, key, keylen, score, data, datalen);
 	if (retval != RL_OK) {
@@ -65,6 +66,16 @@ int basic_test_zadd_zscore2(int _commit)
 		rl_commit(db);
 	}
 
+	retval = rl_zcard(db, key, keylen, &card);
+	if (retval != RL_OK) {
+		fprintf(stderr, "Unable to zcard %d\n", retval);
+		return 1;
+	}
+	if (card != 1) {
+		fprintf(stderr, "Expected zcard to be 1, got %ld instead\n", card);
+		return 1;
+	}
+
 	retval = rl_zadd(db, key, keylen, score, data2, datalen2);
 	if (retval != RL_OK) {
 		fprintf(stderr, "Unable to zadd a second time %d\n", retval);
@@ -73,6 +84,16 @@ int basic_test_zadd_zscore2(int _commit)
 
 	if (_commit) {
 		rl_commit(db);
+	}
+
+	retval = rl_zcard(db, key, keylen, &card);
+	if (retval != RL_OK) {
+		fprintf(stderr, "Unable to zcard a second time %d\n", retval);
+		return 1;
+	}
+	if (card != 2) {
+		fprintf(stderr, "Expected zcard to be 2, got %ld instead\n", card);
+		return 1;
 	}
 
 	retval = rl_zscore(db, key, keylen, data, datalen, &score2);
