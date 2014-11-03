@@ -8,7 +8,7 @@
 #include "page_skiplist.h"
 #include "util.h"
 
-static int rl_zset_create(rlite *db, long levels_page_number, rl_btree **btree, rl_skiplist **_skiplist)
+static int rl_zset_create(rlite *db, long levels_page_number, rl_btree **btree, long *btree_page, rl_skiplist **_skiplist, long *skiplist_page)
 {
 	rl_list *levels;
 	rl_btree *scores;
@@ -63,14 +63,20 @@ static int rl_zset_create(rlite *db, long levels_page_number, rl_btree **btree, 
 	if (btree) {
 		*btree = scores;
 	}
+	if (btree_page) {
+		*btree_page = scores_page_number;
+	}
 	if (_skiplist) {
 		*_skiplist = skiplist;
+	}
+	if (skiplist_page) {
+		*skiplist_page = skiplist_page_number;
 	}
 cleanup:
 	return retval;
 }
 
-static int rl_zset_read(rlite *db, long levels_page_number, rl_btree **btree, rl_skiplist **skiplist)
+static int rl_zset_read(rlite *db, long levels_page_number, rl_btree **btree, long *btree_page, rl_skiplist **skiplist, long *skiplist_page)
 {
 	void *tmp;
 	long scores_page_number, skiplist_page_number;
@@ -80,36 +86,46 @@ static int rl_zset_read(rlite *db, long levels_page_number, rl_btree **btree, rl
 		goto cleanup;
 	}
 	levels = tmp;
-	if (btree) {
+	if (btree || btree_page) {
 		retval = rl_list_get_element(db, levels, &tmp, 0);
 		if (retval != RL_FOUND) {
 			goto cleanup;
 		}
 		scores_page_number = *(long *)tmp;
-		retval = rl_read(db, &rl_data_type_btree_hash_md5_double, scores_page_number, &rl_btree_type_hash_md5_double, &tmp);
-		if (retval != RL_FOUND) {
-			goto cleanup;
+		if (btree) {
+			retval = rl_read(db, &rl_data_type_btree_hash_md5_double, scores_page_number, &rl_btree_type_hash_md5_double, &tmp);
+			if (retval != RL_FOUND) {
+				goto cleanup;
+			}
+			*btree = tmp;
 		}
-		*btree = tmp;
+		if (btree_page) {
+			*btree_page = scores_page_number;
+		}
 	}
-	if (skiplist) {
+	if (skiplist || skiplist_page) {
 		retval = rl_list_get_element(db, levels, &tmp, 1);
 		if (retval != RL_FOUND) {
 			goto cleanup;
 		}
 		skiplist_page_number = *(long *)tmp;
-		retval = rl_read(db, &rl_data_type_skiplist, skiplist_page_number, NULL, &tmp);
-		if (retval != RL_FOUND) {
-			goto cleanup;
+		if (skiplist) {
+			retval = rl_read(db, &rl_data_type_skiplist, skiplist_page_number, NULL, &tmp);
+			if (retval != RL_FOUND) {
+				goto cleanup;
+			}
+			*skiplist = tmp;
 		}
-		*skiplist = tmp;
+		if (skiplist_page) {
+			*skiplist_page = skiplist_page_number;
+		}
 	}
 	retval = RL_OK;
 cleanup:
 	return retval;
 }
 
-static int rl_zset_get_objects(rlite *db, unsigned char *key, long keylen, rl_btree **btree, rl_skiplist **skiplist, int create)
+static int rl_zset_get_objects(rlite *db, unsigned char *key, long keylen, rl_btree **btree, long *btree_page, rl_skiplist **skiplist, long *skiplist_page, int create)
 {
 	long levels_page_number;
 	int retval;
@@ -119,10 +135,10 @@ static int rl_zset_get_objects(rlite *db, unsigned char *key, long keylen, rl_bt
 			goto cleanup;
 		}
 		else if (retval == RL_NOT_FOUND) {
-			retval = rl_zset_create(db, levels_page_number, btree, skiplist);
+			retval = rl_zset_create(db, levels_page_number, btree, btree_page, skiplist, skiplist_page);
 		}
 		else {
-			retval = rl_zset_read(db, levels_page_number, btree, skiplist);
+			retval = rl_zset_read(db, levels_page_number, btree, btree_page, skiplist, skiplist_page);
 		}
 	}
 	else {
@@ -135,7 +151,7 @@ static int rl_zset_get_objects(rlite *db, unsigned char *key, long keylen, rl_bt
 			retval = RL_WRONG_TYPE;
 			goto cleanup;
 		}
-		retval = rl_zset_read(db, levels_page_number, btree, skiplist);
+		retval = rl_zset_read(db, levels_page_number, btree, btree_page, skiplist, skiplist_page);
 	}
 cleanup:
 	return retval;
@@ -144,7 +160,9 @@ cleanup:
 int rl_zadd(rlite *db, unsigned char *key, long keylen, double score, unsigned char *data, long datalen)
 {
 	rl_btree *scores;
-	int retval = rl_zset_get_objects(db, key, keylen, &scores, NULL, 1);
+	rl_skiplist *skiplist;
+	long scores_page, skiplist_page;
+	int retval = rl_zset_get_objects(db, key, keylen, &scores, &scores_page, &skiplist, &skiplist_page, 1);
 	if (retval != RL_OK) {
 		goto cleanup;
 	}
@@ -159,18 +177,26 @@ int rl_zadd(rlite *db, unsigned char *key, long keylen, double score, unsigned c
 	if (retval != RL_OK) {
 		goto cleanup;
 	}
+	retval = rl_skiplist_add(db, skiplist, score, data, datalen);
+	if (retval != RL_OK) {
+		goto cleanup;
+	}
+	retval = rl_write(db, &rl_data_type_btree_hash_md5_double, scores_page, scores);
+	if (retval != RL_OK) {
+		goto cleanup;
+	}
+	retval = rl_write(db, &rl_data_type_skiplist, skiplist_page, skiplist);
+	if (retval != RL_OK) {
+		goto cleanup;
+	}
 cleanup:
 	return retval;
 }
 
-int rl_zscore(rlite *db, unsigned char *key, long keylen, unsigned char *data, long datalen, double *score)
+static int rl_get_zscore(rlite *db, rl_btree *scores, unsigned char *data, long datalen, double *score)
 {
 	unsigned char *digest = NULL;
-	rl_btree *scores;
-	int retval = rl_zset_get_objects(db, key, keylen, &scores, NULL, 0);
-	if (retval != RL_OK) {
-		goto cleanup;
-	}
+	int retval;
 	digest = malloc(sizeof(unsigned char) * 16);
 	if (digest == NULL) {
 		retval = RL_OUT_OF_MEMORY;
@@ -189,5 +215,35 @@ int rl_zscore(rlite *db, unsigned char *key, long keylen, unsigned char *data, l
 	retval = RL_FOUND;
 cleanup:
 	free(digest);
+	return retval;
+}
+
+int rl_zscore(rlite *db, unsigned char *key, long keylen, unsigned char *data, long datalen, double *score)
+{
+	rl_btree *scores;
+	int retval = rl_zset_get_objects(db, key, keylen, &scores, NULL, NULL, NULL, 0);
+	if (retval != RL_OK) {
+		return retval;
+	}
+	return rl_get_zscore(db, scores, data, datalen, score);
+}
+
+int rl_zrank(rlite *db, unsigned char *key, long keylen, unsigned char *data, long datalen, long *rank)
+{
+	double score;
+	rl_btree *scores;
+	rl_skiplist *skiplist;
+	int retval = rl_zset_get_objects(db, key, keylen, &scores, NULL, &skiplist, NULL, 0);
+	if (retval != RL_OK) {
+		return retval;
+	}
+	retval = rl_get_zscore(db, scores, data, datalen, &score);
+	if (retval != RL_FOUND) {
+		return retval;
+	}
+	retval = rl_skiplist_first_node(db, skiplist, score, data, datalen, NULL, rank);
+	if (retval != RL_FOUND) {
+		return retval;
+	}
 	return retval;
 }

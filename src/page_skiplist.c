@@ -230,19 +230,22 @@ cleanup:
 	return retval;
 }
 
-int rl_skiplist_first_node(rlite *db, rl_skiplist *skiplist, double score, rl_skiplist_node **retnode, long *_rank)
+int rl_skiplist_first_node(rlite *db, rl_skiplist *skiplist, double score, unsigned char *value, long valuelen, rl_skiplist_node **retnode, long *_rank)
 {
 	rl_skiplist_node *update_node[RL_SKIPLIST_MAXLEVEL];
 	long rank[RL_SKIPLIST_MAXLEVEL];
-	int retval = rl_skiplist_get_update(db, skiplist, score, NULL, 0, update_node, NULL, rank);
+	int retval = rl_skiplist_get_update(db, skiplist, score, value, valuelen, update_node, NULL, rank);
 	if (retval != RL_OK) {
 		goto cleanup;
 	}
 	if (update_node[0]->level[0].right) {
-		retval = rl_read(db, &rl_data_type_skiplist_node, update_node[0]->level[0].right, skiplist, (void **)retnode);
-		if (retval == RL_FOUND && _rank) {
-			*_rank = rank[0] + 1;
+		if (retnode) {
+			retval = rl_read(db, &rl_data_type_skiplist_node, update_node[0]->level[0].right, skiplist, (void **)retnode);
 		}
+		if (_rank) {
+			*_rank = rank[0];
+		}
+		retval = RL_FOUND;
 	}
 	else {
 		retval = RL_NOT_FOUND;

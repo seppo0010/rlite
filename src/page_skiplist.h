@@ -31,7 +31,7 @@ int rl_skiplist_destroy(rlite *db, void *skiplist);
 int rl_skiplist_node_create(rlite *db, rl_skiplist_node **_node, long level, double score, long value);
 int rl_skiplist_node_destroy(rlite *db, void *node);
 int rl_skiplist_add(rlite *db, rl_skiplist *skiplist, double score, unsigned char *value, long valuelen);
-int rl_skiplist_first_node(rlite *db, rl_skiplist *skiplist, double score, rl_skiplist_node **node, long *rank);
+int rl_skiplist_first_node(rlite *db, rl_skiplist *skiplist, double score, unsigned char *value, long valuelen, rl_skiplist_node **node, long *rank);
 int rl_skiplist_delete(rlite *db, rl_skiplist *skiplist, double score, unsigned char *value, long valuelen);
 
 int rl_skiplist_is_balanced(rlite *db, rl_skiplist *skiplist);

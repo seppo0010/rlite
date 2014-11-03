@@ -102,23 +102,84 @@ int basic_test_zadd_zscore2(int _commit)
 	return 0;
 }
 
+int basic_test_zadd_zrank(int _commit)
+{
+	int retval = 0;
+	fprintf(stderr, "Start basic_test_zadd_zrank %d\n", _commit);
+
+	rlite *db = setup_db(_commit, 1);
+	unsigned char *key = (unsigned char *)"my key";
+	long keylen = strlen((char *)key);
+	double score = 8913.109;
+	long rank;
+	unsigned char *data = (unsigned char *)"my data";
+	long datalen = strlen((char *)data);
+	unsigned char *data2 = (unsigned char *)"my data2";
+	long datalen2 = strlen((char *)data2);
+
+	retval = rl_zadd(db, key, keylen, score, data, datalen);
+	if (retval != RL_OK) {
+		fprintf(stderr, "Unable to zadd %d\n", retval);
+		return 1;
+	}
+
+	if (_commit) {
+		rl_commit(db);
+	}
+
+	retval = rl_zadd(db, key, keylen, score, data2, datalen2);
+	if (retval != RL_OK) {
+		fprintf(stderr, "Unable to zadd a second time %d\n", retval);
+		return 1;
+	}
+
+	if (_commit) {
+		rl_commit(db);
+	}
+
+	retval = rl_zrank(db, key, keylen, data, datalen, &rank);
+	if (retval != RL_FOUND) {
+		fprintf(stderr, "Unable to zrank %d\n", retval);
+		return 1;
+	}
+
+	if (0 != rank) {
+		fprintf(stderr, "Expected rank %d to be %ld\n", 0, rank);
+		return 1;
+	}
+
+	retval = rl_zrank(db, key, keylen, data2, datalen2, &rank);
+	if (retval != RL_FOUND) {
+		fprintf(stderr, "Unable to zrank %d\n", retval);
+		return 1;
+	}
+
+	if (1 != rank) {
+		fprintf(stderr, "Expected rank %d to be %ld\n", 1, rank);
+		return 1;
+	}
+
+	fprintf(stderr, "End basic_test_zadd_zrank\n");
+	rl_close(db);
+	return 0;
+}
+
 int main()
 {
-	int retval = basic_test_zadd_zrange(0);
-	if (retval != 0) {
-		goto cleanup;
-	}
-	retval = basic_test_zadd_zrange(1);
-	if (retval != 0) {
-		goto cleanup;
-	}
-	retval = basic_test_zadd_zscore2(0);
-	if (retval != 0) {
-		goto cleanup;
-	}
-	retval = basic_test_zadd_zscore2(1);
-	if (retval != 0) {
-		goto cleanup;
+	int retval, i;
+	for (i = 0; i < 2; i++) {
+		retval = basic_test_zadd_zrange(i);
+		if (retval != 0) {
+			goto cleanup;
+		}
+		retval = basic_test_zadd_zscore2(i);
+		if (retval != 0) {
+			goto cleanup;
+		}
+		retval = basic_test_zadd_zrank(i);
+		if (retval != 0) {
+			goto cleanup;
+		}
 	}
 cleanup:
 	return retval;
