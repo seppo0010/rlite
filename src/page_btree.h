@@ -26,7 +26,6 @@ int md5_formatter(void *v, char **str, int *size);
 rl_btree_type rl_btree_type_set_long;
 rl_btree_type rl_btree_type_hash_long_long;
 rl_btree_type rl_btree_type_hash_md5_long;
-rl_btree_type rl_btree_type_hash_double_long;
 rl_btree_type rl_btree_type_hash_md5_double;
 
 typedef struct rl_btree_node {
@@ -70,9 +69,6 @@ int rl_btree_node_deserialize_set_long(struct rlite *db, void **obj, void *conte
 
 int rl_btree_node_serialize_hash_long_long(struct rlite *db, void *obj, unsigned char *data);
 int rl_btree_node_deserialize_hash_long_long(struct rlite *db, void **obj, void *context, unsigned char *data);
-
-int rl_btree_node_serialize_hash_double_long(struct rlite *db, void *obj, unsigned char *data);
-int rl_btree_node_deserialize_hash_double_long(struct rlite *db, void **obj, void *context, unsigned char *data);
 
 int rl_btree_node_serialize_hash_md5_double(struct rlite *db, void *obj, unsigned char *data);
 int rl_btree_node_deserialize_hash_md5_double(struct rlite *db, void **obj, void *context, unsigned char *data);

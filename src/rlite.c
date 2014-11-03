@@ -79,12 +79,6 @@ rl_data_type rl_data_type_btree_hash_double_long = {
 	rl_btree_deserialize,
 	rl_btree_destroy,
 };
-rl_data_type rl_data_type_btree_node_hash_double_long = {
-	"rl_data_type_btree_node_hash_double_long",
-	rl_btree_node_serialize_hash_double_long,
-	rl_btree_node_deserialize_hash_double_long,
-	rl_btree_node_destroy,
-};
 rl_data_type rl_data_type_list_long = {
 	"rl_data_type_list_long",
 	rl_list_serialize,

@@ -71,15 +71,6 @@ int long_cmp(void *v1, void *v2)
 	return a > b ? 1 : -1;
 }
 
-int double_cmp(void *v1, void *v2)
-{
-	double a = *((double *)v1), b = *((double *)v2);
-	if (a == b) {
-		return 0;
-	}
-	return a > b ? 1 : -1;
-}
-
 int md5_cmp(void *v1, void *v2)
 {
 	return memcmp(v1, v2, sizeof(unsigned char) * 16);
@@ -93,16 +84,6 @@ int long_formatter(void *v2, char **formatted, int *size)
 		return RL_OUT_OF_MEMORY;
 	}
 	*size = snprintf(*formatted, 22, "%ld", *(long *)v2);
-	return RL_OK;
-}
-
-int double_formatter(void *v2, char **formatted, int *size)
-{
-	*formatted = malloc(sizeof(char) * 22);
-	if (*formatted == NULL) {
-		return RL_OUT_OF_MEMORY;
-	}
-	*size = snprintf(*formatted, 22, "%lf", *(double *)v2);
 	return RL_OK;
 }
 
