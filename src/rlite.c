@@ -341,7 +341,7 @@ int rl_create_db(rlite *db)
 int rl_get_key_btree(rlite *db, rl_btree **btree)
 {
 	void *_btree;
-	int retval = rl_read(db, &rl_data_type_btree_hash_md5_long, GLOBAL_KEY_BTREE, &rl_btree_type_hash_md5_long, &_btree);
+	int retval = rl_read(db, &rl_data_type_btree_hash_md5_long, GLOBAL_KEY_BTREE, &rl_btree_type_hash_md5_long, &_btree, 1);
 	if (retval != RL_FOUND) {
 		goto cleanup;
 	}
@@ -364,7 +364,7 @@ int rl_read_header(rlite *db)
 		}
 	}
 	else {
-		retval = rl_read(db, &rl_data_type_header, 0, NULL, &header);
+		retval = rl_read(db, &rl_data_type_header, 0, NULL, &header, 1);
 		if (retval == RL_NOT_FOUND && rl_has_flag(db, RLITE_OPEN_CREATE)) {
 			db->page_size = DEFAULT_PAGE_SIZE;
 			retval = rl_create_db(db);
@@ -484,7 +484,7 @@ int rl_read_from_cache(rlite *db, rl_data_type *type, long page_number, void **o
 	return retval;
 }
 
-int rl_read(rlite *db, rl_data_type *type, long page, void *context, void **obj)
+int rl_read(rlite *db, rl_data_type *type, long page, void *context, void **obj, int cache)
 {
 #ifdef DEBUG
 	int keep = 0;
@@ -494,8 +494,24 @@ int rl_read(rlite *db, rl_data_type *type, long page, void *context, void **obj)
 		return RL_UNEXPECTED;
 	}
 #endif
-	int retval = rl_read_from_cache(db, type, page, obj);
+	int retval;
+	unsigned char *serialize_data;
+	retval = rl_read_from_cache(db, type, page, obj);
 	if (retval != RL_NOT_FOUND) {
+		if (db->driver_type != RL_MEMORY_DRIVER && !cache) {
+			serialize_data = malloc(db->page_size * sizeof(unsigned char));
+			retval = type->serialize(db, *obj, serialize_data);
+			if (retval != RL_OK) {
+				free(serialize_data);
+				return retval;
+			}
+			retval = type->deserialize(db, obj, context, serialize_data);
+			free(serialize_data);
+			if (retval != RL_OK) {
+				return retval;
+			}
+			retval = RL_FOUND;
+		}
 		return retval;
 	}
 	unsigned char *data = malloc(db->page_size * sizeof(unsigned char));
@@ -532,54 +548,56 @@ int rl_read(rlite *db, rl_data_type *type, long page, void *context, void **obj)
 
 		retval = type->deserialize(db, obj, context ? context : type, data);
 
-		rl_ensure_pages(db);
-		rl_page *page_obj = malloc(sizeof(rl_page));
-		if (page_obj == NULL) {
-			retval = RL_OUT_OF_MEMORY;
-			goto cleanup;
-		}
-		page_obj->page_number = page;
-		page_obj->type = type;
-		page_obj->obj = *obj;
-#ifdef DEBUG
-		keep = 1;
-		if (initial_page_size != db->page_size) {
-			page_obj->serialized_data = realloc(data, db->page_size * sizeof(unsigned char));
-			if (page_obj->serialized_data == NULL) {
-				fprintf(stderr, "realloc failed\n");
+		if (cache) {
+			rl_ensure_pages(db);
+			rl_page *page_obj = malloc(sizeof(rl_page));
+			if (page_obj == NULL) {
 				retval = RL_OUT_OF_MEMORY;
 				goto cleanup;
 			}
-			data = page_obj->serialized_data;
-			if (db->page_size > initial_page_size) {
-				memset(&data[initial_page_size], 0, db->page_size - initial_page_size);
-			}
-		}
-		else {
-			page_obj->serialized_data = data;
-		}
-
-		unsigned char *serialize_data = calloc(db->page_size, sizeof(unsigned char));
-		retval = type->serialize(db, *obj, serialize_data);
-		if (retval != RL_OK) {
-			goto cleanup;
-		}
-		if (memcmp(data, serialize_data, db->page_size) != 0) {
-			fprintf(stderr, "serialize unserialized data mismatch\n");
-			long i;
-			for (i = 0; i < db->page_size; i++) {
-				if (serialize_data[i] != data[i]) {
-					fprintf(stderr, "at position %ld expected %d, got %d\n", i, serialize_data[i], data[i]);
+			page_obj->page_number = page;
+			page_obj->type = type;
+			page_obj->obj = *obj;
+#ifdef DEBUG
+			keep = 1;
+			if (initial_page_size != db->page_size) {
+				page_obj->serialized_data = realloc(data, db->page_size * sizeof(unsigned char));
+				if (page_obj->serialized_data == NULL) {
+					fprintf(stderr, "realloc failed\n");
+					retval = RL_OUT_OF_MEMORY;
+					goto cleanup;
+				}
+				data = page_obj->serialized_data;
+				if (db->page_size > initial_page_size) {
+					memset(&data[initial_page_size], 0, db->page_size - initial_page_size);
 				}
 			}
-		}
-		free(serialize_data);
+			else {
+				page_obj->serialized_data = data;
+			}
+
+			serialize_data = calloc(db->page_size, sizeof(unsigned char));
+			retval = type->serialize(db, *obj, serialize_data);
+			if (retval != RL_OK) {
+				goto cleanup;
+			}
+			if (memcmp(data, serialize_data, db->page_size) != 0) {
+				fprintf(stderr, "serialize unserialized data mismatch\n");
+				long i;
+				for (i = 0; i < db->page_size; i++) {
+					if (serialize_data[i] != data[i]) {
+						fprintf(stderr, "at position %ld expected %d, got %d\n", i, serialize_data[i], data[i]);
+					}
+				}
+			}
+			free(serialize_data);
 #endif
-		if (pos < db->read_pages_len) {
-			memmove_dbg(&db->read_pages[pos + 1], &db->read_pages[pos], sizeof(rl_page *) * (db->read_pages_len - pos), __LINE__);
+			if (pos < db->read_pages_len) {
+				memmove_dbg(&db->read_pages[pos + 1], &db->read_pages[pos], sizeof(rl_page *) * (db->read_pages_len - pos), __LINE__);
+			}
+			db->read_pages[pos] = page_obj;
+			db->read_pages_len++;
 		}
-		db->read_pages[pos] = page_obj;
-		db->read_pages_len++;
 	}
 	else {
 		fprintf(stderr, "Unexpected driver %d when asking for page %ld\n", db->driver_type, page);

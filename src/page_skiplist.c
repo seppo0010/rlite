@@ -137,7 +137,7 @@ int rl_skiplist_iterator_next(rl_skiplist_iterator *iterator, rl_skiplist_node *
 	}
 	void *_node;
 	rl_skiplist_node *node;
-	int retval = rl_read(iterator->db, &rl_data_type_skiplist_node, iterator->node_page, iterator->skiplist, &_node);
+	int retval = rl_read(iterator->db, &rl_data_type_skiplist_node, iterator->node_page, iterator->skiplist, &_node, 1);
 	if (retval != RL_FOUND) {
 		return retval;
 	}
@@ -167,7 +167,7 @@ static int rl_skiplist_get_update(rlite *db, rl_skiplist *skiplist, double score
 	}
 
 	node_page = skiplist->left;
-	int cmp, retval = rl_read(db, &rl_data_type_skiplist_node, skiplist->left, skiplist, &_node);
+	int cmp, retval = rl_read(db, &rl_data_type_skiplist_node, skiplist->left, skiplist, &_node, 1);
 	if (retval != RL_FOUND) {
 		goto cleanup;
 	}
@@ -186,7 +186,7 @@ static int rl_skiplist_get_update(rlite *db, rl_skiplist *skiplist, double score
 			if (tmp == 0) {
 				break;
 			}
-			retval = rl_read(db, &rl_data_type_skiplist_node, tmp, skiplist, &_node);
+			retval = rl_read(db, &rl_data_type_skiplist_node, tmp, skiplist, &_node, 1);
 			if (retval != RL_FOUND) {
 				goto cleanup;
 			}
@@ -244,7 +244,7 @@ int rl_skiplist_add(rlite *db, rl_skiplist *skiplist, double score, unsigned cha
 	if (level > skiplist->level) {
 		for (i = skiplist->level; i < level; i++) {
 			rank[i] = 0;
-			retval = rl_read(db, &rl_data_type_skiplist_node, skiplist->left, skiplist, &_node);
+			retval = rl_read(db, &rl_data_type_skiplist_node, skiplist->left, skiplist, &_node, 1);
 			if (retval != RL_FOUND) {
 				goto cleanup;
 			}
@@ -285,7 +285,7 @@ int rl_skiplist_add(rlite *db, rl_skiplist *skiplist, double score, unsigned cha
 	if (node->level[0].right) {
 		tmp = node_page;
 		node_page = node->level[0].right;
-		retval = rl_read(db, &rl_data_type_skiplist_node, node_page, skiplist, &_node);
+		retval = rl_read(db, &rl_data_type_skiplist_node, node_page, skiplist, &_node, 1);
 		if (retval != RL_FOUND) {
 			goto cleanup;
 		}
@@ -315,7 +315,7 @@ int rl_skiplist_first_node(rlite *db, rl_skiplist *skiplist, double score, unsig
 	}
 	if (update_node[0]->level[0].right) {
 		if (retnode) {
-			retval = rl_read(db, &rl_data_type_skiplist_node, update_node[0]->level[0].right, skiplist, (void **)retnode);
+			retval = rl_read(db, &rl_data_type_skiplist_node, update_node[0]->level[0].right, skiplist, (void **)retnode, 1);
 		}
 		if (_rank) {
 			*_rank = rank[0];
@@ -342,7 +342,7 @@ int rl_skiplist_delete(rlite *db, rl_skiplist *skiplist, double score, unsigned 
 	void *_node;
 	rl_skiplist_node *node, *next_node;
 	long node_page = update_node[0]->level[0].right;
-	retval = rl_read(db, &rl_data_type_skiplist_node, node_page, skiplist, &_node);
+	retval = rl_read(db, &rl_data_type_skiplist_node, node_page, skiplist, &_node, 1);
 	if (retval != RL_FOUND) {
 		goto cleanup;
 	}
@@ -376,7 +376,7 @@ int rl_skiplist_delete(rlite *db, rl_skiplist *skiplist, double score, unsigned 
 
 	long next_node_page = node->level[0].right;
 	if (next_node_page) {
-		retval = rl_read(db, &rl_data_type_skiplist_node, next_node_page, skiplist, &_node);
+		retval = rl_read(db, &rl_data_type_skiplist_node, next_node_page, skiplist, &_node, 1);
 		if (retval != RL_FOUND) {
 			goto cleanup;
 		}
@@ -400,7 +400,7 @@ int rl_skiplist_delete(rlite *db, rl_skiplist *skiplist, double score, unsigned 
 		goto cleanup;
 	}
 
-	retval = rl_read(db, &rl_data_type_skiplist_node, skiplist->left, skiplist, &_node);
+	retval = rl_read(db, &rl_data_type_skiplist_node, skiplist->left, skiplist, &_node, 1);
 	if (retval != RL_FOUND) {
 		goto cleanup;
 	}
@@ -430,7 +430,7 @@ int rl_skiplist_print(rlite *db, rl_skiplist *skiplist)
 			fprintf(stderr, "Too many nodes, expected %ld\n", skiplist->size);
 			return RL_UNEXPECTED;
 		}
-		retval = rl_read(db, &rl_data_type_skiplist_node, page, skiplist, &_node);
+		retval = rl_read(db, &rl_data_type_skiplist_node, page, skiplist, &_node, 1);
 		if (retval != RL_FOUND) {
 			goto cleanup;
 		}
@@ -466,7 +466,7 @@ int rl_skiplist_is_balanced(rlite *db, rl_skiplist *skiplist)
 			return RL_UNEXPECTED;
 		}
 		nodes_page[i] = page;
-		retval = rl_read(db, &rl_data_type_skiplist_node, page, skiplist, &_node);
+		retval = rl_read(db, &rl_data_type_skiplist_node, page, skiplist, &_node, 1);
 		if (retval != RL_FOUND) {
 			goto cleanup;
 		}
@@ -475,7 +475,7 @@ int rl_skiplist_is_balanced(rlite *db, rl_skiplist *skiplist)
 		page = node->level[0].right;
 	}
 	if (i != skiplist->size + 1) {
-		fprintf(stderr, "Number of nodes (%ld) doesn't match skiplist size (%ld)\n", i, skiplist->size);
+		fprintf(stderr, "Number of nodes (%ld) doesn't match skiplist size (%ld)\n", i - 1, skiplist->size);
 		retval = RL_UNEXPECTED;
 		goto cleanup;
 	}
@@ -621,7 +621,7 @@ int rl_skiplist_node_by_rank(rlite *db, rl_skiplist *skiplist, long rank, rl_ski
 	// increment the rank in 1 to ignore the first node thats not actually a data node
 	rank++;
 
-	int retval = rl_read(db, &rl_data_type_skiplist_node, skiplist->left, skiplist, &_node);
+	int retval = rl_read(db, &rl_data_type_skiplist_node, skiplist->left, skiplist, &_node, 1);
 	if (retval != RL_FOUND) {
 		goto cleanup;
 	}
@@ -636,7 +636,7 @@ int rl_skiplist_node_by_rank(rlite *db, rl_skiplist *skiplist, long rank, rl_ski
 				break;
 			}
 			pos += node->level[i].span;
-			retval = rl_read(db, &rl_data_type_skiplist_node, node->level[i].right, skiplist, &_node);
+			retval = rl_read(db, &rl_data_type_skiplist_node, node->level[i].right, skiplist, &_node, 1);
 			if (retval != RL_FOUND) {
 				goto cleanup;
 			}

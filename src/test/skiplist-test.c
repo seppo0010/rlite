@@ -6,6 +6,8 @@
 #include "../page_skiplist.h"
 #include "../page_multi_string.h"
 
+#define TEST_SIZE 100
+
 int basic_skiplist_test(int sign, int commit)
 {
 	fprintf(stderr, "Start basic_skiplist_test %d %d\n", sign, commit);
@@ -19,7 +21,7 @@ int basic_skiplist_test(int sign, int commit)
 	int retval;
 	long i;
 	unsigned char *data = malloc(sizeof(unsigned char) * 1);
-	for (i = 0; i < 200; i++) {
+	for (i = 0; i < TEST_SIZE; i++) {
 		data[0] = i;
 		retval = rl_skiplist_add(db, skiplist, 5.2 * i * sign, data, 1);
 		if (retval != RL_OK) {
@@ -196,7 +198,7 @@ int basic_skiplist_node_by_rank()
 	int retval;
 	long i;
 	unsigned char *data = malloc(sizeof(unsigned char) * 1);
-	for (i = 0; i < 200; i++) {
+	for (i = 0; i < TEST_SIZE; i++) {
 		data[0] = i;
 		retval = rl_skiplist_add(db, skiplist, 5.2 * i, data, 1);
 		if (retval != RL_OK) {
@@ -205,7 +207,7 @@ int basic_skiplist_node_by_rank()
 		}
 	}
 
-	for (i = 0; i < 200; i++) {
+	for (i = 0; i < TEST_SIZE; i++) {
 		retval = rl_skiplist_node_by_rank(db, skiplist, i, &node);
 		if (retval != RL_OK) {
 			fprintf(stderr, "Unable to get %ld node by rank, got %d\n", i, retval);
@@ -238,7 +240,7 @@ int basic_skiplist_iterator_test(int commit)
 	int retval, cmp;
 	long i;
 	unsigned char *data = malloc(sizeof(unsigned char) * 1);
-	for (i = 0; i < 200; i++) {
+	for (i = 0; i < TEST_SIZE; i++) {
 		data[0] = i;
 		retval = rl_skiplist_add(db, skiplist, 5.2 * i, data, 1);
 		if (retval != RL_OK) {
@@ -253,11 +255,11 @@ int basic_skiplist_iterator_test(int commit)
 		return 1;
 	}
 
-	long hundredth_node;
+	long random_node = 0;
 	i = 0;
 	while ((retval = rl_skiplist_iterator_next(iterator, &node)) == RL_OK) {
-		if (i == 99) {
-			hundredth_node = iterator->node_page;
+		if (i == TEST_SIZE / 2 - 1) {
+			random_node = iterator->node_page;
 		}
 		if (node->score != 5.2 * i) {
 			fprintf(stderr, "Expected score at position %ld to be %lf, got %lf instead\n", i, 5.2 * i, node->score);
@@ -278,8 +280,8 @@ int basic_skiplist_iterator_test(int commit)
 		fprintf(stderr, "Expected skiplist last return value to be %d after %ld iterations, got %d instead\n", RL_END, i, retval);
 		return 1;
 	}
-	if (i != 200) {
-		fprintf(stderr, "Expected iterator to have %d iterations, got %ld instead\n", 200, i);
+	if (i != TEST_SIZE) {
+		fprintf(stderr, "Expected iterator to have %d iterations, got %ld instead\n", TEST_SIZE, i);
 		return 1;
 	}
 	rl_skiplist_iterator_destroy(db, iterator);
@@ -290,7 +292,7 @@ int basic_skiplist_iterator_test(int commit)
 		return 1;
 	}
 
-	i = 199;
+	i = TEST_SIZE - 1;
 	while ((retval = rl_skiplist_iterator_next(iterator, &node)) == RL_OK) {
 		if (node->score != 5.2 * i) {
 			fprintf(stderr, "Expected score at position %ld to be %lf, got %lf instead\n", i, 5.2 * i, node->score);
@@ -323,7 +325,7 @@ int basic_skiplist_iterator_test(int commit)
 		return 1;
 	}
 
-	i = 199;
+	i = TEST_SIZE - 1;
 	while ((retval = rl_skiplist_iterator_next(iterator, &node)) == RL_OK) {
 		if (node->score != 5.2 * i) {
 			fprintf(stderr, "Expected score at position %ld to be %lf, got %lf instead\n", i, 5.2 * i, node->score);
@@ -344,19 +346,19 @@ int basic_skiplist_iterator_test(int commit)
 		fprintf(stderr, "Expected skiplist last return value to be %d after %ld iterations, got %d instead\n", RL_END, i, retval);
 		return 1;
 	}
-	if (i != 198) {
-		fprintf(stderr, "Expected iterator to have %d iterations, got %ld instead\n", 198, i);
+	if (i != TEST_SIZE - 2) {
+		fprintf(stderr, "Expected iterator to have %d iterations, got %ld instead\n", TEST_SIZE - 2, i);
 		return 1;
 	}
 	rl_skiplist_iterator_destroy(db, iterator);
 
-	retval = rl_skiplist_iterator_create(db, &iterator, skiplist, hundredth_node, 1, 5);
+	retval = rl_skiplist_iterator_create(db, &iterator, skiplist, random_node, 1, 5);
 	if (retval != RL_OK) {
 		fprintf(stderr, "Unable to create iterator, got %d\n", retval);
 		return 1;
 	}
 
-	i = 100;
+	i = TEST_SIZE / 2;
 	while ((retval = rl_skiplist_iterator_next(iterator, &node)) == RL_OK) {
 		if (node->score != 5.2 * i) {
 			fprintf(stderr, "Expected score at position %ld to be %lf, got %lf instead\n", i, 5.2 * i, node->score);
@@ -377,8 +379,8 @@ int basic_skiplist_iterator_test(int commit)
 		fprintf(stderr, "Expected skiplist last return value to be %d after %ld iterations, got %d instead\n", RL_END, i, retval);
 		return 1;
 	}
-	if (i != 105) {
-		fprintf(stderr, "Expected iterator to have %d iterations, got %ld instead\n", 105, i);
+	if (i != TEST_SIZE / 2 + 5) {
+		fprintf(stderr, "Expected iterator to have %d iterations, got %ld instead\n", TEST_SIZE / 2 + 5, i);
 		return 1;
 	}
 	rl_skiplist_iterator_destroy(db, iterator);

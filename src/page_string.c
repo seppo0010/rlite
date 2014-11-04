@@ -46,7 +46,7 @@ int rl_string_create(rlite *db, unsigned char **_data, long *number)
 int rl_string_get(rlite *db, unsigned char **_data, long number)
 {
 	void *data;
-	int retval = rl_read(db, &rl_data_type_string, number, NULL, &data);
+	int retval = rl_read(db, &rl_data_type_string, number, NULL, &data, 1);
 	if (retval != RL_FOUND) {
 		return retval;
 	}

@@ -7,17 +7,17 @@
 
 int rl_multi_string_cmp(struct rlite *db, long p1, long p2, int *cmp)
 {
-	rl_list *list1, *list2;
-	rl_list_node *node1, *node2;
+	rl_list *list1 = NULL, *list2 = NULL;
+	rl_list_node *node1 = NULL, *node2 = NULL;
 	void *_list, *_node;
 	unsigned char *str1, *str2;
 
-	int retval = rl_read(db, &rl_data_type_list_long, p1, &list_long, &_list);
+	int retval = rl_read(db, &rl_data_type_list_long, p1, &list_long, &_list, 0);
 	if (retval != RL_FOUND) {
 		goto cleanup;
 	}
 	list1 = _list;
-	retval = rl_read(db, &rl_data_type_list_long, p2, &list_long, &_list);
+	retval = rl_read(db, &rl_data_type_list_long, p2, &list_long, &_list, 0);
 	if (retval != RL_FOUND) {
 		goto cleanup;
 	}
@@ -39,12 +39,12 @@ int rl_multi_string_cmp(struct rlite *db, long p1, long p2, int *cmp)
 			retval = RL_OK;
 			goto cleanup;
 		}
-		retval = rl_read(db, list1->type->list_node_type, node_number1, list1, &_node);
+		retval = rl_read(db, list1->type->list_node_type, node_number1, list1, &_node, 0);
 		if (retval != RL_FOUND) {
 			goto cleanup;
 		}
 		node1 = _node;
-		retval = rl_read(db, list2->type->list_node_type, node_number2, list2, &_node);
+		retval = rl_read(db, list2->type->list_node_type, node_number2, list2, &_node, 0);
 		if (retval != RL_FOUND) {
 			goto cleanup;
 		}
@@ -72,19 +72,30 @@ int rl_multi_string_cmp(struct rlite *db, long p1, long p2, int *cmp)
 		}
 		node_number1 = node1->right;
 		node_number2 = node2->right;
+		rl_list_node_nocache_destroy(db, node1);
+		rl_list_node_nocache_destroy(db, node2);
+		node1 = node2 = NULL;
 	}
 cleanup:
+	rl_list_nocache_destroy(db, list1);
+	rl_list_nocache_destroy(db, list2);
+	if (node1) {
+		rl_list_node_nocache_destroy(db, node1);
+	}
+	if (node2) {
+		rl_list_node_nocache_destroy(db, node2);
+	}
 	return retval;
 }
 
 int rl_multi_string_cmp_str(struct rlite *db, long p1, unsigned char *str, long len, int *cmp)
 {
-	rl_list *list1;
-	rl_list_node *node1;
+	rl_list *list1 = NULL;
+	rl_list_node *node1 = NULL;
 	void *_list, *_node;
 	unsigned char *str1;
 
-	int retval = rl_read(db, &rl_data_type_list_long, p1, &list_long, &_list);
+	int retval = rl_read(db, &rl_data_type_list_long, p1, &list_long, &_list, 0);
 	if (retval != RL_FOUND) {
 		goto cleanup;
 	}
@@ -98,7 +109,7 @@ int rl_multi_string_cmp_str(struct rlite *db, long p1, unsigned char *str, long 
 			*cmp = 0;
 			break;
 		}
-		retval = rl_read(db, list1->type->list_node_type, node_number1, list1, &_node);
+		retval = rl_read(db, list1->type->list_node_type, node_number1, list1, &_node, 0);
 		if (retval != RL_FOUND) {
 			goto cleanup;
 		}
@@ -128,16 +139,23 @@ int rl_multi_string_cmp_str(struct rlite *db, long p1, unsigned char *str, long 
 		}
 		first = 0;
 		node_number1 = node1->right;
+		rl_list_node_nocache_destroy(db, node1);
+		node1 = NULL;
 	}
 cleanup:
+	rl_list_nocache_destroy(db, list1);
+	if (node1) {
+		rl_list_node_nocache_destroy(db, node1);
+	}
 	return retval;
 }
+
 int rl_multi_string_get(struct rlite *db, long number, unsigned char **_data, long *size)
 {
 	rl_list *list;
 	rl_list_node *node;
 	void *_list, *_node;
-	int retval = rl_read(db, &rl_data_type_list_long, number, &list_long, &_list);
+	int retval = rl_read(db, &rl_data_type_list_long, number, &list_long, &_list, 0);
 	if (retval != RL_FOUND) {
 		return retval;
 	}
@@ -146,7 +164,7 @@ int rl_multi_string_get(struct rlite *db, long number, unsigned char **_data, lo
 	unsigned char *data = NULL;
 	long node_number = list->left, i, pos = 0, to_copy;
 	while (node_number > 0) {
-		retval = rl_read(db, list->type->list_node_type, node_number, list, &_node);
+		retval = rl_read(db, list->type->list_node_type, node_number, list, &_node, 0);
 		if (retval != RL_FOUND) {
 			goto cleanup;
 		}
@@ -170,10 +188,16 @@ int rl_multi_string_get(struct rlite *db, long number, unsigned char **_data, lo
 			pos += to_copy;
 		}
 		node_number = node->right;
+		rl_list_node_nocache_destroy(db, node);
+		node = NULL;
 	}
 	*_data = data;
 	retval = RL_OK;
 cleanup:
+	rl_list_nocache_destroy(db, list);
+	if (node) {
+		rl_list_node_nocache_destroy(db, node);
+	}
 	return retval;
 }
 

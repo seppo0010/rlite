@@ -43,7 +43,7 @@ static int rl_key_get_list(rlite *db, unsigned char *key, long keylen, int creat
 		}
 	}
 	else {
-		retval = rl_read(db, &rl_data_type_list_key, keypage, &list_key, &_list);
+		retval = rl_read(db, &rl_data_type_list_key, keypage, &list_key, &_list, 1);
 		if (retval != RL_FOUND) {
 			if (retval == RL_NOT_FOUND && create) {
 				retval = rl_list_create(db, list, &list_key);

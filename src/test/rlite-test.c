@@ -24,7 +24,7 @@ int test_rlite_page_cache()
 		db->read_pages[i]->obj = db->read_pages[i];
 	}
 	for (i = 0; i < size; i++) {
-		retval = rl_read(db, &rl_data_type_header, i, NULL, &obj);
+		retval = rl_read(db, &rl_data_type_header, i, NULL, &obj, 1);
 		if (retval != RL_FOUND) {
 			fprintf(stderr, "Expected retval to be RL_FOUND, got %d insted\n", retval);
 			return 1;
