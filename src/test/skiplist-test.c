@@ -208,7 +208,7 @@ int basic_skiplist_node_by_rank()
 	}
 
 	for (i = 0; i < TEST_SIZE; i++) {
-		retval = rl_skiplist_node_by_rank(db, skiplist, i, &node);
+		retval = rl_skiplist_node_by_rank(db, skiplist, i, &node, NULL);
 		if (retval != RL_OK) {
 			fprintf(stderr, "Unable to get %ld node by rank, got %d\n", i, retval);
 			return 1;

@@ -260,16 +260,10 @@ int rl_zcard(rlite *db, unsigned char *key, long keylen, long *card)
 	return RL_OK;
 }
 
-int rl_zrange(rlite *db, unsigned char *key, long keylen, long start, long end, unsigned char ***data, long **datalen, double **scores, long *size)
+int rl_zrange(rlite *db, unsigned char *key, long keylen, long start, long end, rl_zset_iterator **iterator)
 {
-	void *_node;
-	long card, i;
-	rl_skiplist_node *node;
+	long card, size, node_page;
 	rl_skiplist *skiplist;
-	if ((data && !datalen) || (datalen && !data)) {
-		fprintf(stderr, "Expected both or neither data and datalen\n");
-		return RL_UNEXPECTED;
-	}
 
 	int retval = rl_zcard(db, key, keylen, &card);
 	if (retval != RL_OK) {
@@ -287,49 +281,54 @@ int rl_zrange(rlite *db, unsigned char *key, long keylen, long start, long end, 
 		end += card;
 	}
 	if (start > end || start >= card) {
-		*size = 0;
+		size = 0;
 		goto cleanup;
 	}
 	if (end >= card) {
 		end = card - 1;
 	}
 
-	*size = end - start + 1;
+	size = end - start + 1;
 
-	retval = rl_skiplist_node_by_rank(db, skiplist, start, &node);
+	retval = rl_skiplist_node_by_rank(db, skiplist, start, NULL, &node_page);
 	if (retval != RL_OK) {
 		goto cleanup;
 	}
 
-	if (scores) {
-		*scores = malloc(sizeof(double) * *size);
-	}
-
-	if (data) {
-		*data = malloc(sizeof(unsigned char *) * *size);
-		*datalen = malloc(sizeof(long) * *size);
-	}
-
-	for (i = start; ; i++) {
-		if (scores) {
-			(*scores)[i - start] = node->score;
-		}
-		if (data) {
-			retval = rl_multi_string_get(db, node->value, &(*data)[i], &(*datalen)[i]);
-			if (retval != RL_OK) {
-				goto cleanup;
-			}
-		}
-		if (i == end) {
-			break;
-		}
-		retval = rl_read(db, &rl_data_type_skiplist_node, node->level[0].right, skiplist, &_node, 1);
-		if (retval != RL_FOUND) {
-			goto cleanup;
-		}
-		node = _node;
-	}
-	retval = RL_OK;
+	retval = rl_skiplist_iterator_create(db, iterator, skiplist, node_page, 1, size);
 cleanup:
 	return retval;
 }
+
+int rl_zset_iterator_next(rl_zset_iterator *iterator, double *score, unsigned char **data, long *datalen)
+{
+	if ((!data && datalen) || (data && !datalen)) {
+		fprintf(stderr, "Expected to receive either data and datalen or neither\n");
+		return RL_UNEXPECTED;
+	}
+
+	rl_skiplist_node *node;
+	int retval = rl_skiplist_iterator_next(iterator, &node);
+	if (retval != RL_OK) {
+		goto cleanup;
+	}
+
+	if (data) {
+		retval = rl_multi_string_get(iterator->db, node->value, data, datalen);
+		if (retval != RL_OK) {
+			goto cleanup;
+		}
+	}
+
+	if (score) {
+		*score = node->score;
+	}
+cleanup:
+	return retval;
+}
+
+int rl_zset_iterator_destroy(rl_zset_iterator *iterator)
+{
+	return rl_skiplist_iterator_destroy(iterator->db, iterator);
+}
+

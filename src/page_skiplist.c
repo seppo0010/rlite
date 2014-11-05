@@ -612,10 +612,11 @@ cleanup:
 	return retval;
 }
 
-int rl_skiplist_node_by_rank(rlite *db, rl_skiplist *skiplist, long rank, rl_skiplist_node **retnode)
+int rl_skiplist_node_by_rank(rlite *db, rl_skiplist *skiplist, long rank, rl_skiplist_node **retnode, long *retnode_page)
 {
 	void *_node;
 	rl_skiplist_node *node;
+	long node_page = 0;
 	long i, pos = 0;
 
 	// increment the rank in 1 to ignore the first node thats not actually a data node
@@ -636,7 +637,8 @@ int rl_skiplist_node_by_rank(rlite *db, rl_skiplist *skiplist, long rank, rl_ski
 				break;
 			}
 			pos += node->level[i].span;
-			retval = rl_read(db, &rl_data_type_skiplist_node, node->level[i].right, skiplist, &_node, 1);
+			node_page = node->level[i].right;
+			retval = rl_read(db, &rl_data_type_skiplist_node, node_page, skiplist, &_node, 1);
 			if (retval != RL_FOUND) {
 				goto cleanup;
 			}
@@ -647,7 +649,12 @@ int rl_skiplist_node_by_rank(rlite *db, rl_skiplist *skiplist, long rank, rl_ski
 		retval = RL_NOT_FOUND;
 	}
 	else {
-		*retnode = node;
+		if (retnode) {
+			*retnode = node;
+		}
+		if (retnode_page) {
+			*retnode_page = node_page;
+		}
 		retval = RL_OK;
 	}
 cleanup:
