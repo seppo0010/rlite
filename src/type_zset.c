@@ -172,6 +172,10 @@ int rl_zadd(rlite *db, unsigned char *key, long keylen, double score, unsigned c
 	unsigned char *digest = malloc(sizeof(unsigned char) * 16);
 	retval = md5(data, datalen, digest);
 	if (retval != RL_OK) {
+		if (retval == RL_FOUND) {
+			// TODO should we remove the previous value instead?
+			retval = RL_INVALID_PARAMETERS;
+		}
 		goto cleanup;
 	}
 	retval = rl_btree_add_element(db, scores, digest, value_ptr);
@@ -242,7 +246,7 @@ int rl_zrank(rlite *db, unsigned char *key, long keylen, unsigned char *data, lo
 	if (retval != RL_FOUND) {
 		return retval;
 	}
-	retval = rl_skiplist_first_node(db, skiplist, score, data, datalen, NULL, rank);
+	retval = rl_skiplist_first_node(db, skiplist, score, 0, data, datalen, NULL, rank);
 	if (retval != RL_FOUND) {
 		return retval;
 	}
@@ -258,6 +262,43 @@ int rl_zcard(rlite *db, unsigned char *key, long keylen, long *card)
 	}
 	*card = skiplist->size;
 	return RL_OK;
+}
+
+int rl_zcount(rlite *db, unsigned char *key, long keylen, rl_zrangespec *range, long *count)
+{
+	rl_skiplist *skiplist;
+	long maxrank, minrank;
+	int retval;
+	if (range->max < range->min) {
+		*count = 0;
+		retval = RL_OK;
+		goto cleanup;
+	}
+
+	retval = rl_zset_get_objects(db, key, keylen, NULL, NULL, &skiplist, NULL, 0);
+	if (retval != RL_OK) {
+		goto cleanup;
+	}
+
+	retval = rl_skiplist_first_node(db, skiplist, range->max, !range->maxex, NULL, 0, NULL, &maxrank);
+	if (retval == RL_NOT_FOUND) {
+		maxrank = skiplist->size;
+	}
+	else if (retval != RL_FOUND) {
+		goto cleanup;
+	}
+	retval = rl_skiplist_first_node(db, skiplist, range->min, range->minex, NULL, 0, NULL, &minrank);
+	if (retval == RL_NOT_FOUND) {
+		minrank = skiplist->size;
+	}
+	else if (retval != RL_FOUND) {
+		goto cleanup;
+	}
+
+	*count = maxrank - minrank;
+	retval = RL_OK;
+cleanup:
+	return retval;
 }
 
 int rl_zrange(rlite *db, unsigned char *key, long keylen, long start, long end, rl_zset_iterator **iterator)

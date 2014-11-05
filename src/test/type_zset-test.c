@@ -343,6 +343,98 @@ int basic_test_zadd_zrem(int _commit)
 	return 0;
 }
 
+#define ZCOUNT_SIZE 100
+int basic_test_zadd_zcount(int _commit)
+{
+	int retval = 0;
+	fprintf(stderr, "Start basic_test_zadd_zcount %d\n", _commit);
+
+	rlite *db = setup_db(_commit, 1);
+	unsigned char *key = (unsigned char *)"my key";
+	long keylen = strlen((char *)key);
+	long datalen = 20;
+	unsigned char *data = malloc(sizeof(unsigned char) * datalen);
+	long i, count;
+
+	for (i = 0; i < datalen; i++) {
+		data[i] = i;
+	}
+
+	for (i = 0; i < ZCOUNT_SIZE; i++) {
+		data[0] = i;
+		retval = rl_zadd(db, key, keylen, i * 1.0, data, datalen);
+		if (retval != RL_OK) {
+			fprintf(stderr, "Unable to zadd %d\n", retval);
+			return 1;
+		}
+	}
+	free(data);
+
+	if (_commit) {
+		rl_commit(db);
+	}
+
+	rl_zrangespec range;
+	range.min = -1000;
+	range.minex = 0;
+	range.max = 1000;
+	range.maxex = 0;
+	retval = rl_zcount(db, key, keylen, &range, &count);
+	if (retval != RL_OK) {
+		fprintf(stderr, "Unable to zcount %d\n", retval);
+		return 1;
+	}
+	if (count != ZCOUNT_SIZE) {
+		fprintf(stderr, "Expected zcount to be %d, got %ld\n", ZCOUNT_SIZE, count);
+		return 1;
+	}
+
+	range.min = 0;
+	range.minex = 0;
+	range.max = ZCOUNT_SIZE - 1;
+	range.maxex = 0;
+	retval = rl_zcount(db, key, keylen, &range, &count);
+	if (retval != RL_OK) {
+		fprintf(stderr, "Unable to zcount %d\n", retval);
+		return 1;
+	}
+	if (count != ZCOUNT_SIZE) {
+		fprintf(stderr, "Expected zcount to be %d, got %ld\n", ZCOUNT_SIZE, count);
+		return 1;
+	}
+
+	range.min = 0;
+	range.minex = 1;
+	range.max = ZCOUNT_SIZE - 1;
+	range.maxex = 1;
+	retval = rl_zcount(db, key, keylen, &range, &count);
+	if (retval != RL_OK) {
+		fprintf(stderr, "Unable to zcount %d\n", retval);
+		return 1;
+	}
+	if (count != ZCOUNT_SIZE - 2) {
+		fprintf(stderr, "Expected zcount to be %d, got %ld\n", ZCOUNT_SIZE - 2, count);
+		return 1;
+	}
+
+	range.min = 1;
+	range.minex = 1;
+	range.max = 2;
+	range.maxex = 0;
+	retval = rl_zcount(db, key, keylen, &range, &count);
+	if (retval != RL_OK) {
+		fprintf(stderr, "Unable to zcount %d\n", retval);
+		return 1;
+	}
+	if (count != 1) {
+		fprintf(stderr, "Expected zcount to be %d, got %ld\n", 1, count);
+		return 1;
+	}
+
+	fprintf(stderr, "End basic_test_zadd_zcount\n");
+	rl_close(db);
+	return 0;
+}
 int main()
 {
 	int retval, i;
@@ -360,6 +452,10 @@ int main()
 			goto cleanup;
 		}
 		retval = basic_test_zadd_zrem(i);
+		if (retval != 0) {
+			goto cleanup;
+		}
+		retval = basic_test_zadd_zcount(i);
 		if (retval != 0) {
 			goto cleanup;
 		}

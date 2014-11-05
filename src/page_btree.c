@@ -403,6 +403,9 @@ int rl_btree_add_element(rlite *db, rl_btree *btree, void *score, void *value)
 				goto cleanup;
 			}
 			retval = rl_write(db, btree->type->btree_node_type, child, right);
+			if (retval != RL_OK) {
+				goto cleanup;
+			}
 		}
 	}
 	if (score) {

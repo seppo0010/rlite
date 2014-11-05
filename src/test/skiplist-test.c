@@ -75,7 +75,7 @@ int basic_skiplist_first_node_test()
 	}
 
 	for (i = 0; i < 2; i++) {
-		retval = rl_skiplist_first_node(db, skiplist, i == 0 ? 1.5 : 2.0, NULL, 0, &node, &rank);
+		retval = rl_skiplist_first_node(db, skiplist, i == 0 ? 1.5 : 2.0, 0, NULL, 0, &node, &rank);
 		if (retval != RL_FOUND) {
 			fprintf(stderr, "Expected to find a node with a score bigger than 2.0, got %d\n", retval);
 			return 1;
@@ -108,7 +108,7 @@ int basic_skiplist_first_node_test()
 		free(data2);
 	}
 
-	retval = rl_skiplist_first_node(db, skiplist, 20.0, NULL, 0, NULL, NULL);
+	retval = rl_skiplist_first_node(db, skiplist, 20.0, 0, NULL, 0, NULL, NULL);
 	if (retval != RL_NOT_FOUND) {
 		fprintf(stderr, "Expected to not find any node after 20, got %d\n", retval);
 		return 1;
