@@ -2,6 +2,7 @@
 #include <string.h>
 #include "../rlite.h"
 #include "../type_zset.h"
+#include "../page_key.h"
 #include "test_util.h"
 
 int basic_test_zadd_zscore(int _commit)
@@ -316,6 +317,24 @@ int basic_test_zadd_zrem(int _commit)
 
 	if (0 != rank) {
 		fprintf(stderr, "Expected rank %d to be %ld\n", 0, rank);
+		return 1;
+	}
+
+	unsigned char *members2[2] = {data, data2};
+	long members_len2[2] = {datalen, datalen2};
+	retval = rl_zrem(db, key, keylen, 2, members2, members_len2, &changed);
+	if (retval != RL_OK) {
+		fprintf(stderr, "Unable to zrem %d\n", retval);
+		return 1;
+	}
+	if (changed != 1) {
+		fprintf(stderr, "Expected to have removed 1 element, got %ld\n", changed);
+		return 1;
+	}
+
+	retval = rl_key_get(db, key, keylen, NULL, NULL);
+	if (retval != RL_NOT_FOUND) {
+		fprintf(stderr, "Expected not to find key after removing all zset elements, got %ld\n", changed);
 		return 1;
 	}
 

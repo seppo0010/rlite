@@ -332,6 +332,38 @@ int rl_zset_iterator_destroy(rl_zset_iterator *iterator)
 	return rl_skiplist_iterator_destroy(iterator->db, iterator);
 }
 
+static int delete_zset(rlite *db, unsigned char *key, long keylen, rl_skiplist *skiplist, long skiplist_page, rl_btree *scores, long scores_page)
+{
+	int retval;
+	if (skiplist->size == 0) {
+		retval = rl_delete(db, skiplist_page);
+		if (retval != RL_OK) {
+			goto cleanup;
+		}
+		retval = rl_skiplist_destroy(db, skiplist);
+		if (retval != RL_OK) {
+			goto cleanup;
+		}
+		retval = rl_delete(db, scores_page);
+		if (retval != RL_OK) {
+			goto cleanup;
+		}
+		retval = rl_btree_destroy(db, scores);
+		if (retval != RL_OK) {
+			goto cleanup;
+		}
+		retval = rl_key_delete(db, key, keylen);
+		if (retval != RL_OK) {
+			goto cleanup;
+		}
+	}
+	else {
+		retval = RL_NOT_IMPLEMENTED;
+	}
+cleanup:
+	return retval;
+}
+
 int rl_zrem(rlite *db, unsigned char *key, long keylen, long members_size, unsigned char **members, long *members_len, long *changed)
 {
 	unsigned char *digest = NULL;
@@ -371,7 +403,13 @@ int rl_zrem(rlite *db, unsigned char *key, long keylen, long members_size, unsig
 		}
 	}
 
-	if (_changed) {
+	if (skiplist->size == 0) {
+		retval = delete_zset(db, key, keylen, skiplist, skiplist_page, scores, scores_page);
+		if (retval != RL_OK) {
+			goto cleanup;
+		}
+	}
+	else if (_changed) {
 		retval = rl_write(db, &rl_data_type_btree_hash_md5_double, scores_page, scores);
 		if (retval != RL_OK) {
 			goto cleanup;
@@ -382,8 +420,6 @@ int rl_zrem(rlite *db, unsigned char *key, long keylen, long members_size, unsig
 			goto cleanup;
 		}
 	}
-
-	// TODO: if removing all the nodes, delete the zset
 
 	*changed = _changed;
 	retval = RL_OK;
