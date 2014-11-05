@@ -9,6 +9,20 @@
 #include "page_skiplist.h"
 #include "util.h"
 
+static int update_zset(rlite *db, rl_btree *scores, long scores_page, rl_skiplist *skiplist, long skiplist_page)
+{
+	int retval = rl_write(db, &rl_data_type_btree_hash_md5_double, scores_page, scores);
+	if (retval != RL_OK) {
+		goto cleanup;
+	}
+	retval = rl_write(db, &rl_data_type_skiplist, skiplist_page, skiplist);
+	if (retval != RL_OK) {
+		goto cleanup;
+	}
+cleanup:
+	return retval;
+}
+
 static int rl_zset_create(rlite *db, long levels_page_number, rl_btree **btree, long *btree_page, rl_skiplist **_skiplist, long *skiplist_page)
 {
 	rl_list *levels;
@@ -158,23 +172,15 @@ cleanup:
 	return retval;
 }
 
-int rl_zadd(rlite *db, unsigned char *key, long keylen, double score, unsigned char *data, long datalen)
+static int add_member(rlite *db, rl_btree *scores, rl_skiplist *skiplist, double score, unsigned char *data, long datalen)
 {
-	rl_btree *scores;
-	rl_skiplist *skiplist;
-	long scores_page, skiplist_page;
-	int retval = rl_zset_get_objects(db, key, keylen, &scores, &scores_page, &skiplist, &skiplist_page, 1);
-	if (retval != RL_OK) {
-		goto cleanup;
-	}
 	void *value_ptr = malloc(sizeof(double));
 	*(double *)value_ptr = score;
 	unsigned char *digest = malloc(sizeof(unsigned char) * 16);
-	retval = md5(data, datalen, digest);
+	int retval = md5(data, datalen, digest);
 	if (retval != RL_OK) {
 		if (retval == RL_FOUND) {
-			// TODO should we remove the previous value instead?
-			retval = RL_INVALID_PARAMETERS;
+			retval = RL_UNEXPECTED;
 		}
 		goto cleanup;
 	}
@@ -186,11 +192,26 @@ int rl_zadd(rlite *db, unsigned char *key, long keylen, double score, unsigned c
 	if (retval != RL_OK) {
 		goto cleanup;
 	}
-	retval = rl_write(db, &rl_data_type_btree_hash_md5_double, scores_page, scores);
+cleanup:
+	return retval;
+}
+
+int rl_zadd(rlite *db, unsigned char *key, long keylen, double score, unsigned char *data, long datalen)
+{
+	rl_btree *scores;
+	rl_skiplist *skiplist;
+	long scores_page, skiplist_page;
+	int retval = rl_zset_get_objects(db, key, keylen, &scores, &scores_page, &skiplist, &skiplist_page, 1);
 	if (retval != RL_OK) {
 		goto cleanup;
 	}
-	retval = rl_write(db, &rl_data_type_skiplist, skiplist_page, skiplist);
+
+	retval = add_member(db, scores, skiplist, score, data, datalen);
+	if (retval != RL_OK) {
+		goto cleanup;
+	}
+
+	retval = update_zset(db, scores, scores_page, skiplist, skiplist_page);
 	if (retval != RL_OK) {
 		goto cleanup;
 	}
@@ -405,11 +426,37 @@ cleanup:
 	return retval;
 }
 
+static int remove_member(rlite *db, rl_btree *scores, rl_skiplist *skiplist, unsigned char *member, long member_len)
+{
+	double score;
+	void *tmp;
+	unsigned char digest[16];
+	int retval = md5(member, member_len, digest);
+	if (retval != RL_OK) {
+		goto cleanup;
+	}
+	retval = rl_btree_find_score(db, scores, digest, &tmp, NULL, NULL);
+	if (retval != RL_FOUND && retval != RL_NOT_FOUND) {
+		goto cleanup;
+	}
+	if (retval == RL_FOUND) {
+		retval = rl_btree_remove_element(db, scores, digest);
+		if (retval != RL_OK) {
+			goto cleanup;
+		}
+		score = *(double *)tmp;
+		retval = rl_skiplist_delete(db, skiplist, score, member, member_len);
+		if (retval != RL_OK) {
+			goto cleanup;
+		}
+		free(tmp);
+	}
+cleanup:
+	return retval;
+}
+
 int rl_zrem(rlite *db, unsigned char *key, long keylen, long members_size, unsigned char **members, long *members_len, long *changed)
 {
-	unsigned char *digest = NULL;
-	void *tmp;
-	double score;
 	rl_btree *scores;
 	rl_skiplist *skiplist;
 	long scores_page, skiplist_page;
@@ -418,28 +465,13 @@ int rl_zrem(rlite *db, unsigned char *key, long keylen, long members_size, unsig
 		goto cleanup;
 	}
 	long i;
-	digest = malloc(sizeof(unsigned char) * 16);
 	long _changed = 0;
 	for (i = 0; i < members_size; i++) {
-		retval = md5(members[i], members_len[i], digest);
-		if (retval != RL_OK) {
+		retval = remove_member(db, scores, skiplist, members[i], members_len[i]);
+		if (retval != RL_OK && retval != RL_NOT_FOUND) {
 			goto cleanup;
 		}
-		retval = rl_btree_find_score(db, scores, digest, &tmp, NULL, NULL);
-		if (retval != RL_FOUND && retval != RL_NOT_FOUND) {
-			goto cleanup;
-		}
-		if (retval == RL_FOUND) {
-			retval = rl_btree_remove_element(db, scores, digest);
-			if (retval != RL_OK) {
-				goto cleanup;
-			}
-			score = *(double *)tmp;
-			retval = rl_skiplist_delete(db, skiplist, score, members[i], members_len[i]);
-			if (retval != RL_OK) {
-				goto cleanup;
-			}
-			free(tmp);
+		else if (retval == RL_OK) {
 			_changed++;
 		}
 	}
@@ -451,12 +483,7 @@ int rl_zrem(rlite *db, unsigned char *key, long keylen, long members_size, unsig
 		}
 	}
 	else if (_changed) {
-		retval = rl_write(db, &rl_data_type_btree_hash_md5_double, scores_page, scores);
-		if (retval != RL_OK) {
-			goto cleanup;
-		}
-
-		retval = rl_write(db, &rl_data_type_skiplist, skiplist_page, skiplist);
+		retval = update_zset(db, scores, scores_page, skiplist, skiplist_page);
 		if (retval != RL_OK) {
 			goto cleanup;
 		}
@@ -465,6 +492,44 @@ int rl_zrem(rlite *db, unsigned char *key, long keylen, long members_size, unsig
 	*changed = _changed;
 	retval = RL_OK;
 cleanup:
-	free(digest);
+	return retval;
+}
+
+int rl_zincrby(rlite *db, unsigned char *key, long keylen, double score, unsigned char *data, long datalen, double *newscore)
+{
+	double existing_score;
+	rl_btree *scores;
+	rl_skiplist *skiplist;
+	long scores_page, skiplist_page;
+	int retval = rl_zset_get_objects(db, key, keylen, &scores, &scores_page, &skiplist, &skiplist_page, 1);
+	if (retval != RL_OK) {
+		return retval;
+	}
+	retval = rl_get_zscore(db, scores, data, datalen, &existing_score);
+	if (retval != RL_FOUND && retval != RL_NOT_FOUND) {
+		goto cleanup;
+	}
+	else if (retval == RL_FOUND) {
+		score += existing_score;
+		retval = remove_member(db, scores, skiplist, data, datalen);
+		if (retval != RL_OK) {
+			goto cleanup;
+		}
+	}
+
+	retval = add_member(db, scores, skiplist, score, data, datalen);
+	if (retval != RL_OK) {
+		goto cleanup;
+	}
+
+	retval = update_zset(db, scores, scores_page, skiplist, skiplist_page);
+	if (retval != RL_OK) {
+		goto cleanup;
+	}
+
+	if (newscore) {
+		*newscore = score;
+	}
+cleanup:
 	return retval;
 }

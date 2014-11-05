@@ -434,6 +434,44 @@ int fuzzy_set_delete_test(long size, long btree_node_size, int _commit)
 	return 0;
 }
 
+int basic_test_insert_delete_insert(int _commit)
+{
+	fprintf(stderr, "Start basic_test_insert_delete_insert %d\n", _commit);
+	rlite *db = setup_db(_commit, 1);
+	rl_btree *btree;
+	if (rl_btree_create(db, &btree, &rl_btree_type_set_long, 2) != RL_OK) {
+		return 1;
+	}
+
+	long *element = malloc(sizeof(long));
+	*element = 1;
+	int retval = rl_btree_add_element(db, btree, element, NULL);
+	if (RL_OK != retval) {
+		fprintf(stderr, "Failed to add child, got %d\n", retval);
+		return 1;
+	}
+
+	retval = rl_btree_remove_element(db, btree, element);
+	if (RL_OK != retval) {
+		fprintf(stderr, "Failed to remove child, got %d\n", retval);
+		return 1;
+	}
+
+	element = malloc(sizeof(long));
+	*element = 1;
+	retval = rl_btree_add_element(db, btree, element, NULL);
+	if (RL_OK != retval) {
+		fprintf(stderr, "Failed to add child, got %d\n", retval);
+		return 1;
+	}
+
+	fprintf(stderr, "End basic_test_insert_delete_insert\n");
+
+	free(btree);
+	rl_close(db);
+	return 0;
+}
+
 #define DELETE_TESTS_COUNT 7
 int main()
 {
@@ -448,6 +486,13 @@ int main()
 	retval = basic_insert_hash_test();
 	if (retval != 0) {
 		goto cleanup;
+	}
+
+	for (i = 0; i < 2; i++) {
+		retval = basic_test_insert_delete_insert(i);
+		if (retval != 0) {
+			goto cleanup;
+		}
 	}
 
 	long delete_tests[DELETE_TESTS_COUNT][2] = {

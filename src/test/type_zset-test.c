@@ -435,6 +435,49 @@ int basic_test_zadd_zcount(int _commit)
 	rl_close(db);
 	return 0;
 }
+
+int basic_test_zadd_zincrby(int _commit)
+{
+	int retval = 0;
+	fprintf(stderr, "Start basic_test_zadd_zincrby %d\n", _commit);
+
+	rlite *db = setup_db(_commit, 1);
+	unsigned char *key = (unsigned char *)"my key";
+	long keylen = strlen((char *)key);
+	double score = 4.2;
+	unsigned char *data = (unsigned char *)"my data";
+	long datalen = strlen((char *)data);
+	double newscore;
+
+	retval = rl_zincrby(db, key, keylen, score, data, datalen, &newscore);
+	if (retval != RL_OK) {
+		fprintf(stderr, "Unable to zincrby %d\n", retval);
+		return 1;
+	}
+	if (newscore != score) {
+		fprintf(stderr, "Expected new score %lf to match incremented score %lf\n", newscore, score);
+		return 1;
+	}
+
+	if (_commit) {
+		rl_commit(db);
+	}
+
+	retval = rl_zincrby(db, key, keylen, score, data, datalen, &newscore);
+	if (retval != RL_OK) {
+		fprintf(stderr, "Unable to zincrby %d\n", retval);
+		return 1;
+	}
+	if (newscore != score * 2) {
+		fprintf(stderr, "Expected new score %lf to match incremented twice score %lf\n", newscore, 2 * score);
+		return 1;
+	}
+
+	fprintf(stderr, "End basic_test_zadd_zincrby\n");
+	rl_close(db);
+	return 0;
+}
+
 int main()
 {
 	int retval, i;
@@ -456,6 +499,10 @@ int main()
 			goto cleanup;
 		}
 		retval = basic_test_zadd_zcount(i);
+		if (retval != 0) {
+			goto cleanup;
+		}
+		retval = basic_test_zadd_zincrby(i);
 		if (retval != 0) {
 			goto cleanup;
 		}

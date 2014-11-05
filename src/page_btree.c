@@ -424,6 +424,9 @@ int rl_btree_add_element(rlite *db, rl_btree *btree, void *score, void *value)
 			retval = RL_OUT_OF_MEMORY;
 			goto cleanup;
 		}
+		if (node_page == 0) {
+			node_page = db->next_empty_page;
+		}
 		node->children[0] = node_page;
 		retval = rl_write(db, btree->type->btree_node_type, node->children[0], old_root);
 		if (retval != RL_OK) {

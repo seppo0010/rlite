@@ -97,8 +97,8 @@ int md5_formatter(void *v2, char **formatted, int *size)
 	}
 	int i;
 	for (i = 0; i < 16; i++) {
-		*formatted[i * 2] = hex_lookup[data[i] & 0x0F];
-		*formatted[i * 2 + 1] = hex_lookup[(data[i] / 0x0F) & 0x0F];
+		(*formatted)[i * 2] = hex_lookup[data[i] & 0x0F];
+		(*formatted)[i * 2 + 1] = hex_lookup[(data[i] / 0x0F) & 0x0F];
 	}
 	*size = 32;
 	return RL_OK;
