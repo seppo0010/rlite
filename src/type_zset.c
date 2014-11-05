@@ -332,3 +332,62 @@ int rl_zset_iterator_destroy(rl_zset_iterator *iterator)
 	return rl_skiplist_iterator_destroy(iterator->db, iterator);
 }
 
+int rl_zrem(rlite *db, unsigned char *key, long keylen, long members_size, unsigned char **members, long *members_len, long *changed)
+{
+	unsigned char *digest = NULL;
+	void *tmp;
+	double score;
+	rl_btree *scores;
+	rl_skiplist *skiplist;
+	long scores_page, skiplist_page;
+	int retval = rl_zset_get_objects(db, key, keylen, &scores, &scores_page, &skiplist, &skiplist_page, 1);
+	if (retval != RL_OK) {
+		goto cleanup;
+	}
+	long i;
+	digest = malloc(sizeof(unsigned char) * 16);
+	long _changed = 0;
+	for (i = 0; i < members_size; i++) {
+		retval = md5(members[i], members_len[i], digest);
+		if (retval != RL_OK) {
+			goto cleanup;
+		}
+		retval = rl_btree_find_score(db, scores, digest, &tmp, NULL, NULL);
+		if (retval != RL_FOUND && retval != RL_NOT_FOUND) {
+			goto cleanup;
+		}
+		if (retval == RL_FOUND) {
+			retval = rl_btree_remove_element(db, scores, digest);
+			if (retval != RL_OK) {
+				goto cleanup;
+			}
+			score = *(double *)tmp;
+			retval = rl_skiplist_delete(db, skiplist, score, members[i], members_len[i]);
+			if (retval != RL_OK) {
+				goto cleanup;
+			}
+			free(tmp);
+			_changed++;
+		}
+	}
+
+	if (_changed) {
+		retval = rl_write(db, &rl_data_type_btree_hash_md5_double, scores_page, scores);
+		if (retval != RL_OK) {
+			goto cleanup;
+		}
+
+		retval = rl_write(db, &rl_data_type_skiplist, skiplist_page, skiplist);
+		if (retval != RL_OK) {
+			goto cleanup;
+		}
+	}
+
+	// TODO: if removing all the nodes, delete the zset
+
+	*changed = _changed;
+	retval = RL_OK;
+cleanup:
+	free(digest);
+	return retval;
+}
