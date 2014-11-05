@@ -21,6 +21,7 @@ builddebug: clean buildtest
 debug: builddebug vtest
 
 lcov: gcov
+	mkdir -p lcov
 	lcov --directory . --capture --output-file lcov/app.info
 	genhtml  lcov/app.info -o lcov/html
 
