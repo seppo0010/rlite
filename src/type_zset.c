@@ -172,12 +172,12 @@ cleanup:
 	return retval;
 }
 
-static int add_member(rlite *db, rl_btree *scores, rl_skiplist *skiplist, double score, unsigned char *data, long datalen)
+static int add_member(rlite *db, rl_btree *scores, rl_skiplist *skiplist, double score, unsigned char *member, long memberlen)
 {
 	void *value_ptr = malloc(sizeof(double));
 	*(double *)value_ptr = score;
 	unsigned char *digest = malloc(sizeof(unsigned char) * 16);
-	int retval = md5(data, datalen, digest);
+	int retval = md5(member, memberlen, digest);
 	if (retval != RL_OK) {
 		if (retval == RL_FOUND) {
 			retval = RL_UNEXPECTED;
@@ -188,7 +188,7 @@ static int add_member(rlite *db, rl_btree *scores, rl_skiplist *skiplist, double
 	if (retval != RL_OK) {
 		goto cleanup;
 	}
-	retval = rl_skiplist_add(db, skiplist, score, data, datalen);
+	retval = rl_skiplist_add(db, skiplist, score, member, memberlen);
 	if (retval != RL_OK) {
 		goto cleanup;
 	}
@@ -196,7 +196,7 @@ cleanup:
 	return retval;
 }
 
-int rl_zadd(rlite *db, unsigned char *key, long keylen, double score, unsigned char *data, long datalen)
+int rl_zadd(rlite *db, unsigned char *key, long keylen, double score, unsigned char *member, long memberlen)
 {
 	rl_btree *scores;
 	rl_skiplist *skiplist;
@@ -206,7 +206,7 @@ int rl_zadd(rlite *db, unsigned char *key, long keylen, double score, unsigned c
 		goto cleanup;
 	}
 
-	retval = add_member(db, scores, skiplist, score, data, datalen);
+	retval = add_member(db, scores, skiplist, score, member, memberlen);
 	if (retval != RL_OK) {
 		goto cleanup;
 	}
@@ -219,7 +219,7 @@ cleanup:
 	return retval;
 }
 
-static int rl_get_zscore(rlite *db, rl_btree *scores, unsigned char *data, long datalen, double *score)
+static int rl_get_zscore(rlite *db, rl_btree *scores, unsigned char *member, long memberlen, double *score)
 {
 	unsigned char *digest = NULL;
 	int retval;
@@ -228,7 +228,7 @@ static int rl_get_zscore(rlite *db, rl_btree *scores, unsigned char *data, long 
 		retval = RL_OUT_OF_MEMORY;
 		goto cleanup;
 	}
-	retval = md5(data, datalen, digest);
+	retval = md5(member, memberlen, digest);
 	if (retval != RL_OK) {
 		goto cleanup;
 	}
@@ -244,17 +244,17 @@ cleanup:
 	return retval;
 }
 
-int rl_zscore(rlite *db, unsigned char *key, long keylen, unsigned char *data, long datalen, double *score)
+int rl_zscore(rlite *db, unsigned char *key, long keylen, unsigned char *member, long memberlen, double *score)
 {
 	rl_btree *scores;
 	int retval = rl_zset_get_objects(db, key, keylen, &scores, NULL, NULL, NULL, 0);
 	if (retval != RL_OK) {
 		return retval;
 	}
-	return rl_get_zscore(db, scores, data, datalen, score);
+	return rl_get_zscore(db, scores, member, memberlen, score);
 }
 
-int rl_zrank(rlite *db, unsigned char *key, long keylen, unsigned char *data, long datalen, long *rank)
+int rl_zrank(rlite *db, unsigned char *key, long keylen, unsigned char *member, long memberlen, long *rank)
 {
 	double score;
 	rl_btree *scores;
@@ -263,11 +263,11 @@ int rl_zrank(rlite *db, unsigned char *key, long keylen, unsigned char *data, lo
 	if (retval != RL_OK) {
 		return retval;
 	}
-	retval = rl_get_zscore(db, scores, data, datalen, &score);
+	retval = rl_get_zscore(db, scores, member, memberlen, &score);
 	if (retval != RL_FOUND) {
 		return retval;
 	}
-	retval = rl_skiplist_first_node(db, skiplist, score, 0, data, datalen, NULL, rank);
+	retval = rl_skiplist_first_node(db, skiplist, score, 0, member, memberlen, NULL, rank);
 	if (retval != RL_FOUND) {
 		return retval;
 	}
@@ -362,10 +362,10 @@ cleanup:
 	return retval;
 }
 
-int rl_zset_iterator_next(rl_zset_iterator *iterator, double *score, unsigned char **data, long *datalen)
+int rl_zset_iterator_next(rl_zset_iterator *iterator, double *score, unsigned char **member, long *memberlen)
 {
-	if ((!data && datalen) || (data && !datalen)) {
-		fprintf(stderr, "Expected to receive either data and datalen or neither\n");
+	if ((!member && memberlen) || (member && !memberlen)) {
+		fprintf(stderr, "Expected to receive either member and memberlen or neither\n");
 		return RL_UNEXPECTED;
 	}
 
@@ -375,8 +375,8 @@ int rl_zset_iterator_next(rl_zset_iterator *iterator, double *score, unsigned ch
 		goto cleanup;
 	}
 
-	if (data) {
-		retval = rl_multi_string_get(iterator->db, node->value, data, datalen);
+	if (member) {
+		retval = rl_multi_string_get(iterator->db, node->value, member, memberlen);
 		if (retval != RL_OK) {
 			goto cleanup;
 		}
@@ -495,7 +495,7 @@ cleanup:
 	return retval;
 }
 
-int rl_zincrby(rlite *db, unsigned char *key, long keylen, double score, unsigned char *data, long datalen, double *newscore)
+int rl_zincrby(rlite *db, unsigned char *key, long keylen, double score, unsigned char *member, long memberlen, double *newscore)
 {
 	double existing_score;
 	rl_btree *scores;
@@ -505,19 +505,19 @@ int rl_zincrby(rlite *db, unsigned char *key, long keylen, double score, unsigne
 	if (retval != RL_OK) {
 		return retval;
 	}
-	retval = rl_get_zscore(db, scores, data, datalen, &existing_score);
+	retval = rl_get_zscore(db, scores, member, memberlen, &existing_score);
 	if (retval != RL_FOUND && retval != RL_NOT_FOUND) {
 		goto cleanup;
 	}
 	else if (retval == RL_FOUND) {
 		score += existing_score;
-		retval = remove_member(db, scores, skiplist, data, datalen);
+		retval = remove_member(db, scores, skiplist, member, memberlen);
 		if (retval != RL_OK) {
 			goto cleanup;
 		}
 	}
 
-	retval = add_member(db, scores, skiplist, score, data, datalen);
+	retval = add_member(db, scores, skiplist, score, member, memberlen);
 	if (retval != RL_OK) {
 		goto cleanup;
 	}
