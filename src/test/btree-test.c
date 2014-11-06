@@ -370,6 +370,99 @@ int fuzzy_hash_test(long size, long btree_node_size, int _commit)
 	return 0;
 }
 
+int fuzzy_hash_test_iterator(long size, long btree_node_size, int _commit)
+{
+	fprintf(stderr, "Start fuzzy_hash_test_iterator %ld %ld %d\n", size, btree_node_size, _commit);
+	rlite *db = setup_db(_commit, 1);
+	rl_btree_iterator *iterator;
+	rl_btree *btree;
+	if (rl_btree_create(db, &btree, &rl_btree_type_hash_long_long, btree_node_size) != RL_OK) {
+		return 1;
+	}
+
+	long i, element, value, *element_copy, *value_copy;
+	long *elements = malloc(sizeof(long) * size);
+	long *nonelements = malloc(sizeof(long) * size);
+	long *values = malloc(sizeof(long) * size);
+
+	long j;
+
+	void *tmp;
+	long prev_score = -1.0, score;
+
+	for (i = 0; i < size; i++) {
+		element = rand();
+		value = rand();
+		if (contains_element(element, elements, i)) {
+			i--;
+			continue;
+		}
+		else {
+			elements[i] = element;
+			element_copy = malloc(sizeof(long));
+			*element_copy = element;
+			values[i] = value;
+			value_copy = malloc(sizeof(long));
+			*value_copy = value;
+			if (RL_OK != rl_btree_add_element(db, btree, element_copy, value_copy)) {
+				fprintf(stderr, "Failed to add child %ld\n", i);
+				return 1;
+			}
+			if (RL_OK != rl_btree_is_balanced(db, btree)) {
+				fprintf(stderr, "Node is not balanced after adding child %ld (%ld)\n", i, value);
+				return 1;
+			}
+		}
+
+		if (RL_OK != rl_btree_iterator_create(db, btree, &iterator))
+		{
+			fprintf(stderr, "Unable to create btree iterator\n");
+			return 1;
+		}
+
+		j = 0;
+		while (RL_END != rl_btree_iterator_next(iterator, &tmp, NULL)) {
+			score = *(long *)tmp;
+			free(tmp);
+			if (j++ > 0) {
+				if (prev_score >= score) {
+					fprintf(stderr, "Tree is in a bad state in element %ld after adding child %ld\n", j, i);
+					return 1;
+				}
+			}
+			prev_score = score;
+		}
+
+		if (j != i + 1) {
+			fprintf(stderr, "Expected to iterate %ld elements, only did %ld\n", i + 1, j);
+			return 1;
+		}
+
+		if (RL_OK != rl_btree_iterator_destroy(iterator)) {
+			fprintf(stderr, "Unable to destroy iteraton\n");
+			return 1;
+		}
+		iterator = NULL;
+
+		if (_commit) {
+			if (RL_OK != rl_commit(db)) {
+				return 1;
+			}
+		}
+	}
+
+	fprintf(stderr, "End fuzzy_hash_test_iterator\n");
+
+	free(values);
+	free(elements);
+	free(nonelements);
+	free(btree);
+	rl_btree_iterator_destroy(iterator);
+	rl_close(db);
+	return 0;
+}
+
+
 int fuzzy_set_delete_test(long size, long btree_node_size, int _commit)
 {
 	fprintf(stderr, "Start fuzzy_set_delete_test %ld %ld %d\n", size, btree_node_size, _commit);
@@ -557,6 +650,10 @@ int main()
 				commit = k;
 				srand(1);
 				retval = fuzzy_hash_test(size, btree_node_size, commit);
+				if (retval != 0) {
+					goto cleanup;
+				}
+				retval = fuzzy_hash_test_iterator(size, btree_node_size, commit);
 				if (retval != 0) {
 					goto cleanup;
 				}

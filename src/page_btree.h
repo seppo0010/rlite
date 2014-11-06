@@ -3,6 +3,9 @@
 
 #include "rlite.h"
 
+#define rl_btree_nocache_destroy(db, btree) (db->driver_type != RL_MEMORY_DRIVER ? rl_btree_destroy(db, btree) : RL_OK)
+#define rl_btree_node_nocache_destroy(db, node) (db->driver_type != RL_MEMORY_DRIVER ? rl_btree_node_destroy(db, node) : RL_OK);
+
 struct rl_data_type;
 struct rl_btree;
 struct rl_btree_node;
@@ -47,6 +50,16 @@ typedef struct rl_btree {
 	long number_of_elements;
 } rl_btree;
 
+typedef struct {
+	struct rlite *db;
+	rl_btree *btree;
+	long size;
+	struct rl_btree_iterator_nodes {
+		long position;
+		rl_btree_node *node;
+	} nodes[];
+} rl_btree_iterator;
+
 void rl_btree_init();
 int rl_btree_create(struct rlite *db, rl_btree **btree, rl_btree_type *type, long max_node_size);
 int rl_btree_destroy(struct rlite *db, void *btree);
@@ -57,6 +70,10 @@ int rl_btree_find_score(struct rlite *db, rl_btree *btree, void *score, void **v
 int rl_print_btree(struct rlite *db, rl_btree *btree);
 int rl_btree_is_balanced(struct rlite *db, rl_btree *btree);
 int rl_flatten_btree(struct rlite *db, rl_btree *btree, void *** scores, long *size);
+
+int rl_btree_iterator_create(struct rlite *db, rl_btree *btree, rl_btree_iterator **iterator);
+int rl_btree_iterator_next(rl_btree_iterator *iterator, void **score, void **value);
+int rl_btree_iterator_destroy(rl_btree_iterator *iterator);
 
 int rl_btree_serialize(struct rlite *db, void *obj, unsigned char *data);
 int rl_btree_deserialize(struct rlite *db, void **obj, void *context, unsigned char *data);

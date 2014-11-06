@@ -1281,3 +1281,104 @@ cleanup:
 	}
 	return retval;
 }
+
+int rl_btree_iterator_create(rlite *db, rl_btree *btree, rl_btree_iterator **_iterator)
+{
+	long i;
+	void *tmp;
+	rl_btree_iterator *iterator = malloc(sizeof(rl_btree_iterator) + sizeof(struct rl_btree_iterator_nodes) * btree->height);
+	if (!iterator) {
+		return RL_OUT_OF_MEMORY;
+	}
+	iterator->db = db;
+	iterator->btree = btree;
+	iterator->size = btree->height;
+
+	int retval = rl_read(db, btree->type->btree_node_type, btree->root, btree, &tmp, 0);
+	if (retval != RL_FOUND) {
+		goto cleanup;
+	}
+	iterator->nodes[0].node = tmp;
+	iterator->nodes[0].position = 0;
+
+	for (i = 1; i < btree->height; i++) {
+		retval = rl_read(db, btree->type->btree_node_type, iterator->nodes[i - 1].node->children[0], btree, &tmp, 0);
+		if (retval != RL_FOUND) {
+			goto cleanup;
+		}
+		iterator->nodes[i].node = tmp;
+		iterator->nodes[i].position = 0;
+	}
+
+	*_iterator = iterator;
+	retval = RL_OK;
+cleanup:
+	return retval;
+}
+
+int rl_btree_iterator_next(rl_btree_iterator *iterator, void **score, void **value)
+{
+	if (iterator->size == 0) {
+		return RL_END;
+	}
+	int retval;
+	long position;
+	void *tmp;
+	rl_btree *btree = iterator->btree;
+	rl_btree_node *node = iterator->nodes[iterator->size - 1].node;
+	position = iterator->nodes[iterator->size - 1].position;
+	if (score) {
+		*score = malloc(iterator->btree->type->score_size);
+		memcpy(*score, node->scores[position], iterator->btree->type->score_size);
+	}
+	if (value) {
+		*value = malloc(iterator->btree->type->value_size);
+		memcpy(*value, node->values[position], iterator->btree->type->value_size);
+	}
+
+	if (node->children) {
+		iterator->nodes[iterator->size - 1].position++;
+		while (iterator->size < iterator->btree->height) {
+			position = node->children[iterator->nodes[iterator->size - 1].position];
+			retval = rl_read(iterator->db, btree->type->btree_node_type, position, btree, &tmp, 0);
+			if (retval != RL_FOUND) {
+				goto cleanup;
+			}
+			iterator->nodes[iterator->size].position = 0;
+			node = iterator->nodes[iterator->size++].node = tmp;
+		}
+	}
+	else {
+		if (node->size == iterator->nodes[iterator->size - 1].position + 1) {
+			while (--iterator->size > 0) {
+				retval = rl_btree_node_nocache_destroy(iterator->db, node);
+				if (retval != RL_OK) {
+					goto cleanup;
+				}
+				node = iterator->nodes[iterator->size - 1].node;
+				if (iterator->nodes[iterator->size - 1].position < node->size) {
+					break;
+				}
+			}
+			if (iterator->size == 0) {
+				retval = rl_btree_node_nocache_destroy(iterator->db, node);
+				if (retval != RL_OK) {
+					goto cleanup;
+				}
+			}
+		}
+		else {
+			iterator->nodes[iterator->size - 1].position++;
+		}
+	}
+
+	retval = RL_OK;
+cleanup:
+	return retval;
+}
+
+int rl_btree_iterator_destroy(rl_btree_iterator *iterator)
+{
+	free(iterator);
+	return RL_OK;
+}
