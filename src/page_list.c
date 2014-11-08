@@ -742,3 +742,83 @@ int rl_flatten_list(rlite *db, rl_list *list, void **scores)
 cleanup:
 	return retval;
 }
+
+int rl_list_iterator_create(rlite *db, rl_list_iterator **_iterator, rl_list *list, int direction)
+{
+	void *_node;
+	int retval;
+	rl_list_iterator *iterator = malloc(sizeof(*iterator));
+	if (!iterator) {
+		retval = RL_OUT_OF_MEMORY;
+		goto cleanup;
+	}
+	iterator->db = db;
+	iterator->list = list;
+	if (direction < 0) {
+		iterator->direction = -1;
+		retval = rl_read(db, list->type->list_node_type, list->right, list, &_node, 0);
+		if (retval != RL_FOUND) {
+			goto cleanup;
+		}
+		iterator->node = _node;
+		iterator->node_position = iterator->node->size - 1;
+	}
+	else {
+		iterator->direction = 1;
+		retval = rl_read(db, list->type->list_node_type, list->left, list, &_node, 0);
+		if (retval != RL_FOUND) {
+			goto cleanup;
+		}
+		iterator->node = _node;
+		iterator->node_position = 0;
+	}
+	*_iterator = iterator;
+	retval = RL_OK;
+cleanup:
+	return retval;
+}
+
+int rl_list_iterator_destroy(rlite *db, rl_list_iterator *iterator)
+{
+	db = db;
+	free(iterator);
+	return RL_OK;
+}
+
+int rl_list_iterator_next(rl_list_iterator *iterator, void **element)
+{
+	int retval;
+	if (iterator->node == NULL) {
+		retval = RL_END;
+		goto cleanup;
+	}
+	*element = malloc(iterator->list->type->element_size);
+	if (*element == NULL) {
+		retval = RL_OUT_OF_MEMORY;
+		goto cleanup;
+	}
+	memcpy(*element, iterator->node->elements[iterator->node_position], iterator->list->type->element_size);
+	iterator->node_position += iterator->direction;
+	if (iterator->node_position == 0 || iterator->node_position == iterator->node->size) {
+		long next_node_page = iterator->direction == 1 ? iterator->node->right : iterator->node->left;
+		retval = rl_list_node_nocache_destroy(iterator->db, iterator->node);
+		if (retval != RL_OK) {
+			goto cleanup;
+		}
+		if (next_node_page) {
+			void *_node;
+			retval = rl_read(iterator->db, iterator->list->type->list_node_type, next_node_page, iterator->list, &_node, 0);
+			if (retval != RL_FOUND) {
+				goto cleanup;
+			}
+			iterator->node = _node;
+			iterator->node_position = iterator->direction == 1 ? 0 : (iterator->node->size - 1);
+		}
+		else {
+			iterator->node = NULL;
+		}
+	}
+	retval = RL_OK;
+cleanup:
+	return retval;
+}

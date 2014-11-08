@@ -78,6 +78,67 @@ int basic_insert_list_test(int options)
 	return 0;
 }
 
+#define ITERATOR_SIZE 500
+int basic_iterator_list_test(int _commit)
+{
+	fprintf(stderr, "Start basic_iterator_list_test %d\n", _commit);
+
+	rlite *db = setup_db(_commit, 1);
+	rl_list *list;
+	if (RL_OK != rl_list_create(db, &list, &list_long)) {
+		return 1;
+	}
+
+	long i, *element;
+	for (i = 0; i < ITERATOR_SIZE; i++) {
+		element = malloc(sizeof(long));
+		*element = i;
+		if (0 != rl_list_add_element(db, list, element, -1)) {
+			fprintf(stderr, "Failed to add element %ld\n", i);
+			return 1;
+		}
+	}
+
+	if (_commit) {
+		if (RL_OK != rl_commit(db)) {
+			fprintf(stderr, "Failed to commit\n");
+			return 1;
+		}
+	}
+
+	rl_list_iterator *iterator;
+	int retval = rl_list_iterator_create(db, &iterator, list, 1);
+	if (RL_OK != retval) {
+		fprintf(stderr, "Failed to create iterator, got %d\n", retval);
+		return 1;
+	}
+
+	i = 0;
+	void *tmp;
+	long val;
+	while ((retval = rl_list_iterator_next(iterator, &tmp)) == RL_OK) {
+		val = *(long *)tmp;
+		if (val != i) {
+			fprintf(stderr, "Expected %ld element to be %ld, got %ld instead\n", i, i, val);
+			return 1;
+		}
+		free(tmp);
+		i++;
+	}
+
+	if (i != ITERATOR_SIZE) {
+		fprintf(stderr, "Expected %d iterations, got %ld\n", ITERATOR_SIZE, i);
+		return 1;
+	}
+
+	rl_list_destroy(db, list);
+	rl_list_iterator_destroy(db, iterator);
+	rl_close(db);
+
+	fprintf(stderr, "End basic_iterator_list_test %d\n", _commit);
+	return 0;
+}
+
 int contains_element(long element, long *elements, long size)
 {
 	long i;
@@ -324,6 +385,14 @@ int main()
 			goto cleanup;
 		}
 	}
+
+	for (i = 0; i < 2; i++) {
+		retval = basic_iterator_list_test(i);
+		if (retval != 0) {
+			goto cleanup;
+		}
+	}
+
 	for (i = 0; i < 2; i++) {
 		size = i == 0 ? 100 : 200;
 		for (j = 0; j < 2; j++) {
