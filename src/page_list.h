@@ -19,13 +19,6 @@ typedef struct {
 } rl_list_type;
 
 rl_list_type list_long;
-rl_list_type list_key;
-
-typedef struct rl_key {
-	unsigned char type;
-	long string_page;
-	long value_page;
-} rl_key;
 
 typedef struct rl_list_node {
 	long size;
@@ -70,8 +63,5 @@ int rl_list_deserialize(struct rlite *db, void **obj, void *context, unsigned ch
 
 int rl_list_node_serialize_long(struct rlite *db, void *obj, unsigned char *data);
 int rl_list_node_deserialize_long(struct rlite *db, void **obj, void *context, unsigned char *data);
-
-int rl_list_node_serialize_key(rlite *db, void *obj, unsigned char *data);
-int rl_list_node_deserialize_key(rlite *db, void **obj, void *context, unsigned char *data);
 
 #endif

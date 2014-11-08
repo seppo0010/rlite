@@ -24,16 +24,6 @@ rl_list_type list_long = {
 #endif
 };
 
-rl_list_type list_key = {
-	0,
-	0,
-	sizeof(rl_key),
-	key_cmp,
-#ifdef DEBUG
-	0,
-#endif
-};
-
 int rl_list_serialize(rlite *db, void *obj, unsigned char *data)
 {
 	db = db;
@@ -161,8 +151,6 @@ void rl_list_init()
 {
 	list_long.list_type = &rl_data_type_list_long;
 	list_long.list_node_type = &rl_data_type_list_node_long;
-	list_key.list_type = &rl_data_type_list_key;
-	list_key.list_node_type = &rl_data_type_list_node_key;
 }
 
 int rl_list_node_create(rlite *db, rl_list *list, rl_list_node **_node)

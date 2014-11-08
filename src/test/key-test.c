@@ -5,29 +5,11 @@
 #include "../page_key.h"
 #include "../rlite.h"
 
-#define COLLISION_KEY_SIZE 128
-static void get_test_key(unsigned char *data, char *filename)
-{
-	FILE *fp = fopen(filename, "r");
-	if (!fp) {
-		fprintf(stderr, "Unable to open file %s\n", filename);
-		goto cleanup;
-	}
-	size_t read = fread(data, sizeof(unsigned char), COLLISION_KEY_SIZE, fp);
-	if (COLLISION_KEY_SIZE != read) {
-		fprintf(stderr, "Unable to read key from file %s\n", filename);
-	}
-cleanup:
-	if (fp) {
-		fclose(fp);
-	}
-}
-
 static int expect_key(rlite *db, unsigned char *key, long keylen, char type, long page)
 {
 	unsigned char type2;
 	long page2;
-	int retval = rl_key_get(db, key, keylen, &type2, &page2);
+	int retval = rl_key_get(db, key, keylen, &type2, NULL, &page2);
 	if (retval != RL_FOUND) {
 		fprintf(stderr, "Unable to get key %d\n", retval);
 		return 1;
@@ -81,9 +63,9 @@ int basic_test_get_unexisting()
 
 	unsigned char *key = (unsigned char *)"my key";
 	long keylen = strlen((char *)key);
-	retval = rl_key_get(db, key, keylen, NULL, NULL);
+	retval = rl_key_get(db, key, keylen, NULL, NULL, NULL);
 	if (retval != RL_NOT_FOUND) {
-		fprintf(stderr, "Expected not to found key %d\n", retval);
+		fprintf(stderr, "Expected not to find key %d\n", retval);
 		return 1;
 	}
 
@@ -115,7 +97,7 @@ int basic_test_set_delete()
 		return 1;
 	}
 
-	retval = rl_key_get(db, key, keylen, NULL, NULL);
+	retval = rl_key_get(db, key, keylen, NULL, NULL, NULL);
 	if (retval == RL_NOT_FOUND) {
 		retval = RL_OK;
 	} else {
@@ -123,44 +105,6 @@ int basic_test_set_delete()
 	}
 
 	fprintf(stderr, "End basic_test_set_delete\n");
-	rl_close(db);
-	return 0;
-}
-
-int basic_test_set_collision()
-{
-	int retval = 0;
-	unsigned char key1[128];
-	unsigned char key2[128];
-	fprintf(stderr, "Start basic_test_set_collision\n");
-
-	rlite *db = setup_db(0, 1);
-
-	get_test_key(key1, "test/collision1");
-	unsigned char type1 = 'A';
-	long page1 = 23;
-	retval = rl_key_set(db, key1, COLLISION_KEY_SIZE, type1, page1);
-	if (retval != RL_OK) {
-		fprintf(stderr, "Unable to set key %d\n", retval);
-		return 1;
-	}
-
-	get_test_key(key2, "test/collision2");
-	unsigned char type2 = 'B';
-	long page2 = 25;
-
-	retval = rl_key_set(db, key2, COLLISION_KEY_SIZE, type2, page2);
-	if (retval != RL_OK) {
-		fprintf(stderr, "Unable to set key %d\n", retval);
-		return 1;
-	}
-
-	retval = expect_key(db, key1, COLLISION_KEY_SIZE, type1, page1);
-	if (retval == 0) {
-		retval = expect_key(db, key2, COLLISION_KEY_SIZE, type2, page2);
-	}
-
-	fprintf(stderr, "End basic_test_set_collision\n");
 	rl_close(db);
 	return 0;
 }
@@ -222,10 +166,6 @@ int main()
 		goto cleanup;
 	}
 	retval = basic_test_get_unexisting();
-	if (retval != 0) {
-		goto cleanup;
-	}
-	retval = basic_test_set_collision();
 	if (retval != 0) {
 		goto cleanup;
 	}

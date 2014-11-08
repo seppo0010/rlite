@@ -201,7 +201,7 @@ cleanup:
 	return retval;
 }
 
-int rl_multi_string_set(struct rlite *db, long *number, unsigned char *data, long size)
+int rl_multi_string_set(struct rlite *db, long *number, const unsigned char *data, long size)
 {
 	rl_list *list;
 	int retval = rl_list_create(db, &list, &list_long);

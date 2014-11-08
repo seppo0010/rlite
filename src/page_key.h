@@ -3,11 +3,9 @@
 
 struct rlite;
 
-int rl_key_get_or_create(struct rlite *db, unsigned char *key, long keylen, unsigned char type, long *page);
-int rl_key_get(struct rlite *db, unsigned char *key, long keylen, unsigned char *type, long *page);
-int rl_key_set(struct rlite *db, unsigned char *key, long keylen, unsigned char type, long page);
-int rl_key_delete(struct rlite *db, unsigned char *key, long keylen);
-
-int key_cmp(void *v1, void *v2);
+int rl_key_get_or_create(struct rlite *db, const unsigned char *key, long keylen, unsigned char type, long *page);
+int rl_key_get(struct rlite *db, const unsigned char *key, long keylen, unsigned char *type, long *string_page, long *value_page);
+int rl_key_set(struct rlite *db, const unsigned char *key, long keylen, unsigned char type, long page);
+int rl_key_delete(struct rlite *db, const unsigned char *key, long keylen);
 
 #endif

@@ -19,28 +19,40 @@ int rl_header_serialize(struct rlite *db, void *obj, unsigned char *data);
 int rl_header_deserialize(struct rlite *db, void **obj, void *context, unsigned char *data);
 int rl_has_flag(rlite *db, int flag);
 
-rl_data_type rl_data_type_btree_hash_md5_double = {
-	"rl_data_type_btree_hash_md5_double",
+rl_data_type rl_data_type_btree_hash_sha1_double = {
+	"rl_data_type_btree_hash_sha1_double",
 	rl_btree_serialize,
 	rl_btree_deserialize,
 	rl_btree_destroy,
 };
-rl_data_type rl_data_type_btree_node_hash_md5_double = {
-	"rl_data_type_btree_node_hash_md5_double",
-	rl_btree_node_serialize_hash_md5_double,
-	rl_btree_node_deserialize_hash_md5_double,
+rl_data_type rl_data_type_btree_node_hash_sha1_double = {
+	"rl_data_type_btree_node_hash_sha1_double",
+	rl_btree_node_serialize_hash_sha1_double,
+	rl_btree_node_deserialize_hash_sha1_double,
 	rl_btree_node_destroy,
 };
-rl_data_type rl_data_type_btree_hash_md5_long = {
-	"rl_data_type_btree_hash_md5_long",
+rl_data_type rl_data_type_btree_hash_sha1_long = {
+	"rl_data_type_btree_hash_sha1_long",
 	rl_btree_serialize,
 	rl_btree_deserialize,
 	rl_btree_destroy,
 };
-rl_data_type rl_data_type_btree_node_hash_md5_long = {
-	"rl_data_type_btree_node_hash_md5_long",
-	rl_btree_node_serialize_hash_md5_long,
-	rl_btree_node_deserialize_hash_md5_long,
+rl_data_type rl_data_type_btree_node_hash_sha1_long = {
+	"rl_data_type_btree_node_hash_sha1_long",
+	rl_btree_node_serialize_hash_sha1_long,
+	rl_btree_node_deserialize_hash_sha1_long,
+	rl_btree_node_destroy,
+};
+rl_data_type rl_data_type_btree_hash_sha1_key = {
+	"rl_data_type_btree_hash_sha1_key",
+	rl_btree_serialize,
+	rl_btree_deserialize,
+	rl_btree_destroy,
+};
+rl_data_type rl_data_type_btree_node_hash_sha1_key = {
+	"rl_data_type_btree_node_hash_sha1_key",
+	rl_btree_node_serialize_hash_sha1_key,
+	rl_btree_node_deserialize_hash_sha1_key,
 	rl_btree_node_destroy,
 };
 rl_data_type rl_data_type_header = {
@@ -97,13 +109,6 @@ rl_data_type rl_data_type_list_key = {
 	rl_list_deserialize,
 	rl_list_destroy,
 };
-rl_data_type rl_data_type_list_node_key = {
-	"rl_data_type_list_node_key",
-	rl_list_node_serialize_key,
-	rl_list_node_deserialize_key,
-	rl_list_node_destroy,
-};
-
 rl_data_type rl_data_type_string = {
 	"rl_data_type_string",
 	rl_string_serialize,
@@ -331,9 +336,9 @@ int rl_create_db(rlite *db)
 	db->next_empty_page = 2;
 	rl_btree *btree;
 	long max_node_size = (db->page_size - 8) / 8; // TODO: this should be in the type
-	retval = rl_btree_create(db, &btree, &rl_btree_type_hash_md5_long, max_node_size);
+	retval = rl_btree_create(db, &btree, &rl_btree_type_hash_sha1_key, max_node_size);
 	if (retval == RL_OK) {
-		retval = rl_write(db, &rl_data_type_btree_hash_md5_long, GLOBAL_KEY_BTREE, btree);
+		retval = rl_write(db, &rl_data_type_btree_hash_sha1_key, GLOBAL_KEY_BTREE, btree);
 	}
 	return retval;
 }
@@ -341,7 +346,7 @@ int rl_create_db(rlite *db)
 int rl_get_key_btree(rlite *db, rl_btree **btree)
 {
 	void *_btree;
-	int retval = rl_read(db, &rl_data_type_btree_hash_md5_long, GLOBAL_KEY_BTREE, &rl_btree_type_hash_md5_long, &_btree, 1);
+	int retval = rl_read(db, &rl_data_type_btree_hash_sha1_key, GLOBAL_KEY_BTREE, &rl_btree_type_hash_sha1_key, &_btree, 1);
 	if (retval != RL_FOUND) {
 		goto cleanup;
 	}
@@ -798,50 +803,6 @@ int rl_discard(struct rlite *db)
 			}
 			db->write_pages = tmp;
 		}
-	}
-cleanup:
-	return retval;
-}
-
-int rl_set_key(rlite *db, const unsigned char *key, long keylen, long value)
-{
-	unsigned char *digest = malloc(sizeof(unsigned char) * 16);
-	int retval = md5(key, keylen, digest);
-	if (retval != RL_OK) {
-		goto cleanup;
-	}
-	rl_btree *btree;
-	retval = rl_get_key_btree(db, &btree);
-	if (retval != RL_OK) {
-		goto cleanup;
-	}
-	long *val = malloc(sizeof(long));
-	if (!val) {
-		retval = RL_OUT_OF_MEMORY;
-		goto cleanup;
-	}
-	*val = value;
-	retval = rl_btree_add_element(db, btree, digest, val);
-cleanup:
-	return retval;
-}
-
-int rl_get_key(rlite *db, const unsigned char *key, long keylen, long *value)
-{
-	unsigned char digest[16];
-	int retval = md5(key, keylen, digest);
-	if (retval != RL_OK) {
-		goto cleanup;
-	}
-	rl_btree *btree;
-	retval = rl_get_key_btree(db, &btree);
-	if (retval != RL_OK) {
-		goto cleanup;
-	}
-	void *val;
-	retval = rl_btree_find_score(db, btree, digest, &val, NULL, NULL);
-	if (retval == RL_FOUND && value) {
-		*value = *(long *)val;
 	}
 cleanup:
 	return retval;

@@ -11,7 +11,7 @@
 
 static int update_zset(rlite *db, rl_btree *scores, long scores_page, rl_skiplist *skiplist, long skiplist_page)
 {
-	int retval = rl_write(db, &rl_data_type_btree_hash_md5_double, scores_page, scores);
+	int retval = rl_write(db, &rl_data_type_btree_hash_sha1_double, scores_page, scores);
 	if (retval != RL_OK) {
 		goto cleanup;
 	}
@@ -32,12 +32,12 @@ static int rl_zset_create(rlite *db, long levels_page_number, rl_btree **btree, 
 	long skiplist_page_number;
 
 	long max_node_size = (db->page_size - 8) / 24;
-	int retval = rl_btree_create(db, &scores, &rl_btree_type_hash_md5_double, max_node_size);
+	int retval = rl_btree_create(db, &scores, &rl_btree_type_hash_sha1_double, max_node_size);
 	if (retval != RL_OK) {
 		goto cleanup;
 	}
 	scores_page_number = db->next_empty_page;
-	retval = rl_write(db, &rl_data_type_btree_hash_md5_double, scores_page_number, scores);
+	retval = rl_write(db, &rl_data_type_btree_hash_sha1_double, scores_page_number, scores);
 	if (retval != RL_OK) {
 		goto cleanup;
 	}
@@ -108,7 +108,7 @@ static int rl_zset_read(rlite *db, long levels_page_number, rl_btree **btree, lo
 		}
 		scores_page_number = *(long *)tmp;
 		if (btree) {
-			retval = rl_read(db, &rl_data_type_btree_hash_md5_double, scores_page_number, &rl_btree_type_hash_md5_double, &tmp, 1);
+			retval = rl_read(db, &rl_data_type_btree_hash_sha1_double, scores_page_number, &rl_btree_type_hash_sha1_double, &tmp, 1);
 			if (retval != RL_FOUND) {
 				goto cleanup;
 			}
@@ -158,7 +158,7 @@ static int rl_zset_get_objects(rlite *db, unsigned char *key, long keylen, rl_bt
 	}
 	else {
 		unsigned char type;
-		retval = rl_key_get(db, key, keylen, &type, &levels_page_number);
+		retval = rl_key_get(db, key, keylen, &type, NULL, &levels_page_number);
 		if (retval != RL_FOUND) {
 			goto cleanup;
 		}
@@ -176,8 +176,8 @@ static int add_member(rlite *db, rl_btree *scores, rl_skiplist *skiplist, double
 {
 	void *value_ptr = malloc(sizeof(double));
 	*(double *)value_ptr = score;
-	unsigned char *digest = malloc(sizeof(unsigned char) * 16);
-	int retval = md5(member, memberlen, digest);
+	unsigned char *digest = malloc(sizeof(unsigned char) * 20);
+	int retval = sha1(member, memberlen, digest);
 	if (retval != RL_OK) {
 		if (retval == RL_FOUND) {
 			retval = RL_UNEXPECTED;
@@ -223,12 +223,12 @@ static int rl_get_zscore(rlite *db, rl_btree *scores, unsigned char *member, lon
 {
 	unsigned char *digest = NULL;
 	int retval;
-	digest = malloc(sizeof(unsigned char) * 16);
+	digest = malloc(sizeof(unsigned char) * 20);
 	if (digest == NULL) {
 		retval = RL_OUT_OF_MEMORY;
 		goto cleanup;
 	}
-	retval = md5(member, memberlen, digest);
+	retval = sha1(member, memberlen, digest);
 	if (retval != RL_OK) {
 		goto cleanup;
 	}
@@ -430,8 +430,8 @@ static int remove_member(rlite *db, rl_btree *scores, rl_skiplist *skiplist, uns
 {
 	double score;
 	void *tmp;
-	unsigned char digest[16];
-	int retval = md5(member, member_len, digest);
+	unsigned char digest[20];
+	int retval = sha1(member, member_len, digest);
 	if (retval != RL_OK) {
 		goto cleanup;
 	}
@@ -440,16 +440,15 @@ static int remove_member(rlite *db, rl_btree *scores, rl_skiplist *skiplist, uns
 		goto cleanup;
 	}
 	if (retval == RL_FOUND) {
+		score = *(double *)tmp;
 		retval = rl_btree_remove_element(db, scores, digest);
 		if (retval != RL_OK) {
 			goto cleanup;
 		}
-		score = *(double *)tmp;
 		retval = rl_skiplist_delete(db, skiplist, score, member, member_len);
 		if (retval != RL_OK) {
 			goto cleanup;
 		}
-		free(tmp);
 	}
 cleanup:
 	return retval;

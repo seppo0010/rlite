@@ -1,7 +1,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <stdio.h>
-#include <openssl/md5.h>
+#include <openssl/sha.h>
 #include "status.h"
 
 #ifdef DEBUG
@@ -71,9 +71,9 @@ int long_cmp(void *v1, void *v2)
 	return a > b ? 1 : -1;
 }
 
-int md5_cmp(void *v1, void *v2)
+int sha1_cmp(void *v1, void *v2)
 {
-	return memcmp(v1, v2, sizeof(unsigned char) * 16);
+	return memcmp(v1, v2, sizeof(unsigned char) * 20);
 }
 
 #ifdef DEBUG
@@ -87,20 +87,20 @@ int long_formatter(void *v2, char **formatted, int *size)
 	return RL_OK;
 }
 
-int md5_formatter(void *v2, char **formatted, int *size)
+int sha1_formatter(void *v2, char **formatted, int *size)
 {
 	unsigned char *data = (unsigned char *)v2;
 	static const char *hex_lookup = "0123456789ABCDEF";
-	*formatted = malloc(sizeof(char) * 32);
+	*formatted = malloc(sizeof(char) * 40);
 	if (*formatted == NULL) {
 		return RL_OUT_OF_MEMORY;
 	}
 	int i;
-	for (i = 0; i < 16; i++) {
+	for (i = 0; i < 20; i++) {
 		(*formatted)[i * 2] = hex_lookup[data[i] & 0x0F];
 		(*formatted)[i * 2 + 1] = hex_lookup[(data[i] / 0x0F) & 0x0F];
 	}
-	*size = 32;
+	*size = 40;
 	return RL_OK;
 }
 
@@ -203,11 +203,11 @@ void put_double(unsigned char *p, double v)
 	put_8bytes(p, ull);
 }
 
-int md5(const unsigned char *data, long datalen, unsigned char digest[16])
+int sha1(const unsigned char *data, long datalen, unsigned char digest[20])
 {
-	MD5_CTX md5;
-	MD5_Init(&md5);
-	MD5_Update(&md5, data, datalen);
-	MD5_Final(digest, &md5);
+	SHA_CTX sha;
+	SHA1_Init(&sha);
+	SHA1_Update(&sha, data, datalen);
+	SHA1_Final(digest, &sha);
 	return RL_OK;
 }

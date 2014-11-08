@@ -21,15 +21,22 @@ typedef struct {
 #endif
 } rl_btree_type;
 
-int md5_cmp(void *v1, void *v2);
+int sha1_cmp(void *v1, void *v2);
 #ifdef DEBUG
-int md5_formatter(void *v, char **str, int *size);
+int sha1_formatter(void *v, char **str, int *size);
 #endif
+
+typedef struct rl_key {
+	unsigned char type;
+	long string_page;
+	long value_page;
+} rl_key;
 
 rl_btree_type rl_btree_type_set_long;
 rl_btree_type rl_btree_type_hash_long_long;
-rl_btree_type rl_btree_type_hash_md5_long;
-rl_btree_type rl_btree_type_hash_md5_double;
+rl_btree_type rl_btree_type_hash_sha1_long;
+rl_btree_type rl_btree_type_hash_sha1_key;
+rl_btree_type rl_btree_type_hash_sha1_double;
 
 typedef struct rl_btree_node {
 	void **scores;
@@ -78,8 +85,11 @@ int rl_btree_iterator_destroy(rl_btree_iterator *iterator);
 int rl_btree_serialize(struct rlite *db, void *obj, unsigned char *data);
 int rl_btree_deserialize(struct rlite *db, void **obj, void *context, unsigned char *data);
 
-int rl_btree_node_serialize_hash_md5_long(struct rlite *db, void *obj, unsigned char *data);
-int rl_btree_node_deserialize_hash_md5_long(struct rlite *db, void **obj, void *context, unsigned char *data);
+int rl_btree_node_serialize_hash_sha1_long(struct rlite *db, void *obj, unsigned char *data);
+int rl_btree_node_deserialize_hash_sha1_long(struct rlite *db, void **obj, void *context, unsigned char *data);
+
+int rl_btree_node_serialize_hash_sha1_key(struct rlite *db, void *obj, unsigned char *data);
+int rl_btree_node_deserialize_hash_sha1_key(struct rlite *db, void **obj, void *context, unsigned char *data);
 
 int rl_btree_node_serialize_set_long(struct rlite *db, void *obj, unsigned char *data);
 int rl_btree_node_deserialize_set_long(struct rlite *db, void **obj, void *context, unsigned char *data);
@@ -87,7 +97,7 @@ int rl_btree_node_deserialize_set_long(struct rlite *db, void **obj, void *conte
 int rl_btree_node_serialize_hash_long_long(struct rlite *db, void *obj, unsigned char *data);
 int rl_btree_node_deserialize_hash_long_long(struct rlite *db, void **obj, void *context, unsigned char *data);
 
-int rl_btree_node_serialize_hash_md5_double(struct rlite *db, void *obj, unsigned char *data);
-int rl_btree_node_deserialize_hash_md5_double(struct rlite *db, void **obj, void *context, unsigned char *data);
+int rl_btree_node_serialize_hash_sha1_double(struct rlite *db, void *obj, unsigned char *data);
+int rl_btree_node_deserialize_hash_sha1_double(struct rlite *db, void **obj, void *context, unsigned char *data);
 
 #endif

@@ -55,10 +55,11 @@ int test_has_key()
 		fprintf(stderr, "Failed to open file\n");
 		goto cleanup;
 	}
+	unsigned char type = 'C', type2;
 	const unsigned char *key = (unsigned char *)"random key";
 	long keylen = strlen((char *) key);
 	long value = 529, value2;
-	retval = rl_get_key(db, key, keylen, NULL);
+	retval = rl_key_get(db, key, keylen, NULL, NULL, NULL);
 	if (retval == RL_NOT_FOUND) {
 		retval = RL_OK;
 	}
@@ -66,18 +67,23 @@ int test_has_key()
 		fprintf(stderr, "Failed to not find unexisting key (%d)\n", retval);
 		goto cleanup;
 	}
-	retval = rl_set_key(db, key, keylen, value);
+	retval = rl_key_set(db, key, keylen, type, value);
 	if (retval != RL_OK) {
 		fprintf(stderr, "Failed to set key (%d)\n", retval);
 		goto cleanup;
 	}
-	retval = rl_get_key(db, key, keylen, &value2);
+	retval = rl_key_get(db, key, keylen, &type2, NULL, &value2);
 	if (retval != RL_FOUND) {
 		fprintf(stderr, "Failed to find existing key (%d)\n", retval);
 		goto cleanup;
 	}
 	if (value2 != value) {
 		fprintf(stderr, "Expected value2 (%ld) to be equal to value (%ld)\n", value2, value);
+		retval = 1;
+		goto cleanup;
+	}
+	if (value2 != value) {
+		fprintf(stderr, "Expected type2 (%d) to be equal to type (%d)\n", type2, type);
 		retval = 1;
 		goto cleanup;
 	}

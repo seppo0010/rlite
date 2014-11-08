@@ -4,6 +4,7 @@
 #include <stdio.h>
 #include "status.h"
 #include "page_btree.h"
+#include "page_key.h"
 
 #define RL_MEMORY_DRIVER 0
 #define RL_FILE_DRIVER 1
@@ -63,20 +64,19 @@ int rl_delete(struct rlite *db, long page);
 int rl_commit(struct rlite *db);
 int rl_discard(struct rlite *db);
 
-int rl_set_key(rlite *db, const unsigned char *key, long keylen, long value);
-int rl_get_key(rlite *db, const unsigned char *key, long keylen, long *value);
-
 extern rl_data_type rl_data_type_header;
-extern rl_data_type rl_data_type_btree_hash_md5_long;
-extern rl_data_type rl_data_type_btree_node_hash_md5_long;
+extern rl_data_type rl_data_type_btree_hash_sha1_long;
+extern rl_data_type rl_data_type_btree_node_hash_sha1_long;
+extern rl_data_type rl_data_type_btree_hash_sha1_key;
+extern rl_data_type rl_data_type_btree_node_hash_sha1_key;
 extern rl_data_type rl_data_type_btree_set_long;
 extern rl_data_type rl_data_type_btree_node_set_long;
 extern rl_data_type rl_data_type_btree_hash_long_long;
 extern rl_data_type rl_data_type_btree_node_hash_long_long;
 extern rl_data_type rl_data_type_btree_hash_double_long;
 extern rl_data_type rl_data_type_btree_node_hash_double_long;
-extern rl_data_type rl_data_type_btree_hash_md5_double;
-extern rl_data_type rl_data_type_btree_node_hash_md5_double;
+extern rl_data_type rl_data_type_btree_hash_sha1_double;
+extern rl_data_type rl_data_type_btree_node_hash_sha1_double;
 extern rl_data_type rl_data_type_list_long;
 extern rl_data_type rl_data_type_list_node_long;
 extern rl_data_type rl_data_type_list_key;
