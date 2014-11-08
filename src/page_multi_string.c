@@ -295,6 +295,10 @@ int rl_multi_string_sha1(struct rlite *db, unsigned char digest[20], long number
 	if (retval != RL_OK) {
 		goto cleanup;
 	}
+	retval = rl_list_nocache_destroy(db, list);
+	if (retval != RL_OK) {
+		goto cleanup;
+	}
 
 	SHA1_Final(digest, &sha);
 cleanup:

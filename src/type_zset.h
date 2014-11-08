@@ -5,6 +5,10 @@
 
 #define RL_TYPE_ZSET 'Z'
 
+#define RL_ZSET_AGGREGATE_SUM 0
+#define RL_ZSET_AGGREGATE_MIN 1
+#define RL_ZSET_AGGREGATE_MAX 2
+
 struct rlite;
 
 typedef struct {
@@ -23,6 +27,7 @@ int rl_zadd(struct rlite *db, unsigned char *key, long keylen, double score, uns
 int rl_zcard(rlite *db, unsigned char *key, long keylen, long *card);
 int rl_zcount(rlite *db, unsigned char *key, long keylen, rl_zrangespec *range, long *count);
 int rl_zincrby(rlite *db, unsigned char *key, long keylen, double score, unsigned char *data, long datalen, double *newscore);
+int rl_zinterstore(rlite *db, long keys_size, unsigned char **keys, long *keys_len, double *weights, int aggregate);
 int rl_zrange(rlite *db, unsigned char *key, long keylen, long start, long end, rl_zset_iterator **iterator);
 int rl_zrank(rlite *db, unsigned char *key, long keylen, unsigned char *data, long datalen, long *rank);
 int rl_zrem(rlite *db, unsigned char *key, long keylen, long members_size, unsigned char **members, long *members_len, long *changed);

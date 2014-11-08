@@ -179,13 +179,13 @@ static int add_member(rlite *db, rl_btree *scores, rl_skiplist *skiplist, double
 	unsigned char *digest = malloc(sizeof(unsigned char) * 20);
 	int retval = sha1(member, memberlen, digest);
 	if (retval != RL_OK) {
-		if (retval == RL_FOUND) {
-			retval = RL_UNEXPECTED;
-		}
 		goto cleanup;
 	}
 	retval = rl_btree_add_element(db, scores, digest, value_ptr);
 	if (retval != RL_OK) {
+		if (retval == RL_FOUND) {
+			retval = RL_UNEXPECTED;
+		}
 		goto cleanup;
 	}
 	retval = rl_skiplist_add(db, skiplist, score, member, memberlen);
@@ -530,5 +530,140 @@ int rl_zincrby(rlite *db, unsigned char *key, long keylen, double score, unsigne
 		*newscore = score;
 	}
 cleanup:
+	return retval;
+}
+
+int rl_zinterstore(rlite *db, long keys_size, unsigned char **keys, long *keys_len, double *_weights, int aggregate)
+{
+	rl_btree **btrees = NULL;
+	rl_skiplist **skiplists = NULL;
+	double weight = 1.0, weight_tmp;
+	double *weights = NULL;
+	rl_skiplist_node *node;
+	rl_skiplist_iterator *iterator;
+	int retval;
+
+	if (keys_size > 1) {
+		btrees = malloc(sizeof(rl_btree *) * (keys_size - 1));
+		if (!btrees) {
+			retval = RL_OUT_OF_MEMORY;
+			goto cleanup;
+		}
+		skiplists = malloc(sizeof(rl_btree *) * (keys_size - 1));
+		if (!skiplists) {
+			retval = RL_OUT_OF_MEMORY;
+			goto cleanup;
+		}
+	}
+	rl_btree *btree, *btree_tmp;
+	rl_skiplist *skiplist = NULL, *skiplist_tmp;
+	long i;
+	// key in position 0 is the target key
+	// we'll store a pivot skiplist in btree/skiplist and the others in btrees/skiplists
+	weights = malloc(sizeof(double) * (keys_size - 2));
+	for (i = 1; i < keys_size; i++) {
+		weight_tmp = _weights ? _weights[i - 1] : 1.0;
+		retval = rl_zset_get_objects(db, keys[i], keys_len[i], &btree_tmp, NULL, &skiplist_tmp, NULL, 0);
+		if (retval != RL_OK) {
+			goto cleanup;
+		}
+		if (i == 1) {
+			btree = btree_tmp;
+			skiplist = skiplist_tmp;
+			weight = weight_tmp;
+		}
+		else if (btree_tmp->number_of_elements < btree->number_of_elements) {
+			weights[i - 2] = weight;
+			weight = weight_tmp;
+			btrees[i - 2] = btree;
+			btree = btree_tmp;
+			skiplists[i - 2] = skiplist;
+			skiplist = skiplist_tmp;
+		}
+		else {
+			weights[i - 2] = weight_tmp;
+			btrees[i - 2] = btree_tmp;
+			skiplists[i - 2] = skiplist_tmp;
+		}
+	}
+	retval = rl_skiplist_iterator_create(db, &iterator, skiplist, 0, 0, 0);
+	if (retval != RL_OK) {
+		goto cleanup;
+	}
+
+	long target_btree_page, target_skiplist_page;
+	rl_btree *target_btree;
+	rl_skiplist *target_skiplist;
+	retval = rl_zset_get_objects(db, keys[0], keys_len[0], &target_btree, &target_btree_page, &target_skiplist, &target_skiplist_page, 1);
+	if (retval != RL_OK) {
+		goto cleanup;
+	}
+
+	int found;
+	void *tmp;
+	double skiplist_score, tmp_score;
+	unsigned char *member;
+	long memberlen;
+	unsigned char digest[20];
+	while ((retval = rl_skiplist_iterator_next(iterator, &node)) == RL_OK) {
+		found = 1;
+		skiplist_score = node->score * weight;
+		for (i = 1; i < keys_size - 1; i++) {
+			retval = rl_multi_string_sha1(db, digest, node->value);
+			if (retval != RL_OK) {
+				goto cleanup;
+			}
+
+			retval = rl_btree_find_score(db, btrees[i - 1], digest, &tmp, NULL, NULL);
+			if (retval == RL_NOT_FOUND) {
+				found = 0;
+				break;
+			}
+			else if (retval == RL_FOUND) {
+				tmp_score = *(double *)tmp;
+				if (aggregate == RL_ZSET_AGGREGATE_SUM) {
+					skiplist_score += tmp_score * weights[i - 1];
+				}
+				else if (
+				    (aggregate == RL_ZSET_AGGREGATE_MIN && tmp_score * weights[i - 1] < skiplist_score) ||
+				    (aggregate == RL_ZSET_AGGREGATE_MAX && tmp_score * weights[i - 1] > skiplist_score)
+				) {
+					skiplist_score = tmp_score * weights[i - 1];
+				}
+			}
+			else {
+				goto cleanup;
+			}
+		}
+		if (found) {
+			retval = rl_multi_string_get(db, node->value, &member, &memberlen);
+			if (retval != RL_OK) {
+				goto cleanup;
+			}
+			retval = add_member(db, target_btree, target_skiplist, skiplist_score, member, memberlen);
+			if (retval != RL_OK) {
+				goto cleanup;
+			}
+			free(member);
+		}
+	}
+
+	if (retval != RL_END) {
+		goto cleanup;
+	}
+
+	retval = rl_skiplist_iterator_destroy(db, iterator);
+	if (retval != RL_OK) {
+		goto cleanup;
+	}
+
+	retval = update_zset(db, target_btree, target_btree_page, target_skiplist, target_skiplist_page);
+	if (retval != RL_OK) {
+		goto cleanup;
+	}
+cleanup:
+	free(weights);
+	free(btrees);
+	free(skiplists);
 	return retval;
 }
