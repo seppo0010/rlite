@@ -254,44 +254,21 @@ int basic_test_zadd_zrange()
 	return 0;
 }
 
-int basic_test_zadd_zrangebylex(int _commit)
+static int test_zrangebylex(rlite *db, unsigned char *key, long keylen, long initial, long size, unsigned char min[3], long minlen, unsigned char max[3], long maxlen)
 {
-#define ZRANGEBYLEX_SIZE 20
-	int retval = 0;
-	fprintf(stderr, "Start basic_test_zadd_zrangebylex %d\n", _commit);
-	rlite *db = setup_db(_commit, 1);
 	rl_zset_iterator *iterator;
-
-	unsigned char *key = (unsigned char *)"my key";
-	long keylen = strlen((char *)key);
-
-	long i, data2_len;
-	unsigned char data[2];
-	unsigned char *data2;
-	for (i = 0; i < ZRANGEBYLEX_SIZE; i++) {
-		data[0] = 'a' + (i / 2);
-		data[1] = 'A' + i;
-		retval = rl_zadd(db, key, keylen, 1.0, data, ((i & 1) == 0) ? 1 : 2);
-		if (retval != RL_OK) {
-			fprintf(stderr, "Unable to zadd %d\n", retval);
-			return 1;
-		}
-	}
-
-	unsigned char min[3];
-	unsigned char max[3];
-	min[0] = '-';
-	max[0] = '+';
-	retval = rl_zrangebylex(db, key, keylen, min, 1, max, 1, 0, 0, &iterator);
+	int retval = rl_zrangebylex(db, key, keylen, min, minlen, max, maxlen, 0, 0, &iterator);
 	if (retval != RL_OK) {
 		fprintf(stderr, "Unable to zrangebylex, got %d\n", retval);
 		return 1;
 	}
-	if (iterator->size != ZRANGEBYLEX_SIZE) {
-		fprintf(stderr, "Expected zrangebylex size to be %d, got %ld instead\n", ZRANGEBYLEX_SIZE, iterator->size);
+	if (iterator->size != size) {
+		fprintf(stderr, "Expected zrangebylex size to be %ld, got %ld instead\n", size, iterator->size);
 		return 1;
 	}
-	i = 0;
+	unsigned char *data2;
+	long data2_len;
+	long i = initial;
 	while ((retval = rl_zset_iterator_next(iterator, NULL, &data2, &data2_len)) == RL_OK) {
 		if (data2_len != ((i & 1) == 0 ? 1 : 2)) {
 			fprintf(stderr, "Unexpected datalen %ld in element %ld\n", data2_len, i);
@@ -309,8 +286,8 @@ int basic_test_zadd_zrangebylex(int _commit)
 		free(data2);
 	}
 
-	if (i != ZRANGEBYLEX_SIZE) {
-		fprintf(stderr, "Expected size to be %d, got %ld instead\n", ZRANGEBYLEX_SIZE, i);
+	if (i != size + initial) {
+		fprintf(stderr, "Expected size to be %ld, got %ld instead\n", size + initial, i);
 		return 1;
 	}
 
@@ -322,6 +299,72 @@ int basic_test_zadd_zrangebylex(int _commit)
 	if (retval != RL_OK) {
 		fprintf(stderr, "Failed to destroy iterator, got %d\n", retval);
 		return 1;
+	}
+	return 0;
+}
+int basic_test_zadd_zrangebylex(int _commit)
+{
+#define ZRANGEBYLEX_SIZE 20
+	int retval = 0;
+	fprintf(stderr, "Start basic_test_zadd_zrangebylex %d\n", _commit);
+	rlite *db = setup_db(_commit, 1);
+
+	unsigned char *key = (unsigned char *)"my key";
+	long keylen = strlen((char *)key);
+
+	unsigned char data[2];
+	long i;
+	for (i = 0; i < ZRANGEBYLEX_SIZE; i++) {
+		data[0] = 'a' + (i / 2);
+		data[1] = 'A' + i;
+		retval = rl_zadd(db, key, keylen, 1.0, data, ((i & 1) == 0) ? 1 : 2);
+		if (retval != RL_OK) {
+			fprintf(stderr, "Unable to zadd %d\n", retval);
+			return 1;
+		}
+	}
+
+	unsigned char min[3];
+	unsigned char max[3];
+
+	min[0] = '-';
+	max[0] = '+';
+	retval = test_zrangebylex(db, key, keylen, 0, ZRANGEBYLEX_SIZE, min, 1, max, 1);
+	if (retval != 0) {
+		return retval;
+	}
+
+	min[0] = '(';
+	min[1] = 'c';
+	max[0] = '+';
+	retval = test_zrangebylex(db, key, keylen, 5, ZRANGEBYLEX_SIZE - 5, min, 2, max, 1);
+	if (retval != 0) {
+		return retval;
+	}
+
+	min[0] = '[';
+	min[1] = 'c';
+	max[0] = '+';
+	retval = test_zrangebylex(db, key, keylen, 4, ZRANGEBYLEX_SIZE - 4, min, 2, max, 1);
+	if (retval != 0) {
+		return retval;
+	}
+
+	min[0] = '[';
+	min[1] = 'c';
+	max[0] = '[';
+	max[1] = 'f';
+	retval = test_zrangebylex(db, key, keylen, 4, 7, min, 2, max, 2);
+	if (retval != 0) {
+		return retval;
+	}
+
+	min[0] = '-';
+	max[0] = '[';
+	max[1] = 'f';
+	retval = test_zrangebylex(db, key, keylen, 0, 11, min, 1, max, 2);
+	if (retval != 0) {
+		return retval;
 	}
 
 	rl_close(db);
@@ -461,7 +504,7 @@ int basic_test_zadd_zcount(int _commit)
 		return 1;
 	}
 	if (count != ZCOUNT_SIZE) {
-		fprintf(stderr, "Expected zcount to be %d, got %ld\n", ZCOUNT_SIZE, count);
+		fprintf(stderr, "Expected zcount to be %d, got %ld on line %d\n", ZCOUNT_SIZE, count, __LINE__);
 		return 1;
 	}
 
@@ -475,7 +518,7 @@ int basic_test_zadd_zcount(int _commit)
 		return 1;
 	}
 	if (count != ZCOUNT_SIZE) {
-		fprintf(stderr, "Expected zcount to be %d, got %ld\n", ZCOUNT_SIZE, count);
+		fprintf(stderr, "Expected zcount to be %d, got %ld on line %d\n", ZCOUNT_SIZE, count, __LINE__);
 		return 1;
 	}
 

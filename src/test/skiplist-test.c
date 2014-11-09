@@ -75,18 +75,18 @@ int basic_skiplist_first_node_test()
 	}
 
 	for (i = 0; i < 2; i++) {
-		retval = rl_skiplist_first_node(db, skiplist, i == 0 ? 1.5 : 2.0, 0, NULL, 0, &node, &rank);
+		retval = rl_skiplist_first_node(db, skiplist, i == 0 ? 1.5 : 2.0, RL_SKIPLIST_INCLUDE_SCORE, NULL, 0, &node, &rank);
 		if (retval != RL_FOUND) {
-			fprintf(stderr, "Expected to find a node with a score bigger than 2.0, got %d\n", retval);
+			fprintf(stderr, "Expected to find a node with a score greater than or equal to 2.0, got %d\n", retval);
 			return 1;
 		}
 
 		if (node->score != 2.0) {
-			fprintf(stderr, "Expected node score to be 2.0, got %lf instead\n", node->score);
+			fprintf(stderr, "Expected node score to be 2.0, got %lf instead on line %d iteration %ld\n", node->score, __LINE__, i);
 			return 1;
 		}
 		if (rank != 2) {
-			fprintf(stderr, "Expected rank to be 2, got %ld instead\n", rank);
+			fprintf(stderr, "Expected rank to be 2, got %ld instead iteration %ld\n", rank, i);
 			return 1;
 		}
 
@@ -108,7 +108,37 @@ int basic_skiplist_first_node_test()
 		free(data2);
 	}
 
-	retval = rl_skiplist_first_node(db, skiplist, 20.0, 0, NULL, 0, NULL, NULL);
+	retval = rl_skiplist_first_node(db, skiplist, 2.0, RL_SKIPLIST_EXCLUDE_SCORE, NULL, 0, &node, &rank);
+	if (retval != RL_FOUND) {
+		fprintf(stderr, "Expected to find a node with a score greater than 2.0, got %d\n", retval);
+		return 1;
+	}
+
+	if (node->score != 3.0) {
+		fprintf(stderr, "Expected node score to be 3.0, got %lf instead %d\n", node->score, __LINE__);
+		return 1;
+	}
+	if (rank != 3) {
+		fprintf(stderr, "Expected rank to be 3, got %ld instead iteration %ld\n", rank, i);
+		return 1;
+	}
+
+	retval = rl_skiplist_first_node(db, skiplist, 2.0, RL_SKIPLIST_BEFORE_SCORE, NULL, 0, &node, &rank);
+	if (retval != RL_FOUND) {
+		fprintf(stderr, "Expected to find a node with a score less than 2.0, got %d\n", retval);
+		return 1;
+	}
+
+	if (node->score != 1.0) {
+		fprintf(stderr, "Expected node score to be 1.0, got %lf instead %d\n", node->score, __LINE__);
+		return 1;
+	}
+	if (rank != 1) {
+		fprintf(stderr, "Expected rank to be 1, got %ld instead iteration %ld\n", rank, i);
+		return 1;
+	}
+
+	retval = rl_skiplist_first_node(db, skiplist, 20.0, RL_SKIPLIST_INCLUDE_SCORE, NULL, 0, NULL, NULL);
 	if (retval != RL_NOT_FOUND) {
 		fprintf(stderr, "Expected to not find any node after 20, got %d\n", retval);
 		return 1;

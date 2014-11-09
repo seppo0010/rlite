@@ -151,6 +151,7 @@ int rl_multi_string_cmp_str(struct rlite *db, long p1, unsigned char *str, long 
 		node1 = NULL;
 	}
 	while (len > pos);
+	retval = RL_OK;
 cleanup:
 	rl_list_nocache_destroy(db, list1);
 	if (node1) {

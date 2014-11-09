@@ -267,7 +267,7 @@ int rl_zrank(rlite *db, unsigned char *key, long keylen, unsigned char *member, 
 	if (retval != RL_FOUND) {
 		return retval;
 	}
-	retval = rl_skiplist_first_node(db, skiplist, score, 0, member, memberlen, NULL, rank);
+	retval = rl_skiplist_first_node(db, skiplist, score, RL_SKIPLIST_INCLUDE_SCORE, member, memberlen, NULL, rank);
 	if (retval != RL_FOUND) {
 		return retval;
 	}
@@ -301,22 +301,25 @@ int rl_zcount(rlite *db, unsigned char *key, long keylen, rl_zrangespec *range, 
 		goto cleanup;
 	}
 
-	retval = rl_skiplist_first_node(db, skiplist, range->max, !range->maxex, NULL, 0, NULL, &maxrank);
+	retval = rl_skiplist_first_node(db, skiplist, range->max, range->maxex ? RL_SKIPLIST_BEFORE_SCORE : RL_SKIPLIST_INCLUDE_SCORE, NULL, 0, NULL, &maxrank);
 	if (retval == RL_NOT_FOUND) {
-		maxrank = skiplist->size;
+		maxrank = skiplist->size - 1;
 	}
 	else if (retval != RL_FOUND) {
 		goto cleanup;
 	}
-	retval = rl_skiplist_first_node(db, skiplist, range->min, range->minex, NULL, 0, NULL, &minrank);
+	retval = rl_skiplist_first_node(db, skiplist, range->min, range->minex ? RL_SKIPLIST_EXCLUDE_SCORE : RL_SKIPLIST_INCLUDE_SCORE, NULL, 0, NULL, &minrank);
 	if (retval == RL_NOT_FOUND) {
 		minrank = skiplist->size;
 	}
 	else if (retval != RL_FOUND) {
 		goto cleanup;
 	}
+	else if (minrank < 0) {
+		minrank = 0;
+	}
 
-	*count = maxrank - minrank;
+	*count = maxrank - minrank + 1;
 	retval = RL_OK;
 cleanup:
 	return retval;
@@ -373,15 +376,21 @@ int rl_zrangebylex(rlite *db, unsigned char *key, long keylen, unsigned char *mi
 		return RL_UNEXPECTED;
 	}
 
+	rl_skiplist_node *node;
+	double score;
+	retval = rl_skiplist_first_node(db, skiplist, -INFINITY, RL_SKIPLIST_EXCLUDE_SCORE, NULL, 0, &node, NULL);
+	if (retval != RL_FOUND) {
+		goto cleanup;
+	}
+	score = node->score;
+
 	long start, end;
-	int exclude;
 	if (min[0] == '-') {
 		start = 0;
 	}
 	else {
-		exclude = min[0] == '(';
-		retval = rl_skiplist_first_node(db, skiplist, -INFINITY, exclude, &min[1], min_length - 1, NULL, &start);
-		if (retval != RL_OK) {
+		retval = rl_skiplist_first_node(db, skiplist, score, min[0] == '(' ? RL_SKIPLIST_EXCLUDE_SCORE : RL_SKIPLIST_INCLUDE_SCORE, &min[1], min_length - 1, &node, &start);
+		if (retval != RL_FOUND) {
 			goto cleanup;
 		}
 	}
@@ -390,9 +399,8 @@ int rl_zrangebylex(rlite *db, unsigned char *key, long keylen, unsigned char *mi
 		end = -1;
 	}
 	else {
-		exclude = max[0] == '(';
-		retval = rl_skiplist_first_node(db, skiplist, -INFINITY, exclude, &max[1], max_length - 1, NULL, &end);
-		if (retval != RL_OK) {
+		retval = rl_skiplist_first_node(db, skiplist, score, max[0] == '(' ? RL_SKIPLIST_BEFORE_SCORE : RL_SKIPLIST_INCLUDE_SCORE, &max[1], max_length - 1, NULL, &end);
+		if (retval != RL_FOUND) {
 			goto cleanup;
 		}
 	}
