@@ -254,6 +254,81 @@ int basic_test_zadd_zrange()
 	return 0;
 }
 
+int basic_test_zadd_zrangebylex(int _commit)
+{
+#define ZRANGEBYLEX_SIZE 20
+	int retval = 0;
+	fprintf(stderr, "Start basic_test_zadd_zrangebylex %d\n", _commit);
+	rlite *db = setup_db(_commit, 1);
+	rl_zset_iterator *iterator;
+
+	unsigned char *key = (unsigned char *)"my key";
+	long keylen = strlen((char *)key);
+
+	long i, data2_len;
+	unsigned char data[2];
+	unsigned char *data2;
+	for (i = 0; i < ZRANGEBYLEX_SIZE; i++) {
+		data[0] = 'a' + (i / 2);
+		data[1] = 'A' + i;
+		retval = rl_zadd(db, key, keylen, 1.0, data, ((i & 1) == 0) ? 1 : 2);
+		if (retval != RL_OK) {
+			fprintf(stderr, "Unable to zadd %d\n", retval);
+			return 1;
+		}
+	}
+
+	unsigned char min[3];
+	unsigned char max[3];
+	min[0] = '-';
+	max[0] = '+';
+	retval = rl_zrangebylex(db, key, keylen, min, 1, max, 1, 0, 0, &iterator);
+	if (retval != RL_OK) {
+		fprintf(stderr, "Unable to zrangebylex, got %d\n", retval);
+		return 1;
+	}
+	if (iterator->size != ZRANGEBYLEX_SIZE) {
+		fprintf(stderr, "Expected zrangebylex size to be %d, got %ld instead\n", ZRANGEBYLEX_SIZE, iterator->size);
+		return 1;
+	}
+	i = 0;
+	while ((retval = rl_zset_iterator_next(iterator, NULL, &data2, &data2_len)) == RL_OK) {
+		if (data2_len != ((i & 1) == 0 ? 1 : 2)) {
+			fprintf(stderr, "Unexpected datalen %ld in element %ld\n", data2_len, i);
+			return 1;
+		}
+		if (data2[0] != 'a' + (i / 2)) {
+			fprintf(stderr, "Unexpected data[0] %d, expected %ld in iterator %ld\n", data2[0], 'a' + (i % 10), i);
+			return 1;
+		}
+		if (data2_len == 2 && data2[1] != 'A' + i) {
+			fprintf(stderr, "Unexpected data[1] %d, expected %ld in iterator %ld\n", data2[1], 'A' + i, i);
+			return 1;
+		}
+		i++;
+		free(data2);
+	}
+
+	if (i != ZRANGEBYLEX_SIZE) {
+		fprintf(stderr, "Expected size to be %d, got %ld instead\n", ZRANGEBYLEX_SIZE, i);
+		return 1;
+	}
+
+	if (retval != RL_END) {
+		fprintf(stderr, "Iterator finished without RL_END, got %d\n", retval);
+		return 1;
+	}
+	retval = rl_zset_iterator_destroy(iterator);
+	if (retval != RL_OK) {
+		fprintf(stderr, "Failed to destroy iterator, got %d\n", retval);
+		return 1;
+	}
+
+	rl_close(db);
+	fprintf(stderr, "End basic_test_zadd_zrangebylex\n");
+	return 0;
+}
+
 int basic_test_zadd_zrem(int _commit)
 {
 	int retval = 0;
@@ -619,6 +694,10 @@ int main()
 			goto cleanup;
 		}
 		retval = basic_test_zadd_zincrby(i);
+		if (retval != 0) {
+			goto cleanup;
+		}
+		retval = basic_test_zadd_zrangebylex(i);
 		if (retval != 0) {
 			goto cleanup;
 		}

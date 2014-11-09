@@ -322,17 +322,12 @@ cleanup:
 	return retval;
 }
 
-int rl_zrange(rlite *db, unsigned char *key, long keylen, long start, long end, rl_zset_iterator **iterator)
+static int _rl_zrange(rlite *db, rl_skiplist *skiplist, long start, long end, rl_zset_iterator **iterator)
 {
-	long card, size, node_page;
-	rl_skiplist *skiplist;
+	int retval = RL_OK;
+	long size, node_page;
+	long card = skiplist->size;
 
-	int retval = rl_zcard(db, key, keylen, &card);
-	if (retval != RL_OK) {
-		return retval;
-	}
-
-	retval = rl_zset_get_objects(db, key, keylen, NULL, NULL, &skiplist, NULL, 0);
 	if (start < 0) {
 		start += card;
 		if (start < 0) {
@@ -358,6 +353,75 @@ int rl_zrange(rlite *db, unsigned char *key, long keylen, long start, long end, 
 	}
 
 	retval = rl_skiplist_iterator_create(db, iterator, skiplist, node_page, 1, size);
+cleanup:
+	return retval;
+}
+
+int rl_zrangebylex(rlite *db, unsigned char *key, long keylen, unsigned char *min, long min_length, unsigned char *max, long max_length, long offset, long count, rl_zset_iterator **iterator)
+{
+	rl_skiplist *skiplist;
+	int retval = rl_zset_get_objects(db, key, keylen, NULL, NULL, &skiplist, NULL, 0);
+	if (retval != RL_OK) {
+		goto cleanup;
+	}
+
+	if (min[0] != '-' && min[0] != '(' && min[0] != '[') {
+		return RL_UNEXPECTED;
+	}
+
+	if (max[0] != '+' && max[0] != '(' && max[0] != '[') {
+		return RL_UNEXPECTED;
+	}
+
+	long start, end;
+	int exclude;
+	if (min[0] == '-') {
+		start = 0;
+		exclude = 0;
+	}
+	else {
+		exclude = min[0] == '(';
+		retval = rl_skiplist_first_node(db, skiplist, -INFINITY, exclude, &min[1], min_length - 1, NULL, &start);
+		if (retval != RL_OK) {
+			goto cleanup;
+		}
+	}
+
+	if (max[0] == '+') {
+		end = -1;
+		exclude = 0;
+	}
+	else {
+		exclude = max[0] == '(';
+		retval = rl_skiplist_first_node(db, skiplist, -INFINITY, exclude, &max[1], max_length - 1, NULL, &end);
+		if (retval != RL_OK) {
+			goto cleanup;
+		}
+	}
+
+	start += offset;
+
+	retval = _rl_zrange(db, skiplist, start, end, iterator);
+	if (retval != RL_OK) {
+		goto cleanup;
+	}
+	if (count > 0 && (*iterator)->size > count) {
+		(*iterator)->size = count;
+	}
+cleanup:
+	return retval;
+}
+
+int rl_zrange(rlite *db, unsigned char *key, long keylen, long start, long end, rl_zset_iterator **iterator)
+{
+	rl_skiplist *skiplist;
+
+	int retval = rl_zset_get_objects(db, key, keylen, NULL, NULL, &skiplist, NULL, 0);
+	if (retval != RL_OK) {
+		goto cleanup;
+	}
+
+	retval = _rl_zrange(db, skiplist, start, end, iterator);
 cleanup:
 	return retval;
 }
