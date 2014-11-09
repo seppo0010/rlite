@@ -105,7 +105,8 @@ int rl_multi_string_cmp_str(struct rlite *db, long p1, unsigned char *str, long 
 	long node_number1 = list1->left, i, pos = 0;
 	int first = 1;
 	long cmplen;
-	while (1) {
+	long stored_length = 0;
+	while (len > pos) {
 		if (node_number1 == 0) {
 			*cmp = 0;
 			break;
@@ -115,6 +116,9 @@ int rl_multi_string_cmp_str(struct rlite *db, long p1, unsigned char *str, long 
 			goto cleanup;
 		}
 		node1 = _node;
+		if (first) {
+			stored_length = *(long *)node1->elements[0];
+		}
 		for (i = first ? 1 : 0; i < node1->size; i++) {
 			retval = rl_string_get(db, &str1, *(long *)node1->elements[i]);
 			if (retval != RL_OK) {
@@ -124,7 +128,7 @@ int rl_multi_string_cmp_str(struct rlite *db, long p1, unsigned char *str, long 
 			if (cmplen == 0) {
 				// finished with str, the page_multi_string starts with str
 				*cmp = 1;
-				goto cleanup;
+				break;
 			}
 			*cmp = memcmp(str1, &str[pos], cmplen);
 			if (*cmp != 0) {
@@ -136,7 +140,10 @@ int rl_multi_string_cmp_str(struct rlite *db, long p1, unsigned char *str, long 
 				}
 				goto cleanup;
 			}
-			pos += db->page_size;
+			pos += cmplen;
+		}
+		if (*cmp == 0 && len == pos && stored_length != len) {
+			*cmp = stored_length > len ? 1 : -1;
 		}
 		first = 0;
 		node_number1 = node1->right;

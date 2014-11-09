@@ -100,6 +100,70 @@ static int test_sha(long size)
 	return 0;
 }
 
+static int assert_cmp(rlite *db, long p1, unsigned char *data, long size, int expected_cmp)
+{
+	long p2;
+	int cmp;
+	int retval = rl_multi_string_cmp_str(db, p1, data, size, &cmp);
+	if (retval != 0) {
+		return 1;
+	}
+	if (cmp != expected_cmp) {
+		fprintf(stderr, "Expected cmp=%d got %d instead\n", expected_cmp, cmp);
+		return 1;
+	}
+	retval = rl_multi_string_set(db, &p2, data, size);
+	if (retval != 0) {
+		return 1;
+	}
+	retval = rl_multi_string_cmp(db, p1, p2, &cmp);
+	if (cmp != expected_cmp) {
+		fprintf(stderr, "Expected cmp=%d got %d instead\n", expected_cmp, cmp);
+		return 1;
+	}
+	return 0;
+}
+static int test_cmp_different_length()
+{
+	unsigned char data[3], data2[3];
+	long size = 2, i;
+	long p1;
+	rlite *db;
+	fprintf(stderr, "Start test_cmp_different_length\n");
+	if (rl_open(":memory:", &db, RLITE_OPEN_READWRITE | RLITE_OPEN_CREATE) != RL_OK) {
+		fprintf(stderr, "Unable to open rlite\n");
+		return 1;
+	}
+	for (i = 0; i < 3; i++) {
+		data[i] = data2[i] = 100 + i;
+	}
+	int retval = rl_multi_string_set(db, &p1, data, size);
+	if (retval != 0) {
+		return 1;
+	}
+	retval = assert_cmp(db, p1, data2, size, 0);
+	if (retval != 0) {
+		return 1;
+	}
+	retval = assert_cmp(db, p1, data2, size - 1, 1);
+	if (retval != 0) {
+		return 1;
+	}
+	data2[0]++;
+	retval = assert_cmp(db, p1, data2, size - 1, -1);
+	if (retval != 0) {
+		return 1;
+	}
+	retval = assert_cmp(db, p1, data2, size, -1);
+	if (retval != 0) {
+		return 1;
+	}
+
+	rl_close(db);
+	fprintf(stderr, "End test_cmp_different_length\n");
+	return 0;
+}
+
 #define CMP_SIZE 2000
 static int test_cmp(int expected_cmp, long position)
 {
@@ -204,6 +268,10 @@ static int test_cmp2(int expected_cmp, long position)
 int main()
 {
 	int retval = basic_set_get();
+	if (retval != 0) {
+		return retval;
+	}
+	retval = test_cmp_different_length();
 	if (retval != 0) {
 		return retval;
 	}
