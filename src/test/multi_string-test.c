@@ -3,6 +3,7 @@
 #include <limits.h>
 #include "../rlite.h"
 #include "../page_multi_string.h"
+#include "../util.h"
 
 int basic_set_get()
 {
@@ -51,6 +52,52 @@ int basic_set_get()
 	retval = 0;
 cleanup:
 	return retval;
+}
+
+static int test_sha(long size)
+{
+	fprintf(stderr, "Start test_sha %ld\n", size);
+	rlite *db;
+	if (rl_open(":memory:", &db, RLITE_OPEN_READWRITE | RLITE_OPEN_CREATE) != RL_OK) {
+		fprintf(stderr, "Unable to open rlite\n");
+		return 1;
+	}
+
+	unsigned char *data = malloc(sizeof(unsigned char) * size);
+	long page, i;
+	for (i = 0; i < size; i++) {
+		data[i] = i % 123;
+	}
+
+	int retval = rl_multi_string_set(db, &page, data, size);
+	if (retval != RL_OK) {
+		fprintf(stderr, "Failed to set multi string, got %d\n", retval);
+		return 1;
+	}
+
+	unsigned char digest1[20], digest2[20];
+
+	retval = rl_multi_string_sha1(db, digest1, page);
+	if (retval != RL_OK) {
+		fprintf(stderr, "Failed to sha1 multi string, got %d\n", retval);
+		return 1;
+	}
+
+	retval = sha1(data, size, digest2);
+	if (retval != RL_OK) {
+		fprintf(stderr, "Failed to sha1 char*, got %d\n", retval);
+		return 1;
+	}
+
+	if (memcmp(digest1, digest2, 20) != 0) {
+		fprintf(stderr, "Digest mismatch for multi string\n");
+		return 1;
+	}
+
+	free(data);
+	rl_close(db);
+	fprintf(stderr, "End test_sha %ld\n", size);
+	return 0;
 }
 
 #define CMP_SIZE 2000
@@ -161,6 +208,14 @@ int main()
 		return retval;
 	}
 	retval = test_cmp(0, 0);
+	if (retval != 0) {
+		return retval;
+	}
+	retval = test_sha(100);
+	if (retval != 0) {
+		return retval;
+	}
+	retval = test_sha(1000);
 	if (retval != 0) {
 		return retval;
 	}

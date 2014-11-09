@@ -1,5 +1,6 @@
 #include <stdlib.h>
 #include <string.h>
+#include <openssl/sha.h>
 #include "rlite.h"
 #include "page_list.h"
 #include "page_string.h"
@@ -250,4 +251,52 @@ int rl_multi_string_set(struct rlite *db, long *number, const unsigned char *dat
 	}
 cleanup:
 	return retval;
+}
+
+int rl_multi_string_sha1(struct rlite *db, unsigned char digest[20], long number)
+{
+	unsigned char *data;
+	long datalen;
+	SHA_CTX sha;
+	SHA1_Init(&sha);
+
+	void *tmp;
+	rl_list *list;
+	rl_list_iterator *iterator;
+	int retval = rl_read(db, &rl_data_type_list_long, number, &list_long, &tmp, 0);
+	if (retval != RL_FOUND) {
+		goto cleanup;
+	}
+	list = tmp;
+
+	retval = rl_list_iterator_create(db, &iterator, list, 1);
+	if (retval != RL_OK) {
+		goto cleanup;
+	}
+
+	long size = 0;
+	while ((retval = rl_list_iterator_next(iterator, &tmp)) == RL_OK) {
+		if (size == 0) {
+			size = *(long *)tmp;
+			free(tmp);
+			continue;
+		}
+		retval = rl_string_get(db, &data, *(long *)tmp);
+		if (retval != RL_OK) {
+			goto cleanup;
+		}
+		datalen = size > db->page_size ? db->page_size : size;
+		SHA1_Update(&sha, data, datalen);
+		size -= datalen;
+		free(tmp);
+	}
+
+	retval = rl_list_iterator_destroy(db, iterator);
+	if (retval != RL_OK) {
+		goto cleanup;
+	}
+
+	SHA1_Final(digest, &sha);
+cleanup:
+	return RL_OK;
 }
