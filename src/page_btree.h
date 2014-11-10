@@ -32,11 +32,11 @@ typedef struct rl_key {
 	long value_page;
 } rl_key;
 
-rl_btree_type rl_btree_type_set_long;
-rl_btree_type rl_btree_type_hash_long_long;
-rl_btree_type rl_btree_type_hash_sha1_long;
-rl_btree_type rl_btree_type_hash_sha1_key;
-rl_btree_type rl_btree_type_hash_sha1_double;
+extern rl_btree_type rl_btree_type_set_long;
+extern rl_btree_type rl_btree_type_hash_long_long;
+extern rl_btree_type rl_btree_type_hash_sha1_long;
+extern rl_btree_type rl_btree_type_hash_sha1_key;
+extern rl_btree_type rl_btree_type_hash_sha1_double;
 
 typedef struct rl_btree_node {
 	void **scores;

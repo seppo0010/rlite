@@ -2,12 +2,24 @@ OPTIMIZATION?=-O2
 
 ifeq ($(uname_S),SunOS)
   # make isinf() available
-  CFLAGS?=-std=c99 -pedantic $(OPTIMIZATION) -Wall -W -D__EXTENSIONS__ -D_XPG6
-  DEBUG?=-g -ggdb 
+  CFLAGS?= -pedantic $(OPTIMIZATION) -Wall -W -D__EXTENSIONS__ -D_XPG6
+  DEBUG?=-g -ggdb
 else
-  CFLAGS?=-std=c99 -pedantic $(OPTIMIZATION) -Wall -W $(ARCH) $(PROF)
-  DEBUG?=-g -rdynamic -ggdb 
+  CFLAGS?= -pedantic $(OPTIMIZATION) -Wall -W $(ARCH) $(PROF)
+  DEBUG?=-g -ggdb
 endif
+
+DEBUG.gcc += -rdynamic
+CFLAGS.gcc += -std=c99
+
+ifeq ($(shell $(CC) -v 2>&1 | grep -c "clang version"), 1)
+DEBUG += ${DEBUG.clang}
+CFLAGS += ${CFLAGS.clang}
+else
+DEBUG += ${DEBUG.gcc}
+CFLAGS += ${CFLAGS.gcc}
+endif
+
 LIBS=-lm -lssl -lcrypto
 
 all: buildtest
@@ -24,6 +36,10 @@ lcov: gcov
 	mkdir -p lcov
 	lcov --directory . --capture --output-file lcov/app.info
 	genhtml  lcov/app.info -o lcov/html
+
+clang-analyzer:
+	rm -rf analyzer
+	scan-build -o analyzer make
 
 .c.o:
 	$(CC) $(ARCH) $(DEBUG) $(CFLAGS) -c $<

@@ -184,10 +184,8 @@ int rl_header_serialize(struct rlite *db, void *obj, unsigned char *data)
 	return retval;
 }
 
-int rl_header_deserialize(struct rlite *db, void **obj, void *context, unsigned char *data)
+int rl_header_deserialize(struct rlite *db, void **UNUSED(obj), void *UNUSED(context), unsigned char *data)
 {
-	obj = obj;
-	context = context;
 	int retval = RL_OK;
 	int identifier_len = strlen((char *)identifier);
 	if (memcmp(data, identifier, identifier_len) != 0) {
@@ -293,7 +291,7 @@ int rl_open(const char *filename, rlite **_db, int flags)
 
 	*_db = db;
 cleanup:
-	if (retval != RL_OK) {
+	if (retval != RL_OK && db != NULL) {
 		free(db->read_pages);
 		free(db->write_pages);
 		free(db);
@@ -333,6 +331,9 @@ int rl_has_flag(rlite *db, int flag)
 int rl_create_db(rlite *db)
 {
 	int retval = rl_ensure_pages(db);
+	if (retval != RL_OK) {
+		return retval;
+	}
 	db->next_empty_page = 2;
 	rl_btree *btree;
 	long max_node_size = (db->page_size - 8) / 8; // TODO: this should be in the type
@@ -353,7 +354,7 @@ int rl_get_key_btree(rlite *db, rl_btree **btree)
 	*btree = _btree;
 	retval = RL_OK;
 cleanup:
-	return RL_OK;
+	return retval;
 }
 
 int rl_read_header(rlite *db)
@@ -405,10 +406,8 @@ void print_cache(rlite *db)
 }
 #endif
 
-static int rl_search_cache(rlite *db, rl_data_type *type, long page_number, void **obj, long *position, rl_page **pages, long page_len)
+static int rl_search_cache(rlite *UNUSED(db), rl_data_type *type, long page_number, void **obj, long *position, rl_page **pages, long page_len)
 {
-	db = db;
-
 	long pos, min = 0, max = page_len - 1;
 	rl_page *page;
 	if (max >= 0) {
@@ -658,6 +657,9 @@ int rl_write(struct rlite *db, rl_data_type *type, long page_number, void *obj)
 		if (page_number == db->next_empty_page) {
 			db->next_empty_page++;
 			retval = rl_write(db, &rl_data_type_header , 0, NULL);
+			if (retval != RL_OK) {
+				return retval;
+			}
 		}
 
 		retval = rl_search_cache(db, type, page_number, NULL, &pos, db->read_pages, db->read_pages_len);

@@ -76,9 +76,8 @@ void rl_btree_init()
 	rl_btree_type_hash_sha1_double.btree_node_type = &rl_data_type_btree_node_hash_sha1_double;
 }
 
-int rl_btree_serialize(struct rlite *db, void *obj, unsigned char *data)
+int rl_btree_serialize(struct rlite *UNUSED(db), void *obj, unsigned char *data)
 {
-	db = db;
 	rl_btree *tree = obj;
 	put_4bytes(data, tree->root);
 	put_4bytes(&data[4], tree->height);
@@ -102,13 +101,12 @@ int rl_btree_deserialize(struct rlite *db, void **obj, void *context, unsigned c
 }
 
 #ifdef DEBUG
-int rl_print_btree_node(rlite *db, rl_btree *btree, rl_btree_node *node, long level);
+int rl_print_btree_node(rlite *UNUSED(db), rl_btree *btree, rl_btree_node *node, long level);
 #endif
 
 
-int rl_btree_node_create(rlite *db, rl_btree *btree, rl_btree_node **_node)
+int rl_btree_node_create(rlite *UNUSED(db), rl_btree *btree, rl_btree_node **_node)
 {
-	db = db;
 	int retval = RL_OK;
 	rl_btree_node *node = malloc(sizeof(rl_btree_node));
 	if (!node) {
@@ -143,10 +141,9 @@ cleanup:
 	return retval;
 }
 
-int rl_btree_node_destroy(rlite *db, void *_node)
+int rl_btree_node_destroy(rlite *UNUSED(db), void *_node)
 {
 	rl_btree_node *node = _node;
-	db = db;
 	long i;
 	if (node->scores) {
 		for (i = 0; i < node->size; i++) {
@@ -202,9 +199,8 @@ cleanup:
 	return retval;
 }
 
-int rl_btree_destroy(rlite *db, void *btree)
+int rl_btree_destroy(rlite *UNUSED(db), void *btree)
 {
-	db = db;
 	free(btree);
 	return RL_OK;
 }
@@ -1016,9 +1012,8 @@ int rl_flatten_btree(rlite *db, rl_btree *btree, void *** scores, long *size)
 	return rl_flatten_btree_node(db, btree, node, scores, size);
 }
 
-int rl_btree_node_serialize_hash_sha1_long(rlite *db, void *obj, unsigned char *data)
+int rl_btree_node_serialize_hash_sha1_long(rlite *UNUSED(db), void *obj, unsigned char *data)
 {
-	db = db;
 	rl_btree_node *node = (rl_btree_node *)obj;
 	put_4bytes(data, node->size);
 	long i, pos = 4;
@@ -1034,7 +1029,6 @@ int rl_btree_node_serialize_hash_sha1_long(rlite *db, void *obj, unsigned char *
 
 int rl_btree_node_deserialize_hash_sha1_long(rlite *db, void **obj, void *context, unsigned char *data)
 {
-	db = db;
 	rl_btree_node *node;
 	rl_btree *btree = (rl_btree *) context;
 	int retval = rl_btree_node_create(db, btree, &node);
@@ -1087,9 +1081,8 @@ cleanup:
 	return retval;
 }
 
-int rl_btree_node_serialize_hash_sha1_key(rlite *db, void *obj, unsigned char *data)
+int rl_btree_node_serialize_hash_sha1_key(rlite *UNUSED(db), void *obj, unsigned char *data)
 {
-	db = db;
 	rl_btree_node *node = (rl_btree_node *)obj;
 	put_4bytes(data, node->size);
 	long i, pos = 4;
@@ -1109,7 +1102,6 @@ int rl_btree_node_serialize_hash_sha1_key(rlite *db, void *obj, unsigned char *d
 
 int rl_btree_node_deserialize_hash_sha1_key(rlite *db, void **obj, void *context, unsigned char *data)
 {
-	db = db;
 	rl_btree_node *node;
 	rl_btree *btree = (rl_btree *) context;
 	int retval = rl_btree_node_create(db, btree, &node);
@@ -1165,9 +1157,8 @@ cleanup:
 	return retval;
 }
 
-int rl_btree_node_serialize_set_long(struct rlite *db, void *obj, unsigned char *data)
+int rl_btree_node_serialize_set_long(struct rlite *UNUSED(db), void *obj, unsigned char *data)
 {
-	db = db;
 	rl_btree_node *node = obj;
 	put_4bytes(data, node->size);
 	long i, pos = 4;
@@ -1226,9 +1217,8 @@ cleanup:
 	return retval;
 }
 
-int rl_btree_node_serialize_hash_long_long(struct rlite *db, void *obj, unsigned char *data)
+int rl_btree_node_serialize_hash_long_long(struct rlite *UNUSED(db), void *obj, unsigned char *data)
 {
-	db = db;
 	rl_btree_node *node = obj;
 	int retval = RL_OK;
 	if (!data) {
@@ -1301,9 +1291,8 @@ cleanup:
 	return retval;
 }
 
-int rl_btree_node_serialize_hash_sha1_double(struct rlite *db, void *obj, unsigned char *data)
+int rl_btree_node_serialize_hash_sha1_double(struct rlite *UNUSED(db), void *obj, unsigned char *data)
 {
-	db = db;
 	rl_btree_node *node = obj;
 	int retval = RL_OK;
 	if (!data) {

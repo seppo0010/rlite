@@ -18,7 +18,7 @@ typedef struct {
 #endif
 } rl_list_type;
 
-rl_list_type list_long;
+extern rl_list_type list_long;
 
 typedef struct rl_list_node {
 	long size;

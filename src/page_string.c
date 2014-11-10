@@ -2,6 +2,7 @@
 #include <string.h>
 #include "rlite.h"
 #include "page_string.h"
+#include "util.h"
 
 int rl_string_serialize(rlite *db, void *obj, unsigned char *data)
 {
@@ -9,9 +10,8 @@ int rl_string_serialize(rlite *db, void *obj, unsigned char *data)
 	return RL_OK;
 }
 
-int rl_string_deserialize(rlite *db, void **obj, void *context, unsigned char *data)
+int rl_string_deserialize(rlite *db, void **obj, void *UNUSED(context), unsigned char *data)
 {
-	context = context;
 	unsigned char *new_data = malloc(sizeof(char) * db->page_size);
 	if (!new_data) {
 		return RL_OUT_OF_MEMORY;
@@ -21,9 +21,8 @@ int rl_string_deserialize(rlite *db, void **obj, void *context, unsigned char *d
 	return RL_OK;
 }
 
-int rl_string_destroy(rlite *db, void *obj)
+int rl_string_destroy(rlite *UNUSED(db), void *obj)
 {
-	db = db;
 	free(obj);
 	return RL_OK;
 }

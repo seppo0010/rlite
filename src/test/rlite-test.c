@@ -60,10 +60,7 @@ int test_has_key()
 	long keylen = strlen((char *) key);
 	long value = 529, value2;
 	retval = rl_key_get(db, key, keylen, NULL, NULL, NULL);
-	if (retval == RL_NOT_FOUND) {
-		retval = RL_OK;
-	}
-	else {
+	if (retval != RL_NOT_FOUND) {
 		fprintf(stderr, "Failed to not find unexisting key (%d)\n", retval);
 		goto cleanup;
 	}

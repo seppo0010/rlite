@@ -338,7 +338,7 @@ static int _rl_zrange(rlite *db, rl_skiplist *skiplist, long start, long end, rl
 		end += card;
 	}
 	if (start > end || start >= card) {
-		size = 0;
+		retval = RL_NOT_FOUND;
 		goto cleanup;
 	}
 	if (end >= card) {
@@ -377,7 +377,6 @@ int rl_zrangebylex(rlite *db, unsigned char *key, long keylen, unsigned char *mi
 	int exclude;
 	if (min[0] == '-') {
 		start = 0;
-		exclude = 0;
 	}
 	else {
 		exclude = min[0] == '(';
@@ -389,7 +388,6 @@ int rl_zrangebylex(rlite *db, unsigned char *key, long keylen, unsigned char *mi
 
 	if (max[0] == '+') {
 		end = -1;
-		exclude = 0;
 	}
 	else {
 		exclude = max[0] == '(';
@@ -618,6 +616,10 @@ int rl_zinterstore(rlite *db, long keys_size, unsigned char **keys, long *keys_l
 			retval = RL_OUT_OF_MEMORY;
 			goto cleanup;
 		}
+	}
+	else {
+		retval = RL_UNEXPECTED;
+		goto cleanup;
 	}
 	rl_btree *btree, *btree_tmp;
 	rl_skiplist *skiplist = NULL, *skiplist_tmp;

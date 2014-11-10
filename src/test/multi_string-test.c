@@ -117,6 +117,9 @@ static int assert_cmp(rlite *db, long p1, unsigned char *data, long size, int ex
 		return 1;
 	}
 	retval = rl_multi_string_cmp(db, p1, p2, &cmp);
+	if (retval != 0) {
+		return 1;
+	}
 	if (cmp != expected_cmp) {
 		fprintf(stderr, "Expected cmp=%d got %d instead\n", expected_cmp, cmp);
 		return 1;

@@ -48,6 +48,9 @@ int basic_test_set_get(int _commit)
 	}
 
 	retval = expect_key(db, key, keylen, type, page);
+	if (retval != 0) {
+		return 1;
+	}
 
 	fprintf(stderr, "End basic_test_set_get\n");
 	rl_close(db);
@@ -98,10 +101,9 @@ int basic_test_set_delete()
 	}
 
 	retval = rl_key_get(db, key, keylen, NULL, NULL, NULL);
-	if (retval == RL_NOT_FOUND) {
-		retval = RL_OK;
-	} else {
+	if (retval != RL_NOT_FOUND) {
 		fprintf(stderr, "Expected not to find key, got %d instead\n", retval);
+		return 1;
 	}
 
 	fprintf(stderr, "End basic_test_set_delete\n");

@@ -374,7 +374,7 @@ int fuzzy_hash_test_iterator(long size, long btree_node_size, int _commit)
 {
 	fprintf(stderr, "Start fuzzy_hash_test_iterator %ld %ld %d\n", size, btree_node_size, _commit);
 	rlite *db = setup_db(_commit, 1);
-	rl_btree_iterator *iterator;
+	rl_btree_iterator *iterator = NULL;
 	rl_btree *btree;
 	if (rl_btree_create(db, &btree, &rl_btree_type_hash_long_long, btree_node_size) != RL_OK) {
 		return 1;

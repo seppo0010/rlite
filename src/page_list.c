@@ -24,9 +24,8 @@ rl_list_type list_long = {
 #endif
 };
 
-int rl_list_serialize(rlite *db, void *obj, unsigned char *data)
+int rl_list_serialize(rlite *UNUSED(db), void *obj, unsigned char *data)
 {
-	db = db;
 	rl_list *list = obj;
 	put_4bytes(data, list->left);
 	put_4bytes(&data[4], list->right);
@@ -51,9 +50,8 @@ int rl_list_deserialize(rlite *db, void **obj, void *context, unsigned char *dat
 	return retval;
 }
 
-int rl_list_node_serialize_long(rlite *db, void *obj, unsigned char *data)
+int rl_list_node_serialize_long(rlite *UNUSED(db), void *obj, unsigned char *data)
 {
-	db = db;
 	rl_list_node *node = obj;
 
 	int retval = RL_OK;
@@ -95,9 +93,8 @@ cleanup:
 	return retval;
 }
 
-int rl_list_node_serialize_key(rlite *db, void *obj, unsigned char *data)
+int rl_list_node_serialize_key(rlite *UNUSED(db), void *obj, unsigned char *data)
 {
-	db = db;
 	rl_list_node *node = obj;
 	rl_key *key;
 
@@ -153,9 +150,8 @@ void rl_list_init()
 	list_long.list_node_type = &rl_data_type_list_node_long;
 }
 
-int rl_list_node_create(rlite *db, rl_list *list, rl_list_node **_node)
+int rl_list_node_create(rlite *UNUSED(db), rl_list *list, rl_list_node **_node)
 {
-	db = db;
 	rl_list_node *node = malloc(sizeof(rl_list_node));
 	if (!node) {
 		return RL_OUT_OF_MEMORY;
@@ -170,9 +166,8 @@ int rl_list_node_create(rlite *db, rl_list *list, rl_list_node **_node)
 	return RL_OK;
 }
 
-int rl_list_node_destroy(rlite *db, void *_node)
+int rl_list_node_destroy(rlite *UNUSED(db), void *_node)
 {
-	db = db;
 	rl_list_node *node = _node;
 	long i;
 	if (node->elements) {
@@ -216,9 +211,8 @@ cleanup:
 	return RL_OK;
 }
 
-int rl_list_destroy(rlite *db, void *list)
+int rl_list_destroy(rlite *UNUSED(db), void *list)
 {
-	db = db;
 	free(list);
 	return RL_OK;
 }
@@ -469,7 +463,6 @@ int rl_list_remove_element(rlite *db, rl_list *list, long position)
 	if (retval != RL_FOUND) {
 		return retval;
 	}
-	retval = RL_OK;
 
 	if (node->size - (position - pos + 1) > 0) {
 		free(node->elements[position - pos]);
@@ -607,7 +600,7 @@ succeeded:
 	retval = RL_OK;
 	list->size--;
 cleanup:
-	return 0;
+	return retval;
 }
 
 int rl_list_is_balanced(rlite *db, rl_list *list)
@@ -766,9 +759,8 @@ cleanup:
 	return retval;
 }
 
-int rl_list_iterator_destroy(rlite *db, rl_list_iterator *iterator)
+int rl_list_iterator_destroy(rlite *UNUSED(db), rl_list_iterator *iterator)
 {
-	db = db;
 	free(iterator);
 	return RL_OK;
 }
