@@ -406,7 +406,11 @@ void print_cache(rlite *db)
 }
 #endif
 
+#ifdef DEBUG
+static int rl_search_cache(rlite *db, rl_data_type *type, long page_number, void **obj, long *position, rl_page **pages, long page_len)
+#else
 static int rl_search_cache(rlite *UNUSED(db), rl_data_type *type, long page_number, void **obj, long *position, rl_page **pages, long page_len)
+#endif
 {
 	long pos, min = 0, max = page_len - 1;
 	rl_page *page;
