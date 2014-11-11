@@ -106,7 +106,7 @@ int rl_multi_string_cmp_str(struct rlite *db, long p1, unsigned char *str, long 
 	int first = 1;
 	long cmplen;
 	long stored_length = 0;
-	while (len > pos) {
+	do {
 		if (node_number1 == 0) {
 			*cmp = 0;
 			break;
@@ -150,6 +150,7 @@ int rl_multi_string_cmp_str(struct rlite *db, long p1, unsigned char *str, long 
 		rl_list_node_nocache_destroy(db, node1);
 		node1 = NULL;
 	}
+	while (len > pos);
 cleanup:
 	rl_list_nocache_destroy(db, list1);
 	if (node1) {

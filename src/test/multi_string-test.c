@@ -106,23 +106,28 @@ static int assert_cmp(rlite *db, long p1, unsigned char *data, long size, int ex
 	int cmp;
 	int retval = rl_multi_string_cmp_str(db, p1, data, size, &cmp);
 	if (retval != 0) {
+		fprintf(stderr, "Failed to cmp, got %d on line %d\n", retval, __LINE__);
 		return 1;
 	}
 	if (cmp != expected_cmp) {
-		fprintf(stderr, "Expected cmp=%d got %d instead\n", expected_cmp, cmp);
+		fprintf(stderr, "Expected cmp=%d got %d instead on line %d\n", expected_cmp, cmp, __LINE__);
 		return 1;
 	}
-	retval = rl_multi_string_set(db, &p2, data, size);
-	if (retval != 0) {
-		return 1;
-	}
-	retval = rl_multi_string_cmp(db, p1, p2, &cmp);
-	if (retval != 0) {
-		return 1;
-	}
-	if (cmp != expected_cmp) {
-		fprintf(stderr, "Expected cmp=%d got %d instead\n", expected_cmp, cmp);
-		return 1;
+	if (data) {
+		retval = rl_multi_string_set(db, &p2, data, size);
+		if (retval != 0) {
+			fprintf(stderr, "Failed to set, got %d on line %d\n", retval, __LINE__);
+			return 1;
+		}
+		retval = rl_multi_string_cmp(db, p1, p2, &cmp);
+		if (retval != 0) {
+			fprintf(stderr, "Failed to cmp, got %d on line %d\n", retval, __LINE__);
+			return 1;
+		}
+		if (cmp != expected_cmp) {
+			fprintf(stderr, "Expected cmp=%d got %d instead on line %d\n", expected_cmp, cmp, __LINE__);
+			return 1;
+		}
 	}
 	return 0;
 }
@@ -158,6 +163,10 @@ static int test_cmp_different_length()
 		return 1;
 	}
 	retval = assert_cmp(db, p1, data2, size, -1);
+	if (retval != 0) {
+		return 1;
+	}
+	retval = assert_cmp(db, p1, NULL, 0, 1);
 	if (retval != 0) {
 		return 1;
 	}
