@@ -254,7 +254,7 @@ int basic_test_zadd_zrange()
 	return 0;
 }
 
-static int test_zrangebylex(rlite *db, unsigned char *key, long keylen, long initial, long size, unsigned char min[3], long minlen, unsigned char max[3], long maxlen, long offset, long limit)
+static int test_zrangebylex(rlite *db, unsigned char *key, long keylen, long initial, long size, long total_size, unsigned char min[3], long minlen, unsigned char max[3], long maxlen, long offset, long limit)
 {
 	rl_zset_iterator *iterator;
 	long lexcount;
@@ -291,11 +291,11 @@ static int test_zrangebylex(rlite *db, unsigned char *key, long keylen, long ini
 			return 1;
 		}
 		if (data2[0] != 'a' + (i / 2)) {
-			fprintf(stderr, "Unexpected data[0] %d, expected %ld in iterator %ld\n", data2[0], 'a' + (i % 10), i);
+			fprintf(stderr, "Unexpected data[0] %d, expected %ld in iterator %ld on line %d\n", data2[0], 'a' + (i / 2), i, __LINE__);
 			return 1;
 		}
 		if (data2_len == 2 && data2[1] != 'A' + i) {
-			fprintf(stderr, "Unexpected data[1] %d, expected %ld in iterator %ld\n", data2[1], 'A' + i, i);
+			fprintf(stderr, "Unexpected data[1] %d, expected %ld in iterator %ld on line %d\n", data2[1], 'A' + i, i, __LINE__);
 			return 1;
 		}
 		i++;
@@ -304,6 +304,50 @@ static int test_zrangebylex(rlite *db, unsigned char *key, long keylen, long ini
 
 	if (i != size + initial) {
 		fprintf(stderr, "Expected size to be %ld, got %ld instead\n", size + initial, i);
+		return 1;
+	}
+
+	if (retval != RL_END) {
+		fprintf(stderr, "Iterator finished without RL_END, got %d\n", retval);
+		return 1;
+	}
+	retval = rl_zset_iterator_destroy(iterator);
+	if (retval != RL_OK) {
+		fprintf(stderr, "Failed to destroy iterator, got %d\n", retval);
+		return 1;
+	}
+
+	retval = rl_zrevrangebylex(db, key, keylen, min, minlen, max, maxlen, offset, limit, &iterator);
+	if (retval != RL_OK) {
+		fprintf(stderr, "Unable to zrangebylex, got %d\n", retval);
+		return 1;
+	}
+	if (iterator->size != size) {
+		fprintf(stderr, "Expected zrangebylex size to be %ld, got %ld instead\n", size, iterator->size);
+		return 1;
+	}
+
+	i = total_size - 1 - offset;
+	printf("limit=%ld offset=%ld i=%ld\n", limit, offset, i);
+	while ((retval = rl_zset_iterator_next(iterator, NULL, &data2, &data2_len)) == RL_OK) {
+		if (data2_len != ((i & 1) == 0 ? 1 : 2)) {
+			fprintf(stderr, "Unexpected datalen %ld in element %ld in line %d\n", data2_len, i, __LINE__);
+			return 1;
+		}
+		if (data2[0] != 'a' + (i / 2)) {
+			fprintf(stderr, "Unexpected data[0] %d, expected %ld in iterator %ld on line %d\n", data2[0], 'a' + (i / 2), i, __LINE__);
+			return 1;
+		}
+		if (data2_len == 2 && data2[1] != 'A' + i) {
+			fprintf(stderr, "Unexpected data[1] %d, expected %ld in iterator %ld on line %d\n", data2[1], 'A' + i, i, __LINE__);
+			return 1;
+		}
+		i--;
+		free(data2);
+	}
+
+	if (i != total_size - size - 1 - offset) {
+		fprintf(stderr, "Expected initial to be %ld, got %ld instead\n", total_size - size - 1 - offset, i);
 		return 1;
 	}
 
@@ -345,21 +389,21 @@ int basic_test_zadd_zrangebylex(int _commit)
 
 	min[0] = '-';
 	max[0] = '+';
-	retval = test_zrangebylex(db, key, keylen, 0, ZRANGEBYLEX_SIZE, min, 1, max, 1, 0, 0);
+	retval = test_zrangebylex(db, key, keylen, 0, ZRANGEBYLEX_SIZE, ZRANGEBYLEX_SIZE, min, 1, max, 1, 0, 0);
 	if (retval != 0) {
 		return retval;
 	}
 
 	min[0] = '-';
 	max[0] = '+';
-	retval = test_zrangebylex(db, key, keylen, 1, ZRANGEBYLEX_SIZE - 1, min, 1, max, 1, 1, 0);
+	retval = test_zrangebylex(db, key, keylen, 1, ZRANGEBYLEX_SIZE - 1, ZRANGEBYLEX_SIZE, min, 1, max, 1, 1, 0);
 	if (retval != 0) {
 		return retval;
 	}
 
 	min[0] = '-';
 	max[0] = '+';
-	retval = test_zrangebylex(db, key, keylen, 0, 1, min, 1, max, 1, 0, 1);
+	retval = test_zrangebylex(db, key, keylen, 0, 1, ZRANGEBYLEX_SIZE, min, 1, max, 1, 0, 1);
 	if (retval != 0) {
 		return retval;
 	}
@@ -367,7 +411,7 @@ int basic_test_zadd_zrangebylex(int _commit)
 	min[0] = '(';
 	min[1] = 'c';
 	max[0] = '+';
-	retval = test_zrangebylex(db, key, keylen, 5, ZRANGEBYLEX_SIZE - 5, min, 2, max, 1, 0, 0);
+	retval = test_zrangebylex(db, key, keylen, 5, ZRANGEBYLEX_SIZE - 5, ZRANGEBYLEX_SIZE, min, 2, max, 1, 0, 0);
 	if (retval != 0) {
 		return retval;
 	}
@@ -375,7 +419,7 @@ int basic_test_zadd_zrangebylex(int _commit)
 	min[0] = '[';
 	min[1] = 'c';
 	max[0] = '+';
-	retval = test_zrangebylex(db, key, keylen, 4, ZRANGEBYLEX_SIZE - 4, min, 2, max, 1, 0, 0);
+	retval = test_zrangebylex(db, key, keylen, 4, ZRANGEBYLEX_SIZE - 4, ZRANGEBYLEX_SIZE, min, 2, max, 1, 0, 0);
 	if (retval != 0) {
 		return retval;
 	}
@@ -384,7 +428,7 @@ int basic_test_zadd_zrangebylex(int _commit)
 	min[1] = 'c';
 	max[0] = '[';
 	max[1] = 'f';
-	retval = test_zrangebylex(db, key, keylen, 4, 7, min, 2, max, 2, 0, 0);
+	retval = test_zrangebylex(db, key, keylen, 4, 7, 11, min, 2, max, 2, 0, 0);
 	if (retval != 0) {
 		return retval;
 	}
@@ -392,7 +436,7 @@ int basic_test_zadd_zrangebylex(int _commit)
 	min[0] = '-';
 	max[0] = '[';
 	max[1] = 'f';
-	retval = test_zrangebylex(db, key, keylen, 0, 11, min, 1, max, 2, 0, 0);
+	retval = test_zrangebylex(db, key, keylen, 0, 11, 11, min, 1, max, 2, 0, 0);
 	if (retval != 0) {
 		return retval;
 	}

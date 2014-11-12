@@ -325,7 +325,7 @@ cleanup:
 	return retval;
 }
 
-static int _rl_zrange(rlite *db, rl_skiplist *skiplist, long start, long end, rl_zset_iterator **iterator)
+static int _rl_zrange(rlite *db, rl_skiplist *skiplist, long start, long end, int direction, rl_zset_iterator **iterator)
 {
 	int retval = RL_OK;
 	long size, node_page;
@@ -350,12 +350,12 @@ static int _rl_zrange(rlite *db, rl_skiplist *skiplist, long start, long end, rl
 
 	size = end - start + 1;
 
-	retval = rl_skiplist_node_by_rank(db, skiplist, start, NULL, &node_page);
+	retval = rl_skiplist_node_by_rank(db, skiplist, direction > 0 ? start : end, NULL, &node_page);
 	if (retval != RL_OK) {
 		goto cleanup;
 	}
 
-	retval = rl_skiplist_iterator_create(db, iterator, skiplist, node_page, 1, size);
+	retval = rl_skiplist_iterator_create(db, iterator, skiplist, node_page, direction, size);
 cleanup:
 	return retval;
 }
@@ -437,6 +437,28 @@ cleanup:
 	return retval;
 }
 
+int rl_zrevrangebylex(rlite *db, unsigned char *key, long keylen, unsigned char *min, long minlen, unsigned char *max, long maxlen, long offset, long count, rl_zset_iterator **iterator)
+{
+	long start, end;
+	rl_skiplist *skiplist;
+	int retval = lex_get_range(db, key, keylen, min, minlen, max, maxlen, &skiplist, &start, &end);
+	if (retval != RL_OK) {
+		goto cleanup;
+	}
+
+	end -= offset;
+
+	retval = _rl_zrange(db, skiplist, start, end, -1, iterator);
+	if (retval != RL_OK) {
+		goto cleanup;
+	}
+	if (count > 0 && (*iterator)->size > count) {
+		(*iterator)->size = count;
+	}
+cleanup:
+	return retval;
+}
+
 int rl_zrangebylex(rlite *db, unsigned char *key, long keylen, unsigned char *min, long minlen, unsigned char *max, long maxlen, long offset, long count, rl_zset_iterator **iterator)
 {
 	long start, end;
@@ -448,7 +470,7 @@ int rl_zrangebylex(rlite *db, unsigned char *key, long keylen, unsigned char *mi
 
 	start += offset;
 
-	retval = _rl_zrange(db, skiplist, start, end, iterator);
+	retval = _rl_zrange(db, skiplist, start, end, 1, iterator);
 	if (retval != RL_OK) {
 		goto cleanup;
 	}
@@ -468,7 +490,7 @@ int rl_zrange(rlite *db, unsigned char *key, long keylen, long start, long end, 
 		goto cleanup;
 	}
 
-	retval = _rl_zrange(db, skiplist, start, end, iterator);
+	retval = _rl_zrange(db, skiplist, start, end, 1, iterator);
 cleanup:
 	return retval;
 }
