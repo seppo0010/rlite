@@ -257,7 +257,18 @@ int basic_test_zadd_zrange()
 static int test_zrangebylex(rlite *db, unsigned char *key, long keylen, long initial, long size, unsigned char min[3], long minlen, unsigned char max[3], long maxlen)
 {
 	rl_zset_iterator *iterator;
-	int retval = rl_zrangebylex(db, key, keylen, min, minlen, max, maxlen, 0, 0, &iterator);
+	long lexcount;
+	int retval = rl_zlexcount(db, key, keylen, min, minlen, max, maxlen, &lexcount);
+	if (retval != RL_OK) {
+		fprintf(stderr, "Unable to rl_zlexcount, got %d\n", retval);
+		return 1;
+	}
+	if (size != lexcount) {
+		fprintf(stderr, "Expected lexcount to be %ld, got %ld instead\n", size, lexcount);
+		return 1;
+	}
+
+	retval = rl_zrangebylex(db, key, keylen, min, minlen, max, maxlen, 0, 0, &iterator);
 	if (retval != RL_OK) {
 		fprintf(stderr, "Unable to zrangebylex, got %d\n", retval);
 		return 1;

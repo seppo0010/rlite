@@ -28,6 +28,7 @@ int rl_zcard(rlite *db, unsigned char *key, long keylen, long *card);
 int rl_zcount(rlite *db, unsigned char *key, long keylen, rl_zrangespec *range, long *count);
 int rl_zincrby(rlite *db, unsigned char *key, long keylen, double score, unsigned char *data, long datalen, double *newscore);
 int rl_zinterstore(rlite *db, long keys_size, unsigned char **keys, long *keys_len, double *weights, int aggregate);
+int rl_zlexcount(rlite *db, unsigned char *key, long keylen, unsigned char *min, long minlen, unsigned char *max, long maxlen, long *lexcount);
 int rl_zrange(rlite *db, unsigned char *key, long keylen, long start, long end, rl_zset_iterator **iterator);
 int rl_zrangebylex(rlite *db, unsigned char *key, long keylen, unsigned char *min, long min_length, unsigned char *max, long max_length, long offset, long count, rl_zset_iterator **iterator);
 int rl_zrank(rlite *db, unsigned char *key, long keylen, unsigned char *data, long datalen, long *rank);

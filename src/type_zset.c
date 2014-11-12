@@ -360,12 +360,15 @@ cleanup:
 	return retval;
 }
 
-int rl_zrangebylex(rlite *db, unsigned char *key, long keylen, unsigned char *min, long min_length, unsigned char *max, long max_length, long offset, long count, rl_zset_iterator **iterator)
+static int lex_get_range(rlite *db, unsigned char *key, long keylen, unsigned char *min, long minlen, unsigned char *max, long maxlen, rl_skiplist **_skiplist, long *_start, long *_end)
 {
 	rl_skiplist *skiplist;
 	int retval = rl_zset_get_objects(db, key, keylen, NULL, NULL, &skiplist, NULL, 0);
 	if (retval != RL_OK) {
 		goto cleanup;
+	}
+	if (_skiplist) {
+		*_skiplist = skiplist;
 	}
 
 	if (min[0] != '-' && min[0] != '(' && min[0] != '[') {
@@ -389,7 +392,7 @@ int rl_zrangebylex(rlite *db, unsigned char *key, long keylen, unsigned char *mi
 		start = 0;
 	}
 	else {
-		retval = rl_skiplist_first_node(db, skiplist, score, min[0] == '(' ? RL_SKIPLIST_EXCLUDE_SCORE : RL_SKIPLIST_INCLUDE_SCORE, &min[1], min_length - 1, &node, &start);
+		retval = rl_skiplist_first_node(db, skiplist, score, min[0] == '(' ? RL_SKIPLIST_EXCLUDE_SCORE : RL_SKIPLIST_INCLUDE_SCORE, &min[1], minlen - 1, &node, &start);
 		if (retval != RL_FOUND) {
 			goto cleanup;
 		}
@@ -399,10 +402,48 @@ int rl_zrangebylex(rlite *db, unsigned char *key, long keylen, unsigned char *mi
 		end = -1;
 	}
 	else {
-		retval = rl_skiplist_first_node(db, skiplist, score, max[0] == '(' ? RL_SKIPLIST_BEFORE_SCORE : RL_SKIPLIST_INCLUDE_SCORE, &max[1], max_length - 1, NULL, &end);
+		retval = rl_skiplist_first_node(db, skiplist, score, max[0] == '(' ? RL_SKIPLIST_BEFORE_SCORE : RL_SKIPLIST_INCLUDE_SCORE, &max[1], maxlen - 1, NULL, &end);
 		if (retval != RL_FOUND) {
 			goto cleanup;
 		}
+	}
+
+	if (_start) {
+		*_start = start;
+	}
+	if (_end) {
+		*_end = end;
+	}
+	retval = RL_OK;
+cleanup:
+	return retval;
+}
+
+int rl_zlexcount(rlite *db, unsigned char *key, long keylen, unsigned char *min, long minlen, unsigned char *max, long maxlen, long *lexcount)
+{
+	long start, end;
+	rl_skiplist *skiplist;
+	int retval = lex_get_range(db, key, keylen, min, minlen, max, maxlen, &skiplist, &start, &end);
+	if (retval != RL_OK) {
+		goto cleanup;
+	}
+	if (end < 0) {
+		end += skiplist->size;
+	}
+
+	*lexcount = end - start + 1;
+	retval = RL_OK;
+cleanup:
+	return retval;
+}
+
+int rl_zrangebylex(rlite *db, unsigned char *key, long keylen, unsigned char *min, long minlen, unsigned char *max, long maxlen, long offset, long count, rl_zset_iterator **iterator)
+{
+	long start, end;
+	rl_skiplist *skiplist;
+	int retval = lex_get_range(db, key, keylen, min, minlen, max, maxlen, &skiplist, &start, &end);
+	if (retval != RL_OK) {
+		goto cleanup;
 	}
 
 	start += offset;
