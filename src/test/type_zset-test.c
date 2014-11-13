@@ -891,6 +891,76 @@ int basic_test_zadd_zremrangebyrank(int _commit)
 	return 0;
 }
 
+int basic_test_zadd_zremrangebyscore(int _commit)
+{
+	int retval = 0;
+	fprintf(stderr, "Start basic_test_zadd_zremrangebyscore %d\n", _commit);
+
+	rlite *db = setup_db(_commit, 1);
+
+#define ZREMRANGEBYSCORE_SIZE 20
+	unsigned char *key = (unsigned char *)"my key";
+	long keylen = strlen((char *)key), i, changed;
+	unsigned char data[1];
+	for (i = 0; i < ZREMRANGEBYSCORE_SIZE; i++) {
+		data[0] = i;
+		retval = rl_zadd(db, key, keylen, i * 10.0, data, 1);
+		if (retval != RL_OK) {
+			fprintf(stderr, "Unable to zadd %d\n", retval);
+			return 1;
+		}
+	}
+
+	if (_commit) {
+		rl_commit(db);
+	}
+
+	rl_zrangespec range;
+
+#define run_test_zremrangebyscore(_min, _minex, _max, _maxex, changed_expected, data_score, rank_expected)\
+	range.min = _min;\
+	range.minex = _minex;\
+	range.max = _max;\
+	range.maxex = _maxex;\
+	retval = rl_zremrangebyscore(db, key, keylen, &range, &changed);\
+	if ((changed_expected > 0 && retval != RL_OK) || (changed_expected == 0 && retval != RL_NOT_FOUND)) {\
+		fprintf(stderr, "Failed to zremrangebyscore, got %d on line %d\n", retval, __LINE__);\
+		return 1;\
+	}\
+	if (changed_expected && changed != changed_expected) {\
+		fprintf(stderr, "Expected to delete %d elements, got %ld on line %d\n", changed_expected, changed, __LINE__);\
+		return 1;\
+	}\
+	data[0] = data_score;\
+	retval = rl_zrank(db, key, keylen, data, 1, &i);\
+	if (rank_expected == -1) {\
+		if (retval != RL_NOT_FOUND) {\
+			fprintf(stderr, "Failed to zscore, got %d on line %d\n", retval, __LINE__);\
+			return 1;\
+		}\
+	} else {\
+		if (retval != RL_FOUND) {\
+			fprintf(stderr, "Failed to zscore, got %d on line %d\n", retval, __LINE__);\
+			return 1;\
+		}\
+		if (i != rank_expected) {\
+			fprintf(stderr, "Expected score to be %d, got %ld on line %d\n", rank_expected, i, __LINE__);\
+			return 1;\
+		}\
+	}
+
+	run_test_zremrangebyscore(0, 0, 100, 1, 10, 19, 9);
+	run_test_zremrangebyscore(-INFINITY, 0, 100, 0, 1, 19, 8);
+	run_test_zremrangebyscore(-INFINITY, 0, 100, 0, 0, 19, 8);
+	run_test_zremrangebyscore(180, 0, INFINITY, 0, 2, 17, 6);
+	run_test_zremrangebyscore(-INFINITY, 0, INFINITY, 0, 7, 0, -1);
+
+	rl_close(db);
+	fprintf(stderr, "End basic_test_zadd_zremrangebyscore\n");
+	return 0;
+}
+
+
 int main()
 {
 #define ZINTERSTORE_TESTS 7
@@ -938,6 +1008,10 @@ int main()
 			goto cleanup;
 		}
 		retval = basic_test_zadd_zremrangebyrank(i);
+		if (retval != 0) {
+			goto cleanup;
+		}
+		retval = basic_test_zadd_zremrangebyscore(i);
 		if (retval != 0) {
 			goto cleanup;
 		}

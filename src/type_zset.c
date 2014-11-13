@@ -360,16 +360,11 @@ cleanup:
 	return retval;
 }
 
-int rl_zrangebyscore(rlite *db, unsigned char *key, long keylen, rl_zrangespec *range, long offset, long count, rl_zset_iterator **iterator)
+static int _rl_zrangebyscore(rlite *db, rl_skiplist *skiplist, rl_zrangespec *range, long *_start, long *_end)
 {
 	long start, end;
-	rl_skiplist *skiplist;
 	rl_skiplist_node *node;
-	int retval = rl_zset_get_objects(db, key, keylen, NULL, NULL, &skiplist, NULL, 0);
-	if (retval != RL_OK) {
-		goto cleanup;
-	}
-	retval = rl_skiplist_first_node(db, skiplist, range->min, range->minex ? RL_SKIPLIST_EXCLUDE_SCORE : RL_SKIPLIST_INCLUDE_SCORE, NULL, 0, NULL, &start);
+	int retval = rl_skiplist_first_node(db, skiplist, range->min, range->minex ? RL_SKIPLIST_EXCLUDE_SCORE : RL_SKIPLIST_INCLUDE_SCORE, NULL, 0, NULL, &start);
 	if (retval != RL_FOUND) {
 		goto cleanup;
 	}
@@ -378,12 +373,33 @@ int rl_zrangebyscore(rlite *db, unsigned char *key, long keylen, rl_zrangespec *
 	if (retval != RL_FOUND && retval != RL_NOT_FOUND) {
 		goto cleanup;
 	}
+
 	if (retval == RL_FOUND && end == 0 && (range->maxex || node->score > range->max)) {
 		retval = RL_NOT_FOUND;
 		goto cleanup;
 	}
 	if (end < start) {
 		retval = RL_NOT_FOUND;
+		goto cleanup;
+	}
+	*_start = start;
+	*_end = end;
+	retval = RL_OK;
+cleanup:
+	return retval;
+}
+
+int rl_zrangebyscore(rlite *db, unsigned char *key, long keylen, rl_zrangespec *range, long offset, long count, rl_zset_iterator **iterator)
+{
+	long start, end;
+	rl_skiplist *skiplist;
+	int retval = rl_zset_get_objects(db, key, keylen, NULL, NULL, &skiplist, NULL, 0);
+	if (retval != RL_OK) {
+		goto cleanup;
+	}
+
+	retval = _rl_zrangebyscore(db, skiplist, range, &start, &end);
+	if (retval != RL_OK) {
 		goto cleanup;
 	}
 
@@ -705,26 +721,13 @@ cleanup:
 	return retval;
 }
 
-int rl_zremrangebyrank(rlite *db, unsigned char *key, long keylen, long start, long end, long *changed)
+static int _zremiterator(rlite *db, unsigned char *key, long keylen, rl_zset_iterator *iterator, rl_btree *scores, long scores_page, rl_skiplist *skiplist, long skiplist_page, long *changed)
 {
-	rl_zset_iterator *iterator;
-	rl_btree *scores;
-	rl_skiplist *skiplist;
-	long scores_page, skiplist_page;
-	int retval = rl_zset_get_objects(db, key, keylen, &scores, &scores_page, &skiplist, &skiplist_page, 1);
-	if (retval != RL_OK) {
-		goto cleanup;
-	}
 	long _changed = 0;
 	double score;
 	unsigned char *member;
 	long memberlen;
-
-	retval = _rl_zrange(db, skiplist, start, end, 1, &iterator);
-	if (retval != RL_OK) {
-		goto cleanup;
-	}
-
+	int retval;
 	while ((retval = rl_zset_iterator_next(iterator, &score, &member, &memberlen)) == RL_OK) {
 		retval = remove_member_score(db, scores, skiplist, member, memberlen, score);
 		if (retval != RL_OK) {
@@ -749,6 +752,64 @@ int rl_zremrangebyrank(rlite *db, unsigned char *key, long keylen, long start, l
 	}
 
 	*changed = _changed;
+	retval = RL_OK;
+cleanup:
+	return retval;
+}
+
+int rl_zremrangebyrank(rlite *db, unsigned char *key, long keylen, long start, long end, long *changed)
+{
+	rl_zset_iterator *iterator;
+	rl_btree *scores;
+	rl_skiplist *skiplist;
+	long scores_page, skiplist_page;
+	int retval = rl_zset_get_objects(db, key, keylen, &scores, &scores_page, &skiplist, &skiplist_page, 1);
+	if (retval != RL_OK) {
+		goto cleanup;
+	}
+
+	retval = _rl_zrange(db, skiplist, start, end, 1, &iterator);
+	if (retval != RL_OK) {
+		goto cleanup;
+	}
+
+	retval = _zremiterator(db, key, keylen, iterator, scores, scores_page, skiplist, skiplist_page, changed);
+	if (retval != RL_OK) {
+		goto cleanup;
+	}
+
+	retval = RL_OK;
+cleanup:
+	return retval;
+}
+
+int rl_zremrangebyscore(rlite *db, unsigned char *key, long keylen, rl_zrangespec *range, long *changed)
+{
+	rl_zset_iterator *iterator;
+	rl_btree *scores;
+	rl_skiplist *skiplist;
+	long scores_page, skiplist_page;
+	int retval = rl_zset_get_objects(db, key, keylen, &scores, &scores_page, &skiplist, &skiplist_page, 1);
+	if (retval != RL_OK) {
+		goto cleanup;
+	}
+
+	long start, end;
+	retval = _rl_zrangebyscore(db, skiplist, range, &start, &end);
+	if (retval != RL_OK) {
+		goto cleanup;
+	}
+
+	retval = _rl_zrange(db, skiplist, start, end, 1, &iterator);
+	if (retval != RL_OK) {
+		goto cleanup;
+	}
+
+	retval = _zremiterator(db, key, keylen, iterator, scores, scores_page, skiplist, skiplist_page, changed);
+	if (retval != RL_OK) {
+		goto cleanup;
+	}
+
 	retval = RL_OK;
 cleanup:
 	return retval;
