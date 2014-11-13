@@ -1,6 +1,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <limits.h>
+#include <math.h>
 #include "../rlite.h"
 #include "../type_zset.h"
 #include "../page_key.h"
@@ -328,7 +329,6 @@ static int test_zrangebylex(rlite *db, unsigned char *key, long keylen, long ini
 	}
 
 	i = total_size - 1 - offset;
-	printf("limit=%ld offset=%ld i=%ld\n", limit, offset, i);
 	while ((retval = rl_zset_iterator_next(iterator, NULL, &data2, &data2_len)) == RL_OK) {
 		if (data2_len != ((i & 1) == 0 ? 1 : 2)) {
 			fprintf(stderr, "Unexpected datalen %ld in element %ld in line %d\n", data2_len, i, __LINE__);
@@ -362,6 +362,7 @@ static int test_zrangebylex(rlite *db, unsigned char *key, long keylen, long ini
 	}
 	return 0;
 }
+
 int basic_test_zadd_zrangebylex(int _commit)
 {
 #define ZRANGEBYLEX_SIZE 20
@@ -443,6 +444,94 @@ int basic_test_zadd_zrangebylex(int _commit)
 
 	rl_close(db);
 	fprintf(stderr, "End basic_test_zadd_zrangebylex\n");
+	return 0;
+}
+
+static int test_zrangebyscore(rlite *db, unsigned char *key, long keylen, rl_zrangespec *range, long size, double base_score, double step)
+{
+	rl_zset_iterator *iterator;
+	long offset = 0, limit = 0;
+	int retval = rl_zrangebyscore(db, key, keylen, range, offset, limit, &iterator);
+	if (size == 0 && retval == RL_NOT_FOUND) {
+		return 0;
+	}
+	if (retval != RL_OK) {
+		fprintf(stderr, "Unable to zrangebyscore, got %d\n", retval);
+		return 1;
+	}
+
+	double score;
+	long i = 0;
+	while ((retval = rl_zset_iterator_next(iterator, &score, NULL, NULL)) == RL_OK) {
+		if (score != base_score + i * step) {
+			fprintf(stderr, "Expected score to be %lf, got %lf instead\n", base_score + i * step, score);
+			return 1;
+		}
+		i++;
+	}
+	if (retval != RL_END) {
+		fprintf(stderr, "Expected iterator to finish, got %d instead\n", retval);
+		return 1;
+	}
+	retval = rl_zset_iterator_destroy(iterator);
+	if (retval != RL_OK) {
+		fprintf(stderr, "Unable to destroy zset iterator\n");
+		return 1;
+	}
+	if (i != size) {
+		fprintf(stderr, "Expected size to be %ld, got %ld\n", size, i);
+		return 1;
+	}
+
+	return 0;
+}
+
+int basic_test_zadd_zrangebyscore(int _commit)
+{
+#define ZRANGEBYSCORE_SIZE 20
+	int retval = 0;
+	fprintf(stderr, "Start basic_test_zadd_zrangebyscore %d\n", _commit);
+	rlite *db = setup_db(_commit, 1);
+
+	unsigned char *key = (unsigned char *)"my key";
+	long keylen = strlen((char *)key);
+
+	unsigned char data[1];
+	long i;
+	for (i = 0; i < ZRANGEBYSCORE_SIZE; i++) {
+		data[0] = 'a' + i;
+		retval = rl_zadd(db, key, keylen, i, data, 1);
+		if (retval != RL_OK) {
+			fprintf(stderr, "Unable to zadd %d\n", retval);
+			return 1;
+		}
+	}
+
+	rl_zrangespec range;
+#define run_test(_min, _minex, _max, _maxex, size, base_score) \
+	range.min = _min;\
+	range.minex = _minex;\
+	range.max = _max;\
+	range.maxex = _maxex;\
+	if (0 != test_zrangebyscore(db, key, keylen, &range, size, base_score, 1)) {\
+		fprintf(stderr, "zrangebyscore test failed on line %d\n", __LINE__);\
+		return 1;\
+	}
+	run_test(-INFINITY, 1, INFINITY, 1, ZRANGEBYSCORE_SIZE, 0);
+	run_test(-INFINITY, 0, INFINITY, 1, ZRANGEBYSCORE_SIZE, 0);
+	run_test(-INFINITY, 1, INFINITY, 0, ZRANGEBYSCORE_SIZE, 0);
+	run_test(-INFINITY, 0, INFINITY, 0, ZRANGEBYSCORE_SIZE, 0);
+	run_test(-5, 0, INFINITY, 0, ZRANGEBYSCORE_SIZE, 0);
+	run_test(5, 0, INFINITY, 0, ZRANGEBYSCORE_SIZE - 5, 5);
+	run_test(5, 0, 6, 1, 1, 5);
+	run_test(21, 0, 40, 0, 0, 0);
+	run_test(-INFINITY, 0, -5, 0, 0, 0);
+	run_test(0, 0, 0, 0, 1, 0);
+	run_test(0, 1, 0, 1, 0, 0);
+	run_test(1, 0, 1, 0, 1, 1);
+
+	rl_close(db);
+	fprintf(stderr, "End basic_test_zadd_zrangebyscore\n");
 	return 0;
 }
 
@@ -818,6 +907,10 @@ int main()
 		if (retval != 0) {
 			goto cleanup;
 		}
+		retval = basic_test_zadd_zrangebyscore(i);
+		if (retval != 0) {
+			goto cleanup;
+		}
 		for (j = 0; j < ZINTERSTORE_TESTS; j++) {
 			retval = basic_test_zadd_zinterstore(i, zinterstore_tests[j]);
 			if (retval != 0) {
@@ -832,3 +925,4 @@ int main()
 cleanup:
 	return retval;
 }
+// int rl_zrangebyscore(rlite *db, unsigned char *key, long keylen, rl_zrangespec* range, long offset, long count, rl_zset_iterator **iterator)

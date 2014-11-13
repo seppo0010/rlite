@@ -360,6 +360,46 @@ cleanup:
 	return retval;
 }
 
+int rl_zrangebyscore(rlite *db, unsigned char *key, long keylen, rl_zrangespec *range, long offset, long count, rl_zset_iterator **iterator)
+{
+	long start, end;
+	rl_skiplist *skiplist;
+	rl_skiplist_node *node;
+	int retval = rl_zset_get_objects(db, key, keylen, NULL, NULL, &skiplist, NULL, 0);
+	if (retval != RL_OK) {
+		goto cleanup;
+	}
+	retval = rl_skiplist_first_node(db, skiplist, range->min, range->minex ? RL_SKIPLIST_EXCLUDE_SCORE : RL_SKIPLIST_INCLUDE_SCORE, NULL, 0, NULL, &start);
+	if (retval != RL_FOUND) {
+		goto cleanup;
+	}
+
+	retval = rl_skiplist_first_node(db, skiplist, range->max, range->maxex ? RL_SKIPLIST_BEFORE_SCORE : RL_SKIPLIST_INCLUDE_SCORE, NULL, 0, &node, &end);
+	if (retval != RL_FOUND && retval != RL_NOT_FOUND) {
+		goto cleanup;
+	}
+	if (retval == RL_FOUND && end == 0 && (range->maxex || node->score > range->max)) {
+		retval = RL_NOT_FOUND;
+		goto cleanup;
+	}
+	if (end < start) {
+		retval = RL_NOT_FOUND;
+		goto cleanup;
+	}
+
+	start += offset;
+
+	retval = _rl_zrange(db, skiplist, start, end, 1, iterator);
+	if (retval != RL_OK) {
+		goto cleanup;
+	}
+	if (count > 0 && (*iterator)->size > count) {
+		(*iterator)->size = count;
+	}
+cleanup:
+	return retval;
+}
+
 static int lex_get_range(rlite *db, unsigned char *key, long keylen, unsigned char *min, long minlen, unsigned char *max, long maxlen, rl_skiplist **_skiplist, long *_start, long *_end)
 {
 	rl_skiplist *skiplist;

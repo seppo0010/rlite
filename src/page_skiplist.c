@@ -321,7 +321,7 @@ int rl_skiplist_first_node(rlite *db, rl_skiplist *skiplist, double score, int r
 		goto cleanup;
 	}
 
-	if (range_mode == RL_SKIPLIST_INCLUDE_SCORE) {
+	if (range_mode == RL_SKIPLIST_INCLUDE_SCORE && update_node[0]->value) {
 		if (update_node[0]->score == score || update_node[0]->score > score) {
 			if (update_node[0]->score < score || !value || !update_node[0]->value) {
 				cmp = 0;
