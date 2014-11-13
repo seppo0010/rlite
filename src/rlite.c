@@ -91,12 +91,6 @@ rl_data_type rl_data_type_list_node_long = {
 	rl_list_node_deserialize_long,
 	rl_list_node_destroy,
 };
-rl_data_type rl_data_type_list_key = {
-	"rl_data_type_list_key",
-	rl_list_serialize,
-	rl_list_deserialize,
-	rl_list_destroy,
-};
 rl_data_type rl_data_type_string = {
 	"rl_data_type_string",
 	rl_string_serialize,

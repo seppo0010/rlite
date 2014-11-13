@@ -6,7 +6,6 @@
 #include "status.h"
 #include "page_list.h"
 #include "page_string.h"
-#include "page_key.h"
 #include "util.h"
 
 #ifdef DEBUG
@@ -87,57 +86,6 @@ int rl_list_node_deserialize_long(rlite *db, void **obj, void *context, unsigned
 		node->elements[i] = malloc(sizeof(long));
 		*(long *)node->elements[i] = get_4bytes(&data[pos]);
 		pos += 4;
-	}
-	*obj = node;
-cleanup:
-	return retval;
-}
-
-int rl_list_node_serialize_key(rlite *UNUSED(db), void *obj, unsigned char *data)
-{
-	rl_list_node *node = obj;
-	rl_key *key;
-
-	int retval = RL_OK;
-	if (!data) {
-		retval = RL_OUT_OF_MEMORY;
-		goto cleanup;
-	}
-	put_4bytes(data, node->size);
-	put_4bytes(&data[4], node->left);
-	put_4bytes(&data[8], node->right);
-	long i, pos = 12;
-	for (i = 0; i < node->size; i++) {
-		key = node->elements[i];
-		data[pos] = key->type;
-		put_4bytes(&data[pos + 1], key->string_page);
-		put_4bytes(&data[pos + 5], key->value_page);
-		pos += 9;
-	}
-cleanup:
-	return retval;
-}
-
-int rl_list_node_deserialize_key(rlite *db, void **obj, void *context, unsigned char *data)
-{
-	rl_list *list = context;
-	rl_list_node *node;
-	rl_key *key;
-	int retval = rl_list_node_create(db, list, &node);
-	if (retval != RL_OK) {
-		goto cleanup;
-	}
-	node->size = (long)get_4bytes(data);
-	node->left = (long)get_4bytes(&data[4]);
-	node->right = (long)get_4bytes(&data[8]);
-	long i, pos = 12;
-	for (i = 0; i < node->size; i++) {
-		key = malloc(sizeof(rl_key));
-		key->type = data[pos];
-		key->string_page = get_4bytes(&data[pos + 1]);
-		key->value_page = get_4bytes(&data[pos + 5]);
-		node->elements[i] = key;
-		pos += 9;
 	}
 	*obj = node;
 cleanup:
