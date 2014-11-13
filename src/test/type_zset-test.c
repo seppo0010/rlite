@@ -829,6 +829,67 @@ int basic_test_zadd_zinterstore(int _commit, long params[5])
 	return 0;
 }
 
+int basic_test_zadd_zremrangebyrank(int _commit)
+{
+	int retval = 0;
+	fprintf(stderr, "Start basic_test_zadd_zremrangebyrank %d\n", _commit);
+
+	rlite *db = setup_db(_commit, 1);
+
+#define ZREMRANGEBYRANK_SIZE 20
+	unsigned char *key = (unsigned char *)"my key";
+	long keylen = strlen((char *)key), i, changed;
+	unsigned char data[1];
+	for (i = 0; i < ZREMRANGEBYRANK_SIZE; i++) {
+		data[0] = i;
+		retval = rl_zadd(db, key, keylen, i * 1.0, data, 1);
+		if (retval != RL_OK) {
+			fprintf(stderr, "Unable to zadd %d\n", retval);
+			return 1;
+		}
+	}
+
+	if (_commit) {
+		rl_commit(db);
+	}
+
+#define run_test_zremrangebyrank(start, end, changed_expected, data_rank, rank_expected)\
+	retval = rl_zremrangebyrank(db, key, keylen, start, end, &changed);\
+	if (retval != RL_OK) {\
+		fprintf(stderr, "Failed to zremrangebyrank, got %d on line %d\n", retval, __LINE__);\
+		return 1;\
+	}\
+	if (changed != changed_expected) {\
+		fprintf(stderr, "Expected to delete %d elements, got %ld on line %d\n", changed_expected, changed, __LINE__);\
+		return 1;\
+	}\
+	data[0] = data_rank;\
+	retval = rl_zrank(db, key, keylen, data, 1, &i);\
+	if (rank_expected == -1) {\
+		if (retval != RL_NOT_FOUND) {\
+			fprintf(stderr, "Failed to zrank, got %d on line %d\n", retval, __LINE__);\
+			return 1;\
+		}\
+	} else {\
+		if (retval != RL_FOUND) {\
+			fprintf(stderr, "Failed to zrank, got %d on line %d\n", retval, __LINE__);\
+			return 1;\
+		}\
+		if (i != rank_expected) {\
+			fprintf(stderr, "Expected rank to be %d, got %ld on line %d\n", rank_expected, i, __LINE__);\
+			return 1;\
+		}\
+	}
+
+	run_test_zremrangebyrank(0, 10, 11, 19, 8);
+	run_test_zremrangebyrank(-5, -1, 5, 14, 3);
+	run_test_zremrangebyrank(0, 0, 1, 14, 2);
+	run_test_zremrangebyrank(0, -1, 3, 0, -1);
+
+	rl_close(db);
+	fprintf(stderr, "End basic_test_zadd_zremrangebyrank\n");
+	return 0;
+}
 
 int main()
 {
@@ -873,6 +934,10 @@ int main()
 			goto cleanup;
 		}
 		retval = basic_test_zadd_zrangebyscore(i);
+		if (retval != 0) {
+			goto cleanup;
+		}
+		retval = basic_test_zadd_zremrangebyrank(i);
 		if (retval != 0) {
 			goto cleanup;
 		}

@@ -599,6 +599,36 @@ cleanup:
 	return retval;
 }
 
+static int remove_member_score_sha1(rlite *db, rl_btree *scores, rl_skiplist *skiplist, unsigned char *member, long member_len, double score, unsigned char digest[20])
+{
+	int retval = rl_btree_remove_element(db, scores, digest);
+	if (retval != RL_OK) {
+		goto cleanup;
+	}
+	retval = rl_skiplist_delete(db, skiplist, score, member, member_len);
+	if (retval != RL_OK) {
+		goto cleanup;
+	}
+	retval = RL_OK;
+cleanup:
+	return retval;
+}
+
+static int remove_member_score(rlite *db, rl_btree *scores, rl_skiplist *skiplist, unsigned char *member, long member_len, double score)
+{
+	unsigned char digest[20];
+	int retval = sha1(member, member_len, digest);
+	if (retval != RL_OK) {
+		goto cleanup;
+	}
+	retval = remove_member_score_sha1(db, scores, skiplist, member, member_len, score, digest);
+	if (retval != RL_OK) {
+		goto cleanup;
+	}
+cleanup:
+	return retval;
+}
+
 static int remove_member(rlite *db, rl_btree *scores, rl_skiplist *skiplist, unsigned char *member, long member_len)
 {
 	double score;
@@ -614,15 +644,31 @@ static int remove_member(rlite *db, rl_btree *scores, rl_skiplist *skiplist, uns
 	}
 	if (retval == RL_FOUND) {
 		score = *(double *)tmp;
-		retval = rl_btree_remove_element(db, scores, digest);
-		if (retval != RL_OK) {
-			goto cleanup;
-		}
-		retval = rl_skiplist_delete(db, skiplist, score, member, member_len);
+		retval = remove_member_score_sha1(db, scores, skiplist, member, member_len, score, digest);
 		if (retval != RL_OK) {
 			goto cleanup;
 		}
 	}
+cleanup:
+	return retval;
+}
+static int skiplist_changed(rlite *db, unsigned char *key, long keylen, rl_skiplist *skiplist, long skiplist_page, rl_btree *scores, long scores_page, long changed)
+{
+	int retval;
+	if (skiplist->size == 0) {
+		retval = delete_zset(db, key, keylen, skiplist, skiplist_page, scores, scores_page);
+		if (retval != RL_OK) {
+			goto cleanup;
+		}
+	}
+	else if (changed) {
+		retval = update_zset(db, scores, scores_page, skiplist, skiplist_page);
+		if (retval != RL_OK) {
+			goto cleanup;
+		}
+	}
+
+	retval = RL_OK;
 cleanup:
 	return retval;
 }
@@ -648,17 +694,9 @@ int rl_zrem(rlite *db, unsigned char *key, long keylen, long members_size, unsig
 		}
 	}
 
-	if (skiplist->size == 0) {
-		retval = delete_zset(db, key, keylen, skiplist, skiplist_page, scores, scores_page);
-		if (retval != RL_OK) {
-			goto cleanup;
-		}
-	}
-	else if (_changed) {
-		retval = update_zset(db, scores, scores_page, skiplist, skiplist_page);
-		if (retval != RL_OK) {
-			goto cleanup;
-		}
+	retval = skiplist_changed(db, key, keylen, skiplist, skiplist_page, scores, scores_page, _changed);
+	if (retval != RL_OK) {
+		goto cleanup;
 	}
 
 	*changed = _changed;
@@ -666,6 +704,56 @@ int rl_zrem(rlite *db, unsigned char *key, long keylen, long members_size, unsig
 cleanup:
 	return retval;
 }
+
+int rl_zremrangebyrank(rlite *db, unsigned char *key, long keylen, long start, long end, long *changed)
+{
+	rl_zset_iterator *iterator;
+	rl_btree *scores;
+	rl_skiplist *skiplist;
+	long scores_page, skiplist_page;
+	int retval = rl_zset_get_objects(db, key, keylen, &scores, &scores_page, &skiplist, &skiplist_page, 1);
+	if (retval != RL_OK) {
+		goto cleanup;
+	}
+	long _changed = 0;
+	double score;
+	unsigned char *member;
+	long memberlen;
+
+	retval = _rl_zrange(db, skiplist, start, end, 1, &iterator);
+	if (retval != RL_OK) {
+		goto cleanup;
+	}
+
+	while ((retval = rl_zset_iterator_next(iterator, &score, &member, &memberlen)) == RL_OK) {
+		retval = remove_member_score(db, scores, skiplist, member, memberlen, score);
+		if (retval != RL_OK) {
+			goto cleanup;
+		}
+		free(member);
+		_changed++;
+	}
+
+	if (retval != RL_END) {
+		goto cleanup;
+	}
+
+	retval = rl_zset_iterator_destroy(iterator);
+	if (retval != RL_OK) {
+		goto cleanup;
+	}
+
+	retval = skiplist_changed(db, key, keylen, skiplist, skiplist_page, scores, scores_page, _changed);
+	if (retval != RL_OK) {
+		goto cleanup;
+	}
+
+	*changed = _changed;
+	retval = RL_OK;
+cleanup:
+	return retval;
+}
+
 
 int rl_zincrby(rlite *db, unsigned char *key, long keylen, double score, unsigned char *member, long memberlen, double *newscore)
 {
