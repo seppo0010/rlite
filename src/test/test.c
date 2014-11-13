@@ -8,11 +8,11 @@
 #include "key-test.h"
 #include "multi_string-test.h"
 #include "skiplist-test.h"
+#include "long-test.h"
 #include "../util.h"
 
 #ifdef DEBUG
 int main(int argc, char *argv[]) {
-	int retval;
 	int skip_tests = 0, passed_tests = 0;
 	if (argc >= 2) {
 		test_mode = atoi(argv[1]);
@@ -27,9 +27,10 @@ int main(int argc, char *argv[]) {
 	}
 #else
 int main() {
-	int retval;
 #define RUN_TEST(name) retval = name(); if (retval != 0) return retval;
 #endif
+	int retval;
+	RUN_TEST(long_test);
 	RUN_TEST(btree_test);
 	RUN_TEST(list_test);
 	RUN_TEST(rlite_test);

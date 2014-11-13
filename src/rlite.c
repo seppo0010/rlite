@@ -4,6 +4,7 @@
 #include <errno.h>
 #include "page_btree.h"
 #include "page_list.h"
+#include "page_long.h"
 #include "page_string.h"
 #include "page_skiplist.h"
 #include "rlite.h"
@@ -113,6 +114,12 @@ rl_data_type rl_data_type_skiplist_node = {
 	rl_skiplist_node_serialize,
 	rl_skiplist_node_deserialize,
 	rl_skiplist_node_destroy,
+};
+rl_data_type rl_data_type_long = {
+	"rl_data_type_long",
+	rl_long_serialize,
+	rl_long_deserialize,
+	rl_long_destroy,
 };
 
 rl_data_type rl_data_type_skiplist_node;

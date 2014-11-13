@@ -80,6 +80,7 @@ extern rl_data_type rl_data_type_list_long;
 extern rl_data_type rl_data_type_list_node_long;
 extern rl_data_type rl_data_type_list_node_key;
 extern rl_data_type rl_data_type_string;
+extern rl_data_type rl_data_type_long;
 extern rl_data_type rl_data_type_skiplist;
 extern rl_data_type rl_data_type_skiplist_node;
 
