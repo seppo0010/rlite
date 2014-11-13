@@ -7,17 +7,6 @@
 #include "rlite.h"
 #include "util.h"
 
-rl_btree_type rl_btree_type_hash_sha1_long = {
-	0,
-	0,
-	sizeof(unsigned char) * 20,
-	sizeof(long),
-	sha1_cmp,
-#ifdef DEBUG
-	sha1_formatter,
-#endif
-};
-
 rl_btree_type rl_btree_type_hash_sha1_key = {
 	0,
 	0,
@@ -64,8 +53,6 @@ rl_btree_type rl_btree_type_hash_sha1_double = {
 
 void rl_btree_init()
 {
-	rl_btree_type_hash_sha1_long.btree_type = &rl_data_type_btree_hash_sha1_long;
-	rl_btree_type_hash_sha1_long.btree_node_type = &rl_data_type_btree_node_hash_sha1_long;
 	rl_btree_type_hash_sha1_key.btree_type = &rl_data_type_btree_hash_sha1_key;
 	rl_btree_type_hash_sha1_key.btree_node_type = &rl_data_type_btree_node_hash_sha1_key;
 	rl_btree_type_hash_long_long.btree_type = &rl_data_type_btree_hash_long_long;
@@ -1010,75 +997,6 @@ int rl_flatten_btree(rlite *db, rl_btree *btree, void *** scores, long *size)
 		return retval;
 	}
 	return rl_flatten_btree_node(db, btree, node, scores, size);
-}
-
-int rl_btree_node_serialize_hash_sha1_long(rlite *UNUSED(db), void *obj, unsigned char *data)
-{
-	rl_btree_node *node = (rl_btree_node *)obj;
-	put_4bytes(data, node->size);
-	long i, pos = 4;
-	for (i = 0; i < node->size; i++) {
-		memcpy(&data[pos], node->scores[i], sizeof(unsigned char) * 20);
-		put_4bytes(&data[pos + 20], *(long *)node->values[i]);
-		put_4bytes(&data[pos + 24], node->children ? node->children[i] : 0);
-		pos += 28;
-	}
-	put_4bytes(&data[pos], node->children ? node->children[node->size] : 0);
-	return RL_OK;
-}
-
-int rl_btree_node_deserialize_hash_sha1_long(rlite *db, void **obj, void *context, unsigned char *data)
-{
-	rl_btree_node *node;
-	rl_btree *btree = (rl_btree *) context;
-	int retval = rl_btree_node_create(db, btree, &node);
-	if (retval != RL_OK) {
-		return retval;
-	}
-	node->size = (long)get_4bytes(data);
-	long i, pos = 4, child;
-	for (i = 0; i < node->size; i++) {
-		node->scores[i] = malloc(sizeof(unsigned char) * 20);
-		if (!node->scores[i]) {
-			node->size = i;
-			retval = RL_OUT_OF_MEMORY;
-			goto cleanup;
-		}
-		memcpy(node->scores[i], &data[pos], sizeof(unsigned char) * 20);
-		node->values[i] = malloc(sizeof(long));
-		if (!node->values[i]) {
-			free(node->scores[i]);
-			node->size = i;
-			retval = RL_OUT_OF_MEMORY;
-			goto cleanup;
-		}
-		*(long *)node->values[i] = get_4bytes(&data[pos + 20]);
-		child = get_4bytes(&data[pos + 24]);
-		if (child != 0) {
-			if (!node->children) {
-				node->children = malloc(sizeof(long) * (btree->max_node_size + 1));
-				if (!node->children) {
-					free(node->scores[i]);
-					free(node->values[i]);
-					node->size = i;
-					retval = RL_OUT_OF_MEMORY;
-					goto cleanup;
-				}
-			}
-			node->children[i] = child;
-		}
-		pos += 28;
-	}
-	child = get_4bytes(&data[pos]);
-	if (child != 0) {
-		node->children[node->size] = child;
-	}
-	*obj = node;
-cleanup:
-	if (retval != RL_OK && node) {
-		rl_btree_node_destroy(db, node);
-	}
-	return retval;
 }
 
 int rl_btree_node_serialize_hash_sha1_key(rlite *UNUSED(db), void *obj, unsigned char *data)

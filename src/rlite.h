@@ -65,8 +65,6 @@ int rl_commit(struct rlite *db);
 int rl_discard(struct rlite *db);
 
 extern rl_data_type rl_data_type_header;
-extern rl_data_type rl_data_type_btree_hash_sha1_long;
-extern rl_data_type rl_data_type_btree_node_hash_sha1_long;
 extern rl_data_type rl_data_type_btree_hash_sha1_key;
 extern rl_data_type rl_data_type_btree_node_hash_sha1_key;
 extern rl_data_type rl_data_type_btree_set_long;

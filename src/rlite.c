@@ -31,18 +31,6 @@ rl_data_type rl_data_type_btree_node_hash_sha1_double = {
 	rl_btree_node_deserialize_hash_sha1_double,
 	rl_btree_node_destroy,
 };
-rl_data_type rl_data_type_btree_hash_sha1_long = {
-	"rl_data_type_btree_hash_sha1_long",
-	rl_btree_serialize,
-	rl_btree_deserialize,
-	rl_btree_destroy,
-};
-rl_data_type rl_data_type_btree_node_hash_sha1_long = {
-	"rl_data_type_btree_node_hash_sha1_long",
-	rl_btree_node_serialize_hash_sha1_long,
-	rl_btree_node_deserialize_hash_sha1_long,
-	rl_btree_node_destroy,
-};
 rl_data_type rl_data_type_btree_hash_sha1_key = {
 	"rl_data_type_btree_hash_sha1_key",
 	rl_btree_serialize,
