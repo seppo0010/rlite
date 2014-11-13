@@ -388,59 +388,24 @@ int basic_test_zadd_zrangebylex(int _commit)
 	unsigned char min[3];
 	unsigned char max[3];
 
-	min[0] = '-';
-	max[0] = '+';
-	retval = test_zrangebylex(db, key, keylen, 0, ZRANGEBYLEX_SIZE, ZRANGEBYLEX_SIZE, min, 1, max, 1, 0, 0);
-	if (retval != 0) {
-		return retval;
+#define run_test_zrangebylex(min0, min1, minlen, max0, max1, maxlen, initial, size, total_size, offset, limit)\
+	min[0] = min0;\
+	min[1] = min1;\
+	max[0] = max0;\
+	max[1] = max1;\
+	retval = test_zrangebylex(db, key, keylen, initial, size, total_size, min, minlen, max, maxlen, offset, limit);\
+	if (retval != 0) {\
+		fprintf(stderr, "Failed zrangebylex on line %d\n", __LINE__);\
+		return retval;\
 	}
 
-	min[0] = '-';
-	max[0] = '+';
-	retval = test_zrangebylex(db, key, keylen, 1, ZRANGEBYLEX_SIZE - 1, ZRANGEBYLEX_SIZE, min, 1, max, 1, 1, 0);
-	if (retval != 0) {
-		return retval;
-	}
-
-	min[0] = '-';
-	max[0] = '+';
-	retval = test_zrangebylex(db, key, keylen, 0, 1, ZRANGEBYLEX_SIZE, min, 1, max, 1, 0, 1);
-	if (retval != 0) {
-		return retval;
-	}
-
-	min[0] = '(';
-	min[1] = 'c';
-	max[0] = '+';
-	retval = test_zrangebylex(db, key, keylen, 5, ZRANGEBYLEX_SIZE - 5, ZRANGEBYLEX_SIZE, min, 2, max, 1, 0, 0);
-	if (retval != 0) {
-		return retval;
-	}
-
-	min[0] = '[';
-	min[1] = 'c';
-	max[0] = '+';
-	retval = test_zrangebylex(db, key, keylen, 4, ZRANGEBYLEX_SIZE - 4, ZRANGEBYLEX_SIZE, min, 2, max, 1, 0, 0);
-	if (retval != 0) {
-		return retval;
-	}
-
-	min[0] = '[';
-	min[1] = 'c';
-	max[0] = '[';
-	max[1] = 'f';
-	retval = test_zrangebylex(db, key, keylen, 4, 7, 11, min, 2, max, 2, 0, 0);
-	if (retval != 0) {
-		return retval;
-	}
-
-	min[0] = '-';
-	max[0] = '[';
-	max[1] = 'f';
-	retval = test_zrangebylex(db, key, keylen, 0, 11, 11, min, 1, max, 2, 0, 0);
-	if (retval != 0) {
-		return retval;
-	}
+	run_test_zrangebylex('-', 0, 1, '+', 0, 1, 0, ZRANGEBYLEX_SIZE, ZRANGEBYLEX_SIZE, 0, 0)
+	run_test_zrangebylex('-', 0, 1, '+', 0, 1, 1, ZRANGEBYLEX_SIZE - 1, ZRANGEBYLEX_SIZE, 1, 0)
+	run_test_zrangebylex('-', 0, 1, '+', 0, 1, 0, 1, ZRANGEBYLEX_SIZE, 0, 1)
+	run_test_zrangebylex('(', 'c', 2, '+', 0, 1, 5, ZRANGEBYLEX_SIZE - 5, ZRANGEBYLEX_SIZE, 0, 0)
+	run_test_zrangebylex('[', 'c', 2, '+', 0, 1, 4, ZRANGEBYLEX_SIZE - 4, ZRANGEBYLEX_SIZE, 0, 0)
+	run_test_zrangebylex('[', 'c', 2, '[', 'f', 2, 4, 7, 11, 0, 0)
+	run_test_zrangebylex('-', 0, 1, '[', 'f', 2, 0, 11, 11, 0, 0)
 
 	rl_close(db);
 	fprintf(stderr, "End basic_test_zadd_zrangebylex\n");
@@ -508,7 +473,7 @@ int basic_test_zadd_zrangebyscore(int _commit)
 	}
 
 	rl_zrangespec range;
-#define run_test(_min, _minex, _max, _maxex, size, base_score) \
+#define run_test_zrangebyscore(_min, _minex, _max, _maxex, size, base_score) \
 	range.min = _min;\
 	range.minex = _minex;\
 	range.max = _max;\
@@ -517,18 +482,18 @@ int basic_test_zadd_zrangebyscore(int _commit)
 		fprintf(stderr, "zrangebyscore test failed on line %d\n", __LINE__);\
 		return 1;\
 	}
-	run_test(-INFINITY, 1, INFINITY, 1, ZRANGEBYSCORE_SIZE, 0);
-	run_test(-INFINITY, 0, INFINITY, 1, ZRANGEBYSCORE_SIZE, 0);
-	run_test(-INFINITY, 1, INFINITY, 0, ZRANGEBYSCORE_SIZE, 0);
-	run_test(-INFINITY, 0, INFINITY, 0, ZRANGEBYSCORE_SIZE, 0);
-	run_test(-5, 0, INFINITY, 0, ZRANGEBYSCORE_SIZE, 0);
-	run_test(5, 0, INFINITY, 0, ZRANGEBYSCORE_SIZE - 5, 5);
-	run_test(5, 0, 6, 1, 1, 5);
-	run_test(21, 0, 40, 0, 0, 0);
-	run_test(-INFINITY, 0, -5, 0, 0, 0);
-	run_test(0, 0, 0, 0, 1, 0);
-	run_test(0, 1, 0, 1, 0, 0);
-	run_test(1, 0, 1, 0, 1, 1);
+	run_test_zrangebyscore(-INFINITY, 1, INFINITY, 1, ZRANGEBYSCORE_SIZE, 0);
+	run_test_zrangebyscore(-INFINITY, 0, INFINITY, 1, ZRANGEBYSCORE_SIZE, 0);
+	run_test_zrangebyscore(-INFINITY, 1, INFINITY, 0, ZRANGEBYSCORE_SIZE, 0);
+	run_test_zrangebyscore(-INFINITY, 0, INFINITY, 0, ZRANGEBYSCORE_SIZE, 0);
+	run_test_zrangebyscore(-5, 0, INFINITY, 0, ZRANGEBYSCORE_SIZE, 0);
+	run_test_zrangebyscore(5, 0, INFINITY, 0, ZRANGEBYSCORE_SIZE - 5, 5);
+	run_test_zrangebyscore(5, 0, 6, 1, 1, 5);
+	run_test_zrangebyscore(21, 0, 40, 0, 0, 0);
+	run_test_zrangebyscore(-INFINITY, 0, -5, 0, 0, 0);
+	run_test_zrangebyscore(0, 0, 0, 0, 1, 0);
+	run_test_zrangebyscore(0, 1, 0, 1, 0, 0);
+	run_test_zrangebyscore(1, 0, 1, 0, 1, 1);
 
 	rl_close(db);
 	fprintf(stderr, "End basic_test_zadd_zrangebyscore\n");
