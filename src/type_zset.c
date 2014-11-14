@@ -544,6 +544,20 @@ cleanup:
 	return retval;
 }
 
+int rl_zrevrange(rlite *db, unsigned char *key, long keylen, long start, long end, rl_zset_iterator **iterator)
+{
+	rl_skiplist *skiplist;
+
+	int retval = rl_zset_get_objects(db, key, keylen, NULL, NULL, &skiplist, NULL, 0);
+	if (retval != RL_OK) {
+		goto cleanup;
+	}
+
+	retval = _rl_zrange(db, skiplist, start, end, -1, iterator);
+cleanup:
+	return retval;
+}
+
 int rl_zrange(rlite *db, unsigned char *key, long keylen, long start, long end, rl_zset_iterator **iterator)
 {
 	rl_skiplist *skiplist;

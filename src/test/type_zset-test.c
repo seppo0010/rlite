@@ -213,10 +213,23 @@ int basic_test_zadd_zrange()
 
 	unsigned char *data;
 	long datalen;
+	double score;
 	rl_zset_iterator* iterator;
+
 	retval = rl_zrange(db, key, keylen, 0, -1, &iterator);
 	if (retval != RL_OK) {
 		fprintf(stderr, "Unable to zrange %d\n", retval);
+		return 1;
+	}
+	if (iterator->size != 200) {
+		fprintf(stderr, "Expected size to be 200, got %ld instead\n", iterator->size);
+		return 1;
+	}
+	rl_zset_iterator_destroy(iterator);
+
+	retval = rl_zrevrange(db, key, keylen, 0, -1, &iterator);
+	if (retval != RL_OK) {
+		fprintf(stderr, "Unable to zrevrange %d\n", retval);
 		return 1;
 	}
 	if (iterator->size != 200) {
@@ -241,6 +254,35 @@ int basic_test_zadd_zrange()
 	}
 	if (data[0] != 0) {
 		fprintf(stderr, "Expected data to be 0, got %d instead\n", data[0]);
+		return 1;
+	}
+	if (datalen != 1) {
+		fprintf(stderr, "Expected data to be 1, got %ld instead\n", datalen);
+		return 1;
+	}
+	free(data);
+	rl_zset_iterator_destroy(iterator);
+
+	retval = rl_zrevrange(db, key, keylen, 0, -1, &iterator);
+	if (retval != RL_OK) {
+		fprintf(stderr, "Unable to zrevrange %d\n", retval);
+		return 1;
+	}
+	if (iterator->size != 200) {
+		fprintf(stderr, "Expected size to be 200, got %ld instead\n", iterator->size);
+		return 1;
+	}
+	retval = rl_zset_iterator_next(iterator, &score, &data, &datalen);
+	if (retval != RL_OK) {
+		fprintf(stderr, "Failed to fetch next element in zset iterator\n");
+		return 1;
+	}
+	if (score != 10.5 * 199) {
+		fprintf(stderr, "Expected score to be %lf, got %lf instead\n", 10.5 * 199, score);
+		return 1;
+	}
+	if (data[0] != 199) {
+		fprintf(stderr, "Expected data to be 199, got %d instead\n", data[0]);
 		return 1;
 	}
 	if (datalen != 1) {
