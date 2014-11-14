@@ -184,6 +184,28 @@ int basic_test_zadd_zrank(int _commit)
 		return 1;
 	}
 
+	retval = rl_zrevrank(db, key, keylen, data, datalen, &rank);
+	if (retval != RL_FOUND) {
+		fprintf(stderr, "Unable to zrevrank %d\n", retval);
+		return 1;
+	}
+
+	if (1 != rank) {
+		fprintf(stderr, "Expected rank %d to be %ld\n", 1, rank);
+		return 1;
+	}
+
+	retval = rl_zrevrank(db, key, keylen, data2, datalen2, &rank);
+	if (retval != RL_FOUND) {
+		fprintf(stderr, "Unable to zrevrank %d\n", retval);
+		return 1;
+	}
+
+	if (0 != rank) {
+		fprintf(stderr, "Expected rank %d to be %ld\n", 0, rank);
+		return 1;
+	}
+
 	fprintf(stderr, "End basic_test_zadd_zrank\n");
 	rl_close(db);
 	return 0;

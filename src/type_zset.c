@@ -274,6 +274,27 @@ int rl_zrank(rlite *db, unsigned char *key, long keylen, unsigned char *member, 
 	return retval;
 }
 
+int rl_zrevrank(rlite *db, unsigned char *key, long keylen, unsigned char *member, long memberlen, long *revrank)
+{
+	double score;
+	rl_btree *scores;
+	rl_skiplist *skiplist;
+	int retval = rl_zset_get_objects(db, key, keylen, &scores, NULL, &skiplist, NULL, 0);
+	if (retval != RL_OK) {
+		return retval;
+	}
+	retval = rl_get_zscore(db, scores, member, memberlen, &score);
+	if (retval != RL_FOUND) {
+		return retval;
+	}
+	retval = rl_skiplist_first_node(db, skiplist, score, RL_SKIPLIST_INCLUDE_SCORE, member, memberlen, NULL, revrank);
+	if (retval != RL_FOUND) {
+		return retval;
+	}
+	*revrank = skiplist->size - (*revrank) - 1;
+	return retval;
+}
+
 int rl_zcard(rlite *db, unsigned char *key, long keylen, long *card)
 {
 	rl_skiplist *skiplist;

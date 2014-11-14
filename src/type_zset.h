@@ -36,6 +36,7 @@ int rl_zrank(rlite *db, unsigned char *key, long keylen, unsigned char *data, lo
 int rl_zrevrange(rlite *db, unsigned char *key, long keylen, long start, long end, rl_zset_iterator **iterator);
 int rl_zrevrangebylex(rlite *db, unsigned char *key, long keylen, unsigned char *min, long minlen, unsigned char *max, long maxlen, long offset, long count, rl_zset_iterator **iterator);
 int rl_zrevrangebyscore(rlite *db, unsigned char *key, long keylen, rl_zrangespec *range, long offset, long count, rl_zset_iterator **iterator);
+int rl_zrevrank(rlite *db, unsigned char *key, long keylen, unsigned char *data, long datalen, long *revrank);
 int rl_zrem(rlite *db, unsigned char *key, long keylen, long members_size, unsigned char **members, long *members_len, long *changed);
 int rl_zremrangebylex(rlite *db, unsigned char *key, long keylen, unsigned char *min, long minlen, unsigned char *max, long maxlen, long *changed);
 int rl_zremrangebyrank(rlite *db, unsigned char *key, long keylen, long start, long end, long *changed);
