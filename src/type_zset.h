@@ -30,11 +30,12 @@ int rl_zincrby(rlite *db, unsigned char *key, long keylen, double score, unsigne
 int rl_zinterstore(rlite *db, long keys_size, unsigned char **keys, long *keys_len, double *weights, int aggregate);
 int rl_zlexcount(rlite *db, unsigned char *key, long keylen, unsigned char *min, long minlen, unsigned char *max, long maxlen, long *lexcount);
 int rl_zrange(rlite *db, unsigned char *key, long keylen, long start, long end, rl_zset_iterator **iterator);
-int rl_zrangebylex(rlite *db, unsigned char *key, long keylen, unsigned char *min, long min_length, unsigned char *max, long max_length, long offset, long count, rl_zset_iterator **iterator);
+int rl_zrangebylex(rlite *db, unsigned char *key, long keylen, unsigned char *min, long minlen, unsigned char *max, long maxlen, long offset, long count, rl_zset_iterator **iterator);
 int rl_zrangebyscore(rlite *db, unsigned char *key, long keylen, rl_zrangespec *range, long offset, long count, rl_zset_iterator **iterator);
 int rl_zrank(rlite *db, unsigned char *key, long keylen, unsigned char *data, long datalen, long *rank);
-int rl_zrevrangebylex(rlite *db, unsigned char *key, long keylen, unsigned char *min, long min_length, unsigned char *max, long max_length, long offset, long count, rl_zset_iterator **iterator);
+int rl_zrevrangebylex(rlite *db, unsigned char *key, long keylen, unsigned char *min, long minlen, unsigned char *max, long maxlen, long offset, long count, rl_zset_iterator **iterator);
 int rl_zrem(rlite *db, unsigned char *key, long keylen, long members_size, unsigned char **members, long *members_len, long *changed);
+int rl_zremrangebylex(rlite *db, unsigned char *key, long keylen, unsigned char *min, long minlen, unsigned char *max, long maxlen, long *changed);
 int rl_zremrangebyrank(rlite *db, unsigned char *key, long keylen, long start, long end, long *changed);
 int rl_zremrangebyscore(rlite *db, unsigned char *key, long keylen, rl_zrangespec *range, long *changed);
 int rl_zscore(rlite *db, unsigned char *key, long keylen, unsigned char *data, long datalen, double *score);

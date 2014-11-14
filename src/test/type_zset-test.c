@@ -260,105 +260,112 @@ static int test_zrangebylex(rlite *db, unsigned char *key, long keylen, long ini
 	rl_zset_iterator *iterator;
 	long lexcount;
 	int retval;
+	unsigned char *data2;
+	long data2_len;
+	long i;
 	if (offset == 0 && limit == 0) {
 		// These test expect different values if offset or limit exist
 
 		retval = rl_zlexcount(db, key, keylen, min, minlen, max, maxlen, &lexcount);
-		if (retval != RL_OK) {
-			fprintf(stderr, "Unable to rl_zlexcount, got %d\n", retval);
-			return 1;
-		}
-		if (size != lexcount) {
-			fprintf(stderr, "Expected lexcount to be %ld, got %ld instead\n", size, lexcount);
-			return 1;
+		if (retval != RL_NOT_FOUND || size != 0) {
+			if (retval != RL_OK) {
+				fprintf(stderr, "Unable to rl_zlexcount, got %d\n", retval);
+				return 1;
+			}
+			if (size != lexcount) {
+				fprintf(stderr, "Expected lexcount to be %ld, got %ld instead\n", size, lexcount);
+				return 1;
+			}
 		}
 	}
 
 	retval = rl_zrangebylex(db, key, keylen, min, minlen, max, maxlen, offset, limit, &iterator);
-	if (retval != RL_OK) {
-		fprintf(stderr, "Unable to zrangebylex, got %d\n", retval);
-		return 1;
-	}
-	if (iterator->size != size) {
-		fprintf(stderr, "Expected zrangebylex size to be %ld, got %ld instead\n", size, iterator->size);
-		return 1;
-	}
-	unsigned char *data2;
-	long data2_len;
-	long i = initial;
-	while ((retval = rl_zset_iterator_next(iterator, NULL, &data2, &data2_len)) == RL_OK) {
-		if (data2_len != ((i & 1) == 0 ? 1 : 2)) {
-			fprintf(stderr, "Unexpected datalen %ld in element %ld\n", data2_len, i);
+	if (retval != RL_NOT_FOUND || size != 0) {
+		if (retval != RL_OK) {
+			fprintf(stderr, "Unable to zrangebylex, got %d\n", retval);
 			return 1;
 		}
-		if (data2[0] != 'a' + (i / 2)) {
-			fprintf(stderr, "Unexpected data[0] %d, expected %ld in iterator %ld on line %d\n", data2[0], 'a' + (i / 2), i, __LINE__);
+		if (iterator->size != size) {
+			fprintf(stderr, "Expected zrangebylex size to be %ld, got %ld instead\n", size, iterator->size);
 			return 1;
 		}
-		if (data2_len == 2 && data2[1] != 'A' + i) {
-			fprintf(stderr, "Unexpected data[1] %d, expected %ld in iterator %ld on line %d\n", data2[1], 'A' + i, i, __LINE__);
-			return 1;
+		i = initial;
+		while ((retval = rl_zset_iterator_next(iterator, NULL, &data2, &data2_len)) == RL_OK) {
+			if (data2_len != ((i & 1) == 0 ? 1 : 2)) {
+				fprintf(stderr, "Unexpected datalen %ld in element %ld in line %d\n", data2_len, i, __LINE__);
+				return 1;
+			}
+			if (data2[0] != 'a' + (i / 2)) {
+				fprintf(stderr, "Unexpected data[0] %d, expected %ld in iterator %ld on line %d\n", data2[0], 'a' + (i / 2), i, __LINE__);
+				return 1;
+			}
+			if (data2_len == 2 && data2[1] != 'A' + i) {
+				fprintf(stderr, "Unexpected data[1] %d, expected %ld in iterator %ld on line %d\n", data2[1], 'A' + i, i, __LINE__);
+				return 1;
+			}
+			i++;
+			free(data2);
 		}
-		i++;
-		free(data2);
-	}
 
-	if (i != size + initial) {
-		fprintf(stderr, "Expected size to be %ld, got %ld instead\n", size + initial, i);
-		return 1;
-	}
+		if (i != size + initial) {
+			fprintf(stderr, "Expected size to be %ld, got %ld instead\n", size + initial, i);
+			return 1;
+		}
 
-	if (retval != RL_END) {
-		fprintf(stderr, "Iterator finished without RL_END, got %d\n", retval);
-		return 1;
-	}
-	retval = rl_zset_iterator_destroy(iterator);
-	if (retval != RL_OK) {
-		fprintf(stderr, "Failed to destroy iterator, got %d\n", retval);
-		return 1;
+		if (retval != RL_END) {
+			fprintf(stderr, "Iterator finished without RL_END, got %d\n", retval);
+			return 1;
+		}
+		retval = rl_zset_iterator_destroy(iterator);
+		if (retval != RL_OK) {
+			fprintf(stderr, "Failed to destroy iterator, got %d\n", retval);
+			return 1;
+		}
 	}
 
 	retval = rl_zrevrangebylex(db, key, keylen, min, minlen, max, maxlen, offset, limit, &iterator);
-	if (retval != RL_OK) {
-		fprintf(stderr, "Unable to zrangebylex, got %d\n", retval);
-		return 1;
-	}
-	if (iterator->size != size) {
-		fprintf(stderr, "Expected zrangebylex size to be %ld, got %ld instead\n", size, iterator->size);
-		return 1;
-	}
-
-	i = total_size - 1 - offset;
-	while ((retval = rl_zset_iterator_next(iterator, NULL, &data2, &data2_len)) == RL_OK) {
-		if (data2_len != ((i & 1) == 0 ? 1 : 2)) {
-			fprintf(stderr, "Unexpected datalen %ld in element %ld in line %d\n", data2_len, i, __LINE__);
+	if (retval != RL_NOT_FOUND || size != 0) {
+		if (retval != RL_OK) {
+			fprintf(stderr, "Unable to zrangebylex, got %d\n", retval);
 			return 1;
 		}
-		if (data2[0] != 'a' + (i / 2)) {
-			fprintf(stderr, "Unexpected data[0] %d, expected %ld in iterator %ld on line %d\n", data2[0], 'a' + (i / 2), i, __LINE__);
+		if (iterator->size != size) {
+			fprintf(stderr, "Expected zrangebylex size to be %ld, got %ld instead\n", size, iterator->size);
 			return 1;
 		}
-		if (data2_len == 2 && data2[1] != 'A' + i) {
-			fprintf(stderr, "Unexpected data[1] %d, expected %ld in iterator %ld on line %d\n", data2[1], 'A' + i, i, __LINE__);
+
+		i = total_size - 1 - offset;
+		while ((retval = rl_zset_iterator_next(iterator, NULL, &data2, &data2_len)) == RL_OK) {
+			if (data2_len != ((i & 1) == 0 ? 1 : 2)) {
+				fprintf(stderr, "Unexpected datalen %ld in element %ld in line %d\n", data2_len, i, __LINE__);
+				return 1;
+			}
+			if (data2[0] != 'a' + (i / 2)) {
+				fprintf(stderr, "Unexpected data[0] %d, expected %ld in iterator %ld on line %d\n", data2[0], 'a' + (i / 2), i, __LINE__);
+				return 1;
+			}
+			if (data2_len == 2 && data2[1] != 'A' + i) {
+				fprintf(stderr, "Unexpected data[1] %d, expected %ld in iterator %ld on line %d\n", data2[1], 'A' + i, i, __LINE__);
+				return 1;
+			}
+			i--;
+			free(data2);
+		}
+
+		if (i != total_size - size - 1 - offset) {
+			fprintf(stderr, "Expected initial to be %ld, got %ld instead\n", total_size - size - 1 - offset, i);
 			return 1;
 		}
-		i--;
-		free(data2);
-	}
 
-	if (i != total_size - size - 1 - offset) {
-		fprintf(stderr, "Expected initial to be %ld, got %ld instead\n", total_size - size - 1 - offset, i);
-		return 1;
-	}
-
-	if (retval != RL_END) {
-		fprintf(stderr, "Iterator finished without RL_END, got %d\n", retval);
-		return 1;
-	}
-	retval = rl_zset_iterator_destroy(iterator);
-	if (retval != RL_OK) {
-		fprintf(stderr, "Failed to destroy iterator, got %d\n", retval);
-		return 1;
+		if (retval != RL_END) {
+			fprintf(stderr, "Iterator finished without RL_END, got %d\n", retval);
+			return 1;
+		}
+		retval = rl_zset_iterator_destroy(iterator);
+		if (retval != RL_OK) {
+			fprintf(stderr, "Failed to destroy iterator, got %d\n", retval);
+			return 1;
+		}
 	}
 	return 0;
 }
@@ -399,6 +406,7 @@ int basic_test_zadd_zrangebylex(int _commit)
 		return retval;\
 	}
 
+	run_test_zrangebylex('-', 0, 1, '(', 'a', 2, 0, 0, 0, 0, 0)
 	run_test_zrangebylex('-', 0, 1, '+', 0, 1, 0, ZRANGEBYLEX_SIZE, ZRANGEBYLEX_SIZE, 0, 0)
 	run_test_zrangebylex('-', 0, 1, '+', 0, 1, 1, ZRANGEBYLEX_SIZE - 1, ZRANGEBYLEX_SIZE, 1, 0)
 	run_test_zrangebylex('-', 0, 1, '+', 0, 1, 0, 1, ZRANGEBYLEX_SIZE, 0, 1)
@@ -950,6 +958,7 @@ int basic_test_zadd_zremrangebyscore(int _commit)
 	}
 
 	run_test_zremrangebyscore(0, 0, 100, 1, 10, 19, 9);
+	run_test_zremrangebyscore(0, 0, 100, 1, 0, 19, 9);
 	run_test_zremrangebyscore(-INFINITY, 0, 100, 0, 1, 19, 8);
 	run_test_zremrangebyscore(-INFINITY, 0, 100, 0, 0, 19, 8);
 	run_test_zremrangebyscore(180, 0, INFINITY, 0, 2, 17, 6);
@@ -960,6 +969,53 @@ int basic_test_zadd_zremrangebyscore(int _commit)
 	return 0;
 }
 
+int basic_test_zadd_zremrangebylex(int _commit)
+{
+#define ZRANGEBYLEX_SIZE 20
+	int retval = 0;
+	fprintf(stderr, "Start basic_test_zadd_zremrangebylex%d\n", _commit);
+	rlite *db = setup_db(_commit, 1);
+
+	unsigned char *key = (unsigned char *)"my key";
+	long keylen = strlen((char *)key);
+
+	unsigned char data[2];
+	long i;
+	for (i = 0; i < ZRANGEBYLEX_SIZE; i++) {
+		data[0] = 'a' + (i / 2);
+		data[1] = 'A' + i;
+		retval = rl_zadd(db, key, keylen, 1.0, data, ((i & 1) == 0) ? 1 : 2);
+		if (retval != RL_OK) {
+			fprintf(stderr, "Unable to zadd %d\n", retval);
+			return 1;
+		}
+	}
+
+	unsigned char min[3];
+	unsigned char max[3];
+
+	long changed;
+#define run_remrangebylex(min, max, expected_changed)\
+	retval = rl_zremrangebylex(db, key, keylen, (unsigned char *)min, strlen(min), (unsigned char *)max, strlen(max), &changed);\
+	if (retval != RL_OK) {\
+		fprintf(stderr, "Failed rl_zremrangebylex on line %d, got %d\n", __LINE__, retval);\
+		return 1;\
+	}\
+	if (changed != expected_changed) {\
+		fprintf(stderr, "Expected to change %d but changed %ld on line %d\n", expected_changed, changed, __LINE__);\
+	}
+
+	run_remrangebylex("-", "(a", 0);
+	run_test_zrangebylex('-', 0, 1, '+', 0, 1, 0, ZRANGEBYLEX_SIZE, ZRANGEBYLEX_SIZE, 0, 0)
+	run_remrangebylex("-", "[a", 1);
+	run_test_zrangebylex('-', 0, 1, '+', 0, 1, 1, ZRANGEBYLEX_SIZE - 1, ZRANGEBYLEX_SIZE, 0, 0)
+	run_remrangebylex("(a", "[b", 2);
+	run_test_zrangebylex('-', 0, 1, '+', 0, 1, 3, ZRANGEBYLEX_SIZE - 3, ZRANGEBYLEX_SIZE, 0, 0)
+
+	rl_close(db);
+	fprintf(stderr, "End basic_test_zadd_zremrangebylex\n");
+	return 0;
+}
 
 int main()
 {
@@ -1012,6 +1068,10 @@ int main()
 			goto cleanup;
 		}
 		retval = basic_test_zadd_zremrangebyscore(i);
+		if (retval != 0) {
+			goto cleanup;
+		}
+		retval = basic_test_zadd_zremrangebylex(i);
 		if (retval != 0) {
 			goto cleanup;
 		}

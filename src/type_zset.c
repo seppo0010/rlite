@@ -416,17 +416,8 @@ cleanup:
 	return retval;
 }
 
-static int lex_get_range(rlite *db, unsigned char *key, long keylen, unsigned char *min, long minlen, unsigned char *max, long maxlen, rl_skiplist **_skiplist, long *_start, long *_end)
+static int lex_get_range(rlite *db, unsigned char *min, long minlen, unsigned char *max, long maxlen, rl_skiplist *skiplist, long *_start, long *_end)
 {
-	rl_skiplist *skiplist;
-	int retval = rl_zset_get_objects(db, key, keylen, NULL, NULL, &skiplist, NULL, 0);
-	if (retval != RL_OK) {
-		goto cleanup;
-	}
-	if (_skiplist) {
-		*_skiplist = skiplist;
-	}
-
 	if (min[0] != '-' && min[0] != '(' && min[0] != '[') {
 		return RL_UNEXPECTED;
 	}
@@ -437,7 +428,7 @@ static int lex_get_range(rlite *db, unsigned char *key, long keylen, unsigned ch
 
 	rl_skiplist_node *node;
 	double score;
-	retval = rl_skiplist_first_node(db, skiplist, -INFINITY, RL_SKIPLIST_EXCLUDE_SCORE, NULL, 0, &node, NULL);
+	int retval = rl_skiplist_first_node(db, skiplist, -INFINITY, RL_SKIPLIST_EXCLUDE_SCORE, NULL, 0, &node, NULL);
 	if (retval != RL_FOUND) {
 		goto cleanup;
 	}
@@ -462,6 +453,10 @@ static int lex_get_range(rlite *db, unsigned char *key, long keylen, unsigned ch
 		if (retval != RL_FOUND) {
 			goto cleanup;
 		}
+		if (end < 0) {
+			retval = RL_NOT_FOUND;
+			goto cleanup;
+		}
 	}
 
 	if (_start) {
@@ -479,7 +474,11 @@ int rl_zlexcount(rlite *db, unsigned char *key, long keylen, unsigned char *min,
 {
 	long start, end;
 	rl_skiplist *skiplist;
-	int retval = lex_get_range(db, key, keylen, min, minlen, max, maxlen, &skiplist, &start, &end);
+	int retval = rl_zset_get_objects(db, key, keylen, NULL, NULL, &skiplist, NULL, 0);
+	if (retval != RL_OK) {
+		goto cleanup;
+	}
+	retval = lex_get_range(db, min, minlen, max, maxlen, skiplist, &start, &end);
 	if (retval != RL_OK) {
 		goto cleanup;
 	}
@@ -497,7 +496,11 @@ int rl_zrevrangebylex(rlite *db, unsigned char *key, long keylen, unsigned char 
 {
 	long start, end;
 	rl_skiplist *skiplist;
-	int retval = lex_get_range(db, key, keylen, min, minlen, max, maxlen, &skiplist, &start, &end);
+	int retval = rl_zset_get_objects(db, key, keylen, NULL, NULL, &skiplist, NULL, 0);
+	if (retval != RL_OK) {
+		goto cleanup;
+	}
+	retval = lex_get_range(db, min, minlen, max, maxlen, skiplist, &start, &end);
 	if (retval != RL_OK) {
 		goto cleanup;
 	}
@@ -519,7 +522,11 @@ int rl_zrangebylex(rlite *db, unsigned char *key, long keylen, unsigned char *mi
 {
 	long start, end;
 	rl_skiplist *skiplist;
-	int retval = lex_get_range(db, key, keylen, min, minlen, max, maxlen, &skiplist, &start, &end);
+	int retval = rl_zset_get_objects(db, key, keylen, NULL, NULL, &skiplist, NULL, 0);
+	if (retval != RL_OK) {
+		goto cleanup;
+	}
+	retval = lex_get_range(db, min, minlen, max, maxlen, skiplist, &start, &end);
 	if (retval != RL_OK) {
 		goto cleanup;
 	}
@@ -814,6 +821,43 @@ int rl_zremrangebyscore(rlite *db, unsigned char *key, long keylen, rl_zrangespe
 cleanup:
 	return retval;
 }
+
+int rl_zremrangebylex(rlite *db, unsigned char *key, long keylen, unsigned char *min, long minlen, unsigned char *max, long maxlen, long *changed)
+{
+	rl_zset_iterator *iterator;
+	rl_btree *scores;
+	rl_skiplist *skiplist;
+	long scores_page, skiplist_page, start, end;
+	int retval = rl_zset_get_objects(db, key, keylen, &scores, &scores_page, &skiplist, &skiplist_page, 1);
+	if (retval != RL_OK) {
+		goto cleanup;
+	}
+
+	retval = lex_get_range(db, min, minlen, max, maxlen, skiplist, &start, &end);
+	if (retval == RL_NOT_FOUND) {
+		*changed = 0;
+		retval = RL_OK;
+		goto cleanup;
+	}
+	if (retval != RL_OK) {
+		goto cleanup;
+	}
+
+	retval = _rl_zrange(db, skiplist, start, end, 1, &iterator);
+	if (retval != RL_OK) {
+		goto cleanup;
+	}
+
+	retval = _zremiterator(db, key, keylen, iterator, scores, scores_page, skiplist, skiplist_page, changed);
+	if (retval != RL_OK) {
+		goto cleanup;
+	}
+
+	retval = RL_OK;
+cleanup:
+	return retval;
+}
+
 
 
 int rl_zincrby(rlite *db, unsigned char *key, long keylen, double score, unsigned char *member, long memberlen, double *newscore)
