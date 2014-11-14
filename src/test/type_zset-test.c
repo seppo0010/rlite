@@ -467,36 +467,68 @@ static int test_zrangebyscore(rlite *db, unsigned char *key, long keylen, rl_zra
 	rl_zset_iterator *iterator;
 	long offset = 0, limit = 0;
 	int retval = rl_zrangebyscore(db, key, keylen, range, offset, limit, &iterator);
-	if (size == 0 && retval == RL_NOT_FOUND) {
-		return 0;
-	}
-	if (retval != RL_OK) {
-		fprintf(stderr, "Unable to zrangebyscore, got %d\n", retval);
-		return 1;
-	}
-
-	double score;
-	long i = 0;
-	while ((retval = rl_zset_iterator_next(iterator, &score, NULL, NULL)) == RL_OK) {
-		if (score != base_score + i * step) {
-			fprintf(stderr, "Expected score to be %lf, got %lf instead\n", base_score + i * step, score);
+	if (size != 0 || retval != RL_NOT_FOUND) {
+		if (retval != RL_OK) {
+			fprintf(stderr, "Unable to zrangebyscore, got %d\n", retval);
 			return 1;
 		}
-		i++;
+
+		double score;
+		long i = 0;
+		while ((retval = rl_zset_iterator_next(iterator, &score, NULL, NULL)) == RL_OK) {
+			if (score != base_score + i * step) {
+				fprintf(stderr, "Expected score to be %lf, got %lf instead\n", base_score + i * step, score);
+				return 1;
+			}
+			i++;
+		}
+		if (retval != RL_END) {
+			fprintf(stderr, "Expected iterator to finish, got %d instead\n", retval);
+			return 1;
+		}
+		retval = rl_zset_iterator_destroy(iterator);
+		if (retval != RL_OK) {
+			fprintf(stderr, "Unable to destroy zset iterator\n");
+			return 1;
+		}
+		if (i != size) {
+			fprintf(stderr, "Expected size to be %ld, got %ld\n", size, i);
+			return 1;
+		}
 	}
-	if (retval != RL_END) {
-		fprintf(stderr, "Expected iterator to finish, got %d instead\n", retval);
-		return 1;
+
+	retval = rl_zrevrangebyscore(db, key, keylen, range, offset, limit, &iterator);
+	if (size != 0 || retval != RL_NOT_FOUND) {
+		if (retval != RL_OK) {
+			fprintf(stderr, "Unable to zrevrangebyscore, got %d\n", retval);
+			return 1;
+		}
+
+		double score;
+		long i = size - 1;
+		while ((retval = rl_zset_iterator_next(iterator, &score, NULL, NULL)) == RL_OK) {
+			if (score != base_score + i * step) {
+				fprintf(stderr, "Expected score to be %lf, got %lf instead in line %d\n", base_score + i * step, score, __LINE__);
+				return 1;
+			}
+			i--;
+		}
+		if (retval != RL_END) {
+			fprintf(stderr, "Expected iterator to finish, got %d instead\n", retval);
+			return 1;
+		}
+		retval = rl_zset_iterator_destroy(iterator);
+		if (retval != RL_OK) {
+			fprintf(stderr, "Unable to destroy zset iterator\n");
+			return 1;
+		}
+		if (i != -1) {
+			fprintf(stderr, "Expected size to be %d, got %ld\n", -1, i);
+			return 1;
+		}
 	}
-	retval = rl_zset_iterator_destroy(iterator);
-	if (retval != RL_OK) {
-		fprintf(stderr, "Unable to destroy zset iterator\n");
-		return 1;
-	}
-	if (i != size) {
-		fprintf(stderr, "Expected size to be %ld, got %ld\n", size, i);
-		return 1;
-	}
+
+
 
 	return 0;
 }

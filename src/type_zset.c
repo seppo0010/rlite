@@ -416,6 +416,33 @@ cleanup:
 	return retval;
 }
 
+int rl_zrevrangebyscore(rlite *db, unsigned char *key, long keylen, rl_zrangespec *range, long offset, long count, rl_zset_iterator **iterator)
+{
+	long start, end;
+	rl_skiplist *skiplist;
+	int retval = rl_zset_get_objects(db, key, keylen, NULL, NULL, &skiplist, NULL, 0);
+	if (retval != RL_OK) {
+		goto cleanup;
+	}
+
+	retval = _rl_zrangebyscore(db, skiplist, range, &start, &end);
+	if (retval != RL_OK) {
+		goto cleanup;
+	}
+
+	end -= offset;
+
+	retval = _rl_zrange(db, skiplist, start, end, -1, iterator);
+	if (retval != RL_OK) {
+		goto cleanup;
+	}
+	if (count > 0 && (*iterator)->size > count) {
+		(*iterator)->size = count;
+	}
+cleanup:
+	return retval;
+}
+
 static int lex_get_range(rlite *db, unsigned char *min, long minlen, unsigned char *max, long maxlen, rl_skiplist *skiplist, long *_start, long *_end)
 {
 	if (min[0] != '-' && min[0] != '(' && min[0] != '[') {
