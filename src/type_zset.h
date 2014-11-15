@@ -42,5 +42,6 @@ int rl_zremrangebylex(rlite *db, unsigned char *key, long keylen, unsigned char 
 int rl_zremrangebyrank(rlite *db, unsigned char *key, long keylen, long start, long end, long *changed);
 int rl_zremrangebyscore(rlite *db, unsigned char *key, long keylen, rl_zrangespec *range, long *changed);
 int rl_zscore(rlite *db, unsigned char *key, long keylen, unsigned char *data, long datalen, double *score);
+int rl_zunionstore(rlite *db, long keys_size, unsigned char **keys, long *keys_len, double *weights, int aggregate);
 
 #endif

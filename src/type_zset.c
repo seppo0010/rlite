@@ -174,18 +174,25 @@ cleanup:
 
 static int add_member(rlite *db, rl_btree *scores, rl_skiplist *skiplist, double score, unsigned char *member, long memberlen)
 {
+	int retval;
+	unsigned char *digest = NULL;
 	void *value_ptr = malloc(sizeof(double));
+	if (value_ptr == NULL) {
+		retval = RL_OUT_OF_MEMORY;
+		goto cleanup;
+	}
 	*(double *)value_ptr = score;
-	unsigned char *digest = malloc(sizeof(unsigned char) * 20);
-	int retval = sha1(member, memberlen, digest);
+	digest = malloc(sizeof(unsigned char) * 20);
+	if (digest == NULL) {
+		retval = RL_OUT_OF_MEMORY;
+		goto cleanup;
+	}
+	retval = sha1(member, memberlen, digest);
 	if (retval != RL_OK) {
 		goto cleanup;
 	}
 	retval = rl_btree_add_element(db, scores, digest, value_ptr);
 	if (retval != RL_OK) {
-		if (retval == RL_FOUND) {
-			retval = RL_UNEXPECTED;
-		}
 		goto cleanup;
 	}
 	retval = rl_skiplist_add(db, skiplist, score, member, memberlen);
@@ -193,6 +200,10 @@ static int add_member(rlite *db, rl_btree *scores, rl_skiplist *skiplist, double
 		goto cleanup;
 	}
 cleanup:
+	if (retval != RL_OK) {
+		free(value_ptr);
+		free(digest);
+	}
 	return retval;
 }
 
@@ -922,17 +933,10 @@ cleanup:
 
 
 
-int rl_zincrby(rlite *db, unsigned char *key, long keylen, double score, unsigned char *member, long memberlen, double *newscore)
+static int incrby(rlite *db, rl_btree *scores, rl_skiplist *skiplist, unsigned char *member, long memberlen, double score, double *newscore)
 {
-	double existing_score;
-	rl_btree *scores;
-	rl_skiplist *skiplist;
-	long scores_page, skiplist_page;
-	int retval = rl_zset_get_objects(db, key, keylen, &scores, &scores_page, &skiplist, &skiplist_page, 1);
-	if (retval != RL_OK) {
-		return retval;
-	}
-	retval = rl_get_zscore(db, scores, member, memberlen, &existing_score);
+	double existing_score = 0.0;
+	int retval = rl_get_zscore(db, scores, member, memberlen, &existing_score);
 	if (retval != RL_FOUND && retval != RL_NOT_FOUND) {
 		goto cleanup;
 	}
@@ -948,14 +952,29 @@ int rl_zincrby(rlite *db, unsigned char *key, long keylen, double score, unsigne
 	if (retval != RL_OK) {
 		goto cleanup;
 	}
+	if (newscore) {
+		*newscore = score;
+	}
+cleanup:
+	return retval;
+}
+int rl_zincrby(rlite *db, unsigned char *key, long keylen, double score, unsigned char *member, long memberlen, double *newscore)
+{
+	rl_btree *scores;
+	rl_skiplist *skiplist;
+	long scores_page, skiplist_page;
+	int retval = rl_zset_get_objects(db, key, keylen, &scores, &scores_page, &skiplist, &skiplist_page, 1);
+	if (retval != RL_OK) {
+		return retval;
+	}
+	retval = incrby(db, scores, skiplist, member, memberlen, score, newscore);
+	if (retval != RL_OK) {
+		return retval;
+	}
 
 	retval = update_zset(db, scores, scores_page, skiplist, skiplist_page);
 	if (retval != RL_OK) {
 		goto cleanup;
-	}
-
-	if (newscore) {
-		*newscore = score;
 	}
 cleanup:
 	return retval;
@@ -1097,5 +1116,179 @@ cleanup:
 	free(weights);
 	free(btrees);
 	free(skiplists);
+	return retval;
+}
+static int zunionstore_minmax(rlite *db, long keys_size, unsigned char **keys, long *keys_len, double *weights, rl_btree *target_scores, rl_skiplist *target_skiplist, int aggregate)
+{
+	int retval;
+	rl_skiplist_iterator **iterators = NULL;;
+	rl_skiplist *skiplist;
+	double *scores = NULL;
+	unsigned char **members = NULL;
+	long *memberslen = NULL, i;
+	long position;
+	scores = malloc(sizeof(double) * keys_size);
+	if (!scores) {
+		retval = RL_OUT_OF_MEMORY;
+		goto cleanup;
+	}
+	members = malloc(sizeof(unsigned char *) * keys_size);
+	if (!members) {
+		retval = RL_OUT_OF_MEMORY;
+		goto cleanup;
+	}
+	memberslen = malloc(sizeof(long) * keys_size);
+	if (!memberslen) {
+		retval = RL_OUT_OF_MEMORY;
+		goto cleanup;
+	}
+	iterators = malloc(sizeof(rl_skiplist_iterator *) * keys_size);
+	if (!iterators) {
+		retval = RL_OUT_OF_MEMORY;
+		goto cleanup;
+	}
+
+
+	for (i = 0; i < keys_size; i++) {
+		retval = rl_zset_get_objects(db, keys[i], keys_len[i], NULL, NULL, &skiplist, NULL, 0);
+		if (retval == RL_NOT_FOUND) {
+			iterators[i] = NULL;
+			continue;
+		}
+		if (retval != RL_OK) {
+			goto cleanup;
+		}
+		retval = rl_skiplist_iterator_create(db, &iterators[i], skiplist, 0, aggregate == RL_ZSET_AGGREGATE_MAX ? -1 : 1, 0);
+		if (retval != RL_OK) {
+			goto cleanup;
+		}
+
+		retval = rl_zset_iterator_next(iterators[i], &scores[i], &members[i], &memberslen[i]);
+		if (retval != RL_OK) {
+			goto cleanup;
+		}
+	}
+
+	while (1) {
+		position = -1;
+		for (i = 0; i < keys_size; i++) {
+			if (!iterators[i]) {
+				continue;
+			}
+			if ((position == -1) ||
+			        (aggregate == RL_ZSET_AGGREGATE_MAX && scores[i] > (weights ? weights[position] * scores[position] : scores[position])) ||
+			        (aggregate == RL_ZSET_AGGREGATE_MIN && scores[i] < (weights ? weights[position] * scores[position] : scores[position]))) {
+				position = i;
+			}
+		}
+		if (position == -1) {
+			break;
+		}
+
+		retval = add_member(db, target_scores, target_skiplist, (weights ? weights[position] * scores[position] : scores[position]), members[position], memberslen[position]);
+		if (retval != RL_FOUND && retval != RL_OK) {
+			goto cleanup;
+		}
+		free(members[position]);
+
+		retval = rl_zset_iterator_next(iterators[position], &scores[position], &members[position], &memberslen[position]);
+		if (retval == RL_END) {
+			retval = rl_zset_iterator_destroy(iterators[position]);
+			iterators[position] = NULL;
+			if (retval != RL_OK) {
+				goto cleanup;
+			}
+		}
+		else if (retval != RL_OK) {
+			goto cleanup;
+		}
+	}
+
+	retval = RL_OK;
+cleanup:
+	if (iterators) {
+		for (i = 0; i < keys_size; i++) {
+			if (iterators[i]) {
+				rl_zset_iterator_destroy(iterators[i]);
+			}
+		}
+	}
+	free(iterators);
+	free(memberslen);
+	free(members);
+	free(scores);
+	return retval;
+}
+
+static int zunionstore_sum(rlite *db, long keys_size, unsigned char **keys, long *keys_len, double *weights, rl_btree *target_scores, rl_skiplist *target_skiplist)
+{
+	rl_skiplist_iterator *iterator;
+	rl_skiplist *skiplist;
+	double score;
+	unsigned char *member;
+	long memberlen;
+	int retval;
+	long i;
+	for (i = 0; i < keys_size; i++) {
+		retval = rl_zset_get_objects(db, keys[i], keys_len[i], NULL, NULL, &skiplist, NULL, 0);
+		if (retval == RL_NOT_FOUND) {
+			continue;
+		}
+		if (retval != RL_OK) {
+			goto cleanup;
+		}
+		retval = rl_skiplist_iterator_create(db, &iterator, skiplist, 0, 1, 0);
+		if (retval != RL_OK) {
+			goto cleanup;
+		}
+		while ((retval = rl_zset_iterator_next(iterator, &score, &member, &memberlen)) == RL_OK) {
+			retval = incrby(db, target_scores, target_skiplist, member, memberlen, weights ? score * weights[i] : score, NULL);
+			if (retval != RL_OK) {
+				goto cleanup;
+			}
+			free(member);
+		}
+
+		if (retval != RL_END) {
+			goto cleanup;
+		}
+
+		retval = rl_skiplist_iterator_destroy(db, iterator);
+		if (retval != RL_OK) {
+			goto cleanup;
+		}
+	}
+	retval = RL_OK;
+cleanup:
+	return retval;
+}
+
+int rl_zunionstore(rlite *db, long keys_size, unsigned char **keys, long *keys_len, double *weights, int aggregate)
+{
+	rl_btree *scores;
+	rl_skiplist *skiplist;
+	long scores_page, skiplist_page;
+	int retval = rl_zset_get_objects(db, keys[0], keys_len[0], &scores, &scores_page, &skiplist, &skiplist_page, 1);
+	if (retval != RL_OK) {
+		goto cleanup;
+	}
+	if (aggregate == RL_ZSET_AGGREGATE_SUM) {
+		retval = zunionstore_sum(db, keys_size - 1, &keys[1], &keys_len[1], weights, scores, skiplist);
+		if (retval != RL_OK) {
+			goto cleanup;
+		}
+	}
+	else {
+		retval = zunionstore_minmax(db, keys_size - 1, &keys[1], &keys_len[1], weights, scores, skiplist, aggregate);
+		if (retval != RL_OK) {
+			goto cleanup;
+		}
+	}
+
+	retval = update_zset(db, scores, scores_page, skiplist, skiplist_page);
+	if (retval != RL_OK) {
+		goto cleanup;
+	}
+cleanup:
 	return retval;
 }

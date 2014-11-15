@@ -933,6 +933,125 @@ int basic_test_zadd_zinterstore(int _commit, long params[5])
 	return 0;
 }
 
+#define ZUNIONSTORE_KEYS 4
+#define ZUNIONSTORE_MEMBERS 10
+int basic_test_zadd_zunionstore(int _commit, long params[5])
+{
+	int retval = 0;
+	fprintf(stderr, "Start basic_test_zadd_zunionstore %d %ld %ld %ld %ld %ld\n", _commit, params[0], params[1], params[2], params[3], params[4]);
+
+	rlite *db = setup_db(_commit, 1);
+
+	long keys_len[ZUNIONSTORE_KEYS];
+	unsigned char *keys[ZUNIONSTORE_KEYS];
+	long i, j;
+	for (i = 0; i < ZUNIONSTORE_KEYS; i++) {
+		keys[i] = malloc(sizeof(unsigned char));
+		keys[i][0] = 'a' + i;
+		keys_len[i] = 1;
+	}
+
+	unsigned char members[ZUNIONSTORE_MEMBERS][1];
+	for (i = 0; i < ZUNIONSTORE_MEMBERS; i++) {
+		members[i][0] = 'A' + i;
+	}
+
+	for (i = 1; i < ZUNIONSTORE_KEYS; i++) {
+		for (j = 0; j < ZUNIONSTORE_MEMBERS; j++) {
+			retval = rl_zadd(db, keys[i], 1, i * j, members[j], 1);
+			if (retval != RL_OK) {
+				fprintf(stderr, "Unable to zadd %d\n", retval);
+				return 1;
+			}
+		}
+		unsigned char own_member[1];
+		own_member[0] = (unsigned char)(CHAR_MAX - i);
+		retval = rl_zadd(db, keys[i], 1, i, own_member, 1);
+		if (retval != RL_OK) {
+			fprintf(stderr, "Unable to zadd %d\n", retval);
+			return 1;
+		}
+	}
+
+	if (_commit) {
+		rl_commit(db);
+	}
+
+	double weights[3];
+	weights[0] = params[1];
+	weights[1] = params[2];
+	weights[2] = params[3];
+	retval = rl_zunionstore(db, ZUNIONSTORE_KEYS, keys, keys_len, params[1] == 0 && params[2] == 0 && params[3] == 0 ? NULL : weights, params[0]);
+	if (retval != RL_OK) {
+		fprintf(stderr, "Unable to zunionstore %d\n", retval);
+		return 1;
+	}
+
+	rl_zset_iterator *iterator;
+	retval = rl_zrange(db, keys[0], 1, 0, -1, &iterator);
+	if (retval != RL_OK) {
+		fprintf(stderr, "Unable to zrange %d\n", retval);
+		return 1;
+	}
+	if (iterator->size != ZUNIONSTORE_MEMBERS + ZUNIONSTORE_KEYS - 1) {
+		fprintf(stderr, "Expected size to be %d, got %ld instead\n", ZUNIONSTORE_MEMBERS + ZUNIONSTORE_KEYS - 1, iterator->size);
+		return 1;
+	}
+	i = 0;
+	unsigned char *data;
+	long datalen;
+	double score, exp_score;
+	long pos;
+	while ((retval = rl_zset_iterator_next(iterator, &score, &data, &datalen)) == RL_OK) {
+		if (data[0] == (unsigned char)(CHAR_MAX - 1) || data[0] == (unsigned char)(CHAR_MAX - 2) || data[0] == (unsigned char)(CHAR_MAX - 3)) {
+			pos = (unsigned char)CHAR_MAX - data[0];
+			exp_score = pos * (params[1] == 0 && params[2] == 0 && params[3] == 0 ? 1 : params[pos]);
+			if (exp_score != score) {
+				fprintf(stderr, "Member score mismatch, expected %lf, got %lf\n", exp_score, score);
+				return 1;
+			}
+			if (datalen != 1) {
+				fprintf(stderr, "Member len mismatch\n");
+				return 1;
+			}
+			i--;
+		} else {
+			if (score != i * params[4]) {
+				fprintf(stderr, "Expected score to be %ld, got %lf instead\n", i * params[4], score);
+				return 1;
+			}
+			if (data[0] != members[i][0]) {
+				fprintf(stderr, "Member mismatch\n");
+				return 1;
+			}
+			if (datalen != 1) {
+				fprintf(stderr, "Member len mismatch\n");
+				return 1;
+			}
+		}
+		free(data);
+		i++;
+	}
+
+	if (retval != RL_END) {
+		fprintf(stderr, "Expected iterator to finish, got %d instead\n", retval);
+		return 1;
+	}
+	retval = rl_zset_iterator_destroy(iterator);
+	if (retval != RL_OK) {
+		fprintf(stderr, "Unable to destroy zset iterator\n");
+		return 1;
+	}
+
+	fprintf(stderr, "End basic_test_zadd_zunionstore\n");
+
+	for (i = 0; i < ZUNIONSTORE_KEYS; i++) {
+		free(keys[i]);
+	}
+	rl_close(db);
+	return 0;
+}
+
 int basic_test_zadd_zremrangebyrank(int _commit)
 {
 	int retval = 0;
@@ -1116,7 +1235,7 @@ int basic_test_zadd_zremrangebylex(int _commit)
 int main()
 {
 #define ZINTERSTORE_TESTS 7
-	long zinterstore_tests[ZINTERSTORE_TESTS][5] = {
+	long zinterunionstore_tests[ZINTERSTORE_TESTS][5] = {
 		{RL_ZSET_AGGREGATE_SUM, 0, 0, 0, 6},
 		{RL_ZSET_AGGREGATE_SUM, 1, 1, 1, 6},
 		{RL_ZSET_AGGREGATE_MIN, 1, 1, 1, 1},
@@ -1172,7 +1291,11 @@ int main()
 			goto cleanup;
 		}
 		for (j = 0; j < ZINTERSTORE_TESTS; j++) {
-			retval = basic_test_zadd_zinterstore(i, zinterstore_tests[j]);
+			retval = basic_test_zadd_zinterstore(i, zinterunionstore_tests[j]);
+			if (retval != 0) {
+				goto cleanup;
+			}
+			retval = basic_test_zadd_zunionstore(i, zinterunionstore_tests[j]);
 			if (retval != 0) {
 				goto cleanup;
 			}
