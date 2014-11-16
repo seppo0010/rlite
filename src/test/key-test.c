@@ -32,7 +32,8 @@ int basic_test_set_get(int _commit)
 	int retval = 0;
 	fprintf(stderr, "Start basic_test_set_get %d\n", _commit);
 
-	rlite *db = setup_db(_commit, 1);
+	rlite *db;
+	RL_CALL(setup_db, RL_OK, &db, _commit, 1);
 	unsigned char *key = (unsigned char *)"my key";
 	long keylen = strlen((char *)key);
 	unsigned char type = 'A';
@@ -40,7 +41,7 @@ int basic_test_set_get(int _commit)
 	retval = rl_key_set(db, key, keylen, type, page);
 	if (retval != RL_OK) {
 		fprintf(stderr, "Unable to set key %d\n", retval);
-		return 1;
+		goto cleanup;
 	}
 
 	if (_commit) {
@@ -49,12 +50,14 @@ int basic_test_set_get(int _commit)
 
 	retval = expect_key(db, key, keylen, type, page);
 	if (retval != 0) {
-		return 1;
+		goto cleanup;
 	}
 
 	fprintf(stderr, "End basic_test_set_get\n");
 	rl_close(db);
-	return 0;
+	retval = 0;
+cleanup:
+	return retval;
 }
 
 int basic_test_get_unexisting()
@@ -62,19 +65,22 @@ int basic_test_get_unexisting()
 	int retval = 0;
 	fprintf(stderr, "Start basic_test_get_unexisting\n");
 
-	rlite *db = setup_db(0, 1);
+	rlite *db;
+	RL_CALL(setup_db, RL_OK, &db, 0, 1);
 
 	unsigned char *key = (unsigned char *)"my key";
 	long keylen = strlen((char *)key);
 	retval = rl_key_get(db, key, keylen, NULL, NULL, NULL);
 	if (retval != RL_NOT_FOUND) {
 		fprintf(stderr, "Expected not to find key %d\n", retval);
-		return 1;
+		goto cleanup;
 	}
 
 	fprintf(stderr, "End basic_test_get_unexisting\n");
 	rl_close(db);
-	return 0;
+	retval = 0;
+cleanup:
+	return retval;
 }
 
 int basic_test_set_delete()
@@ -82,7 +88,9 @@ int basic_test_set_delete()
 	int retval = 0;
 	fprintf(stderr, "Start basic_test_set_delete\n");
 
-	rlite *db = setup_db(0, 1);
+	rlite *db;
+	RL_CALL(setup_db, RL_OK, &db, 0, 1);
+
 
 	unsigned char *key = (unsigned char *)"my key";
 	long keylen = strlen((char *)key);
@@ -91,24 +99,26 @@ int basic_test_set_delete()
 	retval = rl_key_set(db, key, keylen, type, page);
 	if (retval != RL_OK) {
 		fprintf(stderr, "Unable to set key %d\n", retval);
-		return 1;
+		goto cleanup;
 	}
 
 	retval = rl_key_delete(db, key, keylen);
 	if (retval != RL_OK) {
 		fprintf(stderr, "Unable to delete key %d\n", retval);
-		return 1;
+		goto cleanup;
 	}
 
 	retval = rl_key_get(db, key, keylen, NULL, NULL, NULL);
 	if (retval != RL_NOT_FOUND) {
 		fprintf(stderr, "Expected not to find key, got %d instead\n", retval);
-		return 1;
+		goto cleanup;
 	}
 
 	fprintf(stderr, "End basic_test_set_delete\n");
 	rl_close(db);
-	return 0;
+	retval = 0;
+cleanup:
+	return retval;
 }
 
 int basic_test_get_or_create(int _commit)
@@ -116,7 +126,8 @@ int basic_test_get_or_create(int _commit)
 	int retval = 0;
 	fprintf(stderr, "Start basic_test_get_or_create %d\n", _commit);
 
-	rlite *db = setup_db(_commit, 1);
+	rlite *db;
+	RL_CALL(setup_db, RL_OK, &db, _commit, 1);
 	unsigned char *key = (unsigned char *)"my key";
 	long keylen = strlen((char *)key);
 	unsigned char type = 'A';
@@ -124,7 +135,7 @@ int basic_test_get_or_create(int _commit)
 	retval = rl_key_get_or_create(db, key, keylen, type, &page);
 	if (retval != RL_NOT_FOUND) {
 		fprintf(stderr, "Unable to set key %d\n", retval);
-		return 1;
+		goto cleanup;
 	}
 
 	if (_commit) {
@@ -134,11 +145,11 @@ int basic_test_get_or_create(int _commit)
 	retval = rl_key_get_or_create(db, key, keylen, type, &page2);
 	if (retval != RL_FOUND) {
 		fprintf(stderr, "Unable to find existing key %d\n", retval);
-		return 1;
+		goto cleanup;
 	}
 	if (page != page2) {
 		fprintf(stderr, "Expected page2 %ld to match page %ld\n", page2, page);
-		return 1;
+		goto cleanup;
 	}
 
 	if (_commit) {
@@ -148,41 +159,23 @@ int basic_test_get_or_create(int _commit)
 	retval = rl_key_get_or_create(db, key, keylen, type + 1, &page2);
 	if (retval != RL_WRONG_TYPE) {
 		fprintf(stderr, "Expected get_or_create to return wrong type, got %d instead\n", retval);
-		return 1;
+		goto cleanup;
 	}
 
 	fprintf(stderr, "End basic_test_get_or_create\n");
 	rl_close(db);
-	return 0;
-}
-
-int main()
-{
-	int retval;
-	retval = basic_test_set_get(0);
-	if (retval != 0) {
-		goto cleanup;
-	}
-	retval = basic_test_set_get(1);
-	if (retval != 0) {
-		goto cleanup;
-	}
-	retval = basic_test_get_unexisting();
-	if (retval != 0) {
-		goto cleanup;
-	}
-	retval = basic_test_set_delete();
-	if (retval != 0) {
-		goto cleanup;
-	}
-	retval = basic_test_get_or_create(0);
-	if (retval != 0) {
-		goto cleanup;
-	}
-	retval = basic_test_get_or_create(1);
-	if (retval != 0) {
-		goto cleanup;
-	}
+	retval = 0;
 cleanup:
 	return retval;
 }
+
+RL_TEST_MAIN_START(key_test)
+{
+	RL_TEST(basic_test_set_get, 0);
+	RL_TEST(basic_test_set_get, 1);
+	RL_TEST(basic_test_get_unexisting, 0);
+	RL_TEST(basic_test_set_delete, 0);
+	RL_TEST(basic_test_get_or_create, 0);
+	RL_TEST(basic_test_get_or_create, 1);
+}
+RL_TEST_MAIN_END

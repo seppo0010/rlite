@@ -60,6 +60,7 @@ int rl_read(struct rlite *db, rl_data_type *type, long page, void *context, void
 int rl_get_key_btree(rlite *db, struct rl_btree **btree);
 int rl_alloc_page_number(rlite *db, long *page_number);
 int rl_write(struct rlite *db, rl_data_type *type, long page, void *obj);
+int rl_purge_cache(struct rlite *db, long page);
 int rl_delete(struct rlite *db, long page);
 int rl_commit(struct rlite *db);
 int rl_discard(struct rlite *db);

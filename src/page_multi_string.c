@@ -5,6 +5,7 @@
 #include "page_list.h"
 #include "page_string.h"
 #include "page_multi_string.h"
+#include "util.h"
 
 int rl_multi_string_cmp(struct rlite *db, long p1, long p2, int *cmp)
 {
@@ -13,15 +14,10 @@ int rl_multi_string_cmp(struct rlite *db, long p1, long p2, int *cmp)
 	void *_list, *_node;
 	unsigned char *str1, *str2;
 
-	int retval = rl_read(db, &rl_data_type_list_long, p1, &list_long, &_list, 0);
-	if (retval != RL_FOUND) {
-		goto cleanup;
-	}
+	int retval;
+	RL_CALL(rl_read, RL_FOUND, db, &rl_data_type_list_long, p1, &list_long, &_list, 0);
 	list1 = _list;
-	retval = rl_read(db, &rl_data_type_list_long, p2, &list_long, &_list, 0);
-	if (retval != RL_FOUND) {
-		goto cleanup;
-	}
+	RL_CALL(rl_read, RL_FOUND, db, &rl_data_type_list_long, p2, &list_long, &_list, 0);
 	list2 = _list;
 
 	long node_number1 = list1->left, node_number2 = list2->left, i;
@@ -40,26 +36,14 @@ int rl_multi_string_cmp(struct rlite *db, long p1, long p2, int *cmp)
 			retval = RL_OK;
 			goto cleanup;
 		}
-		retval = rl_read(db, list1->type->list_node_type, node_number1, list1, &_node, 0);
-		if (retval != RL_FOUND) {
-			goto cleanup;
-		}
+		RL_CALL(rl_read, RL_FOUND, db, list1->type->list_node_type, node_number1, list1, &_node, 0);
 		node1 = _node;
-		retval = rl_read(db, list2->type->list_node_type, node_number2, list2, &_node, 0);
-		if (retval != RL_FOUND) {
-			goto cleanup;
-		}
+		RL_CALL(rl_read, RL_FOUND, db, list2->type->list_node_type, node_number2, list2, &_node, 0);
 		node2 = _node;
 		for (i = first ? 1 : 0; i < node1->size; i++) {
 			first = 0;
-			retval = rl_string_get(db, &str1, *(long *)node1->elements[i]);
-			if (retval != RL_OK) {
-				goto cleanup;
-			}
-			retval = rl_string_get(db, &str2, *(long *)node2->elements[i]);
-			if (retval != RL_OK) {
-				goto cleanup;
-			}
+			RL_CALL(rl_string_get, RL_OK, db, &str1, *(long *)node1->elements[i]);
+			RL_CALL(rl_string_get, RL_OK, db, &str2, *(long *)node2->elements[i]);
 			*cmp = memcmp(str1, str2, db->page_size);
 			if (*cmp != 0) {
 				if (*cmp < 0) {
@@ -96,10 +80,8 @@ int rl_multi_string_cmp_str(struct rlite *db, long p1, unsigned char *str, long 
 	void *_list, *_node;
 	unsigned char *str1;
 
-	int retval = rl_read(db, &rl_data_type_list_long, p1, &list_long, &_list, 0);
-	if (retval != RL_FOUND) {
-		goto cleanup;
-	}
+	int retval;
+	RL_CALL(rl_read, RL_FOUND, db, &rl_data_type_list_long, p1, &list_long, &_list, 0);
 	list1 = _list;
 
 	long node_number1 = list1->left, i, pos = 0;
@@ -111,19 +93,13 @@ int rl_multi_string_cmp_str(struct rlite *db, long p1, unsigned char *str, long 
 			*cmp = 0;
 			break;
 		}
-		retval = rl_read(db, list1->type->list_node_type, node_number1, list1, &_node, 0);
-		if (retval != RL_FOUND) {
-			goto cleanup;
-		}
+		RL_CALL(rl_read, RL_FOUND, db, list1->type->list_node_type, node_number1, list1, &_node, 0);
 		node1 = _node;
 		if (first) {
 			stored_length = *(long *)node1->elements[0];
 		}
 		for (i = first ? 1 : 0; i < node1->size; i++) {
-			retval = rl_string_get(db, &str1, *(long *)node1->elements[i]);
-			if (retval != RL_OK) {
-				goto cleanup;
-			}
+			RL_CALL(rl_string_get, RL_OK, db, &str1, *(long *)node1->elements[i]);
 			cmplen = db->page_size < len - pos ? db->page_size : len - pos;
 			if (cmplen == 0) {
 				// finished with str, the page_multi_string starts with str
@@ -162,34 +138,26 @@ cleanup:
 
 int rl_multi_string_get(struct rlite *db, long number, unsigned char **_data, long *size)
 {
-	rl_list *list;
+	rl_list *list = NULL;
 	rl_list_node *node = NULL;
 	void *_list, *_node;
-	int retval = rl_read(db, &rl_data_type_list_long, number, &list_long, &_list, 0);
-	if (retval != RL_FOUND) {
-		return retval;
-	}
+	unsigned char *data = NULL;
+	int retval;
+	RL_CALL(rl_read, RL_FOUND, db, &rl_data_type_list_long, number, &list_long, &_list, 0);
 	list = _list;
 	unsigned char *tmp_data;
-	unsigned char *data = NULL;
 	long node_number = list->left, i, pos = 0, to_copy;
 	while (node_number > 0) {
-		retval = rl_read(db, list->type->list_node_type, node_number, list, &_node, 0);
-		if (retval != RL_FOUND) {
-			goto cleanup;
-		}
+		RL_CALL(rl_read, RL_FOUND, db, list->type->list_node_type, node_number, list, &_node, 0);
 		node = _node;
 		i = 0;
 		if (!data) {
 			*size = *(long *)node->elements[0];
-			data = malloc(sizeof(unsigned char) * (*size));
+			RL_MALLOC(data, sizeof(unsigned char) * (*size));
 			i = 1;
 		}
 		for (; i < node->size; i++) {
-			retval = rl_string_get(db, &tmp_data, *(long *)node->elements[i]);
-			if (retval != RL_OK) {
-				goto cleanup;
-			}
+			RL_CALL(rl_string_get, RL_OK, db, &tmp_data, *(long *)node->elements[i]);
 			to_copy = db->page_size;
 			if (pos + to_copy > *size) {
 				to_copy = *size - pos;
@@ -204,7 +172,12 @@ int rl_multi_string_get(struct rlite *db, long number, unsigned char **_data, lo
 	*_data = data;
 	retval = RL_OK;
 cleanup:
-	rl_list_nocache_destroy(db, list);
+	if (retval != RL_OK) {
+		rl_free(data);
+	}
+	if (list) {
+		rl_list_nocache_destroy(db, list);
+	}
 	if (node) {
 		rl_list_node_nocache_destroy(db, node);
 	}
@@ -213,36 +186,20 @@ cleanup:
 
 int rl_multi_string_set(struct rlite *db, long *number, const unsigned char *data, long size)
 {
-	rl_list *list;
-	int retval = rl_list_create(db, &list, &list_long);
-	if (retval != RL_OK) {
-		return retval;
-	}
+	int retval;
+	long *page = NULL, to_copy;
+	unsigned char *string = NULL;
+	rl_list *list = NULL;
+	RL_CALL(rl_list_create, RL_OK, db, &list, &list_long);
 	*number = db->next_empty_page;
-	retval = rl_write(db, &rl_data_type_list_long, *number, list);
-	if (retval != RL_OK) {
-		free(list);
-		return retval;
-	}
+	RL_CALL(rl_write, RL_OK, db, &rl_data_type_list_long, *number, list);
 	long pos = 0;
-	long *page, to_copy;
-	unsigned char *string;
-	page = malloc(sizeof(long));
-	if (!page) {
-		retval = RL_OUT_OF_MEMORY;
-		goto cleanup;
-	}
+	RL_MALLOC(page, sizeof(*page));
 	*page = size;
-	retval = rl_list_add_element(db, list, page, -1);
-	if (retval != RL_OK) {
-		goto cleanup;
-	}
+	RL_CALL(rl_list_add_element, RL_OK, db, list, page, -1);
+	page = NULL;
 	while (pos < size) {
-		page = malloc(sizeof(long));
-		if (!page) {
-			retval = RL_OUT_OF_MEMORY;
-			goto cleanup;
-		}
+		RL_MALLOC(page, sizeof(*page));
 		retval = rl_string_create(db, &string, page);
 		if (retval != RL_OK) {
 			goto cleanup;
@@ -252,13 +209,16 @@ int rl_multi_string_set(struct rlite *db, long *number, const unsigned char *dat
 			to_copy = size - pos;
 		}
 		memcpy(string, &data[pos], sizeof(unsigned char) * to_copy);
-		retval = rl_list_add_element(db, list, page, -1);
-		if (retval != RL_OK) {
-			goto cleanup;
-		}
+		string = NULL;
+		RL_CALL(rl_list_add_element, RL_OK, db, list, page, -1);
+		page = NULL;
 		pos += to_copy;
 	}
 cleanup:
+	if (retval != RL_OK) {
+		rl_free(page);
+		rl_free(string);
+	}
 	return retval;
 }
 
@@ -271,45 +231,39 @@ int rl_multi_string_sha1(struct rlite *db, unsigned char digest[20], long number
 
 	void *tmp;
 	rl_list *list;
-	rl_list_iterator *iterator;
-	int retval = rl_read(db, &rl_data_type_list_long, number, &list_long, &tmp, 0);
-	if (retval != RL_FOUND) {
-		goto cleanup;
-	}
+	rl_list_iterator *iterator = NULL;
+	int retval;
+	RL_CALL(rl_read, RL_FOUND, db, &rl_data_type_list_long, number, &list_long, &tmp, 0);
 	list = tmp;
 
-	retval = rl_list_iterator_create(db, &iterator, list, 1);
-	if (retval != RL_OK) {
-		goto cleanup;
-	}
+	RL_CALL(rl_list_iterator_create, RL_OK, db, &iterator, list, 1);
 
 	long size = 0;
 	while ((retval = rl_list_iterator_next(iterator, &tmp)) == RL_OK) {
 		if (size == 0) {
 			size = *(long *)tmp;
-			free(tmp);
+			rl_free(tmp);
 			continue;
 		}
-		retval = rl_string_get(db, &data, *(long *)tmp);
-		if (retval != RL_OK) {
-			goto cleanup;
-		}
+		RL_CALL(rl_string_get, RL_OK, db, &data, *(long *)tmp);
 		datalen = size > db->page_size ? db->page_size : size;
 		SHA1_Update(&sha, data, datalen);
 		size -= datalen;
-		free(tmp);
+		rl_free(tmp);
+	}
+	iterator = NULL;
+
+	if (retval != RL_END) {
+		goto cleanup;
 	}
 
-	retval = rl_list_iterator_destroy(db, iterator);
-	if (retval != RL_OK) {
-		goto cleanup;
-	}
-	retval = rl_list_nocache_destroy(db, list);
-	if (retval != RL_OK) {
-		goto cleanup;
-	}
+	RL_CALL(rl_list_nocache_destroy, RL_OK, db, list);
 
 	SHA1_Final(digest, &sha);
+	retval = RL_OK;
 cleanup:
-	return RL_OK;
+	if (iterator) {
+		rl_list_iterator_destroy(db, iterator);
+	}
+	return retval;
 }

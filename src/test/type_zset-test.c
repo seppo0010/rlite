@@ -12,7 +12,8 @@ int basic_test_zadd_zscore(int _commit)
 	int retval = 0;
 	fprintf(stderr, "Start basic_test_zadd_zscore %d\n", _commit);
 
-	rlite *db = setup_db(_commit, 1);
+	rlite *db = NULL;
+	RL_CALL(setup_db, RL_OK, &db, _commit, 1);
 	unsigned char *key = (unsigned char *)"my key";
 	long keylen = strlen((char *)key);
 	double score = 1.41, score2;
@@ -22,7 +23,7 @@ int basic_test_zadd_zscore(int _commit)
 	retval = rl_zadd(db, key, keylen, score, data, datalen);
 	if (retval != RL_OK) {
 		fprintf(stderr, "Unable to zadd %d\n", retval);
-		return 1;
+		goto cleanup;
 	}
 
 	if (_commit) {
@@ -32,17 +33,21 @@ int basic_test_zadd_zscore(int _commit)
 	retval = rl_zscore(db, key, keylen, data, datalen, &score2);
 	if (retval != RL_FOUND) {
 		fprintf(stderr, "Unable to zscore %d\n", retval);
-		return 1;
+		goto cleanup;
 	}
 
 	if (score != score2) {
 		fprintf(stderr, "Expected score %lf to match score2 %lf\n", score, score2);
-		return 1;
+		goto cleanup;
 	}
 
 	fprintf(stderr, "End basic_test_zadd_zscore\n");
-	rl_close(db);
-	return 0;
+	retval = 0;
+cleanup:
+	if (db) {
+		rl_close(db);
+	}
+	return retval;
 }
 
 int basic_test_zadd_zscore2(int _commit)
@@ -50,7 +55,8 @@ int basic_test_zadd_zscore2(int _commit)
 	int retval = 0;
 	fprintf(stderr, "Start basic_test_zadd_zscore2 %d\n", _commit);
 
-	rlite *db = setup_db(_commit, 1);
+	rlite *db = NULL;
+	RL_CALL(setup_db, RL_OK, &db, _commit, 1);
 	unsigned char *key = (unsigned char *)"my key";
 	long keylen = strlen((char *)key);
 	double score = 8913.109, score2;
@@ -63,7 +69,7 @@ int basic_test_zadd_zscore2(int _commit)
 	retval = rl_zadd(db, key, keylen, score, data, datalen);
 	if (retval != RL_OK) {
 		fprintf(stderr, "Unable to zadd %d\n", retval);
-		return 1;
+		goto cleanup;
 	}
 
 	if (_commit) {
@@ -73,17 +79,17 @@ int basic_test_zadd_zscore2(int _commit)
 	retval = rl_zcard(db, key, keylen, &card);
 	if (retval != RL_OK) {
 		fprintf(stderr, "Unable to zcard %d\n", retval);
-		return 1;
+		goto cleanup;
 	}
 	if (card != 1) {
 		fprintf(stderr, "Expected zcard to be 1, got %ld instead\n", card);
-		return 1;
+		goto cleanup;
 	}
 
 	retval = rl_zadd(db, key, keylen, score, data2, datalen2);
 	if (retval != RL_OK) {
 		fprintf(stderr, "Unable to zadd a second time %d\n", retval);
-		return 1;
+		goto cleanup;
 	}
 
 	if (_commit) {
@@ -93,38 +99,42 @@ int basic_test_zadd_zscore2(int _commit)
 	retval = rl_zcard(db, key, keylen, &card);
 	if (retval != RL_OK) {
 		fprintf(stderr, "Unable to zcard a second time %d\n", retval);
-		return 1;
+		goto cleanup;
 	}
 	if (card != 2) {
 		fprintf(stderr, "Expected zcard to be 2, got %ld instead\n", card);
-		return 1;
+		goto cleanup;
 	}
 
 	retval = rl_zscore(db, key, keylen, data, datalen, &score2);
 	if (retval != RL_FOUND) {
 		fprintf(stderr, "Unable to zscore %d\n", retval);
-		return 1;
+		goto cleanup;
 	}
 
 	if (score != score2) {
 		fprintf(stderr, "Expected score %lf to match score2 %lf\n", score, score2);
-		return 1;
+		goto cleanup;
 	}
 
 	retval = rl_zscore(db, key, keylen, data2, datalen2, &score2);
 	if (retval != RL_FOUND) {
 		fprintf(stderr, "Unable to zscore %d\n", retval);
-		return 1;
+		goto cleanup;
 	}
 
 	if (score != score2) {
 		fprintf(stderr, "Expected score %lf to match score2 %lf\n", score, score2);
-		return 1;
+		goto cleanup;
 	}
 
 	fprintf(stderr, "End basic_test_zadd_zscore2\n");
-	rl_close(db);
-	return 0;
+	retval = 0;
+cleanup:
+	if (db) {
+		rl_close(db);
+	}
+	return retval;
 }
 
 int basic_test_zadd_zrank(int _commit)
@@ -132,7 +142,8 @@ int basic_test_zadd_zrank(int _commit)
 	int retval = 0;
 	fprintf(stderr, "Start basic_test_zadd_zrank %d\n", _commit);
 
-	rlite *db = setup_db(_commit, 1);
+	rlite *db = NULL;
+	RL_CALL(setup_db, RL_OK, &db, _commit, 1);
 	unsigned char *key = (unsigned char *)"my key";
 	long keylen = strlen((char *)key);
 	double score = 8913.109;
@@ -145,7 +156,7 @@ int basic_test_zadd_zrank(int _commit)
 	retval = rl_zadd(db, key, keylen, score, data, datalen);
 	if (retval != RL_OK) {
 		fprintf(stderr, "Unable to zadd %d\n", retval);
-		return 1;
+		goto cleanup;
 	}
 
 	if (_commit) {
@@ -155,7 +166,7 @@ int basic_test_zadd_zrank(int _commit)
 	retval = rl_zadd(db, key, keylen, score, data2, datalen2);
 	if (retval != RL_OK) {
 		fprintf(stderr, "Unable to zadd a second time %d\n", retval);
-		return 1;
+		goto cleanup;
 	}
 
 	if (_commit) {
@@ -165,50 +176,54 @@ int basic_test_zadd_zrank(int _commit)
 	retval = rl_zrank(db, key, keylen, data, datalen, &rank);
 	if (retval != RL_FOUND) {
 		fprintf(stderr, "Unable to zrank %d\n", retval);
-		return 1;
+		goto cleanup;
 	}
 
 	if (0 != rank) {
 		fprintf(stderr, "Expected rank %d to be %ld\n", 0, rank);
-		return 1;
+		goto cleanup;
 	}
 
 	retval = rl_zrank(db, key, keylen, data2, datalen2, &rank);
 	if (retval != RL_FOUND) {
 		fprintf(stderr, "Unable to zrank %d\n", retval);
-		return 1;
+		goto cleanup;
 	}
 
 	if (1 != rank) {
 		fprintf(stderr, "Expected rank %d to be %ld\n", 1, rank);
-		return 1;
+		goto cleanup;
 	}
 
 	retval = rl_zrevrank(db, key, keylen, data, datalen, &rank);
 	if (retval != RL_FOUND) {
 		fprintf(stderr, "Unable to zrevrank %d\n", retval);
-		return 1;
+		goto cleanup;
 	}
 
 	if (1 != rank) {
 		fprintf(stderr, "Expected rank %d to be %ld\n", 1, rank);
-		return 1;
+		goto cleanup;
 	}
 
 	retval = rl_zrevrank(db, key, keylen, data2, datalen2, &rank);
 	if (retval != RL_FOUND) {
 		fprintf(stderr, "Unable to zrevrank %d\n", retval);
-		return 1;
+		goto cleanup;
 	}
 
 	if (0 != rank) {
 		fprintf(stderr, "Expected rank %d to be %ld\n", 0, rank);
-		return 1;
+		goto cleanup;
 	}
 
 	fprintf(stderr, "End basic_test_zadd_zrank\n");
-	rl_close(db);
-	return 0;
+	retval = 0;
+cleanup:
+	if (db) {
+		rl_close(db);
+	}
+	return retval;
 }
 
 int basic_test_zadd_zrange()
@@ -216,7 +231,8 @@ int basic_test_zadd_zrange()
 	int retval = 0;
 	fprintf(stderr, "Start basic_test_zadd_zrange\n");
 
-	rlite *db = setup_db(0, 1);
+	rlite *db = NULL;
+	RL_CALL(setup_db, RL_OK, &db, 0, 1);
 
 	unsigned char *key = (unsigned char *)"my key";
 	long keylen = strlen((char *)key);
@@ -229,7 +245,7 @@ int basic_test_zadd_zrange()
 		retval = rl_zadd(db, key, keylen, i * 10.5, setdata, setdatalen);
 		if (retval != RL_OK) {
 			fprintf(stderr, "Unable to zadd %d\n", retval);
-			return 1;
+			goto cleanup;
 		}
 	}
 
@@ -241,82 +257,86 @@ int basic_test_zadd_zrange()
 	retval = rl_zrange(db, key, keylen, 0, -1, &iterator);
 	if (retval != RL_OK) {
 		fprintf(stderr, "Unable to zrange %d\n", retval);
-		return 1;
+		goto cleanup;
 	}
 	if (iterator->size != 200) {
 		fprintf(stderr, "Expected size to be 200, got %ld instead\n", iterator->size);
-		return 1;
+		goto cleanup;
 	}
 	rl_zset_iterator_destroy(iterator);
 
 	retval = rl_zrevrange(db, key, keylen, 0, -1, &iterator);
 	if (retval != RL_OK) {
 		fprintf(stderr, "Unable to zrevrange %d\n", retval);
-		return 1;
+		goto cleanup;
 	}
 	if (iterator->size != 200) {
 		fprintf(stderr, "Expected size to be 200, got %ld instead\n", iterator->size);
-		return 1;
+		goto cleanup;
 	}
 	rl_zset_iterator_destroy(iterator);
 
 	retval = rl_zrange(db, key, keylen, 0, 0, &iterator);
 	if (retval != RL_OK) {
 		fprintf(stderr, "Unable to zrange %d\n", retval);
-		return 1;
+		goto cleanup;
 	}
 	if (iterator->size != 1) {
 		fprintf(stderr, "Expected size to be 1, got %ld instead\n", iterator->size);
-		return 1;
+		goto cleanup;
 	}
 	retval = rl_zset_iterator_next(iterator, NULL, &data, &datalen);
 	if (retval != RL_OK) {
 		fprintf(stderr, "Failed to fetch next element in zset iterator\n");
-		return 1;
+		goto cleanup;
 	}
 	if (data[0] != 0) {
 		fprintf(stderr, "Expected data to be 0, got %d instead\n", data[0]);
-		return 1;
+		goto cleanup;
 	}
 	if (datalen != 1) {
 		fprintf(stderr, "Expected data to be 1, got %ld instead\n", datalen);
-		return 1;
+		goto cleanup;
 	}
-	free(data);
+	rl_free(data);
 	rl_zset_iterator_destroy(iterator);
 
 	retval = rl_zrevrange(db, key, keylen, 0, -1, &iterator);
 	if (retval != RL_OK) {
 		fprintf(stderr, "Unable to zrevrange %d\n", retval);
-		return 1;
+		goto cleanup;
 	}
 	if (iterator->size != 200) {
 		fprintf(stderr, "Expected size to be 200, got %ld instead\n", iterator->size);
-		return 1;
+		goto cleanup;
 	}
 	retval = rl_zset_iterator_next(iterator, &score, &data, &datalen);
 	if (retval != RL_OK) {
 		fprintf(stderr, "Failed to fetch next element in zset iterator\n");
-		return 1;
+		goto cleanup;
 	}
 	if (score != 10.5 * 199) {
 		fprintf(stderr, "Expected score to be %lf, got %lf instead\n", 10.5 * 199, score);
-		return 1;
+		goto cleanup;
 	}
 	if (data[0] != 199) {
 		fprintf(stderr, "Expected data to be 199, got %d instead\n", data[0]);
-		return 1;
+		goto cleanup;
 	}
 	if (datalen != 1) {
 		fprintf(stderr, "Expected data to be 1, got %ld instead\n", datalen);
-		return 1;
+		goto cleanup;
 	}
-	free(data);
+	rl_free(data);
 	rl_zset_iterator_destroy(iterator);
 
-	rl_close(db);
 	fprintf(stderr, "End basic_test_zadd_zrange\n");
-	return 0;
+	retval = 0;
+cleanup:
+	if (db) {
+		rl_close(db);
+	}
+	return retval;
 }
 
 static int test_zrangebylex(rlite *db, unsigned char *key, long keylen, long initial, long size, long total_size, unsigned char min[3], long minlen, unsigned char max[3], long maxlen, long offset, long limit)
@@ -334,11 +354,11 @@ static int test_zrangebylex(rlite *db, unsigned char *key, long keylen, long ini
 		if (retval != RL_NOT_FOUND || size != 0) {
 			if (retval != RL_OK) {
 				fprintf(stderr, "Unable to rl_zlexcount, got %d\n", retval);
-				return 1;
+				goto cleanup;
 			}
 			if (size != lexcount) {
 				fprintf(stderr, "Expected lexcount to be %ld, got %ld instead\n", size, lexcount);
-				return 1;
+				goto cleanup;
 			}
 		}
 	}
@@ -347,43 +367,38 @@ static int test_zrangebylex(rlite *db, unsigned char *key, long keylen, long ini
 	if (retval != RL_NOT_FOUND || size != 0) {
 		if (retval != RL_OK) {
 			fprintf(stderr, "Unable to zrangebylex, got %d\n", retval);
-			return 1;
+			goto cleanup;
 		}
 		if (iterator->size != size) {
 			fprintf(stderr, "Expected zrangebylex size to be %ld, got %ld instead\n", size, iterator->size);
-			return 1;
+			goto cleanup;
 		}
 		i = initial;
 		while ((retval = rl_zset_iterator_next(iterator, NULL, &data2, &data2_len)) == RL_OK) {
 			if (data2_len != ((i & 1) == 0 ? 1 : 2)) {
 				fprintf(stderr, "Unexpected datalen %ld in element %ld in line %d\n", data2_len, i, __LINE__);
-				return 1;
+				goto cleanup;
 			}
 			if (data2[0] != 'a' + (i / 2)) {
 				fprintf(stderr, "Unexpected data[0] %d, expected %ld in iterator %ld on line %d\n", data2[0], 'a' + (i / 2), i, __LINE__);
-				return 1;
+				goto cleanup;
 			}
 			if (data2_len == 2 && data2[1] != 'A' + i) {
 				fprintf(stderr, "Unexpected data[1] %d, expected %ld in iterator %ld on line %d\n", data2[1], 'A' + i, i, __LINE__);
-				return 1;
+				goto cleanup;
 			}
 			i++;
-			free(data2);
+			rl_free(data2);
 		}
 
 		if (i != size + initial) {
 			fprintf(stderr, "Expected size to be %ld, got %ld instead\n", size + initial, i);
-			return 1;
+			goto cleanup;
 		}
 
 		if (retval != RL_END) {
 			fprintf(stderr, "Iterator finished without RL_END, got %d\n", retval);
-			return 1;
-		}
-		retval = rl_zset_iterator_destroy(iterator);
-		if (retval != RL_OK) {
-			fprintf(stderr, "Failed to destroy iterator, got %d\n", retval);
-			return 1;
+			goto cleanup;
 		}
 	}
 
@@ -391,47 +406,44 @@ static int test_zrangebylex(rlite *db, unsigned char *key, long keylen, long ini
 	if (retval != RL_NOT_FOUND || size != 0) {
 		if (retval != RL_OK) {
 			fprintf(stderr, "Unable to zrangebylex, got %d\n", retval);
-			return 1;
+			goto cleanup;
 		}
 		if (iterator->size != size) {
 			fprintf(stderr, "Expected zrangebylex size to be %ld, got %ld instead\n", size, iterator->size);
-			return 1;
+			goto cleanup;
 		}
 
 		i = total_size - 1 - offset;
 		while ((retval = rl_zset_iterator_next(iterator, NULL, &data2, &data2_len)) == RL_OK) {
 			if (data2_len != ((i & 1) == 0 ? 1 : 2)) {
 				fprintf(stderr, "Unexpected datalen %ld in element %ld in line %d\n", data2_len, i, __LINE__);
-				return 1;
+				goto cleanup;
 			}
 			if (data2[0] != 'a' + (i / 2)) {
 				fprintf(stderr, "Unexpected data[0] %d, expected %ld in iterator %ld on line %d\n", data2[0], 'a' + (i / 2), i, __LINE__);
-				return 1;
+				goto cleanup;
 			}
 			if (data2_len == 2 && data2[1] != 'A' + i) {
 				fprintf(stderr, "Unexpected data[1] %d, expected %ld in iterator %ld on line %d\n", data2[1], 'A' + i, i, __LINE__);
-				return 1;
+				goto cleanup;
 			}
 			i--;
-			free(data2);
-		}
-
-		if (i != total_size - size - 1 - offset) {
-			fprintf(stderr, "Expected initial to be %ld, got %ld instead\n", total_size - size - 1 - offset, i);
-			return 1;
+			rl_free(data2);
 		}
 
 		if (retval != RL_END) {
 			fprintf(stderr, "Iterator finished without RL_END, got %d\n", retval);
-			return 1;
+			goto cleanup;
 		}
-		retval = rl_zset_iterator_destroy(iterator);
-		if (retval != RL_OK) {
-			fprintf(stderr, "Failed to destroy iterator, got %d\n", retval);
-			return 1;
+
+		if (i != total_size - size - 1 - offset) {
+			fprintf(stderr, "Expected initial to be %ld, got %ld instead\n", total_size - size - 1 - offset, i);
+			goto cleanup;
 		}
 	}
-	return 0;
+	retval = 0;
+cleanup:
+	return retval;
 }
 
 int basic_test_zadd_zrangebylex(int _commit)
@@ -439,7 +451,9 @@ int basic_test_zadd_zrangebylex(int _commit)
 #define ZRANGEBYLEX_SIZE 20
 	int retval = 0;
 	fprintf(stderr, "Start basic_test_zadd_zrangebylex %d\n", _commit);
-	rlite *db = setup_db(_commit, 1);
+
+	rlite *db = NULL;
+	RL_CALL(setup_db, RL_OK, &db, _commit, 1);
 
 	unsigned char *key = (unsigned char *)"my key";
 	long keylen = strlen((char *)key);
@@ -452,7 +466,7 @@ int basic_test_zadd_zrangebylex(int _commit)
 		retval = rl_zadd(db, key, keylen, 1.0, data, ((i & 1) == 0) ? 1 : 2);
 		if (retval != RL_OK) {
 			fprintf(stderr, "Unable to zadd %d\n", retval);
-			return 1;
+			goto cleanup;
 		}
 	}
 
@@ -467,7 +481,7 @@ int basic_test_zadd_zrangebylex(int _commit)
 	retval = test_zrangebylex(db, key, keylen, initial, size, total_size, min, minlen, max, maxlen, offset, limit);\
 	if (retval != 0) {\
 		fprintf(stderr, "Failed zrangebylex on line %d\n", __LINE__);\
-		return retval;\
+		goto cleanup;\
 	}
 
 	run_test_zrangebylex('-', 0, 1, '(', 'a', 2, 0, 0, 0, 0, 0)
@@ -479,9 +493,13 @@ int basic_test_zadd_zrangebylex(int _commit)
 	run_test_zrangebylex('[', 'c', 2, '[', 'f', 2, 4, 7, 11, 0, 0)
 	run_test_zrangebylex('-', 0, 1, '[', 'f', 2, 0, 11, 11, 0, 0)
 
-	rl_close(db);
 	fprintf(stderr, "End basic_test_zadd_zrangebylex\n");
-	return 0;
+	retval = 0;
+cleanup:
+	if (db) {
+		rl_close(db);
+	}
+	return retval;
 }
 
 static int test_zrangebyscore(rlite *db, unsigned char *key, long keylen, rl_zrangespec *range, long size, double base_score, double step)
@@ -492,7 +510,7 @@ static int test_zrangebyscore(rlite *db, unsigned char *key, long keylen, rl_zra
 	if (size != 0 || retval != RL_NOT_FOUND) {
 		if (retval != RL_OK) {
 			fprintf(stderr, "Unable to zrangebyscore, got %d\n", retval);
-			return 1;
+			goto cleanup;
 		}
 
 		double score;
@@ -500,22 +518,17 @@ static int test_zrangebyscore(rlite *db, unsigned char *key, long keylen, rl_zra
 		while ((retval = rl_zset_iterator_next(iterator, &score, NULL, NULL)) == RL_OK) {
 			if (score != base_score + i * step) {
 				fprintf(stderr, "Expected score to be %lf, got %lf instead\n", base_score + i * step, score);
-				return 1;
+				goto cleanup;
 			}
 			i++;
 		}
 		if (retval != RL_END) {
 			fprintf(stderr, "Expected iterator to finish, got %d instead\n", retval);
-			return 1;
-		}
-		retval = rl_zset_iterator_destroy(iterator);
-		if (retval != RL_OK) {
-			fprintf(stderr, "Unable to destroy zset iterator\n");
-			return 1;
+			goto cleanup;
 		}
 		if (i != size) {
 			fprintf(stderr, "Expected size to be %ld, got %ld\n", size, i);
-			return 1;
+			goto cleanup;
 		}
 	}
 
@@ -523,7 +536,7 @@ static int test_zrangebyscore(rlite *db, unsigned char *key, long keylen, rl_zra
 	if (size != 0 || retval != RL_NOT_FOUND) {
 		if (retval != RL_OK) {
 			fprintf(stderr, "Unable to zrevrangebyscore, got %d\n", retval);
-			return 1;
+			goto cleanup;
 		}
 
 		double score;
@@ -531,28 +544,23 @@ static int test_zrangebyscore(rlite *db, unsigned char *key, long keylen, rl_zra
 		while ((retval = rl_zset_iterator_next(iterator, &score, NULL, NULL)) == RL_OK) {
 			if (score != base_score + i * step) {
 				fprintf(stderr, "Expected score to be %lf, got %lf instead in line %d\n", base_score + i * step, score, __LINE__);
-				return 1;
+				goto cleanup;
 			}
 			i--;
 		}
 		if (retval != RL_END) {
 			fprintf(stderr, "Expected iterator to finish, got %d instead\n", retval);
-			return 1;
-		}
-		retval = rl_zset_iterator_destroy(iterator);
-		if (retval != RL_OK) {
-			fprintf(stderr, "Unable to destroy zset iterator\n");
-			return 1;
+			goto cleanup;
 		}
 		if (i != -1) {
 			fprintf(stderr, "Expected size to be %d, got %ld\n", -1, i);
-			return 1;
+			goto cleanup;
 		}
 	}
 
-
-
-	return 0;
+	retval = 0;
+cleanup:
+	return retval;
 }
 
 int basic_test_zadd_zrangebyscore(int _commit)
@@ -560,7 +568,8 @@ int basic_test_zadd_zrangebyscore(int _commit)
 #define ZRANGEBYSCORE_SIZE 20
 	int retval = 0;
 	fprintf(stderr, "Start basic_test_zadd_zrangebyscore %d\n", _commit);
-	rlite *db = setup_db(_commit, 1);
+	rlite *db = NULL;
+	RL_CALL(setup_db, RL_OK, &db, _commit, 1);
 
 	unsigned char *key = (unsigned char *)"my key";
 	long keylen = strlen((char *)key);
@@ -572,7 +581,7 @@ int basic_test_zadd_zrangebyscore(int _commit)
 		retval = rl_zadd(db, key, keylen, i, data, 1);
 		if (retval != RL_OK) {
 			fprintf(stderr, "Unable to zadd %d\n", retval);
-			return 1;
+			goto cleanup;
 		}
 	}
 
@@ -584,7 +593,7 @@ int basic_test_zadd_zrangebyscore(int _commit)
 	range.maxex = _maxex;\
 	if (0 != test_zrangebyscore(db, key, keylen, &range, size, base_score, 1)) {\
 		fprintf(stderr, "zrangebyscore test failed on line %d\n", __LINE__);\
-		return 1;\
+		goto cleanup;\
 	}
 	run_test_zrangebyscore(-INFINITY, 1, INFINITY, 1, ZRANGEBYSCORE_SIZE, 0);
 	run_test_zrangebyscore(-INFINITY, 0, INFINITY, 1, ZRANGEBYSCORE_SIZE, 0);
@@ -599,9 +608,13 @@ int basic_test_zadd_zrangebyscore(int _commit)
 	run_test_zrangebyscore(0, 1, 0, 1, 0, 0);
 	run_test_zrangebyscore(1, 0, 1, 0, 1, 1);
 
-	rl_close(db);
 	fprintf(stderr, "End basic_test_zadd_zrangebyscore\n");
-	return 0;
+	retval = 0;
+cleanup:
+	if (db) {
+		rl_close(db);
+	}
+	return retval;
 }
 
 int basic_test_zadd_zrem(int _commit)
@@ -609,7 +622,9 @@ int basic_test_zadd_zrem(int _commit)
 	int retval = 0;
 	fprintf(stderr, "Start basic_test_zadd_zrem %d\n", _commit);
 
-	rlite *db = setup_db(_commit, 1);
+	rlite *db = NULL;
+	RL_CALL(setup_db, RL_OK, &db, _commit, 1);
+
 	unsigned char *key = (unsigned char *)"my key";
 	long keylen = strlen((char *)key);
 	double score = 8913.109;
@@ -622,13 +637,13 @@ int basic_test_zadd_zrem(int _commit)
 	retval = rl_zadd(db, key, keylen, score, data, datalen);
 	if (retval != RL_OK) {
 		fprintf(stderr, "Unable to zadd %d\n", retval);
-		return 1;
+		goto cleanup;
 	}
 
 	retval = rl_zadd(db, key, keylen, score, data2, datalen2);
 	if (retval != RL_OK) {
 		fprintf(stderr, "Unable to zadd a second time %d\n", retval);
-		return 1;
+		goto cleanup;
 	}
 
 	if (_commit) {
@@ -641,34 +656,34 @@ int basic_test_zadd_zrem(int _commit)
 	retval = rl_zrem(db, key, keylen, 1, members, members_len, &changed);
 	if (retval != RL_OK) {
 		fprintf(stderr, "Unable to zrem %d\n", retval);
-		return 1;
+		goto cleanup;
 	}
 	if (changed != 1) {
 		fprintf(stderr, "Expected to have removed 1 element, got %ld\n", changed);
-		return 1;
+		goto cleanup;
 	}
 
 	retval = rl_zrank(db, key, keylen, data, datalen, &rank);
 	if (retval != RL_NOT_FOUND) {
 		fprintf(stderr, "Unable to zrank %d\n", retval);
-		return 1;
+		goto cleanup;
 	}
 
 	retval = rl_zscore(db, key, keylen, data, datalen, NULL);
 	if (retval != RL_NOT_FOUND) {
 		fprintf(stderr, "Unable to zscore %d\n", retval);
-		return 1;
+		goto cleanup;
 	}
 
 	retval = rl_zrank(db, key, keylen, data2, datalen2, &rank);
 	if (retval != RL_FOUND) {
 		fprintf(stderr, "Unable to zrank %d\n", retval);
-		return 1;
+		goto cleanup;
 	}
 
 	if (0 != rank) {
 		fprintf(stderr, "Expected rank %d to be %ld\n", 0, rank);
-		return 1;
+		goto cleanup;
 	}
 
 	unsigned char *members2[2] = {data, data2};
@@ -676,22 +691,26 @@ int basic_test_zadd_zrem(int _commit)
 	retval = rl_zrem(db, key, keylen, 2, members2, members_len2, &changed);
 	if (retval != RL_OK) {
 		fprintf(stderr, "Unable to zrem %d\n", retval);
-		return 1;
+		goto cleanup;
 	}
 	if (changed != 1) {
 		fprintf(stderr, "Expected to have removed 1 element, got %ld\n", changed);
-		return 1;
+		goto cleanup;
 	}
 
 	retval = rl_key_get(db, key, keylen, NULL, NULL, NULL);
 	if (retval != RL_NOT_FOUND) {
 		fprintf(stderr, "Expected not to find key after removing all zset elements, got %ld\n", changed);
-		return 1;
+		goto cleanup;
 	}
 
 	fprintf(stderr, "End basic_test_zadd_zrem\n");
-	rl_close(db);
-	return 0;
+	retval = 0;
+cleanup:
+	if (db) {
+		rl_close(db);
+	}
+	return retval;
 }
 
 #define ZCOUNT_SIZE 100
@@ -700,11 +719,13 @@ int basic_test_zadd_zcount(int _commit)
 	int retval = 0;
 	fprintf(stderr, "Start basic_test_zadd_zcount %d\n", _commit);
 
-	rlite *db = setup_db(_commit, 1);
-	unsigned char *key = (unsigned char *)"my key";
-	long keylen = strlen((char *)key);
+	rlite *db = NULL;
 	long datalen = 20;
 	unsigned char *data = malloc(sizeof(unsigned char) * datalen);
+	RL_CALL(setup_db, RL_OK, &db, _commit, 1);
+
+	unsigned char *key = (unsigned char *)"my key";
+	long keylen = strlen((char *)key);
 	long i, count;
 
 	for (i = 0; i < datalen; i++) {
@@ -716,10 +737,11 @@ int basic_test_zadd_zcount(int _commit)
 		retval = rl_zadd(db, key, keylen, i * 1.0, data, datalen);
 		if (retval != RL_OK) {
 			fprintf(stderr, "Unable to zadd %d\n", retval);
-			return 1;
+			goto cleanup;
 		}
 	}
-	free(data);
+	rl_free(data);
+	data = NULL;
 
 	if (_commit) {
 		rl_commit(db);
@@ -733,11 +755,11 @@ int basic_test_zadd_zcount(int _commit)
 	retval = rl_zcount(db, key, keylen, &range, &count);
 	if (retval != RL_OK) {
 		fprintf(stderr, "Unable to zcount %d\n", retval);
-		return 1;
+		goto cleanup;
 	}
 	if (count != ZCOUNT_SIZE) {
 		fprintf(stderr, "Expected zcount to be %d, got %ld on line %d\n", ZCOUNT_SIZE, count, __LINE__);
-		return 1;
+		goto cleanup;
 	}
 
 	range.min = 0;
@@ -747,11 +769,11 @@ int basic_test_zadd_zcount(int _commit)
 	retval = rl_zcount(db, key, keylen, &range, &count);
 	if (retval != RL_OK) {
 		fprintf(stderr, "Unable to zcount %d\n", retval);
-		return 1;
+		goto cleanup;
 	}
 	if (count != ZCOUNT_SIZE) {
 		fprintf(stderr, "Expected zcount to be %d, got %ld on line %d\n", ZCOUNT_SIZE, count, __LINE__);
-		return 1;
+		goto cleanup;
 	}
 
 	range.min = 0;
@@ -761,11 +783,11 @@ int basic_test_zadd_zcount(int _commit)
 	retval = rl_zcount(db, key, keylen, &range, &count);
 	if (retval != RL_OK) {
 		fprintf(stderr, "Unable to zcount %d\n", retval);
-		return 1;
+		goto cleanup;
 	}
 	if (count != ZCOUNT_SIZE - 2) {
 		fprintf(stderr, "Expected zcount to be %d, got %ld\n", ZCOUNT_SIZE - 2, count);
-		return 1;
+		goto cleanup;
 	}
 
 	range.min = 1;
@@ -775,16 +797,21 @@ int basic_test_zadd_zcount(int _commit)
 	retval = rl_zcount(db, key, keylen, &range, &count);
 	if (retval != RL_OK) {
 		fprintf(stderr, "Unable to zcount %d\n", retval);
-		return 1;
+		goto cleanup;
 	}
 	if (count != 1) {
 		fprintf(stderr, "Expected zcount to be %d, got %ld\n", 1, count);
-		return 1;
+		goto cleanup;
 	}
 
 	fprintf(stderr, "End basic_test_zadd_zcount\n");
-	rl_close(db);
-	return 0;
+	retval = 0;
+cleanup:
+	rl_free(data);
+	if (db) {
+		rl_close(db);
+	}
+	return retval;
 }
 
 int basic_test_zadd_zincrby(int _commit)
@@ -792,7 +819,9 @@ int basic_test_zadd_zincrby(int _commit)
 	int retval = 0;
 	fprintf(stderr, "Start basic_test_zadd_zincrby %d\n", _commit);
 
-	rlite *db = setup_db(_commit, 1);
+	rlite *db = NULL;
+	RL_CALL(setup_db, RL_OK, &db, _commit, 1);
+
 	unsigned char *key = (unsigned char *)"my key";
 	long keylen = strlen((char *)key);
 	double score = 4.2;
@@ -803,11 +832,11 @@ int basic_test_zadd_zincrby(int _commit)
 	retval = rl_zincrby(db, key, keylen, score, data, datalen, &newscore);
 	if (retval != RL_OK) {
 		fprintf(stderr, "Unable to zincrby %d\n", retval);
-		return 1;
+		goto cleanup;
 	}
 	if (newscore != score) {
 		fprintf(stderr, "Expected new score %lf to match incremented score %lf\n", newscore, score);
-		return 1;
+		goto cleanup;
 	}
 
 	if (_commit) {
@@ -817,26 +846,29 @@ int basic_test_zadd_zincrby(int _commit)
 	retval = rl_zincrby(db, key, keylen, score, data, datalen, &newscore);
 	if (retval != RL_OK) {
 		fprintf(stderr, "Unable to zincrby %d\n", retval);
-		return 1;
+		goto cleanup;
 	}
 	if (newscore != score * 2) {
 		fprintf(stderr, "Expected new score %lf to match incremented twice score %lf\n", newscore, 2 * score);
-		return 1;
+		goto cleanup;
 	}
 
 	fprintf(stderr, "End basic_test_zadd_zincrby\n");
-	rl_close(db);
-	return 0;
+	retval = 0;
+cleanup:
+	if (db) {
+		rl_close(db);
+	}
+	return retval;
 }
 
 #define ZINTERSTORE_KEYS 4
 #define ZINTERSTORE_MEMBERS 10
 int basic_test_zadd_zinterstore(int _commit, long params[5])
 {
+	unsigned char *data = NULL;
 	int retval = 0;
 	fprintf(stderr, "Start basic_test_zadd_zinterstore %d %ld %ld %ld %ld %ld\n", _commit, params[0], params[1], params[2], params[3], params[4]);
-
-	rlite *db = setup_db(_commit, 1);
 
 	long keys_len[ZINTERSTORE_KEYS];
 	unsigned char *keys[ZINTERSTORE_KEYS];
@@ -846,6 +878,9 @@ int basic_test_zadd_zinterstore(int _commit, long params[5])
 		keys[i][0] = 'a' + i;
 		keys_len[i] = 1;
 	}
+
+	rlite *db = NULL;
+	RL_CALL(setup_db, RL_OK, &db, _commit, 1);
 
 	unsigned char members[ZINTERSTORE_MEMBERS][1];
 	for (i = 0; i < ZINTERSTORE_MEMBERS; i++) {
@@ -857,7 +892,7 @@ int basic_test_zadd_zinterstore(int _commit, long params[5])
 			retval = rl_zadd(db, keys[i], 1, i * j, members[j], 1);
 			if (retval != RL_OK) {
 				fprintf(stderr, "Unable to zadd %d\n", retval);
-				return 1;
+				goto cleanup;
 			}
 		}
 		unsigned char own_member[1];
@@ -865,7 +900,7 @@ int basic_test_zadd_zinterstore(int _commit, long params[5])
 		retval = rl_zadd(db, keys[i], 1, i, own_member, 1);
 		if (retval != RL_OK) {
 			fprintf(stderr, "Unable to zadd %d\n", retval);
-			return 1;
+			goto cleanup;
 		}
 	}
 
@@ -880,57 +915,57 @@ int basic_test_zadd_zinterstore(int _commit, long params[5])
 	retval = rl_zinterstore(db, ZINTERSTORE_KEYS, keys, keys_len, params[1] == 0 && params[2] == 0 && params[3] == 0 ? NULL : weights, params[0]);
 	if (retval != RL_OK) {
 		fprintf(stderr, "Unable to zinterstore %d\n", retval);
-		return 1;
+		goto cleanup;
 	}
 
 	rl_zset_iterator *iterator;
 	retval = rl_zrange(db, keys[0], 1, 0, -1, &iterator);
 	if (retval != RL_OK) {
 		fprintf(stderr, "Unable to zrange %d\n", retval);
-		return 1;
+		goto cleanup;
 	}
 	if (iterator->size != ZINTERSTORE_MEMBERS) {
 		fprintf(stderr, "Expected size to be %d, got %ld instead\n", ZINTERSTORE_MEMBERS, iterator->size);
-		return 1;
+		goto cleanup;
 	}
 	i = 0;
-	unsigned char *data;
 	long datalen;
 	double score;
 	while ((retval = rl_zset_iterator_next(iterator, &score, &data, &datalen)) == RL_OK) {
 		if (score != i * params[4]) {
 			fprintf(stderr, "Expected score to be %ld, got %lf instead\n", i * params[4], score);
-			return 1;
+			goto cleanup;
 		}
 		if (data[0] != members[i][0]) {
 			fprintf(stderr, "Member mismatch\n");
-			return 1;
+			goto cleanup;
 		}
 		if (datalen != 1) {
 			fprintf(stderr, "Member len mismatch\n");
-			return 1;
+			goto cleanup;
 		}
-		free(data);
+		rl_free(data);
+		data = NULL;
 		i++;
 	}
 
 	if (retval != RL_END) {
 		fprintf(stderr, "Expected iterator to finish, got %d instead\n", retval);
-		return 1;
-	}
-	retval = rl_zset_iterator_destroy(iterator);
-	if (retval != RL_OK) {
-		fprintf(stderr, "Unable to destroy zset iterator\n");
-		return 1;
+		goto cleanup;
 	}
 
 	fprintf(stderr, "End basic_test_zadd_zinterstore\n");
 
+	retval = 0;
+cleanup:
 	for (i = 0; i < ZINTERSTORE_KEYS; i++) {
-		free(keys[i]);
+		rl_free(keys[i]);
 	}
-	rl_close(db);
-	return 0;
+	rl_free(data);
+	if (db) {
+		rl_close(db);
+	}
+	return retval;
 }
 
 #define ZUNIONSTORE_KEYS 4
@@ -940,8 +975,6 @@ int basic_test_zadd_zunionstore(int _commit, long params[5])
 	int retval = 0;
 	fprintf(stderr, "Start basic_test_zadd_zunionstore %d %ld %ld %ld %ld %ld\n", _commit, params[0], params[1], params[2], params[3], params[4]);
 
-	rlite *db = setup_db(_commit, 1);
-
 	long keys_len[ZUNIONSTORE_KEYS];
 	unsigned char *keys[ZUNIONSTORE_KEYS];
 	long i, j;
@@ -950,6 +983,9 @@ int basic_test_zadd_zunionstore(int _commit, long params[5])
 		keys[i][0] = 'a' + i;
 		keys_len[i] = 1;
 	}
+
+	rlite *db = NULL;
+	RL_CALL(setup_db, RL_OK, &db, _commit, 1);
 
 	unsigned char members[ZUNIONSTORE_MEMBERS][1];
 	for (i = 0; i < ZUNIONSTORE_MEMBERS; i++) {
@@ -961,7 +997,7 @@ int basic_test_zadd_zunionstore(int _commit, long params[5])
 			retval = rl_zadd(db, keys[i], 1, i * j, members[j], 1);
 			if (retval != RL_OK) {
 				fprintf(stderr, "Unable to zadd %d\n", retval);
-				return 1;
+				goto cleanup;
 			}
 		}
 		unsigned char own_member[1];
@@ -969,7 +1005,7 @@ int basic_test_zadd_zunionstore(int _commit, long params[5])
 		retval = rl_zadd(db, keys[i], 1, i, own_member, 1);
 		if (retval != RL_OK) {
 			fprintf(stderr, "Unable to zadd %d\n", retval);
-			return 1;
+			goto cleanup;
 		}
 	}
 
@@ -984,18 +1020,18 @@ int basic_test_zadd_zunionstore(int _commit, long params[5])
 	retval = rl_zunionstore(db, ZUNIONSTORE_KEYS, keys, keys_len, params[1] == 0 && params[2] == 0 && params[3] == 0 ? NULL : weights, params[0]);
 	if (retval != RL_OK) {
 		fprintf(stderr, "Unable to zunionstore %d\n", retval);
-		return 1;
+		goto cleanup;
 	}
 
 	rl_zset_iterator *iterator;
 	retval = rl_zrange(db, keys[0], 1, 0, -1, &iterator);
 	if (retval != RL_OK) {
 		fprintf(stderr, "Unable to zrange %d\n", retval);
-		return 1;
+		goto cleanup;
 	}
 	if (iterator->size != ZUNIONSTORE_MEMBERS + ZUNIONSTORE_KEYS - 1) {
 		fprintf(stderr, "Expected size to be %d, got %ld instead\n", ZUNIONSTORE_MEMBERS + ZUNIONSTORE_KEYS - 1, iterator->size);
-		return 1;
+		goto cleanup;
 	}
 	i = 0;
 	unsigned char *data;
@@ -1008,48 +1044,47 @@ int basic_test_zadd_zunionstore(int _commit, long params[5])
 			exp_score = pos * (params[1] == 0 && params[2] == 0 && params[3] == 0 ? 1 : params[pos]);
 			if (exp_score != score) {
 				fprintf(stderr, "Member score mismatch, expected %lf, got %lf\n", exp_score, score);
-				return 1;
+				goto cleanup;
 			}
 			if (datalen != 1) {
 				fprintf(stderr, "Member len mismatch\n");
-				return 1;
+				goto cleanup;
 			}
 			i--;
 		} else {
 			if (score != i * params[4]) {
 				fprintf(stderr, "Expected score to be %ld, got %lf instead\n", i * params[4], score);
-				return 1;
+				goto cleanup;
 			}
 			if (data[0] != members[i][0]) {
 				fprintf(stderr, "Member mismatch\n");
-				return 1;
+				goto cleanup;
 			}
 			if (datalen != 1) {
 				fprintf(stderr, "Member len mismatch\n");
-				return 1;
+				goto cleanup;
 			}
 		}
-		free(data);
+		rl_free(data);
 		i++;
 	}
 
 	if (retval != RL_END) {
 		fprintf(stderr, "Expected iterator to finish, got %d instead\n", retval);
-		return 1;
-	}
-	retval = rl_zset_iterator_destroy(iterator);
-	if (retval != RL_OK) {
-		fprintf(stderr, "Unable to destroy zset iterator\n");
-		return 1;
+		goto cleanup;
 	}
 
 	fprintf(stderr, "End basic_test_zadd_zunionstore\n");
 
+	retval = 0;
+cleanup:
 	for (i = 0; i < ZUNIONSTORE_KEYS; i++) {
-		free(keys[i]);
+		rl_free(keys[i]);
 	}
-	rl_close(db);
-	return 0;
+	if (db) {
+		rl_close(db);
+	}
+	return retval;
 }
 
 int basic_test_zadd_zremrangebyrank(int _commit)
@@ -1057,7 +1092,8 @@ int basic_test_zadd_zremrangebyrank(int _commit)
 	int retval = 0;
 	fprintf(stderr, "Start basic_test_zadd_zremrangebyrank %d\n", _commit);
 
-	rlite *db = setup_db(_commit, 1);
+	rlite *db = NULL;
+	RL_CALL(setup_db, RL_OK, &db, _commit, 1);
 
 #define ZREMRANGEBYRANK_SIZE 20
 	unsigned char *key = (unsigned char *)"my key";
@@ -1068,7 +1104,7 @@ int basic_test_zadd_zremrangebyrank(int _commit)
 		retval = rl_zadd(db, key, keylen, i * 1.0, data, 1);
 		if (retval != RL_OK) {
 			fprintf(stderr, "Unable to zadd %d\n", retval);
-			return 1;
+			goto cleanup;
 		}
 	}
 
@@ -1080,27 +1116,27 @@ int basic_test_zadd_zremrangebyrank(int _commit)
 	retval = rl_zremrangebyrank(db, key, keylen, start, end, &changed);\
 	if (retval != RL_OK) {\
 		fprintf(stderr, "Failed to zremrangebyrank, got %d on line %d\n", retval, __LINE__);\
-		return 1;\
+		goto cleanup;\
 	}\
 	if (changed != changed_expected) {\
 		fprintf(stderr, "Expected to delete %d elements, got %ld on line %d\n", changed_expected, changed, __LINE__);\
-		return 1;\
+		goto cleanup;\
 	}\
 	data[0] = data_rank;\
 	retval = rl_zrank(db, key, keylen, data, 1, &i);\
 	if (rank_expected == -1) {\
 		if (retval != RL_NOT_FOUND) {\
 			fprintf(stderr, "Failed to zrank, got %d on line %d\n", retval, __LINE__);\
-			return 1;\
+			goto cleanup;\
 		}\
 	} else {\
 		if (retval != RL_FOUND) {\
 			fprintf(stderr, "Failed to zrank, got %d on line %d\n", retval, __LINE__);\
-			return 1;\
+			goto cleanup;\
 		}\
 		if (i != rank_expected) {\
 			fprintf(stderr, "Expected rank to be %d, got %ld on line %d\n", rank_expected, i, __LINE__);\
-			return 1;\
+			goto cleanup;\
 		}\
 	}
 
@@ -1109,9 +1145,13 @@ int basic_test_zadd_zremrangebyrank(int _commit)
 	run_test_zremrangebyrank(0, 0, 1, 14, 2);
 	run_test_zremrangebyrank(0, -1, 3, 0, -1);
 
-	rl_close(db);
 	fprintf(stderr, "End basic_test_zadd_zremrangebyrank\n");
-	return 0;
+	retval = 0;
+cleanup:
+	if (db) {
+		rl_close(db);
+	}
+	return retval;
 }
 
 int basic_test_zadd_zremrangebyscore(int _commit)
@@ -1119,7 +1159,8 @@ int basic_test_zadd_zremrangebyscore(int _commit)
 	int retval = 0;
 	fprintf(stderr, "Start basic_test_zadd_zremrangebyscore %d\n", _commit);
 
-	rlite *db = setup_db(_commit, 1);
+	rlite *db = NULL;
+	RL_CALL(setup_db, RL_OK, &db, _commit, 1);
 
 #define ZREMRANGEBYSCORE_SIZE 20
 	unsigned char *key = (unsigned char *)"my key";
@@ -1130,7 +1171,7 @@ int basic_test_zadd_zremrangebyscore(int _commit)
 		retval = rl_zadd(db, key, keylen, i * 10.0, data, 1);
 		if (retval != RL_OK) {
 			fprintf(stderr, "Unable to zadd %d\n", retval);
-			return 1;
+			goto cleanup;
 		}
 	}
 
@@ -1148,27 +1189,27 @@ int basic_test_zadd_zremrangebyscore(int _commit)
 	retval = rl_zremrangebyscore(db, key, keylen, &range, &changed);\
 	if ((changed_expected > 0 && retval != RL_OK) || (changed_expected == 0 && retval != RL_NOT_FOUND)) {\
 		fprintf(stderr, "Failed to zremrangebyscore, got %d on line %d\n", retval, __LINE__);\
-		return 1;\
+		goto cleanup;\
 	}\
 	if (changed_expected && changed != changed_expected) {\
 		fprintf(stderr, "Expected to delete %d elements, got %ld on line %d\n", changed_expected, changed, __LINE__);\
-		return 1;\
+		goto cleanup;\
 	}\
 	data[0] = data_score;\
 	retval = rl_zrank(db, key, keylen, data, 1, &i);\
 	if (rank_expected == -1) {\
 		if (retval != RL_NOT_FOUND) {\
 			fprintf(stderr, "Failed to zscore, got %d on line %d\n", retval, __LINE__);\
-			return 1;\
+			goto cleanup;\
 		}\
 	} else {\
 		if (retval != RL_FOUND) {\
 			fprintf(stderr, "Failed to zscore, got %d on line %d\n", retval, __LINE__);\
-			return 1;\
+			goto cleanup;\
 		}\
 		if (i != rank_expected) {\
 			fprintf(stderr, "Expected score to be %d, got %ld on line %d\n", rank_expected, i, __LINE__);\
-			return 1;\
+			goto cleanup;\
 		}\
 	}
 
@@ -1179,9 +1220,13 @@ int basic_test_zadd_zremrangebyscore(int _commit)
 	run_test_zremrangebyscore(180, 0, INFINITY, 0, 2, 17, 6);
 	run_test_zremrangebyscore(-INFINITY, 0, INFINITY, 0, 7, 0, -1);
 
-	rl_close(db);
 	fprintf(stderr, "End basic_test_zadd_zremrangebyscore\n");
-	return 0;
+	retval = 0;
+cleanup:
+	if (db) {
+		rl_close(db);
+	}
+	return retval;
 }
 
 int basic_test_zadd_zremrangebylex(int _commit)
@@ -1189,7 +1234,9 @@ int basic_test_zadd_zremrangebylex(int _commit)
 #define ZRANGEBYLEX_SIZE 20
 	int retval = 0;
 	fprintf(stderr, "Start basic_test_zadd_zremrangebylex%d\n", _commit);
-	rlite *db = setup_db(_commit, 1);
+
+	rlite *db = NULL;
+	RL_CALL(setup_db, RL_OK, &db, _commit, 1);
 
 	unsigned char *key = (unsigned char *)"my key";
 	long keylen = strlen((char *)key);
@@ -1202,7 +1249,7 @@ int basic_test_zadd_zremrangebylex(int _commit)
 		retval = rl_zadd(db, key, keylen, 1.0, data, ((i & 1) == 0) ? 1 : 2);
 		if (retval != RL_OK) {
 			fprintf(stderr, "Unable to zadd %d\n", retval);
-			return 1;
+			goto cleanup;
 		}
 	}
 
@@ -1214,7 +1261,7 @@ int basic_test_zadd_zremrangebylex(int _commit)
 	retval = rl_zremrangebylex(db, key, keylen, (unsigned char *)min, strlen(min), (unsigned char *)max, strlen(max), &changed);\
 	if (retval != RL_OK) {\
 		fprintf(stderr, "Failed rl_zremrangebylex on line %d, got %d\n", __LINE__, retval);\
-		return 1;\
+		goto cleanup;\
 	}\
 	if (changed != expected_changed) {\
 		fprintf(stderr, "Expected to change %d but changed %ld on line %d\n", expected_changed, changed, __LINE__);\
@@ -1227,14 +1274,18 @@ int basic_test_zadd_zremrangebylex(int _commit)
 	run_remrangebylex("(a", "[b", 2);
 	run_test_zrangebylex('-', 0, 1, '+', 0, 1, 3, ZRANGEBYLEX_SIZE - 3, ZRANGEBYLEX_SIZE, 0, 0)
 
-	rl_close(db);
 	fprintf(stderr, "End basic_test_zadd_zremrangebylex\n");
-	return 0;
+	retval = 0;
+cleanup:
+	if (db) {
+		rl_close(db);
+	}
+	return retval;
 }
 
-int main()
-{
 #define ZINTERSTORE_TESTS 7
+RL_TEST_MAIN_START(type_zset_test)
+{
 	long zinterunionstore_tests[ZINTERSTORE_TESTS][5] = {
 		{RL_ZSET_AGGREGATE_SUM, 0, 0, 0, 6},
 		{RL_ZSET_AGGREGATE_SUM, 1, 1, 1, 6},
@@ -1244,68 +1295,24 @@ int main()
 		{RL_ZSET_AGGREGATE_MIN, 5, 1, 1, 2},
 		{RL_ZSET_AGGREGATE_MAX, 5, 1, 1, 5},
 	};
-	int retval, i, j;
+	int i, j;
 	for (i = 0; i < 2; i++) {
-		retval = basic_test_zadd_zscore(i);
-		if (retval != 0) {
-			goto cleanup;
-		}
-		retval = basic_test_zadd_zscore2(i);
-		if (retval != 0) {
-			goto cleanup;
-		}
-		retval = basic_test_zadd_zrank(i);
-		if (retval != 0) {
-			goto cleanup;
-		}
-		retval = basic_test_zadd_zrem(i);
-		if (retval != 0) {
-			goto cleanup;
-		}
-		retval = basic_test_zadd_zcount(i);
-		if (retval != 0) {
-			goto cleanup;
-		}
-		retval = basic_test_zadd_zincrby(i);
-		if (retval != 0) {
-			goto cleanup;
-		}
-		retval = basic_test_zadd_zrangebylex(i);
-		if (retval != 0) {
-			goto cleanup;
-		}
-		retval = basic_test_zadd_zrangebyscore(i);
-		if (retval != 0) {
-			goto cleanup;
-		}
-		retval = basic_test_zadd_zremrangebyrank(i);
-		if (retval != 0) {
-			goto cleanup;
-		}
-		retval = basic_test_zadd_zremrangebyscore(i);
-		if (retval != 0) {
-			goto cleanup;
-		}
-		retval = basic_test_zadd_zremrangebylex(i);
-		if (retval != 0) {
-			goto cleanup;
-		}
+		RL_TEST(basic_test_zadd_zscore, i);
+		RL_TEST(basic_test_zadd_zscore2, i);
+		RL_TEST(basic_test_zadd_zrank, i);
+		RL_TEST(basic_test_zadd_zrem, i);
+		RL_TEST(basic_test_zadd_zcount, i);
+		RL_TEST(basic_test_zadd_zincrby, i);
+		RL_TEST(basic_test_zadd_zrangebylex, i);
+		RL_TEST(basic_test_zadd_zrangebyscore, i);
+		RL_TEST(basic_test_zadd_zremrangebyrank, i);
+		RL_TEST(basic_test_zadd_zremrangebyscore, i);
+		RL_TEST(basic_test_zadd_zremrangebylex, i);
 		for (j = 0; j < ZINTERSTORE_TESTS; j++) {
-			retval = basic_test_zadd_zinterstore(i, zinterunionstore_tests[j]);
-			if (retval != 0) {
-				goto cleanup;
-			}
-			retval = basic_test_zadd_zunionstore(i, zinterunionstore_tests[j]);
-			if (retval != 0) {
-				goto cleanup;
-			}
+			RL_TEST(basic_test_zadd_zinterstore, i, zinterunionstore_tests[j]);
+			RL_TEST(basic_test_zadd_zunionstore, i, zinterunionstore_tests[j]);
 		}
 	}
-	retval = basic_test_zadd_zrange();
-	if (retval != 0) {
-		goto cleanup;
-	}
-cleanup:
-	return retval;
+	RL_TEST(basic_test_zadd_zrange, 0);
 }
-// int rl_zrangebyscore(rlite *db, unsigned char *key, long keylen, rl_zrangespec* range, long offset, long count, rl_zset_iterator **iterator)
+RL_TEST_MAIN_END

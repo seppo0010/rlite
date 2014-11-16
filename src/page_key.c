@@ -14,47 +14,35 @@ struct page_key {
 
 int rl_key_set(rlite *db, const unsigned char *key, long keylen, unsigned char type, long value_page)
 {
-	unsigned char *digest = malloc(sizeof(unsigned char) * 20);
-	int retval = sha1(key, keylen, digest);
-	if (retval != RL_OK) {
-		goto cleanup;
-	}
+	int called_add_element = 0;
+	int retval;
+	rl_key *key_obj = NULL;
+	unsigned char *digest;
+	RL_MALLOC(digest, sizeof(unsigned char) * 20);
+	RL_CALL(sha1, RL_OK, key, keylen, digest);
 	rl_btree *btree;
-	retval = rl_get_key_btree(db, &btree);
-	if (retval != RL_OK) {
-		goto cleanup;
-	}
-	rl_key *key_obj = malloc(sizeof(rl_key));
-	if (!key_obj) {
-		retval = RL_OUT_OF_MEMORY;
-		goto cleanup;
-	}
-	retval = rl_multi_string_set(db, &key_obj->string_page, key, keylen);
-	if (retval != RL_OK) {
-		goto cleanup;
-	}
+	RL_CALL(rl_get_key_btree, RL_OK, db, &btree);
+	RL_MALLOC(key_obj, sizeof(*key_obj))
+	RL_CALL(rl_multi_string_set, RL_OK, db, &key_obj->string_page, key, keylen);
 	key_obj->type = type;
 	key_obj->value_page = value_page;
-	retval = rl_btree_add_element(db, btree, digest, key_obj);
-	if (retval != RL_OK) {
-		goto cleanup;
-	}
+	called_add_element = 1;
+	RL_CALL(rl_btree_add_element, RL_OK, db, btree, digest, key_obj);
 cleanup:
+	if (retval != RL_OK && !called_add_element) {
+		rl_free(digest);
+		rl_free(key_obj);
+	}
 	return retval;
 }
 
 int rl_key_get(rlite *db, const unsigned char *key, long keylen, unsigned char *type, long *string_page, long *value_page)
 {
 	unsigned char digest[20];
-	int retval = sha1(key, keylen, digest);
-	if (retval != RL_OK) {
-		goto cleanup;
-	}
+	int retval;
+	RL_CALL(sha1, RL_OK, key, keylen, digest);
 	rl_btree *btree;
-	retval = rl_get_key_btree(db, &btree);
-	if (retval != RL_OK) {
-		goto cleanup;
-	}
+	RL_CALL(rl_get_key_btree, RL_OK, db, &btree);
 	void *tmp;
 	retval = rl_btree_find_score(db, btree, digest, &tmp, NULL, NULL);
 	if (retval == RL_FOUND) {
@@ -84,33 +72,24 @@ int rl_key_get_or_create(struct rlite *db, const unsigned char *key, long keylen
 	}
 	else if (retval == RL_NOT_FOUND) {
 		rl_alloc_page_number(db, page);
-		retval = rl_key_set(db, key, keylen, type, *page);
-		if (retval != RL_OK) {
-			return retval;
-		}
+		RL_CALL(rl_key_set, RL_OK, db, key, keylen, type, *page);
 		retval = RL_NOT_FOUND;
 
 	}
+cleanup:
 	return retval;
 }
 
 int rl_key_delete(struct rlite *db, const unsigned char *key, long keylen)
 {
-	unsigned char *digest = malloc(sizeof(unsigned char) * 20);
-	int retval = sha1(key, keylen, digest);
-	if (retval != RL_OK) {
-		goto cleanup;
-	}
+	int retval;
+	unsigned char *digest;
+	RL_MALLOC(digest, sizeof(unsigned char) * 20);
+	RL_CALL(sha1, RL_OK, key, keylen, digest);
 	rl_btree *btree;
-	retval = rl_get_key_btree(db, &btree);
-	if (retval != RL_OK) {
-		goto cleanup;
-	}
-	retval = rl_btree_remove_element(db, btree, digest);
-	if (retval != RL_OK) {
-		goto cleanup;
-	}
+	RL_CALL(rl_get_key_btree, RL_OK, db, &btree);
+	RL_CALL(rl_btree_remove_element, RL_OK, db, btree, digest);
 cleanup:
-	free(digest);
+	rl_free(digest);
 	return retval;
 }

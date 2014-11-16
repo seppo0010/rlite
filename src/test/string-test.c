@@ -2,20 +2,18 @@
 #include <stdio.h>
 #include <string.h>
 #include <limits.h>
+#include "test_util.h"
 #include "../rlite.h"
 #include "../status.h"
 #include "../page_string.h"
 
-int main()
+static int do_string_test()
 {
-	fprintf(stderr, "Start string_test\n");
 	srand(1);
+	fprintf(stderr, "Start do_string_test\n");
 	int retval;
-	rlite *db;
-	if (rl_open(":memory:", &db, RLITE_OPEN_READWRITE | RLITE_OPEN_CREATE) != RL_OK) {
-		fprintf(stderr, "Unable to open rlite\n");
-		return 1;
-	}
+	rlite *db = NULL;
+	RL_CALL(setup_db, RL_OK, &db, 0, 1);
 
 	unsigned char *data, *data2;
 	long number, i;
@@ -23,7 +21,7 @@ int main()
 	retval = rl_string_create(db, &data, &number);
 	if (retval != RL_OK) {
 		fprintf(stderr, "Unable to create string\n");
-		return 1;
+		goto cleanup;
 	}
 
 	for (i = 0; i < db->page_size; i++) {
@@ -33,15 +31,23 @@ int main()
 	retval = rl_string_get(db, &data2, number);
 	if (retval != RL_OK) {
 		fprintf(stderr, "Unable to get string\n");
-		return 1;
+		goto cleanup;
 	}
 
 	if (memcmp(data, data2, sizeof(char) * db->page_size) != 0) {
 		fprintf(stderr, "data != data2\n");
-		return 1;
+		retval = 1;
+		goto cleanup;
 	}
 
+	fprintf(stderr, "End do_string_test\n");
+cleanup:
 	rl_close(db);
-	fprintf(stderr, "End string_test\n");
-	return 0;
+	return retval;
 }
+
+RL_TEST_MAIN_START(string_test)
+{
+	RL_TEST(do_string_test, 0);
+}
+RL_TEST_MAIN_END

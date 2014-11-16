@@ -7,3 +7,4 @@
 *.gcno
 /src/lcov/app.info
 /src/lcov/html
+/src/malloc-debug

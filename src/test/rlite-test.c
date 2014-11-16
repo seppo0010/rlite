@@ -2,6 +2,7 @@
 #include <errno.h>
 #include <string.h>
 #include <stdlib.h>
+#include "test_util.h"
 #include "../rlite.h"
 
 int test_rlite_page_cache()
@@ -27,24 +28,27 @@ int test_rlite_page_cache()
 		retval = rl_read(db, &rl_data_type_header, i, NULL, &obj, 1);
 		if (retval != RL_FOUND) {
 			fprintf(stderr, "Expected retval to be RL_FOUND, got %d insted\n", retval);
-			return 1;
+			goto cleanup;
 		}
 		if (obj != db->read_pages[i]) {
 			fprintf(stderr, "Expected obj to be %p, got %p insted\n", (void *) db->read_pages[i], obj);
-			return 1;
+			retval = 1;
+			goto cleanup;
 		}
 	}
 	for (i = 0; i < size; i++) {
-		free(db->read_pages[i]);
+		rl_free(db->read_pages[i]);
 	}
-	free(db->read_pages);
-	free(db);
-	return 0;
+	rl_free(db->read_pages);
+	rl_free(db);
+	retval = 0;
+cleanup:
+	return retval;
 }
 
 int test_has_key()
 {
-	rlite *db;
+	rlite *db = NULL;
 	int retval;
 	const char *filepath = "rlite-test.rld";
 	if (access(filepath, F_OK) == 0) {
@@ -84,19 +88,15 @@ int test_has_key()
 		retval = 1;
 		goto cleanup;
 	}
-	retval = rl_close(db);
+	retval = 0;
 cleanup:
+	rl_close(db);
 	return retval;
 }
 
-int main()
+RL_TEST_MAIN_START(rlite_test)
 {
-	int retval = test_rlite_page_cache();
-	if (retval != 0) {
-		return retval;
-	}
-	retval = test_has_key();
-	if (retval != 0) {
-		return retval;
-	}
+	RL_TEST(test_rlite_page_cache, 0);
+	RL_TEST(test_has_key, 0);
 }
+RL_TEST_MAIN_END

@@ -36,16 +36,15 @@ int rl_list_serialize(rlite *UNUSED(db), void *obj, unsigned char *data)
 int rl_list_deserialize(rlite *db, void **obj, void *context, unsigned char *data)
 {
 	rl_list *list;
-	int retval = rl_list_create(db, &list, context);
-	if (retval != RL_OK) {
-		return retval;
-	}
+	int retval;
+	RL_CALL(rl_list_create, RL_OK, db, &list, context);
 	list->type = context;
 	list->left = get_4bytes(data);
 	list->right = get_4bytes(&data[4]);
 	list->max_node_size = get_4bytes(&data[8]);
 	list->size = get_4bytes(&data[12]);
 	*obj = list;
+cleanup:
 	return retval;
 }
 
@@ -53,11 +52,6 @@ int rl_list_node_serialize_long(rlite *UNUSED(db), void *obj, unsigned char *dat
 {
 	rl_list_node *node = obj;
 
-	int retval = RL_OK;
-	if (!data) {
-		retval = RL_OUT_OF_MEMORY;
-		goto cleanup;
-	}
 	put_4bytes(data, node->size);
 	put_4bytes(&data[4], node->left);
 	put_4bytes(&data[8], node->right);
@@ -66,29 +60,31 @@ int rl_list_node_serialize_long(rlite *UNUSED(db), void *obj, unsigned char *dat
 		put_4bytes(&data[pos], *(long *)(node->elements[i]));
 		pos += 4;
 	}
-cleanup:
-	return retval;
+	return RL_OK;
 }
 
 int rl_list_node_deserialize_long(rlite *db, void **obj, void *context, unsigned char *data)
 {
 	rl_list *list = context;
-	rl_list_node *node;
-	int retval = rl_list_node_create(db, list, &node);
-	if (retval != RL_OK) {
-		goto cleanup;
-	}
+	rl_list_node *node = NULL;
+	long i = 0, pos = 12;
+	int retval;
+	RL_CALL(rl_list_node_create, RL_OK, db, list, &node);
 	node->size = (long)get_4bytes(data);
 	node->left = (long)get_4bytes(&data[4]);
 	node->right = (long)get_4bytes(&data[8]);
-	long i, pos = 12;
 	for (i = 0; i < node->size; i++) {
-		node->elements[i] = malloc(sizeof(long));
+		RL_MALLOC(node->elements[i], sizeof(long))
 		*(long *)node->elements[i] = get_4bytes(&data[pos]);
 		pos += 4;
 	}
 	*obj = node;
+	retval = RL_OK;
 cleanup:
+	if (retval != RL_OK && node) {
+		node->size = i;
+		rl_list_node_destroy(db, node);
+	}
 	return retval;
 }
 
@@ -100,18 +96,21 @@ void rl_list_init()
 
 int rl_list_node_create(rlite *UNUSED(db), rl_list *list, rl_list_node **_node)
 {
-	rl_list_node *node = malloc(sizeof(rl_list_node));
-	if (!node) {
-		return RL_OUT_OF_MEMORY;
-	}
-	node->elements = malloc(sizeof(void *) * list->max_node_size);
-	if (!node->elements) {
-		free(node);
-		return RL_OUT_OF_MEMORY;
-	}
+	int retval;
+	rl_list_node *node;
+	RL_MALLOC(node, sizeof(rl_list_node));
+	RL_MALLOC(node->elements, sizeof(void *) * list->max_node_size);
 	node->size = 0;
 	*_node = node;
-	return RL_OK;
+	retval = RL_OK;
+cleanup:
+	if (retval != RL_OK) {
+		if (node) {
+			rl_free(node->elements);
+		}
+		rl_free(node);
+	}
+	return retval;
 }
 
 int rl_list_node_destroy(rlite *UNUSED(db), void *_node)
@@ -120,48 +119,41 @@ int rl_list_node_destroy(rlite *UNUSED(db), void *_node)
 	long i;
 	if (node->elements) {
 		for (i = 0; i < node->size; i++) {
-			free(node->elements[i]);
+			rl_free(node->elements[i]);
 		}
-		free(node->elements);
+		rl_free(node->elements);
 	}
-	free(node);
+	rl_free(node);
 	return 0;
 }
 
 int rl_list_create(rlite *db, rl_list **_list, rl_list_type *type)
 {
-	rl_list *list = malloc(sizeof(rl_list));
-	if (!list) {
-		return RL_OUT_OF_MEMORY;
-	}
 	int retval;
+	rl_list *list;
+	RL_MALLOC(list, sizeof(rl_list))
 	list->max_node_size = (db->page_size - 12) / type->element_size;
 	list->type = type;
 	rl_list_node *node;
-	retval = rl_list_node_create(db, list, &node);
-	if (retval != RL_OK) {
-		free(list);
-		goto cleanup;
-	}
+	RL_CALL(rl_list_node_create, RL_OK, db, list, &node);
 	node->left = 0;
 	node->right = 0;
 	list->size = 0;
 	list->left = db->next_empty_page;
-	retval = rl_write(db, list->type->list_node_type, db->next_empty_page, node);
-	if (retval != RL_OK) {
-		free(node);
-		free(list);
-		goto cleanup;
-	}
+	RL_CALL(rl_write, RL_OK, db, list->type->list_node_type, db->next_empty_page, node);
 	list->right = list->left;
 	*_list = list;
+	retval = RL_OK;
 cleanup:
-	return RL_OK;
+	if (retval != RL_OK) {
+		rl_list_destroy(db, list);
+	}
+	return retval;
 }
 
 int rl_list_destroy(rlite *UNUSED(db), void *list)
 {
-	free(list);
+	rl_free(list);
 	return RL_OK;
 }
 
@@ -176,10 +168,7 @@ int rl_list_find_element(rlite *db, rl_list *list, void *element, void **found_e
 	long pos = 0, i, number = list->left;
 	int retval = RL_OK;
 	while (number != 0) {
-		retval = rl_read(db, list->type->list_node_type, number, list, &_node, 1);
-		if (retval != RL_FOUND) {
-			goto cleanup;
-		}
+		RL_CALL(rl_read, RL_FOUND, db, list->type->list_node_type, number, list, &_node, 1);
 		node = _node;
 		for (i = 0; i < node->size; i++) {
 			if (list->type->cmp(node->elements[i], element) == 0) {
@@ -219,10 +208,7 @@ int rl_find_element_by_position(rlite *db, rl_list *list, long *position, long *
 	if (*position >= 0) {
 		number = list->left;
 		do {
-			retval = rl_read(db, list->type->list_node_type, number, list, &tmp_node, 1);
-			if (retval != RL_FOUND) {
-				goto cleanup;
-			}
+			RL_CALL(rl_read, RL_FOUND, db, list->type->list_node_type, number, list, &tmp_node, 1);
 			node = tmp_node;
 			if (pos + node->size >= *position) {
 				break;
@@ -239,10 +225,7 @@ int rl_find_element_by_position(rlite *db, rl_list *list, long *position, long *
 		pos = list->size;
 		number = list->right;
 		do {
-			retval = rl_read(db, list->type->list_node_type, number, list, &tmp_node, 1);
-			if (retval != RL_FOUND) {
-				goto cleanup;
-			}
+			RL_CALL(rl_read, RL_FOUND, db, list->type->list_node_type, number, list, &tmp_node, 1);
 			node = tmp_node;
 			pos -= node->size;
 			if (pos <= *position) {
@@ -265,10 +248,8 @@ int rl_list_get_element(struct rlite *db, rl_list *list, void **element, long po
 {
 	long pos;
 	rl_list_node *node;
-	int retval = rl_find_element_by_position(db, list, &position, &pos, &node, NULL);
-	if (retval != RL_FOUND) {
-		goto cleanup;
-	}
+	int retval;
+	RL_CALL(rl_find_element_by_position, RL_FOUND, db, list, &position, &pos, &node, NULL);
 	*element = node->elements[position - pos];
 cleanup:
 	return retval;
@@ -280,30 +261,23 @@ int rl_list_add_element(rlite *db, rl_list *list, void *element, long position)
 	long pos;
 	long number, sibling_number;
 	void *_node;
-	int retval = rl_find_element_by_position(db, list, &position, &pos, &node, &number);
-	if (retval != RL_FOUND) {
-		return retval;
-	}
+	int retval;
+	RL_CALL(rl_find_element_by_position, RL_FOUND, db, list, &position, &pos, &node, &number);
 
 	if (node->size != list->max_node_size) {
 		if (position - pos + 1 < list->max_node_size) {
-			memmove_dbg(&node->elements[position - pos + 1], &node->elements[position - pos], sizeof(void *) * (node->size - (position - pos)), __LINE__);
+			memmove(&node->elements[position - pos + 1], &node->elements[position - pos], sizeof(void *) * (node->size - (position - pos)));
 		}
 		node->elements[position - pos] = element;
+		element = NULL;
 		node->size++;
 
-		retval = rl_write(db, list->type->list_node_type, number, node);
-		if (retval != RL_OK) {
-			goto cleanup;
-		}
+		RL_CALL(rl_write, RL_OK, db, list->type->list_node_type, number, node);
 	}
 	else {
 		if (node->left) {
 			sibling_number = node->left;
-			retval = rl_read(db, list->type->list_node_type, sibling_number, list, &_node, 1);
-			if (retval != RL_FOUND) {
-				goto cleanup;
-			}
+			RL_CALL(rl_read, RL_FOUND, db, list->type->list_node_type, sibling_number, list, &_node, 1);
 			sibling_node = _node;
 			if (sibling_node->size != list->max_node_size) {
 				if (position == pos) {
@@ -311,85 +285,58 @@ int rl_list_add_element(rlite *db, rl_list *list, void *element, long position)
 				}
 				else {
 					sibling_node->elements[sibling_node->size] = node->elements[0];
-					memmove_dbg(&node->elements[0], &node->elements[1], sizeof(void *) * (position - pos - 1), __LINE__);
+					memmove(&node->elements[0], &node->elements[1], sizeof(void *) * (position - pos - 1));
 					node->elements[position - pos - 1] = element;
 				}
+				element = NULL;
 				sibling_node->size++;
-				retval = rl_write(db, list->type->list_node_type, number, node);
-				if (retval != RL_OK) {
-					goto cleanup;
-				}
-				retval = rl_write(db, list->type->list_node_type, sibling_number, sibling_node);
-				if (retval != RL_OK) {
-					goto cleanup;
-				}
+				RL_CALL(rl_write, RL_OK, db, list->type->list_node_type, number, node);
+				RL_CALL(rl_write, RL_OK, db, list->type->list_node_type, sibling_number, sibling_node);
 				goto succeeded;
 			}
 		}
 		if (node->right) {
 			sibling_number = node->right;
-			retval = rl_read(db, list->type->list_node_type, sibling_number, list, &_node, 1);
-			if (retval != RL_FOUND) {
-				goto cleanup;
-			}
+			RL_CALL(rl_read, RL_FOUND, db, list->type->list_node_type, sibling_number, list, &_node, 1);
 			sibling_node = _node;
 			if (sibling_node->size != list->max_node_size) {
-				memmove_dbg(&sibling_node->elements[1], &sibling_node->elements[0], sizeof(void *) * sibling_node->size, __LINE__);
+				memmove(&sibling_node->elements[1], &sibling_node->elements[0], sizeof(void *) * sibling_node->size);
 				if (position - pos == node->size) {
 					sibling_node->elements[0] = element;
 				}
 				else {
 					sibling_node->elements[0] = node->elements[node->size - 1];
-					memmove_dbg(&node->elements[position - pos + 1], &node->elements[position - pos], sizeof(void *) * (node->size - position + pos - 1), __LINE__);
+					memmove(&node->elements[position - pos + 1], &node->elements[position - pos], sizeof(void *) * (node->size - position + pos - 1));
 					node->elements[position - pos] = element;
 				}
+				element = NULL;
 				sibling_node->size++;
-				retval = rl_write(db, list->type->list_node_type, number, node);
-				if (retval != RL_OK) {
-					goto cleanup;
-				}
-				retval = rl_write(db, list->type->list_node_type, sibling_number, sibling_node);
-				if (retval != RL_OK) {
-					goto cleanup;
-				}
+				RL_CALL(rl_write, RL_OK, db, list->type->list_node_type, number, node);
+				RL_CALL(rl_write, RL_OK, db, list->type->list_node_type, sibling_number, sibling_node);
 				goto succeeded;
 			}
 		}
-		retval = rl_list_node_create(db, list, &new_node);
-		if (retval != RL_OK) {
-			goto cleanup;
-		}
+		RL_CALL(rl_list_node_create, RL_OK, db, list, &new_node);
 		if (position - pos == node->size) {
 			new_node->elements[0] = element;
 		}
 		else {
 			new_node->elements[0] = node->elements[node->size - 1];
-			memmove_dbg(&node->elements[position - pos + 1], &node->elements[position - pos], sizeof(void *) * (node->size - position + pos - 1), __LINE__);
+			memmove(&node->elements[position - pos + 1], &node->elements[position - pos], sizeof(void *) * (node->size - position + pos - 1));
 			node->elements[position - pos] = element;
 		}
+		element = NULL;
 		new_node->size = 1;
 		new_node->left = number;
 		new_node->right = node->right;
 		node->right = db->next_empty_page;
-		retval = rl_write(db, list->type->list_node_type, db->next_empty_page, new_node);
-		if (retval != RL_OK) {
-			goto cleanup;
-		}
-		retval = rl_write(db, list->type->list_node_type, number, node);
-		if (retval != RL_OK) {
-			goto cleanup;
-		}
+		RL_CALL(rl_write, RL_OK, db, list->type->list_node_type, db->next_empty_page, new_node);
+		RL_CALL(rl_write, RL_OK, db, list->type->list_node_type, number, node);
 		if (new_node->right != 0) {
-			retval = rl_read(db, list->type->list_node_type, new_node->right, list, &_node, 1);
-			if (retval != RL_FOUND) {
-				goto cleanup;
-			}
+			RL_CALL(rl_read, RL_FOUND, db, list->type->list_node_type, new_node->right, list, &_node, 1);
 			old_node = _node;
 			old_node->left = node->right;
-			retval = rl_write(db, list->type->list_node_type, new_node->right, old_node);
-			if (retval != RL_OK) {
-				goto cleanup;
-			}
+			RL_CALL(rl_write, RL_OK, db, list->type->list_node_type, new_node->right, old_node);
 		}
 		else {
 			list->right = node->right;
@@ -399,6 +346,9 @@ int rl_list_add_element(rlite *db, rl_list *list, void *element, long position)
 succeeded:
 	list->size++;
 cleanup:
+	if (retval != RL_OK) {
+		rl_free(element);
+	}
 	return retval;
 }
 
@@ -407,17 +357,15 @@ int rl_list_remove_element(rlite *db, rl_list *list, long position)
 	rl_list_node *node, *sibling_node;
 	long pos, number;
 	void *_node;
-	int retval = rl_find_element_by_position(db, list, &position, &pos, &node, &number);
-	if (retval != RL_FOUND) {
-		return retval;
-	}
+	int retval;
+	RL_CALL(rl_find_element_by_position, RL_FOUND, db, list, &position, &pos, &node, &number);
 
 	if (node->size - (position - pos + 1) > 0) {
-		free(node->elements[position - pos]);
-		memmove_dbg(&node->elements[position - pos], &node->elements[position - pos + 1], sizeof(void *) * (node->size - (position - pos + 1)), __LINE__);
+		rl_free(node->elements[position - pos]);
+		memmove(&node->elements[position - pos], &node->elements[position - pos + 1], sizeof(void *) * (node->size - (position - pos + 1)));
 	}
 	else {
-		free(node->elements[node->size - 1]);
+		rl_free(node->elements[node->size - 1]);
 	}
 	if (--node->size == 0) {
 		if (list->left == number) {
@@ -427,56 +375,32 @@ int rl_list_remove_element(rlite *db, rl_list *list, long position)
 			list->right = node->left;
 		}
 		if (node->left) {
-			retval = rl_read(db, list->type->list_node_type, node->left, list, &_node, 1);
-			if (retval != RL_FOUND) {
-				goto cleanup;
-			}
+			RL_CALL(rl_read, RL_FOUND, db, list->type->list_node_type, node->left, list, &_node, 1);
 			sibling_node = _node;
 			sibling_node->right = node->right;
 		}
 		if (node->right) {
-			retval = rl_read(db, list->type->list_node_type, node->right, list, &_node, 1);
-			if (retval != RL_FOUND) {
-				goto cleanup;
-			}
+			RL_CALL(rl_read, RL_FOUND, db, list->type->list_node_type, node->right, list, &_node, 1);
 			sibling_node = _node;
 			sibling_node->left = node->left;
 		}
-		retval = rl_delete(db, number);
-		if (retval != RL_OK) {
-			goto cleanup;
-		}
-		retval = rl_list_node_destroy(db, node);
-		if (retval != RL_OK) {
-			goto cleanup;
-		}
+		RL_CALL(rl_delete, RL_OK, db, number);
+		RL_CALL(rl_list_node_destroy, RL_OK, db, node);
 	}
 	else {
 		if (node->left) {
-			retval = rl_read(db, list->type->list_node_type, node->left, list, &_node, 1);
-			if (retval != RL_FOUND) {
-				goto cleanup;
-			}
+			RL_CALL(rl_read, RL_FOUND, db, list->type->list_node_type, node->left, list, &_node, 1);
 			sibling_node = _node;
 			if (sibling_node->size + node->size <= list->max_node_size) {
-				memmove_dbg(&sibling_node->elements[sibling_node->size], node->elements, sizeof(void *) * node->size, __LINE__);
+				memmove(&sibling_node->elements[sibling_node->size], node->elements, sizeof(void *) * node->size);
 				sibling_node->right = node->right;
 				sibling_node->size += node->size;
-				retval = rl_write(db, list->type->list_node_type, node->left, sibling_node);
-				if (retval != RL_OK) {
-					goto cleanup;
-				}
+				RL_CALL(rl_write, RL_OK, db, list->type->list_node_type, node->left, sibling_node);
 				if (node->right) {
-					retval = rl_read(db, list->type->list_node_type, node->right, list, &_node, 1);
-					if (retval != RL_FOUND) {
-						goto cleanup;
-					}
+					RL_CALL(rl_read, RL_FOUND, db, list->type->list_node_type, node->right, list, &_node, 1);
 					sibling_node = _node;
 					sibling_node->left = node->left;
-					retval = rl_write(db, list->type->list_node_type, node->right, sibling_node);
-					if (retval != RL_OK) {
-						goto cleanup;
-					}
+					RL_CALL(rl_write, RL_OK, db, list->type->list_node_type, node->right, sibling_node);
 				}
 				else {
 					list->right = node->left;
@@ -485,42 +409,27 @@ int rl_list_remove_element(rlite *db, rl_list *list, long position)
 				if (retval != RL_OK) {
 					goto cleanup;
 				}
-				// don't free each element
-				free(node->elements);
+				// don't rl_free each element
+				rl_free(node->elements);
 				node->elements = NULL;
-				retval = rl_list_node_destroy(db, node);
-				if (retval != RL_OK) {
-					goto cleanup;
-				}
+				RL_CALL(rl_list_node_destroy, RL_OK, db, node);
 				goto succeeded;
 			}
 		}
 		if (node->right) {
-			retval = rl_read(db, list->type->list_node_type, node->right, list, &_node, 1);
-			if (retval != RL_FOUND) {
-				goto cleanup;
-			}
+			RL_CALL(rl_read, RL_FOUND, db, list->type->list_node_type, node->right, list, &_node, 1);
 			sibling_node = _node;
 			if (sibling_node->size + node->size <= list->max_node_size) {
-				memmove_dbg(&sibling_node->elements[node->size], sibling_node->elements, sizeof(void *) * sibling_node->size, __LINE__);
-				memmove_dbg(sibling_node->elements, node->elements, sizeof(void *) * node->size, __LINE__);
+				memmove(&sibling_node->elements[node->size], sibling_node->elements, sizeof(void *) * sibling_node->size);
+				memmove(sibling_node->elements, node->elements, sizeof(void *) * node->size);
 				sibling_node->left = node->left;
 				sibling_node->size += node->size;
-				retval = rl_write(db, list->type->list_node_type, node->right, sibling_node);
-				if (retval != RL_OK) {
-					goto cleanup;
-				}
+				RL_CALL(rl_write, RL_OK, db, list->type->list_node_type, node->right, sibling_node);
 				if (node->left) {
-					retval = rl_read(db, list->type->list_node_type, node->left, list, &_node, 1);
-					if (retval != RL_FOUND) {
-						goto cleanup;
-					}
+					RL_CALL(rl_read, RL_FOUND, db, list->type->list_node_type, node->left, list, &_node, 1);
 					sibling_node = _node;
 					sibling_node->right = node->right;
-					retval = rl_write(db, list->type->list_node_type, node->left, sibling_node);
-					if (retval != RL_OK) {
-						goto cleanup;
-					}
+					RL_CALL(rl_write, RL_OK, db, list->type->list_node_type, node->left, sibling_node);
 				}
 				else {
 					list->left = node->right;
@@ -529,20 +438,14 @@ int rl_list_remove_element(rlite *db, rl_list *list, long position)
 				if (retval != RL_OK) {
 					goto cleanup;
 				}
-				// don't free each element
-				free(node->elements);
+				// don't rl_free each element
+				rl_free(node->elements);
 				node->elements = NULL;
-				retval = rl_list_node_destroy(db, node);
-				if (retval != RL_OK) {
-					goto cleanup;
-				}
+				RL_CALL(rl_list_node_destroy, RL_OK, db, node);
 				goto succeeded;
 			}
 		}
-		retval = rl_write(db, list->type->list_node_type, number, node);
-		if (retval != RL_OK) {
-			goto cleanup;
-		}
+		RL_CALL(rl_write, RL_OK, db, list->type->list_node_type, number, node);
 	}
 succeeded:
 	retval = RL_OK;
@@ -558,23 +461,13 @@ int rl_list_is_balanced(rlite *db, rl_list *list)
 	long max_node = (list->size / list->max_node_size + 1) * 2;
 	int retval = RL_OK;
 	long *left = NULL;
-	long *right = malloc(sizeof(long) * max_node);
-	if (!right) {
-		retval = RL_OUT_OF_MEMORY;
-		goto cleanup;
-	}
-	left = malloc(sizeof(long) * max_node);
-	if (!left) {
-		retval = RL_OUT_OF_MEMORY;
-		goto cleanup;
-	}
+	long *right;
+	RL_MALLOC(right, sizeof(long) * max_node);
+	RL_MALLOC(left, sizeof(long) * max_node);
 	rl_list_node *node;
 	void *_node;
 	while (number != 0) {
-		retval = rl_read(db, list->type->list_node_type, number, list, &_node, 1);
-		if (retval != RL_FOUND) {
-			goto cleanup;
-		}
+		RL_CALL(rl_read, RL_FOUND, db, list->type->list_node_type, number, list, &_node, 1);
 		node = _node;
 		size += node->size;
 		left[i] = node->left;
@@ -608,8 +501,8 @@ int rl_list_is_balanced(rlite *db, rl_list *list)
 	}
 	retval = RL_OK;
 cleanup:
-	free(right);
-	free(left);
+	rl_free(right);
+	rl_free(left);
 	return retval;
 }
 
@@ -628,18 +521,12 @@ int rl_print_list(rlite *db, rl_list *list)
 	long i, number = list->left;
 	int retval = RL_OK;
 	while (number != 0) {
-		retval = rl_read(db, list->type->list_node_type, number, list, &_node, 1);
-		if (retval != RL_FOUND) {
-			goto cleanup;
-		}
+		RL_CALL(rl_read, RL_FOUND, db, list->type->list_node_type, number, list, &_node, 1);
 		node = _node;
 		for (i = 0; i < node->size; i++) {
-			retval = list->type->formatter(node->elements[i], &element, &size);
-			if (retval != RL_OK) {
-				goto cleanup;
-			}
+			RL_CALL(list->type->formatter, RL_OK, node->elements[i], &element, &size);
 			fwrite(element, sizeof(char), size, stdout);
-			free(element);
+			rl_free(element);
 			printf("\n");
 		}
 		number = node->right;
@@ -657,10 +544,7 @@ int rl_flatten_list(rlite *db, rl_list *list, void **scores)
 	void *_node;
 	int retval = RL_OK;
 	while (number != 0) {
-		retval = rl_read(db, list->type->list_node_type, number, list, &_node, 1);
-		if (retval != RL_FOUND) {
-			goto cleanup;
-		}
+		RL_CALL(rl_read, RL_FOUND, db, list->type->list_node_type, number, list, &_node, 1);
 		node = _node;
 		for (i = 0; i < node->size; i++) {
 			scores[pos++] = node->elements[i];
@@ -676,40 +560,34 @@ int rl_list_iterator_create(rlite *db, rl_list_iterator **_iterator, rl_list *li
 {
 	void *_node;
 	int retval;
-	rl_list_iterator *iterator = malloc(sizeof(*iterator));
-	if (!iterator) {
-		retval = RL_OUT_OF_MEMORY;
-		goto cleanup;
-	}
+	rl_list_iterator *iterator = NULL;
+	RL_MALLOC(iterator, sizeof(*iterator));
 	iterator->db = db;
 	iterator->list = list;
 	if (direction < 0) {
 		iterator->direction = -1;
-		retval = rl_read(db, list->type->list_node_type, list->right, list, &_node, 0);
-		if (retval != RL_FOUND) {
-			goto cleanup;
-		}
+		RL_CALL(rl_read, RL_FOUND, db, list->type->list_node_type, list->right, list, &_node, 0);
 		iterator->node = _node;
 		iterator->node_position = iterator->node->size - 1;
 	}
 	else {
 		iterator->direction = 1;
-		retval = rl_read(db, list->type->list_node_type, list->left, list, &_node, 0);
-		if (retval != RL_FOUND) {
-			goto cleanup;
-		}
+		RL_CALL(rl_read, RL_FOUND, db, list->type->list_node_type, list->left, list, &_node, 0);
 		iterator->node = _node;
 		iterator->node_position = 0;
 	}
 	*_iterator = iterator;
 	retval = RL_OK;
 cleanup:
+	if (retval != RL_OK) {
+		rl_list_iterator_destroy(db, iterator);
+	}
 	return retval;
 }
 
 int rl_list_iterator_destroy(rlite *UNUSED(db), rl_list_iterator *iterator)
 {
-	free(iterator);
+	rl_free(iterator);
 	return RL_OK;
 }
 
@@ -720,33 +598,27 @@ int rl_list_iterator_next(rl_list_iterator *iterator, void **element)
 		retval = RL_END;
 		goto cleanup;
 	}
-	*element = malloc(iterator->list->type->element_size);
-	if (*element == NULL) {
-		retval = RL_OUT_OF_MEMORY;
-		goto cleanup;
-	}
+	RL_MALLOC(*element, iterator->list->type->element_size);
 	memcpy(*element, iterator->node->elements[iterator->node_position], iterator->list->type->element_size);
 	iterator->node_position += iterator->direction;
 	if (iterator->node_position == 0 || iterator->node_position == iterator->node->size) {
 		long next_node_page = iterator->direction == 1 ? iterator->node->right : iterator->node->left;
-		retval = rl_list_node_nocache_destroy(iterator->db, iterator->node);
-		if (retval != RL_OK) {
-			goto cleanup;
-		}
+		RL_CALL(rl_list_node_nocache_destroy, RL_OK, iterator->db, iterator->node);
+		iterator->node = NULL;
 		if (next_node_page) {
 			void *_node;
-			retval = rl_read(iterator->db, iterator->list->type->list_node_type, next_node_page, iterator->list, &_node, 0);
-			if (retval != RL_FOUND) {
-				goto cleanup;
-			}
+			RL_CALL(rl_read, RL_FOUND, iterator->db, iterator->list->type->list_node_type, next_node_page, iterator->list, &_node, 0);
 			iterator->node = _node;
 			iterator->node_position = iterator->direction == 1 ? 0 : (iterator->node->size - 1);
-		}
-		else {
-			iterator->node = NULL;
 		}
 	}
 	retval = RL_OK;
 cleanup:
+	if (retval != RL_OK) {
+		if (iterator->node) {
+			rl_list_node_nocache_destroy(iterator->db, iterator->node);
+		}
+		rl_list_iterator_destroy(iterator->db, iterator);
+	}
 	return retval;
 }
