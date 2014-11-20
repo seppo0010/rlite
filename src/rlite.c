@@ -172,6 +172,7 @@ int rl_header_serialize(struct rlite *db, void *obj, unsigned char *data)
 	memcpy(data, identifier, identifier_len);
 	put_4bytes(&data[identifier_len], db->page_size);
 	put_4bytes(&data[identifier_len + 4], db->next_empty_page);
+	put_4bytes(&data[identifier_len + 8], db->number_of_pages);
 	return RL_OK;
 }
 
@@ -184,6 +185,7 @@ int rl_header_deserialize(struct rlite *db, void **UNUSED(obj), void *UNUSED(con
 	}
 	db->page_size = get_4bytes(&data[identifier_len]);
 	db->next_empty_page = get_4bytes(&data[identifier_len + 4]);
+	db->number_of_pages = get_4bytes(&data[identifier_len + 8]);
 	return RL_OK;
 }
 
@@ -317,6 +319,7 @@ int rl_create_db(rlite *db)
 	int retval;
 	RL_CALL(rl_ensure_pages, RL_OK, db);
 	db->next_empty_page = 2;
+	db->number_of_pages = 1;
 	rl_btree *btree;
 	long max_node_size = (db->page_size - 8) / 8; // TODO: this should be in the type
 	RL_CALL(rl_btree_create, RL_OK, db, &btree, &rl_btree_type_hash_sha1_key, max_node_size);
@@ -343,18 +346,17 @@ cleanup:
 int rl_read_header(rlite *db)
 {
 	db->page_size = HEADER_SIZE;
-	void *header;
 	int retval;
 	if (db->driver_type == RL_MEMORY_DRIVER) {
 		db->page_size = DEFAULT_PAGE_SIZE;
 		RL_CALL(rl_create_db, RL_OK, db);
 	}
 	else {
-		retval = rl_read(db, &rl_data_type_header, 0, NULL, &header, 1);
+		retval = rl_read(db, &rl_data_type_header, 0, NULL, NULL, 1);
 		if (retval == RL_NOT_FOUND && rl_has_flag(db, RLITE_OPEN_CREATE)) {
 			db->page_size = DEFAULT_PAGE_SIZE;
 			RL_CALL(rl_create_db, RL_OK, db);
-			RL_CALL(rl_write, RL_OK, db, &rl_data_type_header , 0, NULL);
+			RL_CALL(rl_write, RL_OK, db, &rl_data_type_header, 0, NULL);
 		}
 		else if (retval != RL_FOUND) {
 			goto cleanup;
@@ -387,7 +389,7 @@ void print_cache(rlite *db)
 #ifdef DEBUG
 static int rl_search_cache(rlite *db, rl_data_type *type, long page_number, void **obj, long *position, rl_page **pages, long page_len)
 #else
-static int rl_search_cache(rlite *UNUSED(db), rl_data_type *type, long page_number, void **obj, long *position, rl_page **pages, long page_len)
+static int rl_search_cache(rlite *UNUSED(db), rl_data_type *UNUSED(type), long page_number, void **obj, long *position, rl_page **pages, long page_len)
 #endif
 {
 	long pos, min = 0, max = page_len - 1;
@@ -397,10 +399,12 @@ static int rl_search_cache(rlite *UNUSED(db), rl_data_type *type, long page_numb
 			pos = min + (max - min) / 2;
 			page = pages[pos];
 			if (page->page_number == page_number) {
-				if (type != NULL && page->type != type) {
+#ifdef DEBUG
+				if (page->type != &rl_data_type_long && type != &rl_data_type_long && type != NULL && page->type != type) {
 					fprintf(stderr, "Type of page in cache (%s) doesn't match the asked one (%s)\n", page->type->name, type->name);
 					return RL_UNEXPECTED;
 				}
+#endif
 				if (obj) {
 					*obj = page->obj;
 				}
@@ -545,7 +549,7 @@ int rl_read(rlite *db, rl_data_type *type, long page, void *context, void **obj,
 			}
 			page_obj->page_number = page;
 			page_obj->type = type;
-			page_obj->obj = *obj;
+			page_obj->obj = obj ? *obj : NULL;
 #ifdef DEBUG
 			keep = 1;
 			if (initial_page_size != db->page_size) {
@@ -565,7 +569,7 @@ int rl_read(rlite *db, rl_data_type *type, long page, void *context, void **obj,
 			}
 
 			serialize_data = calloc(db->page_size, sizeof(unsigned char));
-			retval = type->serialize(db, *obj, serialize_data);
+			retval = type->serialize(db, obj ? *obj : NULL, serialize_data);
 			if (retval != RL_OK) {
 				goto cleanup;
 			}
@@ -607,10 +611,22 @@ cleanup:
 	return retval;
 }
 
-int rl_alloc_page_number(rlite *db, long *page_number)
+int rl_alloc_page_number(rlite *db, long *_page_number)
 {
-	*page_number = db->next_empty_page++;
-	return RL_OK;
+	int retval = RL_OK;
+	long page_number = db->next_empty_page;
+	if (page_number - 1 == db->number_of_pages) {
+		db->next_empty_page++;
+		db->number_of_pages++;
+	}
+	else {
+		RL_CALL(rl_long_get, RL_OK, db, &db->next_empty_page, db->next_empty_page);
+	}
+	if (_page_number) {
+		*_page_number = page_number;
+	}
+cleanup:
+	return retval;
 }
 
 int rl_write(struct rlite *db, rl_data_type *type, long page_number, void *obj)
@@ -618,8 +634,15 @@ int rl_write(struct rlite *db, rl_data_type *type, long page_number, void *obj)
 	rl_page *page = NULL;
 	long pos;
 	int retval = rl_search_cache(db, type, page_number, NULL, &pos, db->write_pages, db->write_pages_len);
+
 	if (retval == RL_FOUND) {
-		db->write_pages[pos]->obj = obj;
+		if (obj != db->write_pages[pos]->obj) {
+			if (db->write_pages[pos]->obj) {
+				db->write_pages[pos]->type->destroy(db, db->write_pages[pos]->obj);
+			}
+			db->write_pages[pos]->obj = obj;
+			db->write_pages[pos]->type = type;
+		}
 		retval = RL_OK;
 	}
 	else if (retval == RL_NOT_FOUND) {
@@ -636,29 +659,33 @@ int rl_write(struct rlite *db, rl_data_type *type, long page_number, void *obj)
 		}
 		db->write_pages[pos] = page;
 		db->write_pages_len++;
-		if (page_number == db->next_empty_page) {
-			db->next_empty_page++;
-			retval = rl_write(db, &rl_data_type_header, 0, NULL);
-			if (retval != RL_OK) {
-				goto cleanup;
-			}
-		}
 
 		retval = rl_search_cache(db, type, page_number, NULL, &pos, db->read_pages, db->read_pages_len);
-		if (retval == RL_NOT_FOUND) {
-			retval = RL_OK;
-		}
-		else if (retval == RL_FOUND) {
+		if (retval == RL_FOUND) {
 #ifdef DEBUG
 			rl_free(db->read_pages[pos]->serialized_data);
 #endif
+			if (db->read_pages[pos]->obj != obj) {
+				db->read_pages[pos]->type->destroy(db, db->read_pages[pos]->obj);
+			}
 			rl_free(db->read_pages[pos]);
 			memmove(&db->read_pages[pos], &db->read_pages[pos + 1], sizeof(rl_page *) * (db->read_pages_len - pos));
 			db->read_pages_len--;
 			retval = RL_OK;
 		}
-		goto cleanup;
+		else if (retval != RL_NOT_FOUND) {
+			goto cleanup;
+		}
+		retval = RL_OK;
 	}
+	if (page_number == db->next_empty_page) {
+		RL_CALL(rl_alloc_page_number, RL_OK, db, NULL);
+		retval = rl_write(db, &rl_data_type_header, 0, NULL);
+		if (retval != RL_OK) {
+			goto cleanup;
+		}
+	}
+
 cleanup:
 	if (retval != RL_OK) {
 		if (obj) {
@@ -697,7 +724,10 @@ cleanup:
 
 int rl_delete(struct rlite *db, long page_number)
 {
-	return rl_write(db, NULL, page_number, NULL);
+	long value = db->next_empty_page;
+	db->next_empty_page = page_number;
+	int retval = rl_long_create(db, value, &db->next_empty_page);
+	return retval;
 }
 
 int rl_commit(struct rlite *db)
@@ -705,6 +735,7 @@ int rl_commit(struct rlite *db)
 	int retval = RL_UNEXPECTED;
 	long i, page_number;
 	rl_page *page;
+	size_t written;
 	unsigned char *data;
 	RL_MALLOC(data, db->page_size * sizeof(unsigned char));
 #ifdef DEBUG
@@ -751,7 +782,8 @@ int rl_commit(struct rlite *db)
 				retval = page->type->serialize(db, page->obj, data);
 			}
 			fseek(driver->fp, page_number * db->page_size, SEEK_SET);
-			if ((size_t)db->page_size != fwrite(data, sizeof(unsigned char), db->page_size, driver->fp)) {
+			written = fwrite(data, sizeof(unsigned char), db->page_size, driver->fp);
+			if ((size_t)db->page_size != written) {
 #ifdef DEBUG
 				print_cache(db);
 #endif

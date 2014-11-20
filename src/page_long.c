@@ -33,10 +33,10 @@ int rl_long_create(struct rlite *db, long value, long *number)
 	int retval;
 	long *val;
 	RL_MALLOC(val, sizeof(*val));
+	*val = value;
 	*number = db->next_empty_page;
 	RL_CALL(rl_write, RL_OK, db, &rl_data_type_long, db->next_empty_page, val);
 
-	*val = value;
 	retval = RL_OK;
 cleanup:
 	return retval;

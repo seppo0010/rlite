@@ -385,7 +385,6 @@ int rl_list_remove_element(rlite *db, rl_list *list, long position)
 			sibling_node->left = node->left;
 		}
 		RL_CALL(rl_delete, RL_OK, db, number);
-		RL_CALL(rl_list_node_destroy, RL_OK, db, node);
 	}
 	else {
 		if (node->left) {
@@ -405,14 +404,14 @@ int rl_list_remove_element(rlite *db, rl_list *list, long position)
 				else {
 					list->right = node->left;
 				}
+				// don't rl_free each element
+				rl_free(node->elements);
+				node->elements = NULL;
+
 				rl_delete(db, number);
 				if (retval != RL_OK) {
 					goto cleanup;
 				}
-				// don't rl_free each element
-				rl_free(node->elements);
-				node->elements = NULL;
-				RL_CALL(rl_list_node_destroy, RL_OK, db, node);
 				goto succeeded;
 			}
 		}
@@ -434,14 +433,14 @@ int rl_list_remove_element(rlite *db, rl_list *list, long position)
 				else {
 					list->left = node->right;
 				}
+				// don't rl_free each element
+				rl_free(node->elements);
+				node->elements = NULL;
+
 				rl_delete(db, number);
 				if (retval != RL_OK) {
 					goto cleanup;
 				}
-				// don't rl_free each element
-				rl_free(node->elements);
-				node->elements = NULL;
-				RL_CALL(rl_list_node_destroy, RL_OK, db, node);
 				goto succeeded;
 			}
 		}

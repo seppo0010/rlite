@@ -485,7 +485,6 @@ int rl_btree_remove_element(rlite *db, rl_btree *btree, void *score)
 					parent_node = tmp;
 					RL_CALL(rl_write, RL_OK, db, btree->type->btree_node_type, node->children[0], parent_node);
 					RL_CALL(rl_delete, RL_OK, db, node_page);
-					RL_CALL(rl_btree_node_destroy, RL_OK, db, node);
 				}
 			}
 			break;
@@ -622,7 +621,6 @@ int rl_btree_remove_element(rlite *db, rl_btree *btree, void *score)
 				rl_free(node->scores);
 				node->scores = NULL;
 				RL_CALL(rl_delete, RL_OK, db, node_page);
-				RL_CALL(rl_btree_node_destroy, RL_OK, db, node);
 				continue;
 			}
 			if (positions[i - 1] < parent_node->size) {
@@ -656,7 +654,6 @@ int rl_btree_remove_element(rlite *db, rl_btree *btree, void *score)
 				rl_free(sibling_node->scores);
 				sibling_node->scores = NULL;
 				RL_CALL(rl_delete, RL_OK, db, sibling_node_page);
-				RL_CALL(rl_btree_node_destroy, RL_OK, db, sibling_node);
 				continue;
 			}
 

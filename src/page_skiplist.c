@@ -371,7 +371,6 @@ int rl_skiplist_delete(rlite *db, rl_skiplist *skiplist, double score, unsigned 
 
 	RL_CALL(rl_delete, RL_OK, db, node_page);
 	RL_CALL(rl_read, RL_FOUND, db, &rl_data_type_skiplist_node, skiplist->left, skiplist, &_node, 1);
-	RL_CALL(rl_skiplist_node_destroy, RL_OK, db, node);
 	node = _node;
 	while (skiplist->level > 0 && node->level[skiplist->level - 1].right == 0) {
 		skiplist->level--;

@@ -526,14 +526,12 @@ int rl_zset_iterator_destroy(rl_zset_iterator *iterator)
 	return rl_skiplist_iterator_destroy(iterator->db, iterator);
 }
 
-static int delete_zset(rlite *db, unsigned char *key, long keylen, rl_skiplist *skiplist, long skiplist_page, rl_btree *scores, long scores_page)
+static int delete_zset(rlite *db, unsigned char *key, long keylen, rl_skiplist *skiplist, long skiplist_page, rl_btree *UNUSED(scores), long scores_page)
 {
 	int retval;
 	if (skiplist->size == 0) {
 		RL_CALL(rl_delete, RL_OK, db, skiplist_page);
-		RL_CALL(rl_skiplist_destroy, RL_OK, db, skiplist);
 		RL_CALL(rl_delete, RL_OK, db, scores_page);
-		RL_CALL(rl_btree_destroy, RL_OK, db, scores);
 		RL_CALL(rl_key_delete, RL_OK, db, key, keylen);
 	}
 	else {
