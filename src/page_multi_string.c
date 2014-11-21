@@ -267,3 +267,79 @@ cleanup:
 	}
 	return retval;
 }
+
+int rl_multi_string_pages(struct rlite *db, long page, short *pages)
+{
+	void *tmp;
+	rl_list *list;
+	rl_list_iterator *iterator = NULL;
+	int retval;
+	RL_CALL(rl_read, RL_FOUND, db, &rl_data_type_list_long, page, &list_long, &tmp, 0);
+	list = tmp;
+
+	RL_CALL(rl_list_pages, RL_OK, db, list, pages);
+	RL_CALL(rl_list_iterator_create, RL_OK, db, &iterator, list, 1);
+
+	int first = 1;
+	while ((retval = rl_list_iterator_next(iterator, &tmp)) == RL_OK) {
+		if (first) {
+			first = 0;
+		}
+		else {
+			pages[*(long *)tmp] = 1;
+		}
+		rl_free(tmp);
+	}
+	iterator = NULL;
+
+	if (retval != RL_END) {
+		goto cleanup;
+	}
+
+	RL_CALL(rl_list_nocache_destroy, RL_OK, db, list);
+
+	retval = RL_OK;
+cleanup:
+	if (iterator) {
+		rl_list_iterator_destroy(db, iterator);
+	}
+	return retval;
+}
+
+int rl_multi_string_delete(struct rlite *db, long page)
+{
+	void *tmp;
+	rl_list *list;
+	rl_list_iterator *iterator = NULL;
+	int retval;
+	RL_CALL(rl_read, RL_FOUND, db, &rl_data_type_list_long, page, &list_long, &tmp, 1);
+	list = tmp;
+
+	RL_CALL(rl_list_iterator_create, RL_OK, db, &iterator, list, 1);
+
+	int first = 1;
+	while ((retval = rl_list_iterator_next(iterator, &tmp)) == RL_OK) {
+		if (first) {
+			first = 0;
+		}
+		else {
+			RL_CALL(rl_delete, RL_OK, db, *(long *)tmp);
+		}
+		rl_free(tmp);
+	}
+	iterator = NULL;
+
+	if (retval != RL_END) {
+		goto cleanup;
+	}
+
+	RL_CALL(rl_list_delete, RL_OK, db, list);
+	RL_CALL(rl_delete, RL_OK, db, page);
+
+	retval = RL_OK;
+cleanup:
+	if (iterator) {
+		rl_list_iterator_destroy(db, iterator);
+	}
+	return retval;
+}

@@ -101,7 +101,7 @@ cleanup:
 	return retval;
 }
 
-static int rl_zset_get_objects(rlite *db, unsigned char *key, long keylen, rl_btree **btree, long *btree_page, rl_skiplist **skiplist, long *skiplist_page, int create)
+static int rl_zset_get_objects(rlite *db, unsigned char *key, long keylen, long *_levels_page_number, rl_btree **btree, long *btree_page, rl_skiplist **skiplist, long *skiplist_page, int create)
 {
 	long levels_page_number;
 	int retval;
@@ -128,6 +128,9 @@ static int rl_zset_get_objects(rlite *db, unsigned char *key, long keylen, rl_bt
 			goto cleanup;
 		}
 		retval = rl_zset_read(db, levels_page_number, btree, btree_page, skiplist, skiplist_page);
+	}
+	if (_levels_page_number) {
+		*_levels_page_number = levels_page_number;
 	}
 cleanup:
 	return retval;
@@ -172,7 +175,7 @@ int rl_zadd(rlite *db, unsigned char *key, long keylen, double score, unsigned c
 	rl_skiplist *skiplist;
 	long scores_page, skiplist_page;
 	int retval;
-	RL_CALL(rl_zset_get_objects, RL_OK, db, key, keylen, &scores, &scores_page, &skiplist, &skiplist_page, 1);
+	RL_CALL(rl_zset_get_objects, RL_OK, db, key, keylen, NULL, &scores, &scores_page, &skiplist, &skiplist_page, 1);
 	RL_CALL(add_member, RL_OK, db, scores, skiplist, score, member, memberlen);
 	RL_CALL(update_zset, RL_OK, db, scores, scores_page, skiplist, skiplist_page);
 cleanup:
@@ -198,7 +201,7 @@ int rl_zscore(rlite *db, unsigned char *key, long keylen, unsigned char *member,
 {
 	rl_btree *scores;
 	int retval;
-	RL_CALL(rl_zset_get_objects, RL_OK, db, key, keylen, &scores, NULL, NULL, NULL, 0);
+	RL_CALL(rl_zset_get_objects, RL_OK, db, key, keylen, NULL, &scores, NULL, NULL, NULL, 0);
 	RL_CALL(rl_get_zscore, RL_FOUND, db, scores, member, memberlen, score);
 cleanup:
 	return retval;
@@ -210,7 +213,7 @@ int rl_zrank(rlite *db, unsigned char *key, long keylen, unsigned char *member, 
 	rl_btree *scores;
 	rl_skiplist *skiplist;
 	int retval;
-	RL_CALL(rl_zset_get_objects, RL_OK, db, key, keylen, &scores, NULL, &skiplist, NULL, 0);
+	RL_CALL(rl_zset_get_objects, RL_OK, db, key, keylen, NULL, &scores, NULL, &skiplist, NULL, 0);
 	RL_CALL(rl_get_zscore, RL_FOUND, db, scores, member, memberlen, &score);
 	RL_CALL(rl_skiplist_first_node, RL_FOUND, db, skiplist, score, RL_SKIPLIST_INCLUDE_SCORE, member, memberlen, NULL, rank);
 cleanup:
@@ -223,7 +226,7 @@ int rl_zrevrank(rlite *db, unsigned char *key, long keylen, unsigned char *membe
 	rl_btree *scores;
 	rl_skiplist *skiplist;
 	int retval;
-	RL_CALL(rl_zset_get_objects, RL_OK, db, key, keylen, &scores, NULL, &skiplist, NULL, 0);
+	RL_CALL(rl_zset_get_objects, RL_OK, db, key, keylen, NULL, &scores, NULL, &skiplist, NULL, 0);
 	RL_CALL(rl_get_zscore, RL_FOUND, db, scores, member, memberlen, &score);
 	RL_CALL(rl_skiplist_first_node, RL_FOUND, db, skiplist, score, RL_SKIPLIST_INCLUDE_SCORE, member, memberlen, NULL, revrank);
 	*revrank = skiplist->size - (*revrank) - 1;
@@ -235,7 +238,7 @@ int rl_zcard(rlite *db, unsigned char *key, long keylen, long *card)
 {
 	rl_skiplist *skiplist;
 	int retval;
-	RL_CALL(rl_zset_get_objects, RL_OK, db, key, keylen, NULL, NULL, &skiplist, NULL, 0);
+	RL_CALL(rl_zset_get_objects, RL_OK, db, key, keylen, NULL, NULL, NULL, &skiplist, NULL, 0);
 	*card = skiplist->size;
 cleanup:
 	return RL_OK;
@@ -252,7 +255,7 @@ int rl_zcount(rlite *db, unsigned char *key, long keylen, rl_zrangespec *range, 
 		goto cleanup;
 	}
 
-	RL_CALL(rl_zset_get_objects, RL_OK, db, key, keylen, NULL, NULL, &skiplist, NULL, 0);
+	RL_CALL(rl_zset_get_objects, RL_OK, db, key, keylen, NULL, NULL, NULL, &skiplist, NULL, 0);
 
 	retval = rl_skiplist_first_node(db, skiplist, range->max, range->maxex ? RL_SKIPLIST_BEFORE_SCORE : RL_SKIPLIST_INCLUDE_SCORE, NULL, 0, NULL, &maxrank);
 	if (retval == RL_NOT_FOUND) {
@@ -340,7 +343,7 @@ int rl_zrangebyscore(rlite *db, unsigned char *key, long keylen, rl_zrangespec *
 	long start, end;
 	rl_skiplist *skiplist;
 	int retval;
-	RL_CALL(rl_zset_get_objects, RL_OK, db, key, keylen, NULL, NULL, &skiplist, NULL, 0);
+	RL_CALL(rl_zset_get_objects, RL_OK, db, key, keylen, NULL, NULL, NULL, &skiplist, NULL, 0);
 	RL_CALL(_rl_zrangebyscore, RL_OK, db, skiplist, range, &start, &end);
 
 	start += offset;
@@ -358,7 +361,7 @@ int rl_zrevrangebyscore(rlite *db, unsigned char *key, long keylen, rl_zrangespe
 	long start, end;
 	rl_skiplist *skiplist;
 	int retval;
-	RL_CALL(rl_zset_get_objects, RL_OK, db, key, keylen, NULL, NULL, &skiplist, NULL, 0);
+	RL_CALL(rl_zset_get_objects, RL_OK, db, key, keylen, NULL, NULL, NULL, &skiplist, NULL, 0);
 	RL_CALL(_rl_zrangebyscore, RL_OK, db, skiplist, range, &start, &end);
 
 	end -= offset;
@@ -425,7 +428,7 @@ int rl_zlexcount(rlite *db, unsigned char *key, long keylen, unsigned char *min,
 	long start, end;
 	rl_skiplist *skiplist;
 	int retval;
-	RL_CALL(rl_zset_get_objects, RL_OK, db, key, keylen, NULL, NULL, &skiplist, NULL, 0);
+	RL_CALL(rl_zset_get_objects, RL_OK, db, key, keylen, NULL, NULL, NULL, &skiplist, NULL, 0);
 	RL_CALL(lex_get_range, RL_OK, db, min, minlen, max, maxlen, skiplist, &start, &end);
 	if (end < 0) {
 		end += skiplist->size;
@@ -442,7 +445,7 @@ int rl_zrevrangebylex(rlite *db, unsigned char *key, long keylen, unsigned char 
 	long start, end;
 	rl_skiplist *skiplist;
 	int retval;
-	RL_CALL(rl_zset_get_objects, RL_OK, db, key, keylen, NULL, NULL, &skiplist, NULL, 0);
+	RL_CALL(rl_zset_get_objects, RL_OK, db, key, keylen, NULL, NULL, NULL, &skiplist, NULL, 0);
 	RL_CALL(lex_get_range, RL_OK, db, min, minlen, max, maxlen, skiplist, &start, &end);
 
 	end -= offset;
@@ -460,7 +463,7 @@ int rl_zrangebylex(rlite *db, unsigned char *key, long keylen, unsigned char *mi
 	long start, end;
 	rl_skiplist *skiplist;
 	int retval;
-	RL_CALL(rl_zset_get_objects, RL_OK, db, key, keylen, NULL, NULL, &skiplist, NULL, 0);
+	RL_CALL(rl_zset_get_objects, RL_OK, db, key, keylen, NULL, NULL, NULL, &skiplist, NULL, 0);
 	RL_CALL(lex_get_range, RL_OK, db, min, minlen, max, maxlen, skiplist, &start, &end);
 
 	start += offset;
@@ -478,7 +481,7 @@ int rl_zrevrange(rlite *db, unsigned char *key, long keylen, long start, long en
 	rl_skiplist *skiplist;
 
 	int retval;
-	RL_CALL(rl_zset_get_objects, RL_OK, db, key, keylen, NULL, NULL, &skiplist, NULL, 0);
+	RL_CALL(rl_zset_get_objects, RL_OK, db, key, keylen, NULL, NULL, NULL, &skiplist, NULL, 0);
 	RL_CALL(_rl_zrange, RL_OK, db, skiplist, start, end, -1, iterator);
 cleanup:
 	return retval;
@@ -489,7 +492,7 @@ int rl_zrange(rlite *db, unsigned char *key, long keylen, long start, long end, 
 	rl_skiplist *skiplist;
 
 	int retval;
-	RL_CALL(rl_zset_get_objects, RL_OK, db, key, keylen, NULL, NULL, &skiplist, NULL, 0);
+	RL_CALL(rl_zset_get_objects, RL_OK, db, key, keylen, NULL, NULL, NULL, &skiplist, NULL, 0);
 	RL_CALL(_rl_zrange, RL_OK, db, skiplist, start, end, 1, iterator);
 cleanup:
 	return retval;
@@ -526,17 +529,18 @@ int rl_zset_iterator_destroy(rl_zset_iterator *iterator)
 	return rl_skiplist_iterator_destroy(iterator->db, iterator);
 }
 
-static int delete_zset(rlite *db, unsigned char *key, long keylen, rl_skiplist *skiplist, long skiplist_page, rl_btree *UNUSED(scores), long scores_page)
+static int delete_zset(rlite *db, unsigned char *key, long keylen, long levels_page_number, rl_skiplist *skiplist, long skiplist_page, rl_btree *scores, long scores_page)
 {
 	int retval;
-	if (skiplist->size == 0) {
-		RL_CALL(rl_delete, RL_OK, db, skiplist_page);
-		RL_CALL(rl_delete, RL_OK, db, scores_page);
-		RL_CALL(rl_key_delete, RL_OK, db, key, keylen);
-	}
-	else {
-		retval = RL_NOT_IMPLEMENTED;
-	}
+	void *tmp;
+	RL_CALL(rl_skiplist_delete_all, RL_OK, db, skiplist);
+	RL_CALL(rl_delete, RL_OK, db, skiplist_page);
+	RL_CALL(rl_btree_delete, RL_OK, db, scores);
+	RL_CALL(rl_delete, RL_OK, db, scores_page);
+	RL_CALL(rl_read, RL_FOUND, db, &rl_data_type_list_long, levels_page_number, &list_long, &tmp, 1);
+	RL_CALL(rl_list_delete, RL_OK, db, tmp);
+	RL_CALL(rl_delete, RL_OK, db, levels_page_number);
+	RL_CALL(rl_key_delete, RL_OK, db, key, keylen);
 cleanup:
 	return retval;
 }
@@ -579,11 +583,11 @@ static int remove_member(rlite *db, rl_btree *scores, rl_skiplist *skiplist, uns
 cleanup:
 	return retval;
 }
-static int skiplist_changed(rlite *db, unsigned char *key, long keylen, rl_skiplist *skiplist, long skiplist_page, rl_btree *scores, long scores_page, long changed)
+static int skiplist_changed(rlite *db, unsigned char *key, long keylen, long levels_page_number, rl_skiplist *skiplist, long skiplist_page, rl_btree *scores, long scores_page, long changed)
 {
 	int retval;
 	if (skiplist->size == 0) {
-		RL_CALL(delete_zset, RL_OK, db, key, keylen, skiplist, skiplist_page, scores, scores_page);
+		RL_CALL(delete_zset, RL_OK, db, key, keylen, levels_page_number, skiplist, skiplist_page, scores, scores_page);
 	}
 	else if (changed) {
 		RL_CALL(update_zset, RL_OK, db, scores, scores_page, skiplist, skiplist_page);
@@ -598,9 +602,9 @@ int rl_zrem(rlite *db, unsigned char *key, long keylen, long members_size, unsig
 {
 	rl_btree *scores;
 	rl_skiplist *skiplist;
-	long scores_page, skiplist_page;
+	long scores_page, skiplist_page, levels_page_number;
 	int retval;
-	RL_CALL(rl_zset_get_objects, RL_OK, db, key, keylen, &scores, &scores_page, &skiplist, &skiplist_page, 1);
+	RL_CALL(rl_zset_get_objects, RL_OK, db, key, keylen, &levels_page_number, &scores, &scores_page, &skiplist, &skiplist_page, 1);
 	long i;
 	long _changed = 0;
 	for (i = 0; i < members_size; i++) {
@@ -613,7 +617,7 @@ int rl_zrem(rlite *db, unsigned char *key, long keylen, long members_size, unsig
 		}
 	}
 
-	RL_CALL(skiplist_changed, RL_OK, db, key, keylen, skiplist, skiplist_page, scores, scores_page, _changed);
+	RL_CALL(skiplist_changed, RL_OK, db, key, keylen, levels_page_number, skiplist, skiplist_page, scores, scores_page, _changed);
 
 	*changed = _changed;
 	retval = RL_OK;
@@ -621,7 +625,7 @@ cleanup:
 	return retval;
 }
 
-static int _zremiterator(rlite *db, unsigned char *key, long keylen, rl_zset_iterator *iterator, rl_btree *scores, long scores_page, rl_skiplist *skiplist, long skiplist_page, long *changed)
+static int _zremiterator(rlite *db, unsigned char *key, long keylen, rl_zset_iterator *iterator, long levels_page_number, rl_btree *scores, long scores_page, rl_skiplist *skiplist, long skiplist_page, long *changed)
 {
 	long _changed = 0;
 	double score;
@@ -642,7 +646,7 @@ static int _zremiterator(rlite *db, unsigned char *key, long keylen, rl_zset_ite
 		goto cleanup;
 	}
 
-	RL_CALL(skiplist_changed, RL_OK, db, key, keylen, skiplist, skiplist_page, scores, scores_page, _changed);
+	RL_CALL(skiplist_changed, RL_OK, db, key, keylen, levels_page_number, skiplist, skiplist_page, scores, scores_page, _changed);
 
 	*changed = _changed;
 	retval = RL_OK;
@@ -655,11 +659,11 @@ int rl_zremrangebyrank(rlite *db, unsigned char *key, long keylen, long start, l
 	rl_zset_iterator *iterator;
 	rl_btree *scores;
 	rl_skiplist *skiplist;
-	long scores_page, skiplist_page;
+	long scores_page, skiplist_page, levels_page_number;
 	int retval;
-	RL_CALL(rl_zset_get_objects, RL_OK, db, key, keylen, &scores, &scores_page, &skiplist, &skiplist_page, 1);
+	RL_CALL(rl_zset_get_objects, RL_OK, db, key, keylen, &levels_page_number, &scores, &scores_page, &skiplist, &skiplist_page, 1);
 	RL_CALL(_rl_zrange, RL_OK, db, skiplist, start, end, 1, &iterator);
-	RL_CALL(_zremiterator, RL_OK, db, key, keylen, iterator, scores, scores_page, skiplist, skiplist_page, changed);
+	RL_CALL(_zremiterator, RL_OK, db, key, keylen, iterator, levels_page_number, scores, scores_page, skiplist, skiplist_page, changed);
 	retval = RL_OK;
 cleanup:
 	return retval;
@@ -670,14 +674,14 @@ int rl_zremrangebyscore(rlite *db, unsigned char *key, long keylen, rl_zrangespe
 	rl_zset_iterator *iterator;
 	rl_btree *scores;
 	rl_skiplist *skiplist;
-	long scores_page, skiplist_page;
+	long scores_page, skiplist_page, levels_page_number;
 	int retval;
-	RL_CALL(rl_zset_get_objects, RL_OK, db, key, keylen, &scores, &scores_page, &skiplist, &skiplist_page, 1);
+	RL_CALL(rl_zset_get_objects, RL_OK, db, key, keylen, &levels_page_number, &scores, &scores_page, &skiplist, &skiplist_page, 1);
 
 	long start, end;
 	RL_CALL(_rl_zrangebyscore, RL_OK, db, skiplist, range, &start, &end);
 	RL_CALL(_rl_zrange, RL_OK, db, skiplist, start, end, 1, &iterator);
-	RL_CALL(_zremiterator, RL_OK, db, key, keylen, iterator, scores, scores_page, skiplist, skiplist_page, changed);
+	RL_CALL(_zremiterator, RL_OK, db, key, keylen, iterator, levels_page_number, scores, scores_page, skiplist, skiplist_page, changed);
 	retval = RL_OK;
 cleanup:
 	return retval;
@@ -688,9 +692,9 @@ int rl_zremrangebylex(rlite *db, unsigned char *key, long keylen, unsigned char 
 	rl_zset_iterator *iterator;
 	rl_btree *scores;
 	rl_skiplist *skiplist;
-	long scores_page, skiplist_page, start, end;
+	long scores_page, skiplist_page, start, end, levels_page_number;
 	int retval;
-	RL_CALL(rl_zset_get_objects, RL_OK, db, key, keylen, &scores, &scores_page, &skiplist, &skiplist_page, 1);
+	RL_CALL(rl_zset_get_objects, RL_OK, db, key, keylen, &levels_page_number, &scores, &scores_page, &skiplist, &skiplist_page, 1);
 	retval = lex_get_range(db, min, minlen, max, maxlen, skiplist, &start, &end);
 	if (retval == RL_NOT_FOUND) {
 		*changed = 0;
@@ -702,7 +706,7 @@ int rl_zremrangebylex(rlite *db, unsigned char *key, long keylen, unsigned char 
 	}
 
 	RL_CALL(_rl_zrange, RL_OK, db, skiplist, start, end, 1, &iterator);
-	RL_CALL(_zremiterator, RL_OK, db, key, keylen, iterator, scores, scores_page, skiplist, skiplist_page, changed);
+	RL_CALL(_zremiterator, RL_OK, db, key, keylen, iterator, levels_page_number, scores, scores_page, skiplist, skiplist_page, changed);
 	retval = RL_OK;
 cleanup:
 	return retval;
@@ -735,7 +739,7 @@ int rl_zincrby(rlite *db, unsigned char *key, long keylen, double score, unsigne
 	rl_skiplist *skiplist;
 	long scores_page, skiplist_page;
 	int retval;
-	RL_CALL(rl_zset_get_objects, RL_OK, db, key, keylen, &scores, &scores_page, &skiplist, &skiplist_page, 1);
+	RL_CALL(rl_zset_get_objects, RL_OK, db, key, keylen, NULL, &scores, &scores_page, &skiplist, &skiplist_page, 1);
 	RL_CALL(incrby, RL_OK, db, scores, skiplist, member, memberlen, score, newscore);
 	RL_CALL(update_zset, RL_OK, db, scores, scores_page, skiplist, skiplist_page);
 cleanup:
@@ -769,7 +773,7 @@ int rl_zinterstore(rlite *db, long keys_size, unsigned char **keys, long *keys_l
 	RL_MALLOC(weights, sizeof(double) * (keys_size - 2));
 	for (i = 1; i < keys_size; i++) {
 		weight_tmp = _weights ? _weights[i - 1] : 1.0;
-		RL_CALL(rl_zset_get_objects, RL_OK, db, keys[i], keys_len[i], &btree_tmp, NULL, &skiplist_tmp, NULL, 0);
+		RL_CALL(rl_zset_get_objects, RL_OK, db, keys[i], keys_len[i], NULL, &btree_tmp, NULL, &skiplist_tmp, NULL, 0);
 		if (i == 1) {
 			btree = btree_tmp;
 			skiplist = skiplist_tmp;
@@ -794,7 +798,7 @@ int rl_zinterstore(rlite *db, long keys_size, unsigned char **keys, long *keys_l
 	long target_btree_page, target_skiplist_page;
 	rl_btree *target_btree;
 	rl_skiplist *target_skiplist;
-	RL_CALL(rl_zset_get_objects, RL_OK, db, keys[0], keys_len[0], &target_btree, &target_btree_page, &target_skiplist, &target_skiplist_page, 1);
+	RL_CALL(rl_zset_get_objects, RL_OK, db, keys[0], keys_len[0], NULL, &target_btree, &target_btree_page, &target_skiplist, &target_skiplist_page, 1);
 
 	int found;
 	void *tmp;
@@ -873,7 +877,7 @@ static int zunionstore_minmax(rlite *db, long keys_size, unsigned char **keys, l
 	}
 
 	for (i = 0; i < keys_size; i++) {
-		retval = rl_zset_get_objects(db, keys[i], keys_len[i], NULL, NULL, &skiplist, NULL, 0);
+		retval = rl_zset_get_objects(db, keys[i], keys_len[i], NULL, NULL, NULL, &skiplist, NULL, 0);
 		if (retval == RL_NOT_FOUND) {
 			iterators[i] = NULL;
 			continue;
@@ -950,7 +954,7 @@ static int zunionstore_sum(rlite *db, long keys_size, unsigned char **keys, long
 	int retval;
 	long i;
 	for (i = 0; i < keys_size; i++) {
-		retval = rl_zset_get_objects(db, keys[i], keys_len[i], NULL, NULL, &skiplist, NULL, 0);
+		retval = rl_zset_get_objects(db, keys[i], keys_len[i], NULL, NULL, NULL, &skiplist, NULL, 0);
 		if (retval == RL_NOT_FOUND) {
 			continue;
 		}
@@ -985,7 +989,7 @@ int rl_zunionstore(rlite *db, long keys_size, unsigned char **keys, long *keys_l
 	rl_skiplist *skiplist;
 	long scores_page, skiplist_page;
 	int retval;
-	RL_CALL(rl_zset_get_objects, RL_OK, db, keys[0], keys_len[0], &scores, &scores_page, &skiplist, &skiplist_page, 1);
+	RL_CALL(rl_zset_get_objects, RL_OK, db, keys[0], keys_len[0], NULL, &scores, &scores_page, &skiplist, &skiplist_page, 1);
 	if (aggregate == RL_ZSET_AGGREGATE_SUM) {
 		RL_CALL(zunionstore_sum, RL_OK, db, keys_size - 1, &keys[1], &keys_len[1], weights, scores, skiplist);
 	}
@@ -995,5 +999,49 @@ int rl_zunionstore(rlite *db, long keys_size, unsigned char **keys, long *keys_l
 
 	RL_CALL(update_zset, RL_OK, db, scores, scores_page, skiplist, skiplist_page);
 cleanup:
+	return retval;
+}
+
+int rl_zset_pages(struct rlite *db, long page, short *pages)
+{
+	rl_btree *scores;
+	rl_skiplist *skiplist;
+	rl_skiplist_iterator *iterator = NULL;
+	rl_skiplist_node *node;
+	long scores_page, skiplist_page;
+	int retval;
+	void *tmp;
+	rl_list *levels;
+
+	RL_CALL(rl_read, RL_FOUND, db, &rl_data_type_list_long, page, &list_long, &tmp, 1);
+	levels = tmp;
+	rl_list_pages(db, levels, pages);
+
+	RL_CALL(rl_zset_read, RL_OK, db, page, &scores, &scores_page, &skiplist, &skiplist_page);
+	pages[scores_page] = 1;
+	pages[skiplist_page] = 1;
+
+	RL_CALL(rl_btree_pages, RL_OK, db, scores, pages);
+
+	RL_CALL(rl_skiplist_pages, RL_OK, db, skiplist, pages);
+
+	RL_CALL(rl_skiplist_iterator_create, RL_OK, db, &iterator, skiplist, 0, 1, 0);
+	while ((rl_skiplist_iterator_next(iterator, &node)) == RL_OK) {
+		pages[node->value] = 1;
+		RL_CALL(rl_multi_string_pages, RL_OK, iterator->db, node->value, pages);
+	}
+	iterator = NULL;
+
+	if (retval != RL_END) {
+		goto cleanup;
+	}
+
+	retval = RL_OK;
+cleanup:
+	if (retval != RL_OK) {
+		if (iterator) {
+			rl_skiplist_iterator_destroy(db, iterator);
+		}
+	}
 	return retval;
 }

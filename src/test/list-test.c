@@ -15,7 +15,7 @@ int basic_insert_list_test(int options)
 	rlite *db = NULL;
 	rl_list *list = NULL;
 	long **vals = malloc(sizeof(long *) * 7);
-	RL_CALL(setup_db, RL_OK, &db, 0, 1);
+	RL_CALL_VERBOSE(setup_db, RL_OK, &db, 0, 1);
 	db->page_size = sizeof(long) * 2 + 12;
 	retval = rl_list_create(db, &list, &list_long);
 	if (RL_OK != retval) {
@@ -91,7 +91,7 @@ int basic_iterator_list_test(int _commit)
 	rlite *db = NULL;
 	rl_list *list = NULL;
 	int retval;
-	RL_CALL(setup_db, RL_OK, &db, _commit, 1);
+	RL_CALL_VERBOSE(setup_db, RL_OK, &db, _commit, 1);
 	retval = rl_list_create(db, &list, &list_long);
 	if (RL_OK != retval) {
 		goto cleanup;
@@ -176,7 +176,7 @@ int fuzzy_list_test(long size, long list_node_size, int _commit)
 	rlite *db = NULL;
 	rl_list *list = NULL;
 	int retval;
-	RL_CALL(setup_db, RL_OK, &db, _commit, 1);
+	RL_CALL_VERBOSE(setup_db, RL_OK, &db, _commit, 1);
 	db->page_size = sizeof(long) * list_node_size + 12;
 	retval = rl_list_create(db, &list, &list_long);
 	if (RL_OK != retval) {
@@ -278,7 +278,7 @@ int basic_delete_list_test(long elements, long element_to_remove, char *name)
 	rlite *db = NULL;
 	rl_list *list = NULL;
 	int retval;
-	RL_CALL(setup_db, RL_OK, &db, 0, 1);
+	RL_CALL_VERBOSE(setup_db, RL_OK, &db, 0, 1);
 	db->page_size = sizeof(long) * 2 + 12;
 	retval = rl_list_create(db, &list, &list_long);
 	if (RL_OK != retval) {
@@ -354,7 +354,7 @@ int fuzzy_list_delete_test(long size, long list_node_size, int _commit)
 	rl_list *list = NULL;
 	long *elements = malloc(sizeof(long) * size);
 	int retval;
-	RL_CALL(setup_db, RL_OK, &db, _commit, 1);
+	RL_CALL_VERBOSE(setup_db, RL_OK, &db, _commit, 1);
 	db->page_size = sizeof(long) * list_node_size + 12;
 	retval = rl_list_create(db, &list, &list_long);
 	if (RL_OK != retval) {

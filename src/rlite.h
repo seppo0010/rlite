@@ -64,6 +64,7 @@ int rl_purge_cache(struct rlite *db, long page);
 int rl_delete(struct rlite *db, long page);
 int rl_commit(struct rlite *db);
 int rl_discard(struct rlite *db);
+int rl_is_balanced(struct rlite *db);
 
 extern rl_data_type rl_data_type_header;
 extern rl_data_type rl_data_type_btree_hash_sha1_key;

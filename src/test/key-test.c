@@ -33,7 +33,7 @@ int basic_test_set_get(int _commit)
 	fprintf(stderr, "Start basic_test_set_get %d\n", _commit);
 
 	rlite *db;
-	RL_CALL(setup_db, RL_OK, &db, _commit, 1);
+	RL_CALL_VERBOSE(setup_db, RL_OK, &db, _commit, 1);
 	unsigned char *key = (unsigned char *)"my key";
 	long keylen = strlen((char *)key);
 	unsigned char type = 'A';
@@ -66,7 +66,7 @@ int basic_test_get_unexisting()
 	fprintf(stderr, "Start basic_test_get_unexisting\n");
 
 	rlite *db;
-	RL_CALL(setup_db, RL_OK, &db, 0, 1);
+	RL_CALL_VERBOSE(setup_db, RL_OK, &db, 0, 1);
 
 	unsigned char *key = (unsigned char *)"my key";
 	long keylen = strlen((char *)key);
@@ -89,7 +89,7 @@ int basic_test_set_delete()
 	fprintf(stderr, "Start basic_test_set_delete\n");
 
 	rlite *db;
-	RL_CALL(setup_db, RL_OK, &db, 0, 1);
+	RL_CALL_VERBOSE(setup_db, RL_OK, &db, 0, 1);
 
 
 	unsigned char *key = (unsigned char *)"my key";
@@ -127,7 +127,7 @@ int basic_test_get_or_create(int _commit)
 	fprintf(stderr, "Start basic_test_get_or_create %d\n", _commit);
 
 	rlite *db;
-	RL_CALL(setup_db, RL_OK, &db, _commit, 1);
+	RL_CALL_VERBOSE(setup_db, RL_OK, &db, _commit, 1);
 	unsigned char *key = (unsigned char *)"my key";
 	long keylen = strlen((char *)key);
 	unsigned char type = 'A';

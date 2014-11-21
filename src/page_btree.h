@@ -96,4 +96,7 @@ int rl_btree_node_deserialize_hash_long_long(struct rlite *db, void **obj, void 
 int rl_btree_node_serialize_hash_sha1_double(struct rlite *db, void *obj, unsigned char *data);
 int rl_btree_node_deserialize_hash_sha1_double(struct rlite *db, void **obj, void *context, unsigned char *data);
 
+int rl_btree_pages(struct rlite *db, rl_btree *btree, short *pages);
+int rl_btree_delete(struct rlite *db, rl_btree *btree);
+
 #endif

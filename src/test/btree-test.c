@@ -14,8 +14,8 @@ int basic_insert_set_test()
 
 	int retval;
 	rlite *db = NULL;
-	RL_CALL(setup_db, RL_OK, &db, 0, 1);
-	RL_CALL(rl_btree_create, RL_OK, db, &btree, &rl_btree_type_set_long, 2);
+	RL_CALL_VERBOSE(setup_db, RL_OK, &db, 0, 1);
+	RL_CALL_VERBOSE(rl_btree_create, RL_OK, db, &btree, &rl_btree_type_set_long, 2);
 	long i;
 	for (i = 0; i < 7; i++) {
 		vals[i] = malloc(sizeof(long));
@@ -68,8 +68,8 @@ int basic_insert_hash_test()
 	rl_btree *btree = NULL;
 	int retval;
 	rlite *db = NULL;
-	RL_CALL(setup_db, RL_OK, &db, 0, 1);
-	RL_CALL(rl_btree_create, RL_OK, db, &btree, &rl_btree_type_hash_long_long, 2);
+	RL_CALL_VERBOSE(setup_db, RL_OK, &db, 0, 1);
+	RL_CALL_VERBOSE(rl_btree_create, RL_OK, db, &btree, &rl_btree_type_hash_long_long, 2);
 	long i;
 	for (i = 0; i < 7; i++) {
 		keys[i] = malloc(sizeof(long));
@@ -130,8 +130,8 @@ int basic_delete_set_test(long elements, long element_to_remove, char *name)
 	rlite *db = NULL;
 	rl_btree *btree = NULL;
 	long **vals = NULL;
-	RL_CALL(setup_db, RL_OK, &db, 0, 1);
-	RL_CALL(rl_btree_create, RL_OK, db, &btree, &rl_btree_type_set_long, 2);
+	RL_CALL_VERBOSE(setup_db, RL_OK, &db, 0, 1);
+	RL_CALL_VERBOSE(rl_btree_create, RL_OK, db, &btree, &rl_btree_type_set_long, 2);
 
 	long abs_elements = labs(elements);
 	long pos_element_to_remove = abs_elements == elements ? element_to_remove : (-element_to_remove);
@@ -219,8 +219,8 @@ int fuzzy_set_test(long size, long btree_node_size, int _commit)
 
 	void **flatten_scores = malloc(sizeof(void *) * size);
 	long j, flatten_size;
-	RL_CALL(setup_db, RL_OK, &db, _commit, 1);
-	RL_CALL(rl_btree_create, RL_OK, db, &btree, &rl_btree_type_set_long, btree_node_size);
+	RL_CALL_VERBOSE(setup_db, RL_OK, &db, _commit, 1);
+	RL_CALL_VERBOSE(rl_btree_create, RL_OK, db, &btree, &rl_btree_type_set_long, btree_node_size);
 
 	long i, element, *element_copy;
 
@@ -264,7 +264,7 @@ int fuzzy_set_test(long size, long btree_node_size, int _commit)
 			}
 			rl_close(db);
 			db = NULL;
-			RL_CALL(setup_db, RL_OK, &db, _commit, 0);
+			RL_CALL_VERBOSE(setup_db, RL_OK, &db, _commit, 0);
 		}
 	}
 
@@ -317,8 +317,8 @@ int fuzzy_hash_test(long size, long btree_node_size, int _commit)
 	long *values = malloc(sizeof(long) * size);
 	void **flatten_scores = malloc(sizeof(void *) * size);
 
-	RL_CALL(setup_db, RL_OK, &db, _commit, 1);
-	RL_CALL(rl_btree_create, RL_OK, db, &btree, &rl_btree_type_hash_long_long, btree_node_size);
+	RL_CALL_VERBOSE(setup_db, RL_OK, &db, _commit, 1);
+	RL_CALL_VERBOSE(rl_btree_create, RL_OK, db, &btree, &rl_btree_type_hash_long_long, btree_node_size);
 
 	long i, element, value, *element_copy, *value_copy;
 
@@ -424,9 +424,9 @@ int fuzzy_hash_test_iterator(long size, long btree_node_size, int _commit)
 	long *elements = malloc(sizeof(long) * size);
 	long *nonelements = malloc(sizeof(long) * size);
 	long *values = malloc(sizeof(long) * size);
-	RL_CALL(setup_db, RL_OK, &db, _commit, 1);
+	RL_CALL_VERBOSE(setup_db, RL_OK, &db, _commit, 1);
 
-	RL_CALL(rl_btree_create, RL_OK, db, &btree, &rl_btree_type_hash_long_long, btree_node_size);
+	RL_CALL_VERBOSE(rl_btree_create, RL_OK, db, &btree, &rl_btree_type_hash_long_long, btree_node_size);
 
 	long i, element, value, *element_copy, *value_copy;
 
@@ -524,8 +524,8 @@ int fuzzy_set_delete_test(long size, long btree_node_size, int _commit)
 	rl_btree *btree = NULL;
 	long *elements = malloc(sizeof(long) * size);
 
-	RL_CALL(setup_db, RL_OK, &db, _commit, 1);
-	RL_CALL(rl_btree_create, RL_OK, db, &btree, &rl_btree_type_set_long, btree_node_size);
+	RL_CALL_VERBOSE(setup_db, RL_OK, &db, _commit, 1);
+	RL_CALL_VERBOSE(rl_btree_create, RL_OK, db, &btree, &rl_btree_type_set_long, btree_node_size);
 
 	long i, element, *element_copy;
 
@@ -596,8 +596,8 @@ int basic_test_insert_delete_insert(int _commit)
 	int retval;
 	rlite *db = NULL;
 	rl_btree *btree = NULL;
-	RL_CALL(setup_db, RL_OK, &db, _commit, 1);
-	RL_CALL(rl_btree_create, RL_OK, db, &btree, &rl_btree_type_set_long, 2);
+	RL_CALL_VERBOSE(setup_db, RL_OK, &db, _commit, 1);
+	RL_CALL_VERBOSE(rl_btree_create, RL_OK, db, &btree, &rl_btree_type_set_long, 2);
 
 	long *element = malloc(sizeof(long));
 	*element = 1;

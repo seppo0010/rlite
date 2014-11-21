@@ -33,11 +33,11 @@ int rl_list_serialize(rlite *UNUSED(db), void *obj, unsigned char *data)
 	return RL_OK;
 }
 
-int rl_list_deserialize(rlite *db, void **obj, void *context, unsigned char *data)
+int rl_list_deserialize(rlite *UNUSED(db), void **obj, void *context, unsigned char *data)
 {
 	rl_list *list;
-	int retval;
-	RL_CALL(rl_list_create, RL_OK, db, &list, context);
+	int retval = RL_OK;
+	RL_MALLOC(list, sizeof(*list));
 	list->type = context;
 	list->left = get_4bytes(data);
 	list->right = get_4bytes(&data[4]);
@@ -619,5 +619,43 @@ cleanup:
 		}
 		rl_list_iterator_destroy(iterator->db, iterator);
 	}
+	return retval;
+}
+
+int rl_list_pages(struct rlite *db, rl_list *list, short *pages)
+{
+	rl_list_node *node;
+	void *_node;
+	long number = list->left;
+	int retval = RL_OK;
+	pages[number] = 1;
+	while (number != 0) {
+		RL_CALL(rl_read, RL_FOUND, db, list->type->list_node_type, number, list, &_node, 1);
+		node = _node;
+		number = node->right;
+		if (number) {
+			pages[number] = 1;
+		}
+	}
+	retval = RL_OK;
+cleanup:
+	return retval;
+}
+
+int rl_list_delete(struct rlite *db, rl_list *list)
+{
+	rl_list_node *node;
+	void *_node;
+	long number = list->left, new_number;
+	int retval = RL_OK;
+	while (number != 0) {
+		RL_CALL(rl_read, RL_FOUND, db, list->type->list_node_type, number, list, &_node, 1);
+		node = _node;
+		new_number = node->right;
+		RL_CALL(rl_delete, RL_OK, db, number);
+		number = new_number;
+	}
+	retval = RL_OK;
+cleanup:
 	return retval;
 }

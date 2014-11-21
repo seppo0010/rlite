@@ -49,6 +49,7 @@ int rl_skiplist_add(rlite *db, rl_skiplist *skiplist, double score, unsigned cha
 int rl_skiplist_first_node(rlite *db, rl_skiplist *skiplist, double score, int range_mode, unsigned char *value, long valuelen, rl_skiplist_node **node, long *rank);
 int rl_skiplist_node_by_rank(rlite *db, rl_skiplist *skiplist, long rank, rl_skiplist_node **node, long *node_page);
 int rl_skiplist_delete(rlite *db, rl_skiplist *skiplist, double score, unsigned char *value, long valuelen);
+int rl_skiplist_delete_all(rlite *db, rl_skiplist *skiplist);
 
 int rl_skiplist_is_balanced(rlite *db, rl_skiplist *skiplist);
 #ifdef DEBUG
@@ -60,5 +61,8 @@ int rl_skiplist_deserialize(struct rlite *db, void **obj, void *context, unsigne
 
 int rl_skiplist_node_serialize(struct rlite *db, void *obj, unsigned char *data);
 int rl_skiplist_node_deserialize(struct rlite *db, void **obj, void *context, unsigned char *data);
+
+int rl_skiplist_pages(struct rlite *db, rl_skiplist *skiplist, short *pages);
+
 
 #endif

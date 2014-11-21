@@ -13,7 +13,7 @@ static int do_string_test()
 	fprintf(stderr, "Start do_string_test\n");
 	int retval;
 	rlite *db = NULL;
-	RL_CALL(setup_db, RL_OK, &db, 0, 1);
+	RL_CALL_VERBOSE(setup_db, RL_OK, &db, 0, 1);
 
 	unsigned char *data, *data2;
 	long number, i;

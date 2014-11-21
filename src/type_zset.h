@@ -44,4 +44,6 @@ int rl_zremrangebyscore(rlite *db, unsigned char *key, long keylen, rl_zrangespe
 int rl_zscore(rlite *db, unsigned char *key, long keylen, unsigned char *data, long datalen, double *score);
 int rl_zunionstore(rlite *db, long keys_size, unsigned char **keys, long *keys_len, double *weights, int aggregate);
 
+int rl_zset_pages(struct rlite *db, long page, short *pages);
+
 #endif

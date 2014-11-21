@@ -83,12 +83,19 @@ cleanup:
 int rl_key_delete(struct rlite *db, const unsigned char *key, long keylen)
 {
 	int retval;
+	void *tmp;
 	unsigned char *digest;
+	rl_btree *btree = NULL;
+	rl_key *key_obj = NULL;
 	RL_MALLOC(digest, sizeof(unsigned char) * 20);
 	RL_CALL(sha1, RL_OK, key, keylen, digest);
-	rl_btree *btree;
 	RL_CALL(rl_get_key_btree, RL_OK, db, &btree);
-	RL_CALL(rl_btree_remove_element, RL_OK, db, btree, digest);
+	retval = rl_btree_find_score(db, btree, digest, &tmp, NULL, NULL);
+	if (retval == RL_FOUND) {
+		key_obj = tmp;
+		RL_CALL(rl_multi_string_delete, RL_OK, db, key_obj->string_page);
+		RL_CALL(rl_btree_remove_element, RL_OK, db, btree, digest);
+	}
 cleanup:
 	rl_free(digest);
 	return retval;

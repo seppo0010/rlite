@@ -64,4 +64,7 @@ int rl_list_deserialize(struct rlite *db, void **obj, void *context, unsigned ch
 int rl_list_node_serialize_long(struct rlite *db, void *obj, unsigned char *data);
 int rl_list_node_deserialize_long(struct rlite *db, void **obj, void *context, unsigned char *data);
 
+int rl_list_pages(struct rlite *db, rl_list *list, short *pages);
+int rl_list_delete(struct rlite *db, rl_list *list);
+
 #endif

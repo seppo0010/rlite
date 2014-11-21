@@ -8,6 +8,7 @@ int rl_long_deserialize(struct rlite *db, void **obj, void *context, unsigned ch
 int rl_long_destroy(struct rlite *db, void *obj);
 int rl_long_create(struct rlite *db, long value, long *number);
 int rl_long_get(rlite *db, long *value, long number);
+int rl_long_set(rlite *db, long value, long number);
 
 #endif
 

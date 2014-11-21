@@ -11,7 +11,7 @@ static int do_long_test(int commit)
 	fprintf(stderr, "Start do_long_test %d\n", commit);
 	int retval;
 	rlite *db = NULL;
-	RL_CALL(setup_db, RL_OK, &db, commit, 1);
+	RL_CALL_VERBOSE(setup_db, RL_OK, &db, commit, 1);
 
 	long data = 123, data2;
 	long number;
@@ -23,7 +23,7 @@ static int do_long_test(int commit)
 	}
 
 	if (commit) {
-		RL_CALL(rl_commit, RL_OK, db);
+		RL_CALL_VERBOSE(rl_commit, RL_OK, db);
 	}
 
 	retval = rl_long_get(db, &data2, number);

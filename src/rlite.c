@@ -7,6 +7,8 @@
 #include "page_long.h"
 #include "page_string.h"
 #include "page_skiplist.h"
+#include "page_multi_string.h"
+#include "type_zset.h"
 #include "rlite.h"
 #include "util.h"
 #ifdef DEBUG
@@ -165,9 +167,8 @@ cleanup:
 	return retval;
 }
 
-int rl_header_serialize(struct rlite *db, void *obj, unsigned char *data)
+int rl_header_serialize(struct rlite *db, void *UNUSED(obj), unsigned char *data)
 {
-	obj = obj;
 	int identifier_len = strlen((char *)identifier);
 	memcpy(data, identifier, identifier_len);
 	put_4bytes(&data[identifier_len], db->page_size);
@@ -319,7 +320,7 @@ int rl_create_db(rlite *db)
 	int retval;
 	RL_CALL(rl_ensure_pages, RL_OK, db);
 	db->next_empty_page = 2;
-	db->number_of_pages = 1;
+	db->number_of_pages = 2;
 	rl_btree *btree;
 	long max_node_size = (db->page_size - 8) / 8; // TODO: this should be in the type
 	RL_CALL(rl_btree_create, RL_OK, db, &btree, &rl_btree_type_hash_sha1_key, max_node_size);
@@ -615,7 +616,7 @@ int rl_alloc_page_number(rlite *db, long *_page_number)
 {
 	int retval = RL_OK;
 	long page_number = db->next_empty_page;
-	if (page_number - 1 == db->number_of_pages) {
+	if (page_number == db->number_of_pages) {
 		db->next_empty_page++;
 		db->number_of_pages++;
 	}
@@ -633,8 +634,17 @@ int rl_write(struct rlite *db, rl_data_type *type, long page_number, void *obj)
 {
 	rl_page *page = NULL;
 	long pos;
-	int retval = rl_search_cache(db, type, page_number, NULL, &pos, db->write_pages, db->write_pages_len);
+	int retval;
 
+	if (page_number == db->next_empty_page) {
+		RL_CALL(rl_alloc_page_number, RL_OK, db, NULL);
+		retval = rl_write(db, &rl_data_type_header, 0, NULL);
+		if (retval != RL_OK) {
+			goto cleanup;
+		}
+	}
+
+	retval = rl_search_cache(db, type, page_number, NULL, &pos, db->write_pages, db->write_pages_len);
 	if (retval == RL_FOUND) {
 		if (obj != db->write_pages[pos]->obj) {
 			if (db->write_pages[pos]->obj) {
@@ -678,13 +688,6 @@ int rl_write(struct rlite *db, rl_data_type *type, long page_number, void *obj)
 		}
 		retval = RL_OK;
 	}
-	if (page_number == db->next_empty_page) {
-		RL_CALL(rl_alloc_page_number, RL_OK, db, NULL);
-		retval = rl_write(db, &rl_data_type_header, 0, NULL);
-		if (retval != RL_OK) {
-			goto cleanup;
-		}
-	}
 
 cleanup:
 	if (retval != RL_OK) {
@@ -724,9 +727,10 @@ cleanup:
 
 int rl_delete(struct rlite *db, long page_number)
 {
-	long value = db->next_empty_page;
+	int retval;
+	RL_CALL(rl_long_set, RL_OK, db, db->next_empty_page, page_number);
 	db->next_empty_page = page_number;
-	int retval = rl_long_create(db, value, &db->next_empty_page);
+cleanup:
 	return retval;
 }
 
@@ -852,5 +856,76 @@ int rl_discard(struct rlite *db)
 		}
 	}
 cleanup:
+	return retval;
+}
+
+int rl_is_balanced(rlite *db)
+{
+	int retval;
+	void *tmp = NULL;
+	rl_key *key;
+	rl_btree *btree;
+	rl_btree_iterator *iterator = NULL;
+	short *pages = NULL;
+	long i;
+	long missing_pages = 0;
+	RL_CALL(rl_get_key_btree, RL_OK, db, &btree);
+	RL_MALLOC(pages, sizeof(short) * db->number_of_pages);
+
+	for (i = 1; i < db->number_of_pages; i++) {
+		pages[i] = 0;
+	}
+
+	pages[GLOBAL_KEY_BTREE] = 1;
+
+	RL_CALL(rl_btree_pages, RL_OK, db, btree, pages);
+	RL_CALL(rl_btree_iterator_create, RL_OK, db, btree, &iterator);
+
+	while ((retval = rl_btree_iterator_next(iterator, NULL, &tmp)) == RL_OK) {
+		key = tmp;
+		pages[key->string_page] = 1;
+		pages[key->value_page] = 1;
+		RL_CALL(rl_multi_string_pages, RL_OK, db, key->string_page, pages);
+		if (key->type == RL_TYPE_ZSET) {
+			rl_zset_pages(db, key->value_page, pages);
+		}
+		else {
+			fprintf(stderr, "Unknown type %d\n", key->type);
+			goto cleanup;
+		}
+		rl_free(tmp);
+	}
+	tmp = NULL;
+	iterator = NULL;
+
+	if (retval != RL_END) {
+		goto cleanup;
+	}
+
+	long page_number = db->next_empty_page;
+	while (page_number != db->number_of_pages) {
+		pages[page_number] = 1;
+		RL_CALL(rl_long_get, RL_OK, db, &page_number, page_number);
+	}
+
+	retval = RL_OK;
+
+	for (i = 1; i < db->number_of_pages; i++) {
+		if (pages[i] == 0) {
+			fprintf(stderr, "Found orphan page %ld\n", i);
+			missing_pages++;
+		}
+	}
+
+	if (missing_pages) {
+		fprintf(stderr, "Missing %ld pages\n", missing_pages);
+		retval = RL_UNEXPECTED;
+	}
+cleanup:
+	rl_free(tmp);
+	if (iterator) {
+		rl_btree_iterator_destroy(iterator);
+	}
+	rl_free(pages);
 	return retval;
 }

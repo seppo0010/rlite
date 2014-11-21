@@ -14,7 +14,7 @@ int basic_skiplist_test(int sign, int commit)
 
 	rlite *db;
 	int retval;
-	RL_CALL(setup_db, RL_OK, &db, commit, 1);
+	RL_CALL_VERBOSE(setup_db, RL_OK, &db, commit, 1);
 	rl_skiplist *skiplist;
 	retval = rl_skiplist_create(db, &skiplist);
 	if (retval != RL_OK) {
@@ -54,7 +54,7 @@ int basic_skiplist_first_node_test()
 
 	rlite *db;
 	int retval;
-	RL_CALL(setup_db, RL_OK, &db, 0, 1);
+	RL_CALL_VERBOSE(setup_db, RL_OK, &db, 0, 1);
 	rl_skiplist *skiplist;
 	rl_skiplist_node *node;
 	long rank;
@@ -173,7 +173,7 @@ int basic_skiplist_delete_node_test(int commit)
 
 	rlite *db;
 	int retval;
-	RL_CALL(setup_db, RL_OK, &db, 0, 1);
+	RL_CALL_VERBOSE(setup_db, RL_OK, &db, 0, 1);
 	rl_skiplist *skiplist;
 	retval = rl_skiplist_create(db, &skiplist);
 	if (retval != RL_OK) {
@@ -240,7 +240,7 @@ int basic_skiplist_node_by_rank()
 
 	rlite *db;
 	int retval;
-	RL_CALL(setup_db, RL_OK, &db, 0, 1);
+	RL_CALL_VERBOSE(setup_db, RL_OK, &db, 0, 1);
 	rl_skiplist *skiplist;
 	rl_skiplist_node *node;
 	retval = rl_skiplist_create(db, &skiplist);
@@ -286,7 +286,7 @@ int basic_skiplist_iterator_test(int commit)
 
 	rlite *db;
 	int retval;
-	RL_CALL(setup_db, RL_OK, &db, 0, 1);
+	RL_CALL_VERBOSE(setup_db, RL_OK, &db, 0, 1);
 	rl_skiplist_iterator *iterator;
 	rl_skiplist *skiplist;
 	rl_skiplist_node *node;

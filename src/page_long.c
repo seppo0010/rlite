@@ -28,18 +28,25 @@ int rl_long_destroy(rlite *UNUSED(db), void *obj)
 	return RL_OK;
 }
 
-int rl_long_create(struct rlite *db, long value, long *number)
+int rl_long_set(rlite *db, long value, long number)
 {
 	int retval;
 	long *val;
 	RL_MALLOC(val, sizeof(*val));
 	*val = value;
-	*number = db->next_empty_page;
-	RL_CALL(rl_write, RL_OK, db, &rl_data_type_long, db->next_empty_page, val);
+	RL_CALL(rl_write, RL_OK, db, &rl_data_type_long, number, val);
 
 	retval = RL_OK;
 cleanup:
 	return retval;
+}
+
+int rl_long_create(struct rlite *db, long value, long *number)
+{
+	if (number) {
+		*number = db->next_empty_page;
+	}
+	return rl_long_set(db, value, db->next_empty_page);
 }
 
 int rl_long_get(rlite *db, long *value, long number)

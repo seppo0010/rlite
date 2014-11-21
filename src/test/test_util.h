@@ -7,6 +7,10 @@ int setup_db(struct rlite **db, int file, int del);
 
 #define RL_TEST_MAIN_END return retval; }
 
+#define RL_CALL_VERBOSE(func, expected, ...)\
+	retval = func(__VA_ARGS__);\
+	if (expected != retval) { fprintf(stderr, "Failed to %s, expected %d but got %d instead on line %d\n", #func, expected, retval, __LINE__); goto cleanup; }
+
 #ifdef DEBUG
 #define RL_TEST(func, ...)\
 	if (*passed_tests >= *skip_tests) {\
