@@ -541,10 +541,12 @@ int rl_read(rlite *db, rl_data_type *type, long page, void *context, void **obj,
 			rl_page *page_obj;
 			page_obj = rl_malloc(sizeof(*page_obj));
 			if (!page_obj) {
-				if (type->destroy && *obj) {
-					type->destroy(db, *obj);
+				if (obj) {
+					if (type->destroy && *obj) {
+						type->destroy(db, *obj);
+					}
+					*obj = NULL;
 				}
-				*obj = NULL;
 				retval = RL_OUT_OF_MEMORY;
 				goto cleanup;
 			}
