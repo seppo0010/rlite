@@ -101,7 +101,7 @@ cleanup:
 	return retval;
 }
 
-static int rl_zset_get_objects(rlite *db, unsigned char *key, long keylen, long *_levels_page_number, rl_btree **btree, long *btree_page, rl_skiplist **skiplist, long *skiplist_page, int create)
+static int rl_zset_get_objects(rlite *db, const unsigned char *key, long keylen, long *_levels_page_number, rl_btree **btree, long *btree_page, rl_skiplist **skiplist, long *skiplist_page, int create)
 {
 	long levels_page_number;
 	int retval;
@@ -169,7 +169,7 @@ cleanup:
 	return retval;
 }
 
-int rl_zadd(rlite *db, unsigned char *key, long keylen, double score, unsigned char *member, long memberlen)
+int rl_zadd(rlite *db, const unsigned char *key, long keylen, double score, unsigned char *member, long memberlen)
 {
 	rl_btree *scores;
 	rl_skiplist *skiplist;
@@ -197,7 +197,7 @@ cleanup:
 	return retval;
 }
 
-int rl_zscore(rlite *db, unsigned char *key, long keylen, unsigned char *member, long memberlen, double *score)
+int rl_zscore(rlite *db, const unsigned char *key, long keylen, unsigned char *member, long memberlen, double *score)
 {
 	rl_btree *scores;
 	int retval;
@@ -207,7 +207,7 @@ cleanup:
 	return retval;
 }
 
-int rl_zrank(rlite *db, unsigned char *key, long keylen, unsigned char *member, long memberlen, long *rank)
+int rl_zrank(rlite *db, const unsigned char *key, long keylen, unsigned char *member, long memberlen, long *rank)
 {
 	double score;
 	rl_btree *scores;
@@ -220,7 +220,7 @@ cleanup:
 	return retval;
 }
 
-int rl_zrevrank(rlite *db, unsigned char *key, long keylen, unsigned char *member, long memberlen, long *revrank)
+int rl_zrevrank(rlite *db, const unsigned char *key, long keylen, unsigned char *member, long memberlen, long *revrank)
 {
 	double score;
 	rl_btree *scores;
@@ -234,7 +234,7 @@ cleanup:
 	return retval;
 }
 
-int rl_zcard(rlite *db, unsigned char *key, long keylen, long *card)
+int rl_zcard(rlite *db, const unsigned char *key, long keylen, long *card)
 {
 	rl_skiplist *skiplist;
 	int retval;
@@ -244,7 +244,7 @@ cleanup:
 	return RL_OK;
 }
 
-int rl_zcount(rlite *db, unsigned char *key, long keylen, rl_zrangespec *range, long *count)
+int rl_zcount(rlite *db, const unsigned char *key, long keylen, rl_zrangespec *range, long *count)
 {
 	rl_skiplist *skiplist;
 	long maxrank, minrank;
@@ -338,7 +338,7 @@ cleanup:
 	return retval;
 }
 
-int rl_zrangebyscore(rlite *db, unsigned char *key, long keylen, rl_zrangespec *range, long offset, long count, rl_zset_iterator **iterator)
+int rl_zrangebyscore(rlite *db, const unsigned char *key, long keylen, rl_zrangespec *range, long offset, long count, rl_zset_iterator **iterator)
 {
 	long start, end;
 	rl_skiplist *skiplist;
@@ -356,7 +356,7 @@ cleanup:
 	return retval;
 }
 
-int rl_zrevrangebyscore(rlite *db, unsigned char *key, long keylen, rl_zrangespec *range, long offset, long count, rl_zset_iterator **iterator)
+int rl_zrevrangebyscore(rlite *db, const unsigned char *key, long keylen, rl_zrangespec *range, long offset, long count, rl_zset_iterator **iterator)
 {
 	long start, end;
 	rl_skiplist *skiplist;
@@ -423,7 +423,7 @@ cleanup:
 	return retval;
 }
 
-int rl_zlexcount(rlite *db, unsigned char *key, long keylen, unsigned char *min, long minlen, unsigned char *max, long maxlen, long *lexcount)
+int rl_zlexcount(rlite *db, const unsigned char *key, long keylen, unsigned char *min, long minlen, unsigned char *max, long maxlen, long *lexcount)
 {
 	long start, end;
 	rl_skiplist *skiplist;
@@ -440,7 +440,7 @@ cleanup:
 	return retval;
 }
 
-int rl_zrevrangebylex(rlite *db, unsigned char *key, long keylen, unsigned char *min, long minlen, unsigned char *max, long maxlen, long offset, long count, rl_zset_iterator **iterator)
+int rl_zrevrangebylex(rlite *db, const unsigned char *key, long keylen, unsigned char *min, long minlen, unsigned char *max, long maxlen, long offset, long count, rl_zset_iterator **iterator)
 {
 	long start, end;
 	rl_skiplist *skiplist;
@@ -458,7 +458,7 @@ cleanup:
 	return retval;
 }
 
-int rl_zrangebylex(rlite *db, unsigned char *key, long keylen, unsigned char *min, long minlen, unsigned char *max, long maxlen, long offset, long count, rl_zset_iterator **iterator)
+int rl_zrangebylex(rlite *db, const unsigned char *key, long keylen, unsigned char *min, long minlen, unsigned char *max, long maxlen, long offset, long count, rl_zset_iterator **iterator)
 {
 	long start, end;
 	rl_skiplist *skiplist;
@@ -476,7 +476,7 @@ cleanup:
 	return retval;
 }
 
-int rl_zrevrange(rlite *db, unsigned char *key, long keylen, long start, long end, rl_zset_iterator **iterator)
+int rl_zrevrange(rlite *db, const unsigned char *key, long keylen, long start, long end, rl_zset_iterator **iterator)
 {
 	rl_skiplist *skiplist;
 
@@ -487,7 +487,7 @@ cleanup:
 	return retval;
 }
 
-int rl_zrange(rlite *db, unsigned char *key, long keylen, long start, long end, rl_zset_iterator **iterator)
+int rl_zrange(rlite *db, const unsigned char *key, long keylen, long start, long end, rl_zset_iterator **iterator)
 {
 	rl_skiplist *skiplist;
 
@@ -529,7 +529,7 @@ int rl_zset_iterator_destroy(rl_zset_iterator *iterator)
 	return rl_skiplist_iterator_destroy(iterator->db, iterator);
 }
 
-static int delete_zset(rlite *db, unsigned char *key, long keylen, long levels_page_number, rl_skiplist *skiplist, long skiplist_page, rl_btree *scores, long scores_page)
+static int delete_zset(rlite *db, const unsigned char *key, long keylen, long levels_page_number, rl_skiplist *skiplist, long skiplist_page, rl_btree *scores, long scores_page)
 {
 	int retval;
 	void *tmp;
@@ -583,7 +583,7 @@ static int remove_member(rlite *db, rl_btree *scores, rl_skiplist *skiplist, uns
 cleanup:
 	return retval;
 }
-static int skiplist_changed(rlite *db, unsigned char *key, long keylen, long levels_page_number, rl_skiplist *skiplist, long skiplist_page, rl_btree *scores, long scores_page, long changed)
+static int skiplist_changed(rlite *db, const unsigned char *key, long keylen, long levels_page_number, rl_skiplist *skiplist, long skiplist_page, rl_btree *scores, long scores_page, long changed)
 {
 	int retval;
 	if (skiplist->size == 0) {
@@ -598,7 +598,7 @@ cleanup:
 	return retval;
 }
 
-int rl_zrem(rlite *db, unsigned char *key, long keylen, long members_size, unsigned char **members, long *members_len, long *changed)
+int rl_zrem(rlite *db, const unsigned char *key, long keylen, long members_size, unsigned char **members, long *members_len, long *changed)
 {
 	rl_btree *scores;
 	rl_skiplist *skiplist;
@@ -625,7 +625,7 @@ cleanup:
 	return retval;
 }
 
-static int _zremiterator(rlite *db, unsigned char *key, long keylen, rl_zset_iterator *iterator, long levels_page_number, rl_btree *scores, long scores_page, rl_skiplist *skiplist, long skiplist_page, long *changed)
+static int _zremiterator(rlite *db, const unsigned char *key, long keylen, rl_zset_iterator *iterator, long levels_page_number, rl_btree *scores, long scores_page, rl_skiplist *skiplist, long skiplist_page, long *changed)
 {
 	long _changed = 0;
 	double score;
@@ -654,7 +654,7 @@ cleanup:
 	return retval;
 }
 
-int rl_zremrangebyrank(rlite *db, unsigned char *key, long keylen, long start, long end, long *changed)
+int rl_zremrangebyrank(rlite *db, const unsigned char *key, long keylen, long start, long end, long *changed)
 {
 	rl_zset_iterator *iterator;
 	rl_btree *scores;
@@ -669,7 +669,7 @@ cleanup:
 	return retval;
 }
 
-int rl_zremrangebyscore(rlite *db, unsigned char *key, long keylen, rl_zrangespec *range, long *changed)
+int rl_zremrangebyscore(rlite *db, const unsigned char *key, long keylen, rl_zrangespec *range, long *changed)
 {
 	rl_zset_iterator *iterator;
 	rl_btree *scores;
@@ -687,7 +687,7 @@ cleanup:
 	return retval;
 }
 
-int rl_zremrangebylex(rlite *db, unsigned char *key, long keylen, unsigned char *min, long minlen, unsigned char *max, long maxlen, long *changed)
+int rl_zremrangebylex(rlite *db, const unsigned char *key, long keylen, unsigned char *min, long minlen, unsigned char *max, long maxlen, long *changed)
 {
 	rl_zset_iterator *iterator;
 	rl_btree *scores;
@@ -733,7 +733,7 @@ static int incrby(rlite *db, rl_btree *scores, rl_skiplist *skiplist, unsigned c
 cleanup:
 	return retval;
 }
-int rl_zincrby(rlite *db, unsigned char *key, long keylen, double score, unsigned char *member, long memberlen, double *newscore)
+int rl_zincrby(rlite *db, const unsigned char *key, long keylen, double score, unsigned char *member, long memberlen, double *newscore)
 {
 	rl_btree *scores;
 	rl_skiplist *skiplist;
@@ -1046,7 +1046,7 @@ cleanup:
 	return retval;
 }
 
-int rl_zset_delete(rlite *db, unsigned char *key, long keylen)
+int rl_zset_delete(rlite *db, const unsigned char *key, long keylen)
 {
 	long levels_page_number, skiplist_page, scores_page;
 	rl_skiplist *skiplist;

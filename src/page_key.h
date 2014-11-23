@@ -6,7 +6,7 @@ struct rlite;
 typedef struct {
 	char identifier;
 	const char *name;
-	int (*delete)(struct rlite *db, unsigned char *key, long keylen);
+	int (*delete)(struct rlite *db, const unsigned char *key, long keylen);
 } rl_type;
 
 extern rl_type types[];
@@ -16,6 +16,6 @@ int rl_key_get(struct rlite *db, const unsigned char *key, long keylen, unsigned
 int rl_key_set(struct rlite *db, const unsigned char *key, long keylen, unsigned char type, long page, unsigned long long expires);
 int rl_key_delete(struct rlite *db, const unsigned char *key, long keylen);
 int rl_key_expires(struct rlite *db, const unsigned char *key, long keylen, unsigned long long expires);
-int rl_key_delete_with_value(struct rlite *db, unsigned char *key, long keylen);
+int rl_key_delete_with_value(struct rlite *db, const unsigned char *key, long keylen);
 
 #endif

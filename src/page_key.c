@@ -61,7 +61,7 @@ cleanup:
 	return retval;
 }
 
-int rl_key_get(struct rlite *db, const unsigned char *key, long keylen, unsigned char *type, long *string_page, long *value_page, unsigned long long *expires)
+static int rl_key_get_ignore_expire(struct rlite *db, const unsigned char *key, long keylen, unsigned char *type, long *string_page, long *value_page, unsigned long long *expires, int ignore_expire)
 {
 	unsigned char digest[20];
 	int retval;
@@ -73,8 +73,8 @@ int rl_key_get(struct rlite *db, const unsigned char *key, long keylen, unsigned
 	retval = rl_btree_find_score(db, btree, digest, &tmp, NULL, NULL);
 	if (retval == RL_FOUND) {
 		key_obj = tmp;
-		if (key_obj->expires != 0 && key_obj->expires < mstime()) {
-			// TODO: delete key and object
+		if (ignore_expire == 0 && key_obj->expires != 0 && key_obj->expires < mstime()) {
+			rl_key_delete_with_value(db, key, keylen);
 			retval = RL_NOT_FOUND;
 			goto cleanup;
 		}
@@ -95,6 +95,11 @@ int rl_key_get(struct rlite *db, const unsigned char *key, long keylen, unsigned
 	}
 cleanup:
 	return retval;
+}
+
+int rl_key_get(struct rlite *db, const unsigned char *key, long keylen, unsigned char *type, long *string_page, long *value_page, unsigned long long *expires)
+{
+	return rl_key_get_ignore_expire(db, key, keylen, type, string_page, value_page, expires, 0);
 }
 
 int rl_key_get_or_create(struct rlite *db, const unsigned char *key, long keylen, unsigned char type, long *page)
@@ -148,13 +153,13 @@ cleanup:
 	return retval;
 }
 
-int rl_key_delete_with_value(struct rlite *db, unsigned char *key, long keylen)
+int rl_key_delete_with_value(struct rlite *db, const unsigned char *key, long keylen)
 {
 	int retval;
 	unsigned char identifier;
 	rl_type *type;
 	long value_page;
-	RL_CALL(rl_key_get, RL_FOUND, db, key, keylen, &identifier, NULL, &value_page, NULL);
+	RL_CALL(rl_key_get_ignore_expire, RL_FOUND, db, key, keylen, &identifier, NULL, &value_page, NULL, 1);
 	RL_CALL(get_type, RL_OK, identifier, &type);
 	RL_CALL(type->delete, RL_OK, db, key, keylen);
 cleanup:
