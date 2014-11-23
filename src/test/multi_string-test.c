@@ -191,7 +191,7 @@ cleanup:
 }
 
 #define CMP_SIZE 2000
-static int test_cmp(int expected_cmp, long position)
+static int test_cmp_internal(int expected_cmp, long position)
 {
 	unsigned char data[CMP_SIZE], data2[CMP_SIZE];
 	long size = CMP_SIZE, i;
@@ -199,7 +199,6 @@ static int test_cmp(int expected_cmp, long position)
 	long p1, p2;
 	rlite *db = NULL;
 	if (position % 500 == 0) {
-		fprintf(stderr, "Start page_multi_string-test test_cmp %d %ld\n", expected_cmp, position);
 	}
 	int retval = rl_open(":memory:", &db, RLITE_OPEN_READWRITE | RLITE_OPEN_CREATE);
 	if (retval != RL_OK) {
@@ -238,25 +237,32 @@ static int test_cmp(int expected_cmp, long position)
 		goto cleanup;
 	}
 
-	if (position % 500 == 0) {
-		fprintf(stderr, "End page_multi_string-test basic_cmp\n");
-	}
 	retval = 0;
 cleanup:
 	rl_close(db);
 	return retval;
 }
 
-static int test_cmp2(int expected_cmp, long position)
+static int test_cmp(int expected_cmp, long position_from, long position_to)
+{
+	int retval;
+	long i;
+	fprintf(stderr, "Start page_multi_string-test test_cmp %d %ld %ld\n", expected_cmp, position_from, position_to);
+	for (i = position_from; i < position_to; i++) {
+		RL_CALL(test_cmp_internal, 0, expected_cmp, i);
+	}
+	fprintf(stderr, "End page_multi_string-test basic_cmp\n");
+cleanup:
+	return retval;
+}
+
+static int test_cmp2_internal(int expected_cmp, long position)
 {
 	unsigned char data[CMP_SIZE], data2[CMP_SIZE];
 	long size = CMP_SIZE, i;
 	int cmp;
 	long p1;
 	rlite *db = NULL;
-	if (position % 500 == 0) {
-		fprintf(stderr, "Start page_multi_string-test test_cmp2 %d %ld\n", expected_cmp, position);
-	}
 	int retval = rl_open(":memory:", &db, RLITE_OPEN_READWRITE | RLITE_OPEN_CREATE);
 	if (retval != RL_OK) {
 		fprintf(stderr, "Unable to open rlite\n");
@@ -290,13 +296,22 @@ static int test_cmp2(int expected_cmp, long position)
 		goto cleanup;
 	}
 
-	if (position % 500 == 0) {
-		fprintf(stderr, "End page_multi_string-test basic_cmp\n");
-	}
-
 	retval = 0;
 cleanup:
 	rl_close(db);
+	return retval;
+}
+
+static int test_cmp2(int expected_cmp, long position_from, long position_to)
+{
+	int retval;
+	long i;
+	fprintf(stderr, "Start page_multi_string-test test_cmp2 %d %ld %ld\n", expected_cmp, position_from, position_to);
+	for (i = position_from; i < position_to; i++) {
+		RL_CALL(test_cmp2_internal, 0, expected_cmp, i);
+	}
+	fprintf(stderr, "End page_multi_string-test basic_cmp2\n");
+cleanup:
 	return retval;
 }
 
@@ -304,14 +319,14 @@ RL_TEST_MAIN_START(multi_string_test)
 {
 	RL_TEST(basic_set_get, 0);
 	RL_TEST(test_cmp_different_length, 0);
-	RL_TEST(test_cmp, 0, 0);
+	RL_TEST(test_cmp, 0, 0, 1);
 	RL_TEST(test_sha, 100);
 	RL_TEST(test_sha, 1000);
 	long i, j;
 	for (i = 0; i < 2; i++) {
-		for (j = 0; j < CMP_SIZE; j++) {
-			RL_TEST(test_cmp, i * 2 - 1, j);
-			RL_TEST(test_cmp2, i * 2 - 1, j);
+		for (j = 0; j < CMP_SIZE / 500; j++) {
+			RL_TEST(test_cmp, i * 2 - 1, j * 500, (j + 1) * 500);
+			RL_TEST(test_cmp2, i * 2 - 1, j * 500, (j + 1) * 500);
 		}
 	}
 }
