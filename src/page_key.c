@@ -8,7 +8,6 @@
 
 int rl_key_set(rlite *db, const unsigned char *key, long keylen, unsigned char type, long value_page, unsigned long long expires)
 {
-	int called_add_element = 0;
 	int retval;
 	rl_key *key_obj = NULL;
 	unsigned char *digest;
@@ -21,15 +20,20 @@ int rl_key_set(rlite *db, const unsigned char *key, long keylen, unsigned char t
 	key_obj->type = type;
 	key_obj->value_page = value_page;
 	key_obj->expires = expires;
-	called_add_element = 1;
-	retval = rl_btree_remove_element(db, btree, digest);
-	if (retval != RL_OK && retval != RL_NOT_FOUND) {
+
+	retval = rl_btree_update_element(db, btree, digest, key_obj);
+	if (retval == RL_NOT_FOUND) {
+		RL_CALL(rl_btree_add_element, RL_OK, db, btree, digest, key_obj);
+	}
+	else if (retval == RL_OK) {
+		rl_free(digest);
+	}
+	else {
 		goto cleanup;
 	}
-	RL_CALL(rl_btree_add_element, RL_OK, db, btree, digest, key_obj);
 	retval = RL_OK;
 cleanup:
-	if (retval != RL_OK && !called_add_element) {
+	if (retval != RL_OK) {
 		rl_free(digest);
 		rl_free(key_obj);
 	}

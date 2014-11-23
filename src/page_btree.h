@@ -72,6 +72,7 @@ int rl_btree_create(struct rlite *db, rl_btree **btree, rl_btree_type *type, lon
 int rl_btree_destroy(struct rlite *db, void *btree);
 int rl_btree_node_destroy(struct rlite *db, void *node);
 int rl_btree_add_element(struct rlite *db, rl_btree *btree, void *score, void *value);
+int rl_btree_update_element(struct rlite *db, rl_btree *btree, void *score, void *value);
 int rl_btree_remove_element(struct rlite *db, rl_btree *btree, void *score);
 int rl_btree_find_score(struct rlite *db, rl_btree *btree, void *score, void **value, rl_btree_node *** nodes, long **positions);
 int rl_print_btree(struct rlite *db, rl_btree *btree);

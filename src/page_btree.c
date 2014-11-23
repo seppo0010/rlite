@@ -417,6 +417,41 @@ cleanup:
 	return retval;
 }
 
+int rl_btree_update_element(rlite *db, rl_btree *btree, void *score, void *value)
+{
+	int retval;
+	long *positions = NULL;
+	rl_btree_node **nodes;
+	RL_MALLOC(nodes, sizeof(rl_btree_node *) * btree->height);
+	RL_MALLOC(positions, sizeof(long) * btree->height);
+	long i;
+	long node_page;
+	RL_CALL(rl_btree_find_score, RL_FOUND, db, btree, score, NULL, &nodes, &positions);
+
+	rl_btree_node *node;
+	for (i = btree->height - 1; i >= 0; i--) {
+		node = nodes[i];
+		if (!node) {
+			continue;
+		}
+
+		if (i == 0) {
+			node_page = btree->root;
+		}
+		else {
+			node_page = nodes[i - 1]->children[positions[i - 1]];
+		}
+		rl_free(node->values[positions[i]]);
+		node->values[positions[i]] = value;
+		RL_CALL(rl_write, RL_OK, db, btree->type->btree_node_type, node_page, node);
+		break;
+	}
+cleanup:
+	rl_free(nodes);
+	rl_free(positions);
+	return retval;
+}
+
 int rl_btree_remove_element(rlite *db, rl_btree *btree, void *score)
 {
 	void *tmp;
