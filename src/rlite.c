@@ -347,11 +347,14 @@ cleanup:
 	return retval;
 }
 
-int rl_get_key_btree(rlite *db, rl_btree **retbtree)
+int rl_get_key_btree(rlite *db, rl_btree **retbtree, int create)
 {
 	void *_btree;
 	int retval;
 	if (!db->databases[db->selected_database]) {
+		if (!create) {
+			return RL_NOT_FOUND;
+		}
 		rl_btree *btree;
 		long max_node_size = (db->page_size - 8) / 8; // TODO: this should be in the type
 		RL_CALL(rl_btree_create, RL_OK, db, &btree, &rl_btree_type_hash_sha1_key, max_node_size);
@@ -498,6 +501,7 @@ int rl_read_from_cache(rlite *db, rl_data_type *type, long page_number, void **o
 
 int rl_read(rlite *db, rl_data_type *type, long page, void *context, void **obj, int cache)
 {
+	// printf("r %ld %s\n", page, type->name);
 #ifdef DEBUG
 	int keep = 0;
 	long initial_page_size = db->page_size;
@@ -655,6 +659,7 @@ cleanup:
 
 int rl_write(struct rlite *db, rl_data_type *type, long page_number, void *obj)
 {
+	// printf("w %ld %s\n", page_number, type->name);
 	rl_page *page = NULL;
 	long pos;
 	int retval;
@@ -882,25 +887,20 @@ cleanup:
 	return retval;
 }
 
-int rl_is_balanced(rlite *db)
+int rl_database_is_balanced(rlite *db, short *pages)
 {
 	int retval;
 	void *tmp = NULL;
 	rl_key *key;
 	rl_btree *btree;
 	rl_btree_iterator *iterator = NULL;
-	short *pages = NULL;
-	long i;
-	long missing_pages = 0;
-	RL_CALL(rl_get_key_btree, RL_OK, db, &btree);
-	RL_MALLOC(pages, sizeof(short) * db->number_of_pages);
-
-	for (i = 1; i < db->number_of_pages; i++) {
-		pages[i] = 0;
+	retval = rl_get_key_btree(db, &btree, 0);
+	if (retval == RL_NOT_FOUND) {
+		retval = RL_OK;
+		goto cleanup;
 	}
-
-	for (i = 0; i < db->number_of_databases; i++) {
-		pages[db->databases[i]] = 1;
+	else if (retval != RL_OK) {
+		goto cleanup;
 	}
 
 	RL_CALL(rl_btree_pages, RL_OK, db, btree, pages);
@@ -927,13 +927,44 @@ int rl_is_balanced(rlite *db)
 		goto cleanup;
 	}
 
+	retval = RL_OK;
+
+cleanup:
+	rl_free(tmp);
+	if (iterator) {
+		rl_btree_iterator_destroy(iterator);
+	}
+	return retval;
+}
+
+int rl_is_balanced(rlite *db)
+{
+	int retval;
+	long i, selected_database = db->selected_database;
+	short *pages = NULL;
+	long missing_pages = 0;
+	RL_MALLOC(pages, sizeof(short) * db->number_of_pages);
+
+	for (i = 1; i < db->number_of_pages; i++) {
+		pages[i] = 0;
+	}
+
+	for (i = 0; i < db->number_of_databases; i++) {
+		if (db->databases[i] == 0) {
+			continue;
+		}
+		pages[db->databases[i]] = 1;
+		RL_CALL(rl_select, RL_OK, db, i);
+		RL_CALL(rl_database_is_balanced, RL_OK, db, pages);
+	}
+
+	RL_CALL(rl_select, RL_OK, db, selected_database);
+
 	long page_number = db->next_empty_page;
 	while (page_number != db->number_of_pages) {
 		pages[page_number] = 1;
 		RL_CALL(rl_long_get, RL_OK, db, &page_number, page_number);
 	}
-
-	retval = RL_OK;
 
 	for (i = 1; i < db->number_of_pages; i++) {
 		if (pages[i] == 0) {
@@ -947,10 +978,6 @@ int rl_is_balanced(rlite *db)
 		retval = RL_UNEXPECTED;
 	}
 cleanup:
-	rl_free(tmp);
-	if (iterator) {
-		rl_btree_iterator_destroy(iterator);
-	}
 	rl_free(pages);
 	return retval;
 }
@@ -995,6 +1022,25 @@ int rl_rename(struct rlite *db, const unsigned char *src, long srclen, const uns
 	RL_CALL(rl_key_get, RL_FOUND, db, src, srclen, &type, NULL, &value_page, &expires);
 	RL_CALL(rl_key_delete, RL_OK, db, src, srclen);
 	RL_CALL(rl_key_set, RL_OK, db, target, targetlen, type, value_page, expires);
+	retval = RL_OK;
+cleanup:
+	return retval;
+}
+
+int rl_dbsize(struct rlite *db, long *size)
+{
+	int retval;
+	rl_btree *btree;
+	retval = rl_get_key_btree(db, &btree, 0);
+	if (retval == RL_NOT_FOUND) {
+		*size = 0;
+		retval = RL_OK;
+		goto cleanup;
+	}
+	else if (retval != RL_OK) {
+		goto cleanup;
+	}
+	*size = btree->number_of_elements;
 	retval = RL_OK;
 cleanup:
 	return retval;

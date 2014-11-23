@@ -216,7 +216,7 @@ cleanup:
 	return retval;
 }
 
-int rl_skiplist_add(rlite *db, rl_skiplist *skiplist, double score, unsigned char *value, long valuelen)
+int rl_skiplist_add(rlite *db, rl_skiplist *skiplist, long skiplist_page, double score, unsigned char *value, long valuelen)
 {
 	void *_node;
 	rl_skiplist_node *node;
@@ -271,6 +271,7 @@ int rl_skiplist_add(rlite *db, rl_skiplist *skiplist, double score, unsigned cha
 		skiplist->right = node_page;
 	}
 	skiplist->size++;
+	RL_CALL(rl_write, RL_OK, db, &rl_data_type_skiplist, skiplist_page, skiplist);
 	retval = RL_OK;
 cleanup:
 	return retval;
@@ -332,7 +333,7 @@ cleanup:
 
 }
 
-int rl_skiplist_delete(rlite *db, rl_skiplist *skiplist, double score, unsigned char *value, long valuelen)
+int rl_skiplist_delete(rlite *db, rl_skiplist *skiplist, long skiplist_page, double score, unsigned char *value, long valuelen)
 {
 	rl_skiplist_node *update_node[RL_SKIPLIST_MAXLEVEL];
 	long update_node_page[RL_SKIPLIST_MAXLEVEL];
@@ -378,13 +379,21 @@ int rl_skiplist_delete(rlite *db, rl_skiplist *skiplist, double score, unsigned 
 
 	RL_CALL(rl_multi_string_delete, RL_OK, db, node->value);
 	RL_CALL(rl_delete, RL_OK, db, node_page);
+	node_page = skiplist->left;
 	RL_CALL(rl_read, RL_FOUND, db, &rl_data_type_skiplist_node, skiplist->left, skiplist, &_node, 1);
 	node = _node;
 	while (skiplist->level > 0 && node->level[skiplist->level - 1].right == 0) {
 		skiplist->level--;
 	}
-	skiplist->size--;
-	retval = RL_OK;
+	if (skiplist->size-- > 1) {
+		RL_CALL(rl_write, RL_OK, db, &rl_data_type_skiplist, skiplist_page, skiplist);
+		retval = RL_OK;
+	}
+	else {
+		RL_CALL(rl_delete, RL_OK, db, node_page);
+		RL_CALL(rl_delete, RL_OK, db, skiplist_page);
+		retval = RL_DELETED;
+	}
 cleanup:
 	return retval;
 }

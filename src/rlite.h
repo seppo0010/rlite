@@ -60,7 +60,7 @@ int rl_close(rlite *db);
 
 int rl_read_header(rlite *db);
 int rl_read(struct rlite *db, rl_data_type *type, long page, void *context, void **obj, int cache);
-int rl_get_key_btree(rlite *db, struct rl_btree **btree);
+int rl_get_key_btree(rlite *db, struct rl_btree **btree, int create);
 int rl_alloc_page_number(rlite *db, long *page_number);
 int rl_write(struct rlite *db, rl_data_type *type, long page, void *obj);
 int rl_purge_cache(struct rlite *db, long page);
@@ -71,6 +71,7 @@ int rl_is_balanced(struct rlite *db);
 int rl_select(struct rlite *db, int selected_database);
 int rl_move(struct rlite *db, unsigned char *key, long keylen, int database);
 int rl_rename(struct rlite *db, const unsigned char *src, long srclen, const unsigned char *target, long targetlen, int overwrite);
+int rl_dbsize(struct rlite *db, long *size);
 
 extern rl_data_type rl_data_type_header;
 extern rl_data_type rl_data_type_btree_hash_sha1_key;

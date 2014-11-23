@@ -246,7 +246,7 @@ cleanup:
 	return retval;
 }
 
-int rl_btree_add_element(rlite *db, rl_btree *btree, void *score, void *value)
+int rl_btree_add_element(rlite *db, rl_btree *btree, long btree_page, void *score, void *value)
 {
 	int retval;
 	long *positions = NULL;
@@ -406,6 +406,8 @@ int rl_btree_add_element(rlite *db, rl_btree *btree, void *score, void *value)
 		btree->height++;
 	}
 	btree->number_of_elements++;
+	RL_CALL(rl_write, RL_OK, db, btree->type->btree_type, btree_page, btree);
+	retval = RL_OK;
 cleanup:
 	if (retval != RL_OK) {
 		free(value);
@@ -452,7 +454,7 @@ cleanup:
 	return retval;
 }
 
-int rl_btree_remove_element(rlite *db, rl_btree *btree, void *score)
+int rl_btree_remove_element(struct rlite *db, rl_btree *btree, long btree_page, void *score)
 {
 	void *tmp;
 	int retval;
@@ -547,6 +549,10 @@ int rl_btree_remove_element(rlite *db, rl_btree *btree, void *score)
 				btree->height--;
 				if (node->children) {
 					btree->root = node->children[0];
+				}
+				else {
+					RL_CALL(rl_delete, RL_OK, db, btree->root);
+					btree->root = 0;
 				}
 			}
 			break;
@@ -707,7 +713,14 @@ int rl_btree_remove_element(rlite *db, rl_btree *btree, void *score)
 		}
 	}
 
-	btree->number_of_elements--;
+	if (btree->number_of_elements-- == 1) {
+		RL_CALL(rl_delete, RL_OK, db, btree_page);
+		retval = RL_DELETED;
+	}
+	else {
+		RL_CALL(rl_write, RL_OK, db, btree->type->btree_type, btree_page, btree);
+		retval = RL_OK;
+	}
 cleanup:
 	rl_free(nodes);
 	rl_free(positions);
@@ -740,10 +753,8 @@ int rl_btree_pages(rlite *db, rl_btree *btree, short *pages)
 	void *tmp;
 	rl_btree_node *node;
 	pages[btree->root] = 1;
-	int retval = rl_read(db, btree->type->btree_node_type, btree->root, btree, &tmp, 1);
-	if (retval != RL_FOUND) {
-		goto cleanup;
-	}
+	int retval;
+	RL_CALL(rl_read, RL_FOUND, db, btree->type->btree_node_type, btree->root, btree, &tmp, 1);
 	node = tmp;
 	RL_CALL(rl_btree_node_pages, RL_OK, db, btree, node, pages);
 cleanup:

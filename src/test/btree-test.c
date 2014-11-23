@@ -16,12 +16,15 @@ int basic_insert_set_test()
 	rlite *db = NULL;
 	RL_CALL_VERBOSE(setup_db, RL_OK, &db, 0, 1);
 	RL_CALL_VERBOSE(rl_btree_create, RL_OK, db, &btree, &rl_btree_type_set_long, 2);
+	long btree_page = db->next_empty_page;
+	RL_CALL_VERBOSE(rl_write, RL_OK, db, btree->type->btree_type, btree_page, btree);
+
 	long i;
 	for (i = 0; i < 7; i++) {
 		vals[i] = malloc(sizeof(long));
 		*vals[i] = i + 1;
 
-		retval = rl_btree_add_element(db, btree, vals[i], NULL);
+		retval = rl_btree_add_element(db, btree, btree_page, vals[i], NULL);
 		if (retval != RL_OK) {
 			fprintf(stderr, "Failed to add child %ld\n", i);
 			goto cleanup;
@@ -51,7 +54,6 @@ int basic_insert_set_test()
 	fprintf(stderr, "End basic_insert_set_test\n");
 	retval = 0;
 cleanup:
-	rl_free(btree);
 	free(vals);
 	if (db) {
 		rl_close(db);
@@ -70,13 +72,15 @@ int basic_insert_hash_test()
 	rlite *db = NULL;
 	RL_CALL_VERBOSE(setup_db, RL_OK, &db, 0, 1);
 	RL_CALL_VERBOSE(rl_btree_create, RL_OK, db, &btree, &rl_btree_type_hash_long_long, 2);
+	long btree_page = db->next_empty_page;
+	RL_CALL_VERBOSE(rl_write, RL_OK, db, btree->type->btree_type, btree_page, btree);
 	long i;
 	for (i = 0; i < 7; i++) {
 		keys[i] = malloc(sizeof(long));
 		vals[i] = malloc(sizeof(long));
 		*keys[i] = i + 1;
 		*vals[i] = i * 10;
-		retval = rl_btree_add_element(db, btree, keys[i], vals[i]);
+		retval = rl_btree_add_element(db, btree, btree_page, keys[i], vals[i]);
 		if (retval != RL_OK) {
 			fprintf(stderr, "Failed to add child %ld\n", i);
 			goto cleanup;
@@ -115,7 +119,6 @@ int basic_insert_hash_test()
 cleanup:
 	free(vals);
 	free(keys);
-	rl_free(btree);
 	if (db) {
 		rl_close(db);
 	}
@@ -132,6 +135,8 @@ int basic_delete_set_test(long elements, long element_to_remove, char *name)
 	long **vals = NULL;
 	RL_CALL_VERBOSE(setup_db, RL_OK, &db, 0, 1);
 	RL_CALL_VERBOSE(rl_btree_create, RL_OK, db, &btree, &rl_btree_type_set_long, 2);
+	long btree_page = db->next_empty_page;
+	RL_CALL_VERBOSE(rl_write, RL_OK, db, btree->type->btree_type, btree_page, btree);
 
 	long abs_elements = labs(elements);
 	long pos_element_to_remove = abs_elements == elements ? element_to_remove : (-element_to_remove);
@@ -140,7 +145,7 @@ int basic_delete_set_test(long elements, long element_to_remove, char *name)
 	for (i = 0; i < abs_elements; i++) {
 		vals[i] = malloc(sizeof(long));
 		*vals[i] = elements == abs_elements ? i + 1 : (-i - 1);
-		retval = rl_btree_add_element(db, btree, vals[i], NULL);
+		retval = rl_btree_add_element(db, btree, btree_page, vals[i], NULL);
 		if (RL_OK != retval) {
 			fprintf(stderr, "Failed to add child %ld\n", i);
 			goto cleanup;
@@ -154,7 +159,7 @@ int basic_delete_set_test(long elements, long element_to_remove, char *name)
 
 	// rl_print_btree(btree);
 
-	retval = rl_btree_remove_element(db, btree, vals[pos_element_to_remove - 1]);
+	retval = rl_btree_remove_element(db, btree, btree_page, vals[pos_element_to_remove - 1]);
 	if (RL_OK != retval) {
 		fprintf(stderr, "Failed to remove child %ld\n", element_to_remove - 1);
 		goto cleanup;
@@ -190,7 +195,6 @@ int basic_delete_set_test(long elements, long element_to_remove, char *name)
 	retval = 0;
 cleanup:
 	free(vals);
-	rl_free(btree);
 	if (db) {
 		rl_close(db);
 	}
@@ -218,9 +222,12 @@ int fuzzy_set_test(long size, long btree_node_size, int _commit)
 	long *nonelements = malloc(sizeof(long) * size);
 
 	void **flatten_scores = malloc(sizeof(void *) * size);
+	void *tmp;
 	long j, flatten_size;
 	RL_CALL_VERBOSE(setup_db, RL_OK, &db, _commit, 1);
 	RL_CALL_VERBOSE(rl_btree_create, RL_OK, db, &btree, &rl_btree_type_set_long, btree_node_size);
+	long btree_page = db->next_empty_page;
+	RL_CALL_VERBOSE(rl_write, RL_OK, db, btree->type->btree_type, btree_page, btree);
 
 	long i, element, *element_copy;
 
@@ -231,10 +238,12 @@ int fuzzy_set_test(long size, long btree_node_size, int _commit)
 			continue;
 		}
 		else {
+			RL_CALL_VERBOSE(rl_read, RL_FOUND, db, &rl_data_type_btree_set_long, btree_page, &rl_btree_type_set_long, &tmp, 1);
+			btree = tmp;
 			elements[i] = element;
 			element_copy = malloc(sizeof(long));
 			*element_copy = element;
-			retval = rl_btree_add_element(db, btree, element_copy, NULL);
+			retval = rl_btree_add_element(db, btree, btree_page, element_copy, NULL);
 			if (RL_OK != retval) {
 				fprintf(stderr, "Failed to add child %ld\n", i);
 				goto cleanup;
@@ -280,6 +289,9 @@ int fuzzy_set_test(long size, long btree_node_size, int _commit)
 		}
 	}
 
+	RL_CALL_VERBOSE(rl_read, RL_FOUND, db, &rl_data_type_btree_set_long, btree_page, &rl_btree_type_set_long, &tmp, 1);
+	btree = tmp;
+
 	for (i = 0; i < size; i++) {
 		retval = rl_btree_find_score(db, btree, &elements[i], NULL, NULL, NULL);
 		if (RL_FOUND != retval) {
@@ -299,7 +311,6 @@ cleanup:
 	rl_free(elements);
 	rl_free(nonelements);
 	rl_free(flatten_scores);
-	rl_free(btree);
 	if (db) {
 		rl_close(db);
 	}
@@ -319,12 +330,14 @@ int fuzzy_hash_test(long size, long btree_node_size, int _commit)
 
 	RL_CALL_VERBOSE(setup_db, RL_OK, &db, _commit, 1);
 	RL_CALL_VERBOSE(rl_btree_create, RL_OK, db, &btree, &rl_btree_type_hash_long_long, btree_node_size);
+	long btree_page = db->next_empty_page;
+	RL_CALL_VERBOSE(rl_write, RL_OK, db, btree->type->btree_type, btree_page, btree);
 
 	long i, element, value, *element_copy, *value_copy;
 
 	long j, flatten_size;
 
-	void *val;
+	void *val, *tmp;
 
 	for (i = 0; i < size; i++) {
 		element = rand();
@@ -334,13 +347,14 @@ int fuzzy_hash_test(long size, long btree_node_size, int _commit)
 			continue;
 		}
 		else {
+			RL_CALL_VERBOSE(rl_read, RL_FOUND, db, &rl_data_type_btree_hash_long_long, btree_page, &rl_btree_type_hash_long_long, &tmp, 1);
 			elements[i] = element;
 			element_copy = malloc(sizeof(long));
 			*element_copy = element;
 			values[i] = value;
 			value_copy = malloc(sizeof(long));
 			*value_copy = value;
-			retval = rl_btree_add_element(db, btree, element_copy, value_copy);
+			retval = rl_btree_add_element(db, btree, btree_page, element_copy, value_copy);
 			if (RL_OK != retval) {
 				fprintf(stderr, "Failed to add child %ld\n", i);
 				goto cleanup;
@@ -364,10 +378,9 @@ int fuzzy_hash_test(long size, long btree_node_size, int _commit)
 			}
 		}
 		if (_commit) {
-			retval = rl_commit(db);
-			if (RL_OK != retval) {
-				goto cleanup;
-			}
+			RL_CALL_VERBOSE(rl_commit, RL_OK, db);
+			RL_CALL_VERBOSE(rl_read, RL_FOUND, db, &rl_data_type_btree_hash_long_long, btree_page, &rl_btree_type_hash_long_long, &tmp, 1);
+			btree = tmp;
 		}
 	}
 
@@ -407,7 +420,6 @@ cleanup:
 	free(elements);
 	free(nonelements);
 	free(flatten_scores);
-	rl_free(btree);
 	if (db) {
 		rl_close(db);
 	}
@@ -427,6 +439,8 @@ int fuzzy_hash_test_iterator(long size, long btree_node_size, int _commit)
 	RL_CALL_VERBOSE(setup_db, RL_OK, &db, _commit, 1);
 
 	RL_CALL_VERBOSE(rl_btree_create, RL_OK, db, &btree, &rl_btree_type_hash_long_long, btree_node_size);
+	long btree_page = db->next_empty_page;
+	RL_CALL_VERBOSE(rl_write, RL_OK, db, btree->type->btree_type, btree_page, btree);
 
 	long i, element, value, *element_copy, *value_copy;
 
@@ -449,7 +463,7 @@ int fuzzy_hash_test_iterator(long size, long btree_node_size, int _commit)
 			values[i] = value;
 			value_copy = malloc(sizeof(long));
 			*value_copy = value;
-			retval = rl_btree_add_element(db, btree, element_copy, value_copy);
+			retval = rl_btree_add_element(db, btree, btree_page, element_copy, value_copy);
 			if (RL_OK != retval) {
 				fprintf(stderr, "Failed to add child %ld\n", i);
 				goto cleanup;
@@ -493,10 +507,9 @@ int fuzzy_hash_test_iterator(long size, long btree_node_size, int _commit)
 		iterator = NULL;
 
 		if (_commit) {
-			retval = rl_commit(db);
-			if (RL_OK != retval) {
-				goto cleanup;
-			}
+			RL_CALL_VERBOSE(rl_commit, RL_OK, db);
+			RL_CALL_VERBOSE(rl_read, RL_FOUND, db, &rl_data_type_btree_hash_long_long, btree_page, &rl_btree_type_hash_long_long, &tmp, 1);
+			btree = tmp;
 		}
 	}
 
@@ -508,7 +521,6 @@ cleanup:
 	free(values);
 	free(elements);
 	free(nonelements);
-	rl_free(btree);
 	if (db) {
 		rl_close(db);
 	}
@@ -520,12 +532,15 @@ int fuzzy_set_delete_test(long size, long btree_node_size, int _commit)
 {
 	fprintf(stderr, "Start fuzzy_set_delete_test %ld %ld %d\n", size, btree_node_size, _commit);
 	int retval;
+	void *tmp;
 	rlite *db = NULL;
 	rl_btree *btree = NULL;
 	long *elements = malloc(sizeof(long) * size);
 
 	RL_CALL_VERBOSE(setup_db, RL_OK, &db, _commit, 1);
 	RL_CALL_VERBOSE(rl_btree_create, RL_OK, db, &btree, &rl_btree_type_set_long, btree_node_size);
+	long btree_page = db->next_empty_page;
+	RL_CALL_VERBOSE(rl_write, RL_OK, db, btree->type->btree_type, btree_page, btree);
 
 	long i, element, *element_copy;
 
@@ -539,7 +554,7 @@ int fuzzy_set_delete_test(long size, long btree_node_size, int _commit)
 			elements[i] = element;
 			element_copy = malloc(sizeof(long));
 			*element_copy = element;
-			retval = rl_btree_add_element(db, btree, element_copy, NULL);
+			retval = rl_btree_add_element(db, btree, btree_page, element_copy, NULL);
 			if (RL_OK != retval) {
 				fprintf(stderr, "Failed to add child %ld\n", i);
 				goto cleanup;
@@ -551,10 +566,9 @@ int fuzzy_set_delete_test(long size, long btree_node_size, int _commit)
 			}
 		}
 		if (_commit) {
-			retval = rl_commit(db);
-			if (RL_OK != retval) {
-				goto cleanup;
-			}
+			RL_CALL_VERBOSE(rl_commit, RL_OK, db);
+			RL_CALL_VERBOSE(rl_read, RL_FOUND, db, &rl_data_type_btree_set_long, btree_page, &rl_btree_type_set_long, &tmp, 1);
+			btree = tmp;
 		}
 	}
 
@@ -562,70 +576,27 @@ int fuzzy_set_delete_test(long size, long btree_node_size, int _commit)
 
 	while (size > 0) {
 		i = (long)(((float)rand() / RAND_MAX) * size);
-		retval = rl_btree_remove_element(db, btree, &elements[i]);
-		if (RL_OK != retval) {
-			fprintf(stderr, "Failed to delete child %ld\n", elements[i]);
+		retval = rl_btree_remove_element(db, btree, btree_page, &elements[i]);
+		if (retval != RL_OK && retval != RL_DELETED) {
 			goto cleanup;
 		}
 
 		// rl_print_btree(btree);
 
-		retval = rl_btree_is_balanced(db, btree);
-		if (RL_OK != retval) {
-			fprintf(stderr, "Node is not balanced after deleting child %ld\n", i);
-			goto cleanup;
-		}
 		elements[i] = elements[size - 1];
-		size--;
+		if (size-- > 1) {
+			retval = rl_btree_is_balanced(db, btree);
+			if (RL_OK != retval) {
+				fprintf(stderr, "Node is not balanced after deleting child %ld\n", i);
+				goto cleanup;
+			}
+		}
 	}
 	fprintf(stderr, "End fuzzy_set_delete_test\n");
 
 	retval = 0;
 cleanup:
 	free(elements);
-	rl_free(btree);
-	if (db) {
-		rl_close(db);
-	}
-	return retval;
-}
-
-int basic_test_insert_delete_insert(int _commit)
-{
-	fprintf(stderr, "Start basic_test_insert_delete_insert %d\n", _commit);
-	int retval;
-	rlite *db = NULL;
-	rl_btree *btree = NULL;
-	RL_CALL_VERBOSE(setup_db, RL_OK, &db, _commit, 1);
-	RL_CALL_VERBOSE(rl_btree_create, RL_OK, db, &btree, &rl_btree_type_set_long, 2);
-
-	long *element = malloc(sizeof(long));
-	*element = 1;
-	retval = rl_btree_add_element(db, btree, element, NULL);
-	if (RL_OK != retval) {
-		fprintf(stderr, "Failed to add child, got %d\n", retval);
-		goto cleanup;
-	}
-
-	retval = rl_btree_remove_element(db, btree, element);
-	if (RL_OK != retval) {
-		fprintf(stderr, "Failed to remove child, got %d\n", retval);
-		goto cleanup;
-	}
-
-	element = malloc(sizeof(long));
-	*element = 1;
-	retval = rl_btree_add_element(db, btree, element, NULL);
-	if (RL_OK != retval) {
-		fprintf(stderr, "Failed to add child, got %d\n", retval);
-		goto cleanup;
-	}
-
-	fprintf(stderr, "End basic_test_insert_delete_insert\n");
-
-	retval = 0;
-cleanup:
-	rl_free(btree);
 	if (db) {
 		rl_close(db);
 	}
@@ -641,10 +612,6 @@ RL_TEST_MAIN_START(btree_test)
 	int commit;
 	RL_TEST(basic_insert_set_test, 0);
 	RL_TEST(basic_insert_hash_test, 0);
-
-	for (i = 0; i < 2; i++) {
-		RL_TEST(basic_test_insert_delete_insert, i);
-	}
 
 	long delete_tests[DELETE_TESTS_COUNT][2] = {
 		{8, 8},

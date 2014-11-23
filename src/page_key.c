@@ -35,7 +35,7 @@ int rl_key_set(rlite *db, const unsigned char *key, long keylen, unsigned char t
 	RL_MALLOC(digest, sizeof(unsigned char) * 20);
 	RL_CALL(sha1, RL_OK, key, keylen, digest);
 	rl_btree *btree;
-	RL_CALL(rl_get_key_btree, RL_OK, db, &btree);
+	RL_CALL(rl_get_key_btree, RL_OK, db, &btree, 1);
 	RL_MALLOC(key_obj, sizeof(*key_obj))
 	RL_CALL(rl_multi_string_set, RL_OK, db, &key_obj->string_page, key, keylen);
 	key_obj->type = type;
@@ -44,8 +44,7 @@ int rl_key_set(rlite *db, const unsigned char *key, long keylen, unsigned char t
 
 	retval = rl_btree_update_element(db, btree, digest, key_obj);
 	if (retval == RL_NOT_FOUND) {
-		RL_CALL(rl_btree_add_element, RL_OK, db, btree, digest, key_obj);
-		RL_CALL(rl_write, RL_OK, db, &rl_data_type_btree_hash_sha1_key, db->databases[db->selected_database], btree);
+		RL_CALL(rl_btree_add_element, RL_OK, db, btree, db->databases[db->selected_database], digest, key_obj);
 	}
 	else if (retval == RL_OK) {
 		rl_free(digest);
@@ -69,7 +68,7 @@ static int rl_key_get_ignore_expire(struct rlite *db, const unsigned char *key, 
 	RL_CALL(sha1, RL_OK, key, keylen, digest);
 	rl_btree *btree;
 	rl_key *key_obj;
-	RL_CALL(rl_get_key_btree, RL_OK, db, &btree);
+	RL_CALL(rl_get_key_btree, RL_OK, db, &btree, 0);
 	void *tmp;
 	retval = rl_btree_find_score(db, btree, digest, &tmp, NULL, NULL);
 	if (retval == RL_FOUND) {
@@ -131,12 +130,19 @@ int rl_key_delete(struct rlite *db, const unsigned char *key, long keylen)
 	rl_key *key_obj = NULL;
 	RL_MALLOC(digest, sizeof(unsigned char) * 20);
 	RL_CALL(sha1, RL_OK, key, keylen, digest);
-	RL_CALL(rl_get_key_btree, RL_OK, db, &btree);
+	RL_CALL(rl_get_key_btree, RL_OK, db, &btree, 0);
 	retval = rl_btree_find_score(db, btree, digest, &tmp, NULL, NULL);
 	if (retval == RL_FOUND) {
 		key_obj = tmp;
 		RL_CALL(rl_multi_string_delete, RL_OK, db, key_obj->string_page);
-		RL_CALL(rl_btree_remove_element, RL_OK, db, btree, digest);
+		retval = rl_btree_remove_element(db, btree, db->databases[db->selected_database], digest);
+		if (retval == RL_DELETED) {
+			db->databases[db->selected_database] = 0;
+			retval = RL_OK;
+		}
+		else if (retval != RL_OK) {
+			goto cleanup;
+		}
 	}
 cleanup:
 	rl_free(digest);

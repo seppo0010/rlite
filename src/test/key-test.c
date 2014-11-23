@@ -10,11 +10,8 @@ static int expect_key(rlite *db, unsigned char *key, long keylen, char type, lon
 {
 	unsigned char type2;
 	long page2;
-	int retval = rl_key_get(db, key, keylen, &type2, NULL, &page2, NULL);
-	if (retval != RL_FOUND) {
-		fprintf(stderr, "Unable to get key %d\n", retval);
-		return 1;
-	}
+	int retval;
+	RL_CALL_VERBOSE(rl_key_get, RL_FOUND, db, key, keylen, &type2, NULL, &page2, NULL);
 
 	if (type != type2) {
 		fprintf(stderr, "Expected type %c, got %c instead\n", type, type2);
@@ -25,7 +22,9 @@ static int expect_key(rlite *db, unsigned char *key, long keylen, char type, lon
 		fprintf(stderr, "Expected page %ld, got %ld instead\n", page, page2);
 		return 1;
 	}
-	return 0;
+	retval = 0;
+cleanup:
+	return retval;
 }
 
 int basic_test_set_get(int _commit)
@@ -39,11 +38,7 @@ int basic_test_set_get(int _commit)
 	long keylen = strlen((char *)key);
 	unsigned char type = 'A';
 	long page = 23;
-	retval = rl_key_set(db, key, keylen, type, page, 0);
-	if (retval != RL_OK) {
-		fprintf(stderr, "Unable to set key %d\n", retval);
-		goto cleanup;
-	}
+	RL_CALL_VERBOSE(rl_key_set, RL_OK, db, key, keylen, type, page, 0);
 
 	if (_commit) {
 		rl_commit(db);
@@ -97,23 +92,9 @@ int basic_test_set_delete()
 	long keylen = strlen((char *)key);
 	unsigned char type = 'A';
 	long page = 23;
-	retval = rl_key_set(db, key, keylen, type, page, 0);
-	if (retval != RL_OK) {
-		fprintf(stderr, "Unable to set key %d\n", retval);
-		goto cleanup;
-	}
-
-	retval = rl_key_delete(db, key, keylen);
-	if (retval != RL_OK) {
-		fprintf(stderr, "Unable to delete key %d\n", retval);
-		goto cleanup;
-	}
-
-	retval = rl_key_get(db, key, keylen, NULL, NULL, NULL, NULL);
-	if (retval != RL_NOT_FOUND) {
-		fprintf(stderr, "Expected not to find key, got %d instead\n", retval);
-		goto cleanup;
-	}
+	RL_CALL_VERBOSE(rl_key_set, RL_OK, db, key, keylen, type, page, 0);
+	RL_CALL_VERBOSE(rl_key_delete, RL_OK, db, key, keylen);
+	RL_CALL_VERBOSE(rl_key_get, RL_NOT_FOUND, db, key, keylen, NULL, NULL, NULL, NULL);
 
 	fprintf(stderr, "End basic_test_set_delete\n");
 	rl_close(db);
@@ -133,21 +114,13 @@ int basic_test_get_or_create(int _commit)
 	long keylen = strlen((char *)key);
 	unsigned char type = 'A';
 	long page = 100, page2 = 200; // set dummy values for != assert
-	retval = rl_key_get_or_create(db, key, keylen, type, &page);
-	if (retval != RL_NOT_FOUND) {
-		fprintf(stderr, "Unable to set key %d\n", retval);
-		goto cleanup;
-	}
+	RL_CALL_VERBOSE(rl_key_get_or_create, RL_NOT_FOUND, db, key, keylen, type, &page);
 
 	if (_commit) {
 		rl_commit(db);
 	}
 
-	retval = rl_key_get_or_create(db, key, keylen, type, &page2);
-	if (retval != RL_FOUND) {
-		fprintf(stderr, "Unable to find existing key %d\n", retval);
-		goto cleanup;
-	}
+	RL_CALL_VERBOSE(rl_key_get_or_create, RL_FOUND, db, key, keylen, type, &page2);
 	if (page != page2) {
 		fprintf(stderr, "Expected page2 %ld to match page %ld\n", page2, page);
 		goto cleanup;
@@ -182,43 +155,26 @@ int basic_test_multidb(int _commit)
 	unsigned char type = 'A';
 	long page = 100, page2 = 200, pagetest; // set dummy values for != assert
 
-	retval = rl_key_get_or_create(db, key, keylen, type, &page);
-	if (retval != RL_NOT_FOUND) {
-		fprintf(stderr, "Unable to set key %d\n", retval);
-		goto cleanup;
-	}
+	RL_CALL_VERBOSE(rl_key_get_or_create, RL_NOT_FOUND, db, key, keylen, type, &page);
 
 	if (_commit) {
-		RL_CALL(rl_commit, RL_OK, db);
+		RL_CALL_VERBOSE(rl_commit, RL_OK, db);
 	}
 
 	RL_CALL_VERBOSE(rl_select, RL_OK, db, 1);
-
-	retval = rl_key_get_or_create(db, key, keylen, type, &page2);
-	if (retval != RL_NOT_FOUND) {
-		fprintf(stderr, "Unable to set key %d\n", retval);
-		goto cleanup;
-	}
+	RL_CALL_VERBOSE(rl_key_get_or_create, RL_NOT_FOUND, db, key, keylen, type, &page2);
 
 	if (_commit) {
-		rl_commit(db);
+		RL_CALL_VERBOSE(rl_commit, RL_OK, db);
 	}
 
-	retval = rl_key_get_or_create(db, key, keylen, type, &pagetest);
-	if (retval != RL_FOUND) {
-		fprintf(stderr, "Unable to find existing key %d\n", retval);
-		goto cleanup;
-	}
+	RL_CALL_VERBOSE(rl_key_get_or_create, RL_FOUND, db, key, keylen, type, &pagetest);
 	if (pagetest != page2) {
 		fprintf(stderr, "Expected pagetest %ld to match page2 %ld\n", pagetest, page2);
 		goto cleanup;
 	}
 
-	retval = rl_key_get_or_create(db, key, keylen, type, &pagetest);
-	if (retval != RL_FOUND) {
-		fprintf(stderr, "Unable to find existing key %d\n", retval);
-		goto cleanup;
-	}
+	RL_CALL_VERBOSE(rl_key_get_or_create, RL_FOUND, db, key, keylen, type, &pagetest);
 	if (pagetest == page) {
 		fprintf(stderr, "Expected pagetest %ld to mismatch page %ld\n", pagetest, page);
 		goto cleanup;
@@ -226,11 +182,7 @@ int basic_test_multidb(int _commit)
 
 	RL_CALL_VERBOSE(rl_select, RL_OK, db, 0);
 
-	retval = rl_key_get_or_create(db, key, keylen, type, &pagetest);
-	if (retval != RL_FOUND) {
-		fprintf(stderr, "Unable to find existing key %d\n", retval);
-		goto cleanup;
-	}
+	RL_CALL_VERBOSE(rl_key_get_or_create, RL_FOUND, db, key, keylen, type, &pagetest);
 	if (pagetest != page) {
 		fprintf(stderr, "Expected pagetest %ld to match page %ld\n", pagetest, page);
 		goto cleanup;
@@ -255,31 +207,16 @@ int basic_test_move(int _commit)
 	unsigned char type = 'A';
 	long page = 100, pagetest; // set dummy values for != assert
 
-	retval = rl_key_get_or_create(db, key, keylen, type, &page);
-	if (retval != RL_NOT_FOUND) {
-		fprintf(stderr, "Unable to set key %d\n", retval);
-		goto cleanup;
-	}
+	RL_CALL_VERBOSE(rl_key_get_or_create, RL_NOT_FOUND, db, key, keylen, type, &page);
 
 	if (_commit) {
-		RL_CALL(rl_commit, RL_OK, db);
+		RL_CALL_VERBOSE(rl_commit, RL_OK, db);
 	}
 
 	RL_CALL_VERBOSE(rl_move, RL_OK, db, key, keylen, 1);
-
-	retval = rl_key_get(db, key, keylen, NULL, NULL, NULL, NULL);
-	if (retval != RL_NOT_FOUND) {
-		fprintf(stderr, "Unable to set key %d\n", retval);
-		goto cleanup;
-	}
-
+	RL_CALL_VERBOSE(rl_key_get, RL_NOT_FOUND, db, key, keylen, NULL, NULL, NULL, NULL);
 	RL_CALL_VERBOSE(rl_select, RL_OK, db, 1);
-
-	retval = rl_key_get_or_create(db, key, keylen, type, &pagetest);
-	if (retval != RL_FOUND) {
-		fprintf(stderr, "Unable to find existing key %d\n", retval);
-		goto cleanup;
-	}
+	RL_CALL_VERBOSE(rl_key_get_or_create, RL_FOUND, db, key, keylen, type, &pagetest);
 	if (pagetest != page) {
 		fprintf(stderr, "Expected pagetest %ld to match page %ld\n", pagetest, page);
 		goto cleanup;
@@ -311,7 +248,6 @@ int basic_test_expires(int _commit)
 	}
 
 	RL_CALL_VERBOSE(rl_key_get, RL_NOT_FOUND, db, key, keylen, NULL, NULL, NULL, NULL);
-
 	RL_CALL_VERBOSE(rl_key_set, RL_OK, db, key, keylen, type, page, 10000 + mstime());
 
 	if (_commit) {
@@ -496,13 +432,90 @@ static int test_rename_no_overwrite(int _commit)
 	RL_CALL_VERBOSE(rl_rename, RL_FOUND, db, key, keylen, key2, key2len, 0);
 	RL_CALL_VERBOSE(rl_zscore, RL_FOUND, db, key2, key2len, data, datalen, &scoretest);
 	if (scoretest != score2) {
-		fprintf(stderr, "Expected scoretest %lf to match score2 %lf\n on line %d\n", scoretest, score2, __LINE__);
+		fprintf(stderr, "Expected scoretest %lf to match score2 %lf on line %d\n", scoretest, score2, __LINE__);
 		retval = RL_UNEXPECTED;
 		goto cleanup;
 	}
 	RL_CALL_VERBOSE(rl_is_balanced, RL_OK, db);
 
 	fprintf(stderr, "End test_rename_no_overwrite\n");
+	retval = 0;
+cleanup:
+	rl_close(db);
+	return retval;
+}
+
+static int test_dbsize(int _commit)
+{
+	int retval = 0;
+	fprintf(stderr, "Start test_dbsize %d\n", _commit);
+
+	rlite *db;
+	RL_CALL_VERBOSE(setup_db, RL_OK, &db, _commit, 1);
+	unsigned char *key = (unsigned char *)"my key";
+	long keylen = strlen((char *)key);
+	unsigned char *key2 = (unsigned char *)"my key 2";
+	long key2len = strlen((char *)key2);
+	unsigned char *data = (unsigned char *)"asd";
+	long datalen = strlen((char *)data);
+	double score = 100, score2 = 200;
+	long size;
+
+	RL_CALL_VERBOSE(rl_zadd, RL_OK, db, key, keylen, score, data, datalen);
+	if (_commit) {
+		RL_CALL_VERBOSE(rl_commit, RL_OK, db);
+	}
+
+	RL_CALL_VERBOSE(rl_dbsize, RL_OK, db, &size);
+
+	if (size != 1) {
+		fprintf(stderr, "Expected size %ld to be %d on line %d\n", size, 1, __LINE__);
+		retval = RL_UNEXPECTED;
+		goto cleanup;
+	}
+
+	RL_CALL_VERBOSE(rl_zadd, RL_OK, db, key2, key2len, score2, data, datalen);
+	if (_commit) {
+		RL_CALL_VERBOSE(rl_commit, RL_OK, db);
+	}
+
+	RL_CALL_VERBOSE(rl_dbsize, RL_OK, db, &size);
+
+	if (size != 2) {
+		fprintf(stderr, "Expected size %ld to be %d on line %d\n", size, 2, __LINE__);
+		retval = RL_UNEXPECTED;
+		goto cleanup;
+	}
+
+	RL_CALL_VERBOSE(rl_key_delete_with_value, RL_OK, db, key, keylen);
+	if (_commit) {
+		RL_CALL_VERBOSE(rl_commit, RL_OK, db);
+	}
+
+	RL_CALL_VERBOSE(rl_dbsize, RL_OK, db, &size);
+
+	if (size != 1) {
+		fprintf(stderr, "Expected size %ld to be %d on line %d\n", size, 1, __LINE__);
+		retval = RL_UNEXPECTED;
+		goto cleanup;
+	}
+
+	RL_CALL_VERBOSE(rl_key_delete_with_value, RL_OK, db, key2, key2len);
+	if (_commit) {
+		RL_CALL_VERBOSE(rl_commit, RL_OK, db);
+	}
+
+	RL_CALL_VERBOSE(rl_dbsize, RL_OK, db, &size);
+
+	if (size != 0) {
+		fprintf(stderr, "Expected size %ld to be %d on line %d\n", size, 0, __LINE__);
+		retval = RL_UNEXPECTED;
+		goto cleanup;
+	}
+
+	RL_CALL_VERBOSE(rl_is_balanced, RL_OK, db);
+
+	fprintf(stderr, "End test_dbsize\n");
 	retval = 0;
 cleanup:
 	rl_close(db);
@@ -523,6 +536,7 @@ RL_TEST_MAIN_START(key_test)
 		RL_TEST(test_rename_ok, i);
 		RL_TEST(test_rename_overwrite, i);
 		RL_TEST(test_rename_no_overwrite, i);
+		RL_TEST(test_dbsize, i);
 	}
 	RL_TEST(basic_test_get_unexisting, 0);
 	RL_TEST(basic_test_set_delete, 0);

@@ -35,9 +35,9 @@ int main() {
 	RUN_TEST(list_test);
 	RUN_TEST(rlite_test);
 	RUN_TEST(string_test);
-	RUN_TEST(type_zset_test);
 	RUN_TEST(key_test);
 	RUN_TEST(multi_string_test);
 	RUN_TEST(skiplist_test);
+	RUN_TEST(type_zset_test);
 	return retval;
 }

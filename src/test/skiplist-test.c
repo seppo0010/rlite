@@ -13,19 +13,19 @@ int basic_skiplist_test(int sign, int commit)
 	fprintf(stderr, "Start basic_skiplist_test %d %d\n", sign, commit);
 
 	rlite *db;
+	void *tmp;
 	int retval;
 	RL_CALL_VERBOSE(setup_db, RL_OK, &db, commit, 1);
 	rl_skiplist *skiplist;
-	retval = rl_skiplist_create(db, &skiplist);
-	if (retval != RL_OK) {
-		goto cleanup;
-	}
+	RL_CALL(rl_skiplist_create, RL_OK, db, &skiplist);
+	long skiplist_page = db->next_empty_page;
+	RL_CALL(rl_write, RL_OK, db, &rl_data_type_skiplist, skiplist_page, skiplist);
 
 	long i;
 	unsigned char *data = malloc(sizeof(unsigned char) * 1);
 	for (i = 0; i < TEST_SIZE; i++) {
 		data[0] = i;
-		retval = rl_skiplist_add(db, skiplist, 5.2 * i * sign, data, 1);
+		retval = rl_skiplist_add(db, skiplist, skiplist_page, 5.2 * i * sign, data, 1);
 		if (retval != RL_OK) {
 			fprintf(stderr, "Unable to add item %ld to skiplist, got %d\n", i, retval);
 			goto cleanup;
@@ -36,10 +36,11 @@ int basic_skiplist_test(int sign, int commit)
 			goto cleanup;
 		}
 		if (commit) {
-			rl_commit(db);
+			RL_CALL_VERBOSE(rl_commit, RL_OK, db);
+			RL_CALL_VERBOSE(rl_read, RL_FOUND, db, &rl_data_type_skiplist, skiplist_page, NULL, &tmp, 1);
+			skiplist = tmp;
 		}
 	}
-	rl_skiplist_destroy(db, skiplist);
 	rl_free(data);
 	rl_close(db);
 	fprintf(stderr, "End basic_skiplist_test\n");
@@ -58,17 +59,16 @@ int basic_skiplist_first_node_test()
 	rl_skiplist *skiplist;
 	rl_skiplist_node *node;
 	long rank;
-	retval = rl_skiplist_create(db, &skiplist);
-	if (retval != RL_OK) {
-		goto cleanup;
-	}
+	RL_CALL(rl_skiplist_create, RL_OK, db, &skiplist);
+	long skiplist_page = db->next_empty_page;
+	RL_CALL(rl_write, RL_OK, db, &rl_data_type_skiplist, skiplist_page, skiplist);
 
 	long i, size;
 	unsigned char *data = malloc(sizeof(unsigned char) * 1);
 	unsigned char *data2;
 	for (i = 0; i < 10; i++) {
 		data[0] = i;
-		retval = rl_skiplist_add(db, skiplist, i, data, 1);
+		retval = rl_skiplist_add(db, skiplist, skiplist_page, i, data, 1);
 		if (retval != RL_OK) {
 			fprintf(stderr, "Unable to add item %ld to skiplist, got %d\n", i, retval);
 			goto cleanup;
@@ -158,7 +158,6 @@ int basic_skiplist_first_node_test()
 		goto cleanup;
 	}
 
-	rl_skiplist_destroy(db, skiplist);
 	rl_free(data);
 	rl_close(db);
 	fprintf(stderr, "End basic_skiplist_first_node_test\n");
@@ -171,14 +170,14 @@ int basic_skiplist_delete_node_test(int commit)
 {
 	fprintf(stderr, "Start basic_skiplist_delete_node_test %d\n", commit);
 
+	void *tmp;
 	rlite *db;
 	int retval;
 	RL_CALL_VERBOSE(setup_db, RL_OK, &db, 0, 1);
 	rl_skiplist *skiplist;
-	retval = rl_skiplist_create(db, &skiplist);
-	if (retval != RL_OK) {
-		goto cleanup;
-	}
+	RL_CALL(rl_skiplist_create, RL_OK, db, &skiplist);
+	long skiplist_page = db->next_empty_page;
+	RL_CALL(rl_write, RL_OK, db, &rl_data_type_skiplist, skiplist_page, skiplist);
 
 	long i;
 	unsigned char *data[10];
@@ -186,7 +185,7 @@ int basic_skiplist_delete_node_test(int commit)
 		data[i] = malloc(sizeof(unsigned char) * 1);
 		data[i][0] = i;
 		// using i / 2 to have some score collisions because i is int
-		retval = rl_skiplist_add(db, skiplist, i / 2, data[i], 1);
+		retval = rl_skiplist_add(db, skiplist, skiplist_page, i / 2, data[i], 1);
 		if (retval != RL_OK) {
 			fprintf(stderr, "Unable to add item %ld to skiplist, got %d\n", i, retval);
 			goto cleanup;
@@ -197,40 +196,41 @@ int basic_skiplist_delete_node_test(int commit)
 			goto cleanup;
 		}
 		if (commit) {
-			if (RL_OK != rl_commit(db)) {
-				fprintf(stderr, "Failed to commit in line %d\n", __LINE__);
-			}
+			RL_CALL_VERBOSE(rl_commit, RL_OK, db);
+			RL_CALL_VERBOSE(rl_read, RL_FOUND, db, &rl_data_type_skiplist, skiplist_page, NULL, &tmp, 1);
+			skiplist = tmp;
 		}
 	}
 
 	for (i = 0; i < 10; i++) {
-		retval = rl_skiplist_delete(db, skiplist, i / 2, data[i], 1);
-		if (retval != RL_OK) {
+		retval = rl_skiplist_delete(db, skiplist, skiplist_page, i / 2, data[i], 1);
+		if (retval != RL_OK && retval != RL_DELETED) {
 			fprintf(stderr, "Failed to delete node at position %ld with score %lf and value %u, got %d\n", i, (double)(i / 2), *data[i], retval);
 			goto cleanup;
 		}
 
-		retval = rl_skiplist_is_balanced(db, skiplist);
-		if (retval != RL_OK) {
-			fprintf(stderr, "Skiplist is not balanced after removing item %ld\n", i);
-			goto cleanup;
+		if (retval != RL_DELETED) {
+			retval = rl_skiplist_is_balanced(db, skiplist);
+			if (retval != RL_OK) {
+				fprintf(stderr, "Skiplist is not balanced after removing item %ld\n", i);
+				goto cleanup;
+			}
 		}
 
 		if (commit) {
-			if (RL_OK != rl_commit(db)) {
-				fprintf(stderr, "Failed to commit in line %d\n", __LINE__);
-			}
+			RL_CALL_VERBOSE(rl_commit, RL_OK, db);
+			RL_CALL_VERBOSE(rl_read, RL_FOUND, db, &rl_data_type_skiplist, skiplist_page, NULL, &tmp, 1);
+			skiplist = tmp;
 		}
 	}
 
-	rl_skiplist_destroy(db, skiplist);
 	for (i = 0; i < 10; i++) {
 		rl_free(data[i]);
 	}
-	rl_close(db);
 	fprintf(stderr, "End basic_skiplist_delete_node_test\n");
 	retval = 0;
 cleanup:
+	rl_close(db);
 	return retval;
 }
 
@@ -243,16 +243,15 @@ int basic_skiplist_node_by_rank()
 	RL_CALL_VERBOSE(setup_db, RL_OK, &db, 0, 1);
 	rl_skiplist *skiplist;
 	rl_skiplist_node *node;
-	retval = rl_skiplist_create(db, &skiplist);
-	if (retval != RL_OK) {
-		goto cleanup;
-	}
+	RL_CALL(rl_skiplist_create, RL_OK, db, &skiplist);
+	long skiplist_page = db->next_empty_page;
+	RL_CALL(rl_write, RL_OK, db, &rl_data_type_skiplist, skiplist_page, skiplist);
 
 	long i;
 	unsigned char *data = malloc(sizeof(unsigned char) * 1);
 	for (i = 0; i < TEST_SIZE; i++) {
 		data[0] = i;
-		retval = rl_skiplist_add(db, skiplist, 5.2 * i, data, 1);
+		retval = rl_skiplist_add(db, skiplist, skiplist_page, 5.2 * i, data, 1);
 		if (retval != RL_OK) {
 			fprintf(stderr, "Unable to add item %ld to skiplist, got %d\n", i, retval);
 			goto cleanup;
@@ -271,7 +270,6 @@ int basic_skiplist_node_by_rank()
 			goto cleanup;
 		}
 	}
-	rl_skiplist_destroy(db, skiplist);
 	rl_free(data);
 	rl_close(db);
 	fprintf(stderr, "End basic_skiplist_node_by_rank\n");
@@ -290,17 +288,16 @@ int basic_skiplist_iterator_test(int commit)
 	rl_skiplist_iterator *iterator;
 	rl_skiplist *skiplist;
 	rl_skiplist_node *node;
-	retval = rl_skiplist_create(db, &skiplist);
-	if (retval != RL_OK) {
-		goto cleanup;
-	}
+	RL_CALL(rl_skiplist_create, RL_OK, db, &skiplist);
+	long skiplist_page = db->next_empty_page;
+	RL_CALL(rl_write, RL_OK, db, &rl_data_type_skiplist, skiplist_page, skiplist);
 
 	int cmp;
 	long i;
 	unsigned char *data = malloc(sizeof(unsigned char) * 1);
 	for (i = 0; i < TEST_SIZE; i++) {
 		data[0] = i;
-		retval = rl_skiplist_add(db, skiplist, 5.2 * i, data, 1);
+		retval = rl_skiplist_add(db, skiplist, skiplist_page, 5.2 * i, data, 1);
 		if (retval != RL_OK) {
 			fprintf(stderr, "Unable to add item %ld to skiplist, got %d\n", i, retval);
 			goto cleanup;
@@ -456,7 +453,6 @@ int basic_skiplist_iterator_test(int commit)
 	}
 
 
-	rl_skiplist_destroy(db, skiplist);
 	rl_free(data);
 	rl_close(db);
 	fprintf(stderr, "End basic_skiplist_iterator_test\n");
