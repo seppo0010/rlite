@@ -5,6 +5,27 @@
 #include "page_btree.h"
 #include "page_key.h"
 #include "page_multi_string.h"
+#include "type_zset.h"
+
+rl_type types[] = {
+	{
+		RL_TYPE_ZSET,
+		"zset",
+		rl_zset_delete
+	},
+};
+
+static int get_type(char identifier, rl_type **type)
+{
+	long i;
+	for (i = 0; i < 1; i++) {
+		if (types[i].identifier == identifier) {
+			*type = &types[i];
+			return RL_OK;
+		}
+	}
+	return RL_UNEXPECTED;
+}
 
 int rl_key_set(rlite *db, const unsigned char *key, long keylen, unsigned char type, long value_page, unsigned long long expires)
 {
@@ -123,6 +144,19 @@ int rl_key_expires(struct rlite *db, const unsigned char *key, long keylen, unsi
 	long string_page, value_page;
 	RL_CALL(rl_key_get, RL_FOUND, db, key, keylen, &type, &string_page, &value_page, NULL);
 	RL_CALL(rl_key_set, RL_OK, db, key, keylen, type, value_page, expires);
+cleanup:
+	return retval;
+}
+
+int rl_key_delete_with_value(struct rlite *db, unsigned char *key, long keylen)
+{
+	int retval;
+	unsigned char identifier;
+	rl_type *type;
+	long value_page;
+	RL_CALL(rl_key_get, RL_FOUND, db, key, keylen, &identifier, NULL, &value_page, NULL);
+	RL_CALL(get_type, RL_OK, identifier, &type);
+	RL_CALL(type->delete, RL_OK, db, key, keylen);
 cleanup:
 	return retval;
 }

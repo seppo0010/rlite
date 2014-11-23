@@ -4,6 +4,7 @@
 #include "test_util.h"
 #include "../page_key.h"
 #include "../rlite.h"
+#include "../type_zset.h"
 
 static int expect_key(rlite *db, unsigned char *key, long keylen, char type, long page)
 {
@@ -373,6 +374,30 @@ cleanup:
 	return retval;
 }
 
+int test_delete_with_value(int _commit)
+{
+	int retval = 0;
+	fprintf(stderr, "Start test_delete_with_value %d\n", _commit);
+
+	rlite *db;
+	RL_CALL_VERBOSE(setup_db, RL_OK, &db, _commit, 1);
+	unsigned char *key = (unsigned char *)"my key";
+	long keylen = strlen((char *)key);
+
+	RL_CALL_VERBOSE(rl_zadd, RL_OK, db, key, keylen, 100, (unsigned char *)"asd", 3);
+	if (_commit) {
+		RL_CALL_VERBOSE(rl_commit, RL_OK, db);
+	}
+	RL_CALL_VERBOSE(rl_key_delete_with_value, RL_OK, db, key, keylen);
+	RL_CALL_VERBOSE(rl_is_balanced, RL_OK, db);
+
+	fprintf(stderr, "End test_delete_with_value\n");
+	retval = 0;
+cleanup:
+	rl_close(db);
+	return retval;
+}
+
 RL_TEST_MAIN_START(key_test)
 {
 	long i;
@@ -383,6 +408,7 @@ RL_TEST_MAIN_START(key_test)
 		RL_TEST(basic_test_move, i);
 		RL_TEST(basic_test_expires, i);
 		RL_TEST(basic_test_change_expiration, i);
+		RL_TEST(test_delete_with_value, i);
 	}
 	RL_TEST(basic_test_get_unexisting, 0);
 	RL_TEST(basic_test_set_delete, 0);

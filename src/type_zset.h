@@ -45,5 +45,6 @@ int rl_zscore(rlite *db, unsigned char *key, long keylen, unsigned char *data, l
 int rl_zunionstore(rlite *db, long keys_size, unsigned char **keys, long *keys_len, double *weights, int aggregate);
 
 int rl_zset_pages(struct rlite *db, long page, short *pages);
+int rl_zset_delete(rlite *db, unsigned char *key, long keylen);
 
 #endif

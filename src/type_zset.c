@@ -1045,3 +1045,23 @@ cleanup:
 	}
 	return retval;
 }
+
+int rl_zset_delete(rlite *db, unsigned char *key, long keylen)
+{
+	long levels_page_number, skiplist_page, scores_page;
+	rl_skiplist *skiplist;
+	rl_btree *scores;
+	int retval;
+	void *tmp;
+	RL_CALL(rl_zset_get_objects, RL_OK, db, key, keylen, &levels_page_number, &scores, &scores_page, &skiplist, &skiplist_page, 0);
+	RL_CALL(rl_skiplist_delete_all, RL_OK, db, skiplist);
+	RL_CALL(rl_delete, RL_OK, db, skiplist_page);
+	RL_CALL(rl_btree_delete, RL_OK, db, scores);
+	RL_CALL(rl_delete, RL_OK, db, scores_page);
+	RL_CALL(rl_read, RL_FOUND, db, &rl_data_type_list_long, levels_page_number, &list_long, &tmp, 1);
+	RL_CALL(rl_list_delete, RL_OK, db, tmp);
+	RL_CALL(rl_delete, RL_OK, db, levels_page_number);
+	RL_CALL(rl_key_delete, RL_OK, db, key, keylen);
+cleanup:
+	return retval;
+}
