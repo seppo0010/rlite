@@ -19,7 +19,6 @@
 #define DEFAULT_WRITE_PAGES_LEN 8
 #define DEFAULT_PAGE_SIZE 1024
 #define HEADER_SIZE 100
-#define GLOBAL_KEY_BTREE 1
 
 int rl_header_serialize(struct rlite *db, void *obj, unsigned char *data);
 int rl_header_deserialize(struct rlite *db, void **obj, void *context, unsigned char *data);
@@ -174,11 +173,18 @@ int rl_header_serialize(struct rlite *db, void *UNUSED(obj), unsigned char *data
 	put_4bytes(&data[identifier_len], db->page_size);
 	put_4bytes(&data[identifier_len + 4], db->next_empty_page);
 	put_4bytes(&data[identifier_len + 8], db->number_of_pages);
+	put_4bytes(&data[identifier_len + 12], db->number_of_databases);
+	long i, pos = identifier_len + 16;
+	for (i = 0; i < db->number_of_databases; i++) {
+		put_4bytes(&data[pos], db->databases[i]);
+		pos += 4;
+	}
 	return RL_OK;
 }
 
 int rl_header_deserialize(struct rlite *db, void **UNUSED(obj), void *UNUSED(context), unsigned char *data)
 {
+	int retval = RL_OK;
 	int identifier_len = strlen((char *)identifier);
 	if (memcmp(data, identifier, identifier_len) != 0) {
 		fprintf(stderr, "Unexpected header, expecting %s\n", identifier);
@@ -187,7 +193,16 @@ int rl_header_deserialize(struct rlite *db, void **UNUSED(obj), void *UNUSED(con
 	db->page_size = get_4bytes(&data[identifier_len]);
 	db->next_empty_page = get_4bytes(&data[identifier_len + 4]);
 	db->number_of_pages = get_4bytes(&data[identifier_len + 8]);
-	return RL_OK;
+	db->number_of_databases = get_4bytes(&data[identifier_len + 12]);
+	RL_MALLOC(db->databases, sizeof(long) * db->number_of_databases);
+
+	long i, pos = identifier_len + 16;
+	for (i = 0; i < db->number_of_databases; i++) {
+		db->databases[i] = get_4bytes(&data[pos]);
+		pos += 4;
+	}
+cleanup:
+	return retval;
 }
 
 static int rl_ensure_pages(rlite *db)
@@ -299,6 +314,7 @@ int rl_close(rlite *db)
 	rl_discard(db);
 	rl_free(db->read_pages);
 	rl_free(db->write_pages);
+	rl_free(db->databases);
 	rl_free(db);
 	return RL_OK;
 }
@@ -317,28 +333,33 @@ int rl_has_flag(rlite *db, int flag)
 
 int rl_create_db(rlite *db)
 {
-	int retval;
+	int retval, i;
 	RL_CALL(rl_ensure_pages, RL_OK, db);
-	db->next_empty_page = 2;
-	db->number_of_pages = 2;
-	rl_btree *btree;
-	long max_node_size = (db->page_size - 8) / 8; // TODO: this should be in the type
-	RL_CALL(rl_btree_create, RL_OK, db, &btree, &rl_btree_type_hash_sha1_key, max_node_size);
-	retval = rl_write(db, &rl_data_type_btree_hash_sha1_key, GLOBAL_KEY_BTREE, btree);
-	if (retval != RL_OK) {
-		rl_discard(db);
-		goto cleanup;
+	db->next_empty_page = 1;
+	db->number_of_pages = 1;
+	db->selected_database = 0;
+	db->number_of_databases = 16;
+	RL_MALLOC(db->databases, sizeof(long) * db->number_of_databases);
+	for (i = 0; i < db->number_of_databases; i++) {
+		db->databases[i] = 0;
 	}
 cleanup:
 	return retval;
 }
 
-int rl_get_key_btree(rlite *db, rl_btree **btree)
+int rl_get_key_btree(rlite *db, rl_btree **retbtree)
 {
 	void *_btree;
 	int retval;
-	RL_CALL(rl_read, RL_FOUND, db, &rl_data_type_btree_hash_sha1_key, GLOBAL_KEY_BTREE, &rl_btree_type_hash_sha1_key, &_btree, 1);
-	*btree = _btree;
+	if (!db->databases[db->selected_database]) {
+		rl_btree *btree;
+		long max_node_size = (db->page_size - 8) / 8; // TODO: this should be in the type
+		RL_CALL(rl_btree_create, RL_OK, db, &btree, &rl_btree_type_hash_sha1_key, max_node_size);
+		db->databases[db->selected_database] = db->next_empty_page;
+		RL_CALL(rl_write, RL_OK, db, &rl_data_type_btree_hash_sha1_key, db->databases[db->selected_database], btree);
+	}
+	RL_CALL(rl_read, RL_FOUND, db, &rl_data_type_btree_hash_sha1_key, db->databases[db->selected_database], &rl_btree_type_hash_sha1_key, &_btree, 1);
+	*retbtree = _btree;
 	retval = RL_OK;
 cleanup:
 	return retval;
@@ -878,7 +899,9 @@ int rl_is_balanced(rlite *db)
 		pages[i] = 0;
 	}
 
-	pages[GLOBAL_KEY_BTREE] = 1;
+	for (i = 0; i < db->number_of_databases; i++) {
+		pages[db->databases[i]] = 1;
+	}
 
 	RL_CALL(rl_btree_pages, RL_OK, db, btree, pages);
 	RL_CALL(rl_btree_iterator_create, RL_OK, db, btree, &iterator);
@@ -930,4 +953,10 @@ cleanup:
 	}
 	rl_free(pages);
 	return retval;
+}
+
+int rl_select(struct rlite *db, int selected_database)
+{
+	db->selected_database = selected_database;
+	return RL_OK;
 }

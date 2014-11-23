@@ -44,6 +44,9 @@ typedef struct rlite {
 	long page_size;
 	void *driver;
 	int driver_type;
+	int selected_database;
+	int number_of_databases;
+	long *databases;
 	long read_pages_alloc;
 	long read_pages_len;
 	rl_page **read_pages;
@@ -65,6 +68,7 @@ int rl_delete(struct rlite *db, long page);
 int rl_commit(struct rlite *db);
 int rl_discard(struct rlite *db);
 int rl_is_balanced(struct rlite *db);
+int rl_select(struct rlite *db, int selected_database);
 
 extern rl_data_type rl_data_type_header;
 extern rl_data_type rl_data_type_btree_hash_sha1_key;
