@@ -974,6 +974,28 @@ int rl_move(struct rlite *db, unsigned char *key, long keylen, int database)
 	RL_CALL(rl_select, RL_OK, db, database);
 	RL_CALL(rl_key_set, RL_OK, db, key, keylen, type, value_page, expires);
 	RL_CALL(rl_select, RL_OK, db, olddb);
+	retval = RL_OK;
+cleanup:
+	return retval;
+}
+
+int rl_rename(struct rlite *db, const unsigned char *src, long srclen, const unsigned char *target, long targetlen, int overwrite)
+{
+	int retval;
+	unsigned char type;
+	unsigned long long expires;
+	long value_page;
+	if (overwrite) {
+		RL_CALL(rl_key_delete_with_value, RL_OK, db, target, targetlen);
+	}
+	else {
+		RL_CALL(rl_key_get, RL_NOT_FOUND, db, target, targetlen, NULL, NULL, NULL, NULL);
+	}
+	// this could be more efficient, if we don't delete the value page
+	RL_CALL(rl_key_get, RL_FOUND, db, src, srclen, &type, NULL, &value_page, &expires);
+	RL_CALL(rl_key_delete, RL_OK, db, src, srclen);
+	RL_CALL(rl_key_set, RL_OK, db, target, targetlen, type, value_page, expires);
+	retval = RL_OK;
 cleanup:
 	return retval;
 }

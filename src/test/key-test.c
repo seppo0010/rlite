@@ -398,6 +398,117 @@ cleanup:
 	return retval;
 }
 
+static int test_rename_ok(int _commit)
+{
+	int retval = 0;
+	fprintf(stderr, "Start test_rename_ok %d\n", _commit);
+
+	rlite *db;
+	RL_CALL_VERBOSE(setup_db, RL_OK, &db, _commit, 1);
+	unsigned char *key = (unsigned char *)"my key";
+	long keylen = strlen((char *)key);
+	unsigned char *key2 = (unsigned char *)"my key 2";
+	long key2len = strlen((char *)key2);
+
+	RL_CALL_VERBOSE(rl_zadd, RL_OK, db, key, keylen, 100, (unsigned char *)"asd", 3);
+	if (_commit) {
+		RL_CALL_VERBOSE(rl_commit, RL_OK, db);
+	}
+	RL_CALL_VERBOSE(rl_rename, RL_OK, db, key, keylen, key2, key2len, 0);
+	RL_CALL_VERBOSE(rl_is_balanced, RL_OK, db);
+
+	fprintf(stderr, "End test_rename_ok\n");
+	retval = 0;
+cleanup:
+	rl_close(db);
+	return retval;
+}
+
+static int test_rename_overwrite(int _commit)
+{
+	int retval = 0;
+	fprintf(stderr, "Start test_rename_overwrite %d\n", _commit);
+
+	rlite *db;
+	RL_CALL_VERBOSE(setup_db, RL_OK, &db, _commit, 1);
+	unsigned char *key = (unsigned char *)"my key";
+	long keylen = strlen((char *)key);
+	unsigned char *key2 = (unsigned char *)"my key 2";
+	long key2len = strlen((char *)key2);
+	unsigned char *data = (unsigned char *)"asd";
+	long datalen = strlen((char *)data);
+	double score = 100, score2 = 200, scoretest;
+
+	RL_CALL_VERBOSE(rl_zadd, RL_OK, db, key, keylen, score, data, datalen);
+	if (_commit) {
+		RL_CALL_VERBOSE(rl_commit, RL_OK, db);
+	}
+
+	RL_CALL_VERBOSE(rl_zadd, RL_OK, db, key2, key2len, score2, data, datalen);
+	if (_commit) {
+		RL_CALL_VERBOSE(rl_commit, RL_OK, db);
+	}
+
+	RL_CALL_VERBOSE(rl_rename, RL_OK, db, key, keylen, key2, key2len, 1);
+	if (_commit) {
+		RL_CALL_VERBOSE(rl_commit, RL_OK, db);
+	}
+	RL_CALL_VERBOSE(rl_zscore, RL_FOUND, db, key2, key2len, data, datalen, &scoretest);
+	if (scoretest != score) {
+		fprintf(stderr, "Expected scoretest %lf to match score %lf on line %d\n", scoretest, score, __LINE__);
+		retval = RL_UNEXPECTED;
+		goto cleanup;
+	}
+	RL_CALL_VERBOSE(rl_is_balanced, RL_OK, db);
+
+	fprintf(stderr, "End test_rename_overwrite\n");
+	retval = 0;
+cleanup:
+	rl_close(db);
+	return retval;
+}
+
+static int test_rename_no_overwrite(int _commit)
+{
+	int retval = 0;
+	fprintf(stderr, "Start test_rename_no_overwrite %d\n", _commit);
+
+	rlite *db;
+	RL_CALL_VERBOSE(setup_db, RL_OK, &db, _commit, 1);
+	unsigned char *key = (unsigned char *)"my key";
+	long keylen = strlen((char *)key);
+	unsigned char *key2 = (unsigned char *)"my key 2";
+	long key2len = strlen((char *)key2);
+	unsigned char *data = (unsigned char *)"asd";
+	long datalen = strlen((char *)data);
+	double score = 100, score2 = 200, scoretest;
+
+	RL_CALL_VERBOSE(rl_zadd, RL_OK, db, key, keylen, score, data, datalen);
+	if (_commit) {
+		RL_CALL_VERBOSE(rl_commit, RL_OK, db);
+	}
+
+	RL_CALL_VERBOSE(rl_zadd, RL_OK, db, key2, key2len, score2, data, datalen);
+	if (_commit) {
+		RL_CALL_VERBOSE(rl_commit, RL_OK, db);
+	}
+
+	RL_CALL_VERBOSE(rl_rename, RL_FOUND, db, key, keylen, key2, key2len, 0);
+	RL_CALL_VERBOSE(rl_zscore, RL_FOUND, db, key2, key2len, data, datalen, &scoretest);
+	if (scoretest != score2) {
+		fprintf(stderr, "Expected scoretest %lf to match score2 %lf\n on line %d\n", scoretest, score2, __LINE__);
+		retval = RL_UNEXPECTED;
+		goto cleanup;
+	}
+	RL_CALL_VERBOSE(rl_is_balanced, RL_OK, db);
+
+	fprintf(stderr, "End test_rename_no_overwrite\n");
+	retval = 0;
+cleanup:
+	rl_close(db);
+	return retval;
+}
+
 RL_TEST_MAIN_START(key_test)
 {
 	long i;
@@ -409,6 +520,9 @@ RL_TEST_MAIN_START(key_test)
 		RL_TEST(basic_test_expires, i);
 		RL_TEST(basic_test_change_expiration, i);
 		RL_TEST(test_delete_with_value, i);
+		RL_TEST(test_rename_ok, i);
+		RL_TEST(test_rename_overwrite, i);
+		RL_TEST(test_rename_no_overwrite, i);
 	}
 	RL_TEST(basic_test_get_unexisting, 0);
 	RL_TEST(basic_test_set_delete, 0);

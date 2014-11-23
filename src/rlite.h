@@ -70,6 +70,7 @@ int rl_discard(struct rlite *db);
 int rl_is_balanced(struct rlite *db);
 int rl_select(struct rlite *db, int selected_database);
 int rl_move(struct rlite *db, unsigned char *key, long keylen, int database);
+int rl_rename(struct rlite *db, const unsigned char *src, long srclen, const unsigned char *target, long targetlen, int overwrite);
 
 extern rl_data_type rl_data_type_header;
 extern rl_data_type rl_data_type_btree_hash_sha1_key;

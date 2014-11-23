@@ -45,6 +45,7 @@ int rl_key_set(rlite *db, const unsigned char *key, long keylen, unsigned char t
 	retval = rl_btree_update_element(db, btree, digest, key_obj);
 	if (retval == RL_NOT_FOUND) {
 		RL_CALL(rl_btree_add_element, RL_OK, db, btree, digest, key_obj);
+		RL_CALL(rl_write, RL_OK, db, &rl_data_type_btree_hash_sha1_key, db->databases[db->selected_database], btree);
 	}
 	else if (retval == RL_OK) {
 		rl_free(digest);
