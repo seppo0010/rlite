@@ -326,6 +326,52 @@ cleanup:
 	return retval;
 }
 
+int basic_test_change_expiration(int _commit)
+{
+	int retval = 0;
+	fprintf(stderr, "Start basic_test_change_expiration %d\n", _commit);
+
+	rlite *db;
+	RL_CALL_VERBOSE(setup_db, RL_OK, &db, _commit, 1);
+	unsigned char *key = (unsigned char *)"my key";
+	long keylen = strlen((char *)key);
+	unsigned char type = 'A';
+	long page = 100;
+	unsigned long long expiration = mstime() + 1000, expirationtest;
+
+	RL_CALL_VERBOSE(rl_key_set, RL_OK, db, key, keylen, type, page, expiration);
+
+	if (_commit) {
+		RL_CALL_VERBOSE(rl_commit, RL_OK, db);
+	}
+
+	RL_CALL_VERBOSE(rl_key_get, RL_FOUND, db, key, keylen, NULL, NULL, NULL, &expirationtest);
+	if (expirationtest != expiration) {
+		fprintf(stderr, "Expected expirationtest %llu to match expiration %llu\n", expirationtest, expiration);
+		retval = RL_UNEXPECTED;
+		goto cleanup;
+	}
+	RL_CALL_VERBOSE(rl_key_expires, RL_OK, db, key, keylen, expiration + 1000);
+
+	if (_commit) {
+		RL_CALL_VERBOSE(rl_commit, RL_OK, db);
+	}
+
+	RL_CALL_VERBOSE(rl_key_get, RL_FOUND, db, key, keylen, NULL, NULL, NULL, NULL);
+	RL_CALL_VERBOSE(rl_key_expires, RL_OK, db, key, keylen, expiration - 10000);
+
+	if (_commit) {
+		RL_CALL_VERBOSE(rl_commit, RL_OK, db);
+	}
+
+	RL_CALL_VERBOSE(rl_key_get, RL_NOT_FOUND, db, key, keylen, NULL, NULL, NULL, NULL);
+
+	fprintf(stderr, "End basic_test_change_expiration\n");
+	retval = 0;
+cleanup:
+	rl_close(db);
+	return retval;
+}
 
 RL_TEST_MAIN_START(key_test)
 {
@@ -336,6 +382,7 @@ RL_TEST_MAIN_START(key_test)
 		RL_TEST(basic_test_multidb, i);
 		RL_TEST(basic_test_move, i);
 		RL_TEST(basic_test_expires, i);
+		RL_TEST(basic_test_change_expiration, i);
 	}
 	RL_TEST(basic_test_get_unexisting, 0);
 	RL_TEST(basic_test_set_delete, 0);

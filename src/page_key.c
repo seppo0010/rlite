@@ -115,3 +115,14 @@ cleanup:
 	rl_free(digest);
 	return retval;
 }
+
+int rl_key_expires(struct rlite *db, const unsigned char *key, long keylen, unsigned long long expires)
+{
+	int retval;
+	unsigned char type;
+	long string_page, value_page;
+	RL_CALL(rl_key_get, RL_FOUND, db, key, keylen, &type, &string_page, &value_page, NULL);
+	RL_CALL(rl_key_set, RL_OK, db, key, keylen, type, value_page, expires);
+cleanup:
+	return retval;
+}
