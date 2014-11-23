@@ -119,7 +119,7 @@ static int rl_zset_get_objects(rlite *db, unsigned char *key, long keylen, long 
 	}
 	else {
 		unsigned char type;
-		retval = rl_key_get(db, key, keylen, &type, NULL, &levels_page_number);
+		retval = rl_key_get(db, key, keylen, &type, NULL, &levels_page_number, NULL);
 		if (retval != RL_FOUND) {
 			goto cleanup;
 		}

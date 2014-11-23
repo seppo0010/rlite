@@ -728,7 +728,7 @@ int basic_test_zadd_zrem(int _commit)
 
 	RL_CALL_VERBOSE(rl_is_balanced, RL_OK, db);
 
-	retval = rl_key_get(db, key, keylen, NULL, NULL, NULL);
+	retval = rl_key_get(db, key, keylen, NULL, NULL, NULL, NULL);
 	if (retval != RL_NOT_FOUND) {
 		fprintf(stderr, "Expected not to find key after removing all zset elements, got %ld\n", changed);
 		goto cleanup;

@@ -966,12 +966,13 @@ int rl_move(struct rlite *db, unsigned char *key, long keylen, int database)
 	int retval;
 	int olddb = db->selected_database;
 	unsigned char type;
+	unsigned long long expires;
 	long value_page;
 	// this could be more efficient, if we don't delete the value page
-	RL_CALL(rl_key_get, RL_FOUND, db, key, keylen, &type, NULL, &value_page);
+	RL_CALL(rl_key_get, RL_FOUND, db, key, keylen, &type, NULL, &value_page, &expires);
 	RL_CALL(rl_key_delete, RL_OK, db, key, keylen);
 	RL_CALL(rl_select, RL_OK, db, database);
-	RL_CALL(rl_key_set, RL_OK, db, key, keylen, type, value_page);
+	RL_CALL(rl_key_set, RL_OK, db, key, keylen, type, value_page, expires);
 	RL_CALL(rl_select, RL_OK, db, olddb);
 cleanup:
 	return retval;

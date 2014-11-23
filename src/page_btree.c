@@ -923,8 +923,9 @@ int rl_btree_node_serialize_hash_sha1_key(rlite *UNUSED(db), void *obj, unsigned
 		data[pos + 20] = key->type;
 		put_4bytes(&data[pos + 21], key->string_page);
 		put_4bytes(&data[pos + 25], key->value_page);
-		put_4bytes(&data[pos + 29], node->children ? node->children[i] : 0);
-		pos += 33;
+		put_8bytes(&data[pos + 29], key->expires);
+		put_4bytes(&data[pos + 37], node->children ? node->children[i] : 0);
+		pos += 41;
 	}
 	put_4bytes(&data[pos], node->children ? node->children[node->size] : 0);
 	return RL_OK;
@@ -957,7 +958,8 @@ int rl_btree_node_deserialize_hash_sha1_key(rlite *db, void **obj, void *context
 		key->type = data[pos + 20];
 		key->string_page = get_4bytes(&data[pos + 21]);
 		key->value_page = get_4bytes(&data[pos + 25]);
-		child = get_4bytes(&data[pos + 29]);
+		key->expires = get_8bytes(&data[pos + 29]);
+		child = get_4bytes(&data[pos + 37]);
 		if (child != 0) {
 			if (!node->children) {
 				node->children = rl_malloc(sizeof(long) * (btree->max_node_size + 1));
@@ -971,7 +973,7 @@ int rl_btree_node_deserialize_hash_sha1_key(rlite *db, void **obj, void *context
 			}
 			node->children[i] = child;
 		}
-		pos += 33;
+		pos += 41;
 	}
 	child = get_4bytes(&data[pos]);
 	if (child != 0) {

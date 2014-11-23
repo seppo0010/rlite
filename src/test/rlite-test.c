@@ -63,17 +63,17 @@ int test_has_key()
 	const unsigned char *key = (unsigned char *)"random key";
 	long keylen = strlen((char *) key);
 	long value = 529, value2;
-	retval = rl_key_get(db, key, keylen, NULL, NULL, NULL);
+	retval = rl_key_get(db, key, keylen, NULL, NULL, NULL, NULL);
 	if (retval != RL_NOT_FOUND) {
 		fprintf(stderr, "Failed to not find unexisting key (%d)\n", retval);
 		goto cleanup;
 	}
-	retval = rl_key_set(db, key, keylen, type, value);
+	retval = rl_key_set(db, key, keylen, type, value, 0);
 	if (retval != RL_OK) {
 		fprintf(stderr, "Failed to set key (%d)\n", retval);
 		goto cleanup;
 	}
-	retval = rl_key_get(db, key, keylen, &type2, NULL, &value2);
+	retval = rl_key_get(db, key, keylen, &type2, NULL, &value2, NULL);
 	if (retval != RL_FOUND) {
 		fprintf(stderr, "Failed to find existing key (%d)\n", retval);
 		goto cleanup;

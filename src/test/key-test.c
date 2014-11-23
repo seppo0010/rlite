@@ -9,7 +9,7 @@ static int expect_key(rlite *db, unsigned char *key, long keylen, char type, lon
 {
 	unsigned char type2;
 	long page2;
-	int retval = rl_key_get(db, key, keylen, &type2, NULL, &page2);
+	int retval = rl_key_get(db, key, keylen, &type2, NULL, &page2, NULL);
 	if (retval != RL_FOUND) {
 		fprintf(stderr, "Unable to get key %d\n", retval);
 		return 1;
@@ -38,7 +38,7 @@ int basic_test_set_get(int _commit)
 	long keylen = strlen((char *)key);
 	unsigned char type = 'A';
 	long page = 23;
-	retval = rl_key_set(db, key, keylen, type, page);
+	retval = rl_key_set(db, key, keylen, type, page, 0);
 	if (retval != RL_OK) {
 		fprintf(stderr, "Unable to set key %d\n", retval);
 		goto cleanup;
@@ -70,7 +70,7 @@ int basic_test_get_unexisting()
 
 	unsigned char *key = (unsigned char *)"my key";
 	long keylen = strlen((char *)key);
-	retval = rl_key_get(db, key, keylen, NULL, NULL, NULL);
+	retval = rl_key_get(db, key, keylen, NULL, NULL, NULL, NULL);
 	if (retval != RL_NOT_FOUND) {
 		fprintf(stderr, "Expected not to find key %d\n", retval);
 		goto cleanup;
@@ -96,7 +96,7 @@ int basic_test_set_delete()
 	long keylen = strlen((char *)key);
 	unsigned char type = 'A';
 	long page = 23;
-	retval = rl_key_set(db, key, keylen, type, page);
+	retval = rl_key_set(db, key, keylen, type, page, 0);
 	if (retval != RL_OK) {
 		fprintf(stderr, "Unable to set key %d\n", retval);
 		goto cleanup;
@@ -108,7 +108,7 @@ int basic_test_set_delete()
 		goto cleanup;
 	}
 
-	retval = rl_key_get(db, key, keylen, NULL, NULL, NULL);
+	retval = rl_key_get(db, key, keylen, NULL, NULL, NULL, NULL);
 	if (retval != RL_NOT_FOUND) {
 		fprintf(stderr, "Expected not to find key, got %d instead\n", retval);
 		goto cleanup;
@@ -266,7 +266,7 @@ int basic_test_move(int _commit)
 
 	RL_CALL_VERBOSE(rl_move, RL_OK, db, key, keylen, 1);
 
-	retval = rl_key_get(db, key, keylen, NULL, NULL, NULL);
+	retval = rl_key_get(db, key, keylen, NULL, NULL, NULL, NULL);
 	if (retval != RL_NOT_FOUND) {
 		fprintf(stderr, "Unable to set key %d\n", retval);
 		goto cleanup;
@@ -291,6 +291,41 @@ cleanup:
 	return retval;
 }
 
+int basic_test_expires(int _commit)
+{
+	int retval = 0;
+	fprintf(stderr, "Start basic_test_expires %d\n", _commit);
+
+	rlite *db;
+	RL_CALL_VERBOSE(setup_db, RL_OK, &db, _commit, 1);
+	unsigned char *key = (unsigned char *)"my key";
+	long keylen = strlen((char *)key);
+	unsigned char type = 'A';
+	long page = 100;
+
+	RL_CALL_VERBOSE(rl_key_set, RL_OK, db, key, keylen, type, page, mstime() - 1);
+
+	if (_commit) {
+		RL_CALL_VERBOSE(rl_commit, RL_OK, db);
+	}
+
+	RL_CALL_VERBOSE(rl_key_get, RL_NOT_FOUND, db, key, keylen, NULL, NULL, NULL, NULL);
+
+	RL_CALL_VERBOSE(rl_key_set, RL_OK, db, key, keylen, type, page, 10000 + mstime());
+
+	if (_commit) {
+		RL_CALL_VERBOSE(rl_commit, RL_OK, db);
+	}
+
+	RL_CALL_VERBOSE(rl_key_get, RL_FOUND, db, key, keylen, NULL, NULL, NULL, NULL);
+
+	fprintf(stderr, "End basic_test_expires\n");
+	retval = 0;
+cleanup:
+	rl_close(db);
+	return retval;
+}
+
 
 RL_TEST_MAIN_START(key_test)
 {
@@ -300,6 +335,7 @@ RL_TEST_MAIN_START(key_test)
 		RL_TEST(basic_test_get_or_create, i);
 		RL_TEST(basic_test_multidb, i);
 		RL_TEST(basic_test_move, i);
+		RL_TEST(basic_test_expires, i);
 	}
 	RL_TEST(basic_test_get_unexisting, 0);
 	RL_TEST(basic_test_set_delete, 0);

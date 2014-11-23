@@ -33,6 +33,8 @@ void rl_free(void *ptr);
 
 int get_4bytes(const unsigned char *p);
 void put_4bytes(unsigned char *p, long v);
+unsigned long long get_8bytes(const unsigned char *p);
+void put_8bytes(unsigned char *p, unsigned long long v);
 int long_cmp(void *v1, void *v2);
 int sha1_cmp(void *v1, void *v2);
 int double_cmp(void *v1, void *v2);
@@ -44,5 +46,6 @@ int double_formatter(void *v2, char **formatted, int *size);
 double get_double(const unsigned char *p);
 void put_double(unsigned char *p, double v);
 int sha1(const unsigned char *data, long datalen, unsigned char digest[20]);
+unsigned long long mstime();
 
 #endif
