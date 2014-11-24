@@ -533,7 +533,7 @@ int rl_zrevrange(rlite *db, const unsigned char *key, long keylen, long start, l
 
 	int retval;
 	RL_CALL(rl_zset_get_objects, RL_OK, db, key, keylen, NULL, NULL, NULL, &skiplist, NULL, 0);
-	RL_CALL(_rl_zrange, RL_OK, db, skiplist, start, end, -1, iterator);
+	RL_CALL(_rl_zrange, RL_OK, db, skiplist, - end - 1, - start - 1, -1, iterator);
 cleanup:
 	return retval;
 }
