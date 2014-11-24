@@ -245,7 +245,7 @@ cleanup:
 
 static int test_cmp(int expected_cmp, long position_from, long position_to)
 {
-	int retval;
+	int retval = RL_OK;
 	long i;
 	fprintf(stderr, "Start page_multi_string-test test_cmp %d %ld %ld\n", expected_cmp, position_from, position_to);
 	for (i = position_from; i < position_to; i++) {
@@ -304,7 +304,7 @@ cleanup:
 
 static int test_cmp2(int expected_cmp, long position_from, long position_to)
 {
-	int retval;
+	int retval = RL_OK;
 	long i;
 	fprintf(stderr, "Start page_multi_string-test test_cmp2 %d %ld %ld\n", expected_cmp, position_from, position_to);
 	for (i = position_from; i < position_to; i++) {

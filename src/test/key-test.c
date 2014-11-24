@@ -528,7 +528,6 @@ static int test_keys(int _commit)
 	fprintf(stderr, "Start test_keys %d\n", _commit);
 
 	rlite *db;
-	RL_CALL_VERBOSE(setup_db, RL_OK, &db, _commit, 1);
 	unsigned char *key = (unsigned char *)"my key";
 	long keylen = strlen((char *)key);
 	unsigned char *key2 = (unsigned char *)"my key 2";
@@ -536,9 +535,10 @@ static int test_keys(int _commit)
 	unsigned char *data = (unsigned char *)"asd";
 	long datalen = strlen((char *)data);
 	double score = 100, score2 = 200;
-	long len, *keyslen = NULL;
+	long len = 0, *keyslen = NULL;
 	unsigned char **keys = NULL;
 	long i;
+	RL_CALL_VERBOSE(setup_db, RL_OK, &db, _commit, 1);
 
 #define FREE_KEYS()\
 	for (i = 0; i < len; i++) {\

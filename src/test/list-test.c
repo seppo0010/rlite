@@ -40,6 +40,9 @@ int basic_insert_list_test(int options)
 			case 3:
 				position = - 1 - i;
 				break;
+			default:
+				retval = RL_UNEXPECTED;
+				goto cleanup;
 		}
 		retval = rl_list_add_element(db, list, vals[i], position);
 		if (0 != retval) {
