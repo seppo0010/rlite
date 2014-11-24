@@ -10,6 +10,7 @@
 #define RL_SKIPLIST_INCLUDE_SCORE 2
 #define RL_SKIPLIST_EXCLUDE_SCORE 3
 
+struct rlite;
 struct rl_data_type;
 typedef struct {
 	long value;
@@ -30,7 +31,7 @@ typedef struct {
 } rl_skiplist;
 
 typedef struct rl_skiplist_iterator {
-	rlite *db;
+	struct rlite *db;
 	rl_skiplist *skiplist;
 	long node_page;
 	int direction; // 1 for right, -1 for left
@@ -38,22 +39,22 @@ typedef struct rl_skiplist_iterator {
 	long size;
 } rl_skiplist_iterator;
 
-int rl_skiplist_create(rlite *db, rl_skiplist **skiplist);
-int rl_skiplist_destroy(rlite *db, void *skiplist);
-int rl_skiplist_node_create(rlite *db, rl_skiplist_node **_node, long level, double score, long value);
-int rl_skiplist_node_destroy(rlite *db, void *node);
-int rl_skiplist_iterator_create(rlite *db, rl_skiplist_iterator **iterator, rl_skiplist *skiplist, long node_page, int direction, int size);
-int rl_skiplist_iterator_destroy(rlite *db, rl_skiplist_iterator *iterator);
+int rl_skiplist_create(struct rlite *db, rl_skiplist **skiplist);
+int rl_skiplist_destroy(struct rlite *db, void *skiplist);
+int rl_skiplist_node_create(struct rlite *db, rl_skiplist_node **_node, long level, double score, long value);
+int rl_skiplist_node_destroy(struct rlite *db, void *node);
+int rl_skiplist_iterator_create(struct rlite *db, rl_skiplist_iterator **iterator, rl_skiplist *skiplist, long node_page, int direction, int size);
+int rl_skiplist_iterator_destroy(struct rlite *db, rl_skiplist_iterator *iterator);
 int rl_skiplist_iterator_next(rl_skiplist_iterator *iterator, rl_skiplist_node **node);
-int rl_skiplist_add(rlite *db, rl_skiplist *skiplist, long skiplist_page, double score, unsigned char *value, long valuelen);
-int rl_skiplist_first_node(rlite *db, rl_skiplist *skiplist, double score, int range_mode, unsigned char *value, long valuelen, rl_skiplist_node **node, long *rank);
-int rl_skiplist_node_by_rank(rlite *db, rl_skiplist *skiplist, long rank, rl_skiplist_node **node, long *node_page);
-int rl_skiplist_delete(rlite *db, rl_skiplist *skiplist, long skiplist_page, double score, unsigned char *value, long valuelen);
-int rl_skiplist_delete_all(rlite *db, rl_skiplist *skiplist);
+int rl_skiplist_add(struct rlite *db, rl_skiplist *skiplist, long skiplist_page, double score, unsigned char *value, long valuelen);
+int rl_skiplist_first_node(struct rlite *db, rl_skiplist *skiplist, double score, int range_mode, unsigned char *value, long valuelen, rl_skiplist_node **node, long *rank);
+int rl_skiplist_node_by_rank(struct rlite *db, rl_skiplist *skiplist, long rank, rl_skiplist_node **node, long *node_page);
+int rl_skiplist_delete(struct rlite *db, rl_skiplist *skiplist, long skiplist_page, double score, unsigned char *value, long valuelen);
+int rl_skiplist_delete_all(struct rlite *db, rl_skiplist *skiplist);
 
-int rl_skiplist_is_balanced(rlite *db, rl_skiplist *skiplist);
+int rl_skiplist_is_balanced(struct rlite *db, rl_skiplist *skiplist);
 #ifdef DEBUG
-int rl_skiplist_print(rlite *db, rl_skiplist *skiplist);
+int rl_skiplist_print(struct rlite *db, rl_skiplist *skiplist);
 #endif
 
 int rl_skiplist_serialize(struct rlite *db, void *obj, unsigned char *data);
