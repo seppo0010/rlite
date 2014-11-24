@@ -12,6 +12,7 @@
 #define RL_WRONG_TYPE 8
 #define RL_END 9
 #define RL_DELETED 10
+#define RL_NAN 11
 
 
 #endif

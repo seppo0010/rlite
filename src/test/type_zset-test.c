@@ -838,6 +838,39 @@ cleanup:
 	return retval;
 }
 
+static int basic_test_zincrnan(int _commit)
+{
+	int retval = 0;
+	fprintf(stderr, "Start basic_test_zincrnan %d\n", _commit);
+
+	rlite *db = NULL;
+	RL_CALL_VERBOSE(setup_db, RL_OK, &db, _commit, 1);
+
+	unsigned char *key = (unsigned char *)"my key";
+	long keylen = strlen((char *)key);
+	unsigned char *data = (unsigned char *)"my data";
+	long datalen = strlen((char *)data);
+
+	RL_CALL_VERBOSE(rl_zadd, RL_OK, db, key, keylen, INFINITY, data, datalen);
+	RL_CALL_VERBOSE(rl_is_balanced, RL_OK, db);
+
+	if (_commit) {
+		RL_CALL_VERBOSE(rl_commit, RL_OK, db);
+		RL_CALL_VERBOSE(rl_is_balanced, RL_OK, db);
+	}
+
+	RL_CALL_VERBOSE(rl_zincrby, RL_NAN, db, key, keylen, -INFINITY, data, datalen, NULL);
+
+	RL_CALL_VERBOSE(rl_is_balanced, RL_OK, db);
+
+	fprintf(stderr, "End basic_test_zincrnan\n");
+	retval = 0;
+cleanup:
+	if (db) {
+		rl_close(db);
+	}
+	return retval;
+}
 #define ZINTERSTORE_KEYS 4
 #define ZINTERSTORE_MEMBERS 10
 int basic_test_zadd_zinterstore(int _commit, long params[5])
@@ -1271,6 +1304,7 @@ RL_TEST_MAIN_START(type_zset_test)
 		RL_TEST(basic_test_zadd_zremrangebyscore, i);
 		RL_TEST(basic_test_zadd_zremrangebylex, i);
 		RL_TEST(basic_test_zadd_dupe, i);
+		RL_TEST(basic_test_zincrnan, i);
 		for (j = 0; j < ZINTERSTORE_TESTS; j++) {
 			RL_TEST(basic_test_zadd_zinterstore, i, zinterunionstore_tests[j]);
 			RL_TEST(basic_test_zadd_zunionstore, i, zinterunionstore_tests[j]);

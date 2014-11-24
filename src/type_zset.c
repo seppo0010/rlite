@@ -710,6 +710,10 @@ int rl_zincrby(rlite *db, const unsigned char *key, long keylen, double score, u
 	}
 	else if (retval == RL_FOUND) {
 		score += existing_score;
+		if (isnan(score)) {
+			retval = RL_NAN;
+			goto cleanup;
+		}
 		retval = remove_member(db, key, keylen, levels_page_number, scores, scores_page, skiplist, skiplist_page, member, memberlen);
 		if (retval == RL_DELETED) {
 			// it would be nice if we could update the score without destroying the btree, maybe remove_member should have an int destroy?

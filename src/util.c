@@ -1,6 +1,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <stdio.h>
+#include <math.h>
 #include "../deps/sha1.h"
 #ifdef DEBUG
 #include <unistd.h>
@@ -202,6 +203,17 @@ unsigned long long pack754(long double f, unsigned bits, unsigned expbits)
 		return 0;    // get this special case out of the way
 	}
 
+	// This doesn't look very formal, but the values for +inf and -inf were
+	// calculated using the formula described in
+	// http://stackoverflow.com/a/3421923/551548
+	if (f == -INFINITY) {
+		return 140737360872672;
+	}
+
+	if (f == INFINITY) {
+		return 140737151196432;
+	}
+
 	// check sign and begin normalization
 	if (f < 0) {
 		sign = 1;
@@ -243,6 +255,13 @@ long double unpack754(unsigned long long i, unsigned bits, unsigned expbits)
 
 	if (i == 0) {
 		return 0.0;
+	}
+	if (i == 140737360872672) {
+		return -INFINITY;
+	}
+
+	if (i == 140737151196432) {
+		return INFINITY;
 	}
 
 	// pull the significand
