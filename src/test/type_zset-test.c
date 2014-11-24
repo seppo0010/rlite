@@ -797,6 +797,47 @@ cleanup:
 	return retval;
 }
 
+int basic_test_zadd_dupe(int _commit)
+{
+	int retval = 0;
+	fprintf(stderr, "Start basic_test_zadd_dupe %d\n", _commit);
+
+	rlite *db = NULL;
+	RL_CALL_VERBOSE(setup_db, RL_OK, &db, _commit, 1);
+
+	unsigned char *key = (unsigned char *)"my key";
+	long keylen = strlen((char *)key);
+	double score = 4.2, newscore;
+	unsigned char *data = (unsigned char *)"my data";
+	long datalen = strlen((char *)data);
+
+	RL_CALL_VERBOSE(rl_zadd, RL_OK, db, key, keylen, score, data, datalen);
+	RL_CALL_VERBOSE(rl_is_balanced, RL_OK, db);
+
+	if (_commit) {
+		RL_CALL_VERBOSE(rl_commit, RL_OK, db);
+		RL_CALL_VERBOSE(rl_is_balanced, RL_OK, db);
+	}
+
+	RL_CALL_VERBOSE(rl_zadd, RL_FOUND, db, key, keylen, score * 2, data, datalen);
+	RL_CALL_VERBOSE(rl_zscore, RL_FOUND, db, key, keylen, data, datalen, &newscore);
+	if (newscore != score * 2) {
+		fprintf(stderr, "Expected new score %lf to match incremented twice score %lf\n", newscore, 2 * score);
+		retval = RL_UNEXPECTED;
+		goto cleanup;
+	}
+
+	RL_CALL_VERBOSE(rl_is_balanced, RL_OK, db);
+
+	fprintf(stderr, "End basic_test_zadd_dupe\n");
+	retval = 0;
+cleanup:
+	if (db) {
+		rl_close(db);
+	}
+	return retval;
+}
+
 #define ZINTERSTORE_KEYS 4
 #define ZINTERSTORE_MEMBERS 10
 int basic_test_zadd_zinterstore(int _commit, long params[5])
@@ -1229,6 +1270,7 @@ RL_TEST_MAIN_START(type_zset_test)
 		RL_TEST(basic_test_zadd_zremrangebyrank, i);
 		RL_TEST(basic_test_zadd_zremrangebyscore, i);
 		RL_TEST(basic_test_zadd_zremrangebylex, i);
+		RL_TEST(basic_test_zadd_dupe, i);
 		for (j = 0; j < ZINTERSTORE_TESTS; j++) {
 			RL_TEST(basic_test_zadd_zinterstore, i, zinterunionstore_tests[j]);
 			RL_TEST(basic_test_zadd_zunionstore, i, zinterunionstore_tests[j]);

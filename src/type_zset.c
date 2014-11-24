@@ -127,6 +127,57 @@ cleanup:
 	return retval;
 }
 
+static int remove_member_score_sha1(rlite *db, const unsigned char *key, long keylen, long levels_page_number, rl_btree *scores, long scores_page, rl_skiplist *skiplist, long skiplist_page, unsigned char *member, long member_len, double score, unsigned char digest[20])
+{
+	void *tmp;
+	int retval;
+	retval = rl_btree_remove_element(db, scores, scores_page, digest);
+	if (retval != RL_OK && retval != RL_DELETED) {
+		goto cleanup;
+	}
+	retval = rl_skiplist_delete(db, skiplist, skiplist_page, score, member, member_len);
+	if (retval != RL_OK && retval != RL_DELETED) {
+		goto cleanup;
+	}
+	if (retval == RL_DELETED) {
+		RL_CALL(rl_read, RL_FOUND, db, &rl_data_type_list_long, levels_page_number, &list_long, &tmp, 1);
+		RL_CALL(rl_list_delete, RL_OK, db, tmp);
+		RL_CALL(rl_delete, RL_OK, db, levels_page_number);
+		RL_CALL(rl_key_delete, RL_OK, db, key, keylen);
+		retval = RL_DELETED;
+	}
+cleanup:
+	return retval;
+}
+
+static int remove_member_score(rlite *db, const unsigned char *key, long keylen, long levels_page_number, rl_btree *scores, long scores_page, rl_skiplist *skiplist, long skiplist_page, unsigned char *member, long member_len, double score)
+{
+	unsigned char digest[20];
+	int retval;
+	RL_CALL(sha1, RL_OK, member, member_len, digest);
+	RL_CALL(remove_member_score_sha1, RL_OK, db, key, keylen, levels_page_number, scores, scores_page, skiplist, skiplist_page, member, member_len, score, digest);
+cleanup:
+	return retval;
+}
+
+static int remove_member(rlite *db, const unsigned char *key, long keylen, long levels_page_number, rl_btree *scores, long scores_page, rl_skiplist *skiplist, long skiplist_page, unsigned char *member, long member_len)
+{
+	double score;
+	void *tmp;
+	unsigned char digest[20];
+	int retval;
+	RL_CALL(sha1, RL_OK, member, member_len, digest);
+	retval = rl_btree_find_score(db, scores, digest, &tmp, NULL, NULL);
+	if (retval != RL_FOUND && retval != RL_NOT_FOUND) {
+		goto cleanup;
+	}
+	if (retval == RL_FOUND) {
+		score = *(double *)tmp;
+		RL_CALL(remove_member_score_sha1, RL_OK, db, key, keylen, levels_page_number, scores, scores_page, skiplist, skiplist_page, member, member_len, score, digest);
+	}
+cleanup:
+	return retval;
+}
 static int add_member(rlite *db, rl_btree *scores, long scores_page, rl_skiplist *skiplist, long skiplist_page, double score, unsigned char *member, long memberlen)
 {
 	int retval;
@@ -162,12 +213,22 @@ cleanup:
 
 int rl_zadd(rlite *db, const unsigned char *key, long keylen, double score, unsigned char *member, long memberlen)
 {
+	int existed;
 	rl_btree *scores;
 	rl_skiplist *skiplist;
-	long scores_page, skiplist_page;
+	long scores_page, skiplist_page, levels_page_number;
 	int retval;
-	RL_CALL(rl_zset_get_objects, RL_OK, db, key, keylen, NULL, &scores, &scores_page, &skiplist, &skiplist_page, 1);
+	RL_CALL(rl_zset_get_objects, RL_OK, db, key, keylen, &levels_page_number, &scores, &scores_page, &skiplist, &skiplist_page, 1);
+	retval = remove_member(db, key, keylen, levels_page_number, scores, scores_page, skiplist, skiplist_page, member, memberlen);
+	if (retval != RL_OK && retval != RL_NOT_FOUND && retval != RL_DELETED) {
+		goto cleanup;
+	}
+	else if (retval == RL_DELETED) {
+		RL_CALL(rl_zset_get_objects, RL_OK, db, key, keylen, &levels_page_number, &scores, &scores_page, &skiplist, &skiplist_page, 1);
+	}
+	existed = retval != RL_NOT_FOUND; // ok or deleted means there was a value
 	RL_CALL(add_member, RL_OK, db, scores, scores_page, skiplist, skiplist_page, score, member, memberlen);
+	retval = existed ? RL_FOUND : RL_OK;
 cleanup:
 	return retval;
 }
@@ -519,57 +580,6 @@ int rl_zset_iterator_destroy(rl_zset_iterator *iterator)
 	return rl_skiplist_iterator_destroy(iterator->db, iterator);
 }
 
-static int remove_member_score_sha1(rlite *db, const unsigned char *key, long keylen, long levels_page_number, rl_btree *scores, long scores_page, rl_skiplist *skiplist, long skiplist_page, unsigned char *member, long member_len, double score, unsigned char digest[20])
-{
-	void *tmp;
-	int retval;
-	retval = rl_btree_remove_element(db, scores, scores_page, digest);
-	if (retval != RL_OK && retval != RL_DELETED) {
-		goto cleanup;
-	}
-	retval = rl_skiplist_delete(db, skiplist, skiplist_page, score, member, member_len);
-	if (retval != RL_OK && retval != RL_DELETED) {
-		goto cleanup;
-	}
-	if (retval == RL_DELETED) {
-		RL_CALL(rl_read, RL_FOUND, db, &rl_data_type_list_long, levels_page_number, &list_long, &tmp, 1);
-		RL_CALL(rl_list_delete, RL_OK, db, tmp);
-		RL_CALL(rl_delete, RL_OK, db, levels_page_number);
-		RL_CALL(rl_key_delete, RL_OK, db, key, keylen);
-		retval = RL_DELETED;
-	}
-cleanup:
-	return retval;
-}
-
-static int remove_member_score(rlite *db, const unsigned char *key, long keylen, long levels_page_number, rl_btree *scores, long scores_page, rl_skiplist *skiplist, long skiplist_page, unsigned char *member, long member_len, double score)
-{
-	unsigned char digest[20];
-	int retval;
-	RL_CALL(sha1, RL_OK, member, member_len, digest);
-	RL_CALL(remove_member_score_sha1, RL_OK, db, key, keylen, levels_page_number, scores, scores_page, skiplist, skiplist_page, member, member_len, score, digest);
-cleanup:
-	return retval;
-}
-
-static int remove_member(rlite *db, const unsigned char *key, long keylen, long levels_page_number, rl_btree *scores, long scores_page, rl_skiplist *skiplist, long skiplist_page, unsigned char *member, long member_len)
-{
-	double score;
-	void *tmp;
-	unsigned char digest[20];
-	int retval;
-	RL_CALL(sha1, RL_OK, member, member_len, digest);
-	retval = rl_btree_find_score(db, scores, digest, &tmp, NULL, NULL);
-	if (retval != RL_FOUND && retval != RL_NOT_FOUND) {
-		goto cleanup;
-	}
-	if (retval == RL_FOUND) {
-		score = *(double *)tmp;
-		RL_CALL(remove_member_score_sha1, RL_OK, db, key, keylen, levels_page_number, scores, scores_page, skiplist, skiplist_page, member, member_len, score, digest);
-	}
-cleanup:
-	return retval;
-}
 int rl_zrem(rlite *db, const unsigned char *key, long keylen, long members_size, unsigned char **members, long *members_len, long *changed)
 {
 	rl_btree *scores;
