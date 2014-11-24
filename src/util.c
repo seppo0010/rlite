@@ -289,7 +289,7 @@ int sha1(const unsigned char *data, long datalen, unsigned char digest[20])
 	return RL_OK;
 }
 
-unsigned long long mstime()
+unsigned long long rl_mstime()
 {
 	struct timeval tp;
 	gettimeofday(&tp, NULL);

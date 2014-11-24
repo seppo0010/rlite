@@ -241,14 +241,14 @@ int basic_test_expires(int _commit)
 	unsigned char type = 'A';
 	long page = 100;
 
-	RL_CALL_VERBOSE(rl_key_set, RL_OK, db, key, keylen, type, page, mstime() - 1);
+	RL_CALL_VERBOSE(rl_key_set, RL_OK, db, key, keylen, type, page, rl_mstime() - 1);
 
 	if (_commit) {
 		RL_CALL_VERBOSE(rl_commit, RL_OK, db);
 	}
 
 	RL_CALL_VERBOSE(rl_key_get, RL_NOT_FOUND, db, key, keylen, NULL, NULL, NULL, NULL);
-	RL_CALL_VERBOSE(rl_key_set, RL_OK, db, key, keylen, type, page, 10000 + mstime());
+	RL_CALL_VERBOSE(rl_key_set, RL_OK, db, key, keylen, type, page, 10000 + rl_mstime());
 
 	if (_commit) {
 		RL_CALL_VERBOSE(rl_commit, RL_OK, db);
@@ -274,7 +274,7 @@ int basic_test_change_expiration(int _commit)
 	long keylen = strlen((char *)key);
 	unsigned char type = 'A';
 	long page = 100;
-	unsigned long long expiration = mstime() + 1000, expirationtest;
+	unsigned long long expiration = rl_mstime() + 1000, expirationtest;
 
 	RL_CALL_VERBOSE(rl_key_set, RL_OK, db, key, keylen, type, page, expiration);
 
