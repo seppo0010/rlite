@@ -1,7 +1,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <stdio.h>
-#include <openssl/sha.h>
+#include "../deps/sha1.h"
 #ifdef DEBUG
 #include <unistd.h>
 #include <sys/stat.h>
@@ -51,12 +51,12 @@ void *rl_malloc(size_t size)
 		return NULL;
 	}
 
-	SHA_CTX sha;
-	SHA1_Init(&sha);
+	SHA1_CTX sha;
+	SHA1Init(&sha);
 	for (j = 0; j < nptrs; j++) {
-		SHA1_Update(&sha, strings[j], strlen(strings[j]));
+		SHA1Update(&sha, strings[j], strlen(strings[j]));
 	}
-	SHA1_Final(digest, &sha);
+	SHA1Final(digest, &sha);
 
 	_sha1_formatter(digest, hexdigest);
 
@@ -282,10 +282,10 @@ void put_double(unsigned char *p, double v)
 
 int sha1(const unsigned char *data, long datalen, unsigned char digest[20])
 {
-	SHA_CTX sha;
-	SHA1_Init(&sha);
-	SHA1_Update(&sha, data, datalen);
-	SHA1_Final(digest, &sha);
+	SHA1_CTX sha;
+	SHA1Init(&sha);
+	SHA1Update(&sha, data, datalen);
+	SHA1Final(digest, &sha);
 	return RL_OK;
 }
 

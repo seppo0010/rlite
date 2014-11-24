@@ -1,6 +1,6 @@
 #include <stdlib.h>
 #include <string.h>
-#include <openssl/sha.h>
+#include "../deps/sha1.h"
 #include "rlite.h"
 #include "page_list.h"
 #include "page_string.h"
@@ -226,8 +226,8 @@ int rl_multi_string_sha1(struct rlite *db, unsigned char digest[20], long number
 {
 	unsigned char *data;
 	long datalen;
-	SHA_CTX sha;
-	SHA1_Init(&sha);
+	SHA1_CTX sha;
+	SHA1Init(&sha);
 
 	void *tmp;
 	rl_list *list;
@@ -247,7 +247,7 @@ int rl_multi_string_sha1(struct rlite *db, unsigned char digest[20], long number
 		}
 		RL_CALL(rl_string_get, RL_OK, db, &data, *(long *)tmp);
 		datalen = size > db->page_size ? db->page_size : size;
-		SHA1_Update(&sha, data, datalen);
+		SHA1Update(&sha, data, datalen);
 		size -= datalen;
 		rl_free(tmp);
 	}
@@ -259,7 +259,7 @@ int rl_multi_string_sha1(struct rlite *db, unsigned char digest[20], long number
 
 	RL_CALL(rl_list_nocache_destroy, RL_OK, db, list);
 
-	SHA1_Final(digest, &sha);
+	SHA1Final(digest, &sha);
 	retval = RL_OK;
 cleanup:
 	if (iterator) {
