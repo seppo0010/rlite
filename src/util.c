@@ -54,7 +54,7 @@ void *rl_malloc(size_t size)
 	SHA1_CTX sha;
 	SHA1Init(&sha);
 	for (j = 0; j < nptrs; j++) {
-		SHA1Update(&sha, strings[j], strlen(strings[j]));
+		SHA1Update(&sha, (unsigned char *)strings[j], strlen(strings[j]));
 	}
 	SHA1Final(digest, &sha);
 
