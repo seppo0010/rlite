@@ -3,6 +3,7 @@
 
 #include <string.h>
 #include <limits.h>
+#include "../deps/utilfromredis.h"
 
 #ifdef DEBUG
 int expect_fail();
@@ -20,6 +21,14 @@ void rl_free(void *ptr);
 		retval = RL_OUT_OF_MEMORY;\
 		goto cleanup;\
 	}
+
+#define RL_REALLOC(ptr, size)\
+	tmp = realloc(ptr, size);\
+	if (!tmp) {\
+		retval = RL_OUT_OF_MEMORY;\
+		goto cleanup;\
+	}\
+	ptr = tmp;
 
 #define RL_CALL(func, expected, ...)\
 	retval = func(__VA_ARGS__);\

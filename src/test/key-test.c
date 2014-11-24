@@ -522,6 +522,166 @@ cleanup:
 	return retval;
 }
 
+static int test_keys(int _commit)
+{
+	int retval = 0;
+	fprintf(stderr, "Start test_keys %d\n", _commit);
+
+	rlite *db;
+	RL_CALL_VERBOSE(setup_db, RL_OK, &db, _commit, 1);
+	unsigned char *key = (unsigned char *)"my key";
+	long keylen = strlen((char *)key);
+	unsigned char *key2 = (unsigned char *)"my key 2";
+	long key2len = strlen((char *)key2);
+	unsigned char *data = (unsigned char *)"asd";
+	long datalen = strlen((char *)data);
+	double score = 100, score2 = 200;
+	long len, *keyslen = NULL;
+	unsigned char **keys = NULL;
+	long i;
+
+#define FREE_KEYS()\
+	for (i = 0; i < len; i++) {\
+		rl_free(keys[i]);\
+	}\
+	rl_free(keyslen);\
+	rl_free(keys);\
+	keys = NULL;\
+	keyslen = NULL;\
+	len = 0;
+
+	RL_CALL_VERBOSE(rl_zadd, RL_OK, db, key, keylen, score, data, datalen);
+	if (_commit) {
+		RL_CALL_VERBOSE(rl_commit, RL_OK, db);
+	}
+
+	RL_CALL_VERBOSE(rl_keys, RL_OK, db, (unsigned char*)"", 0, &len, &keys, &keyslen);
+
+	if (len != 0) {
+		fprintf(stderr, "Expected len %ld to be %d on line %d\n", len, 0, __LINE__);
+		retval = RL_UNEXPECTED;
+		goto cleanup;
+	}
+
+	FREE_KEYS();
+
+	RL_CALL_VERBOSE(rl_keys, RL_OK, db, (unsigned char*)"*", 1, &len, &keys, &keyslen);
+
+	if (len != 1) {
+		fprintf(stderr, "Expected len %ld to be %d on line %d\n", len, 1, __LINE__);
+		retval = RL_UNEXPECTED;
+		goto cleanup;
+	}
+
+	if (memcmp(keys[0], key, keylen) != 0) {
+		fprintf(stderr, "Expected keys[0] to match key on line %d\n", __LINE__);
+		retval = RL_UNEXPECTED;
+		goto cleanup;
+	}
+
+	if (keyslen[0] != keylen) {
+		fprintf(stderr, "Expected keyslen[0] to match keylen on line %d\n", __LINE__);
+		retval = RL_UNEXPECTED;
+		goto cleanup;
+	}
+
+	RL_CALL_VERBOSE(rl_zadd, RL_OK, db, key2, key2len, score2, data, datalen);
+	if (_commit) {
+		RL_CALL_VERBOSE(rl_commit, RL_OK, db);
+	}
+
+	FREE_KEYS();
+	RL_CALL_VERBOSE(rl_keys, RL_OK, db, (unsigned char*)"*", 1, &len, &keys, &keyslen);
+
+	if (len != 2) {
+		fprintf(stderr, "Expected len %ld to be %d on line %d\n", len, 2, __LINE__);
+		retval = RL_UNEXPECTED;
+		goto cleanup;
+	}
+
+	if ((keyslen[0] == keylen && memcmp(keys[0], key, keylen) != 0) || (keyslen[1] == keylen && memcmp(keys[1], key, keylen) != 0)) {
+		fprintf(stderr, "Expected keys to contain key on line %d\n", __LINE__);
+		retval = RL_UNEXPECTED;
+		goto cleanup;
+	}
+
+	if ((keyslen[0] == key2len && memcmp(keys[0], key2, key2len) != 0) || (keyslen[1] == key2len && memcmp(keys[1], key2, key2len) != 0)) {
+		fprintf(stderr, "Expected keys to contain key2 on line %d\n", __LINE__);
+		retval = RL_UNEXPECTED;
+		goto cleanup;
+	}
+
+	FREE_KEYS();
+	RL_CALL_VERBOSE(rl_keys, RL_OK, db, (unsigned char*)"*2", 2, &len, &keys, &keyslen);
+
+	if (len != 1) {
+		fprintf(stderr, "Expected len %ld to be %d on line %d\n", len, 1, __LINE__);
+		retval = RL_UNEXPECTED;
+		goto cleanup;
+	}
+
+	if (memcmp(keys[0], key2, key2len) != 0) {
+		fprintf(stderr, "Expected keys[0] to match key2 on line %d\n", __LINE__);
+		retval = RL_UNEXPECTED;
+		goto cleanup;
+	}
+
+	if (keyslen[0] != key2len) {
+		fprintf(stderr, "Expected keyslen[0] to match key2len on line %d\n", __LINE__);
+		retval = RL_UNEXPECTED;
+		goto cleanup;
+	}
+
+	RL_CALL_VERBOSE(rl_key_delete_with_value, RL_OK, db, key, keylen);
+	if (_commit) {
+		RL_CALL_VERBOSE(rl_commit, RL_OK, db);
+	}
+
+	FREE_KEYS();
+	RL_CALL_VERBOSE(rl_keys, RL_OK, db, (unsigned char*)"*", 1, &len, &keys, &keyslen);
+
+	if (len != 1) {
+		fprintf(stderr, "Expected len %ld to be %d on line %d\n", len, 1, __LINE__);
+		retval = RL_UNEXPECTED;
+		goto cleanup;
+	}
+
+	if (memcmp(keys[0], key2, key2len) != 0) {
+		fprintf(stderr, "Expected keys[0] to match key2 on line %d\n", __LINE__);
+		retval = RL_UNEXPECTED;
+		goto cleanup;
+	}
+
+	if (keyslen[0] != key2len) {
+		fprintf(stderr, "Expected keyslen[0] to match key2len on line %d\n", __LINE__);
+		retval = RL_UNEXPECTED;
+		goto cleanup;
+	}
+
+	RL_CALL_VERBOSE(rl_key_delete_with_value, RL_OK, db, key2, key2len);
+	if (_commit) {
+		RL_CALL_VERBOSE(rl_commit, RL_OK, db);
+	}
+
+	FREE_KEYS();
+	RL_CALL_VERBOSE(rl_keys, RL_OK, db, (unsigned char*)"*", 1, &len, &keys, &keyslen);
+
+	if (len != 0) {
+		fprintf(stderr, "Expected len %ld to be %d on line %d\n", len, 0, __LINE__);
+		retval = RL_UNEXPECTED;
+		goto cleanup;
+	}
+
+	RL_CALL_VERBOSE(rl_is_balanced, RL_OK, db);
+
+	fprintf(stderr, "End test_keys\n");
+	retval = 0;
+cleanup:
+	FREE_KEYS();
+	rl_close(db);
+	return retval;
+}
+
 RL_TEST_MAIN_START(key_test)
 {
 	long i;
@@ -537,6 +697,7 @@ RL_TEST_MAIN_START(key_test)
 		RL_TEST(test_rename_overwrite, i);
 		RL_TEST(test_rename_no_overwrite, i);
 		RL_TEST(test_dbsize, i);
+		RL_TEST(test_keys, i);
 	}
 	RL_TEST(basic_test_get_unexisting, 0);
 	RL_TEST(basic_test_set_delete, 0);

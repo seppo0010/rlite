@@ -207,26 +207,20 @@ cleanup:
 
 static int rl_ensure_pages(rlite *db)
 {
+	int retval = RL_OK;
 	void *tmp;
 	if (rl_has_flag(db, RLITE_OPEN_READWRITE)) {
 		if (db->write_pages_len == db->write_pages_alloc) {
-			tmp = realloc(db->write_pages, sizeof(rl_page *) * db->write_pages_alloc * 2);
-			if (!tmp) {
-				return RL_OUT_OF_MEMORY;
-			}
-			db->write_pages = tmp;
+			RL_REALLOC(db->write_pages, sizeof(rl_page *) * db->write_pages_alloc * 2)
 			db->write_pages_alloc *= 2;
 		}
 	}
 	if (db->read_pages_len == db->read_pages_alloc) {
-		tmp = realloc(db->read_pages, sizeof(rl_page *) * db->read_pages_alloc * 2);
-		if (!tmp) {
-			return RL_OUT_OF_MEMORY;
-		}
-		db->read_pages = tmp;
+		RL_REALLOC(db->read_pages, sizeof(rl_page *) * db->read_pages_alloc * 2)
 		db->read_pages_alloc *= 2;
 	}
-	return RL_OK;
+cleanup:
+	return retval;
 }
 
 int rl_open(const char *filename, rlite **_db, int flags)
@@ -1043,5 +1037,70 @@ int rl_dbsize(struct rlite *db, long *size)
 	*size = btree->number_of_elements;
 	retval = RL_OK;
 cleanup:
+	return retval;
+}
+
+int rl_keys(struct rlite *db, unsigned char *pattern, long patternlen, long *_len, unsigned char ***_result, long **_resultlen)
+{
+	int retval;
+	rl_btree *btree;
+	rl_btree_iterator *iterator;
+	rl_key *key;
+	void *tmp;
+	long alloc, len;
+	unsigned char **result = NULL, *keystr;
+	long *resultlen = NULL, keystrlen;
+	retval = rl_get_key_btree(db, &btree, 0);
+	if (retval == RL_NOT_FOUND) {
+		*_len = 0;
+		*_result = NULL;
+		*_resultlen = NULL;
+		retval = RL_OK;
+		goto cleanup;
+	}
+	else if (retval != RL_OK) {
+		goto cleanup;
+	}
+
+	RL_CALL(rl_btree_iterator_create, RL_OK, db, btree, &iterator);
+
+	len = 0;
+	alloc = 16;
+	RL_MALLOC(result, sizeof(unsigned char *) * alloc);
+	RL_MALLOC(resultlen, sizeof(long) * alloc);
+	int allkeys = patternlen == 1 && pattern[0] == '*';
+	while ((retval = rl_btree_iterator_next(iterator, NULL, &tmp)) == RL_OK) {
+		key = tmp;
+		RL_CALL(rl_multi_string_get, RL_OK, db, key->string_page, &keystr, &keystrlen);
+		if (allkeys || stringmatchlen((char *)pattern, patternlen, (char *)keystr, keystrlen, 0)) {
+			if (len + 1 == alloc) {
+				RL_REALLOC(result, sizeof(unsigned char *) * alloc * 2)
+				alloc *= 2;
+			}
+			result[len] = keystr;
+			resultlen[len] = keystrlen;
+			len++;
+		}
+		else {
+			rl_free(keystr);
+		}
+		rl_free(key);
+	}
+
+	if (retval != RL_END) {
+		goto cleanup;
+	}
+
+	// TODO: should we realloc to shrink the result?
+	*_len = len;
+	*_result = result;
+	*_resultlen = resultlen;
+
+	retval = RL_OK;
+cleanup:
+	if (retval != RL_OK) {
+		rl_free(result);
+		rl_free(resultlen);
+	}
 	return retval;
 }
