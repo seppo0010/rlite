@@ -280,6 +280,7 @@ cleanup:
 /**
  *
  * RL_SKIPLIST_BEFORE_SCORE is the last node before the score and value
+ * RL_SKIPLIST_UPTO_SCORE is the last node before the range, including exact match
  * RL_SKIPLIST_INCLUDE_SCORE is the first node in the range, including exact match
  * RL_SKIPLIST_EXCLUDE_SCORE is the first node in the range, excluding exact match
  */
@@ -287,14 +288,14 @@ int rl_skiplist_first_node(rlite *db, rl_skiplist *skiplist, double score, int r
 {
 	rl_skiplist_node *update_node[RL_SKIPLIST_MAXLEVEL];
 	long rank[RL_SKIPLIST_MAXLEVEL];
-	int exclude = range_mode == RL_SKIPLIST_BEFORE_SCORE ? 1 : 0;
-	int cmp, return_retnode = range_mode == RL_SKIPLIST_BEFORE_SCORE ? 1 : 0;
+	int exclude = range_mode == RL_SKIPLIST_BEFORE_SCORE || range_mode == RL_SKIPLIST_UPTO_SCORE ? 1 : 0;
+	int cmp, return_retnode = exclude;
 	int retval;
 	RL_CALL(rl_skiplist_get_update, RL_OK, db, skiplist, score, exclude, value, valuelen, update_node, NULL, rank);
 
 	if (range_mode == RL_SKIPLIST_INCLUDE_SCORE && update_node[0]->value) {
 		if (update_node[0]->score == score || update_node[0]->score > score) {
-			if (update_node[0]->score < score || !value || !update_node[0]->value) {
+			if (!value || !update_node[0]->value) {
 				cmp = 0;
 			}
 			else {
@@ -302,6 +303,22 @@ int rl_skiplist_first_node(rlite *db, rl_skiplist *skiplist, double score, int r
 			}
 			if (cmp == 0) {
 				return_retnode = 1;
+			}
+		}
+	}
+
+	if (range_mode == RL_SKIPLIST_UPTO_SCORE && update_node[0]->level[0].right) {
+		RL_CALL(rl_read, RL_FOUND, db, &rl_data_type_skiplist_node, update_node[0]->level[0].right, skiplist, (void **)retnode, 1);
+		update_node[1] = *retnode;
+		if (update_node[1]->score == score) {
+			if (!value || !update_node[0]->value) {
+				cmp = 0;
+			}
+			else {
+				RL_CALL(rl_multi_string_cmp_str, RL_OK, db, update_node[0]->value, value, valuelen, &cmp);
+			}
+			if (cmp == 0) {
+				return_retnode = 0;
 			}
 		}
 	}

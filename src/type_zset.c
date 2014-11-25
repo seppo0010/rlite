@@ -369,7 +369,7 @@ static int _rl_zrangebyscore(rlite *db, rl_skiplist *skiplist, rl_zrangespec *ra
 	rl_skiplist_node *node;
 	int retval;
 	RL_CALL(rl_skiplist_first_node, RL_FOUND, db, skiplist, range->min, range->minex ? RL_SKIPLIST_EXCLUDE_SCORE : RL_SKIPLIST_INCLUDE_SCORE, NULL, 0, NULL, &start);
-	retval = rl_skiplist_first_node(db, skiplist, range->max, range->maxex ? RL_SKIPLIST_BEFORE_SCORE : RL_SKIPLIST_INCLUDE_SCORE, NULL, 0, &node, &end);
+	retval = rl_skiplist_first_node(db, skiplist, range->max, range->maxex ? RL_SKIPLIST_BEFORE_SCORE : RL_SKIPLIST_UPTO_SCORE, NULL, 0, &node, &end);
 	if (retval != RL_FOUND && retval != RL_NOT_FOUND) {
 		goto cleanup;
 	}

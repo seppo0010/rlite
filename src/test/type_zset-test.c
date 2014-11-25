@@ -473,7 +473,7 @@ static int test_zrangebyscore(rlite *db, unsigned char *key, long keylen, rl_zra
 	int retval = rl_zrangebyscore(db, key, keylen, range, offset, limit, &iterator);
 	if (size != 0 || retval != RL_NOT_FOUND) {
 		if (retval != RL_OK) {
-			fprintf(stderr, "Unable to zrangebyscore, got %d\n", retval);
+			fprintf(stderr, "Unable to zrangebyscore, got %d on line %d\n", retval, __LINE__);
 			goto cleanup;
 		}
 
@@ -561,6 +561,7 @@ int basic_test_zadd_zrangebyscore(int _commit)
 	range.maxex = _maxex;\
 	if (0 != test_zrangebyscore(db, key, keylen, &range, size, base_score, 1)) {\
 		fprintf(stderr, "zrangebyscore test failed on line %d\n", __LINE__);\
+		retval = RL_UNEXPECTED;\
 		goto cleanup;\
 	}
 	run_test_zrangebyscore(-INFINITY, 1, INFINITY, 1, ZRANGEBYSCORE_SIZE, 0);
@@ -1180,7 +1181,7 @@ int basic_test_zadd_zremrangebyscore(int _commit)
 	range.maxex = _maxex;\
 	retval = rl_zremrangebyscore(db, key, keylen, &range, &changed);\
 	if ((changed_expected > 0 && retval != RL_OK) || (changed_expected == 0 && retval != RL_NOT_FOUND)) {\
-		fprintf(stderr, "Failed to zremrangebyscore, got %d on line %d\n", retval, __LINE__);\
+		fprintf(stderr, "Failed to zremrangebyscore, got %d on line %d (changed_expected is %d)\n", retval, __LINE__, changed_expected);\
 		goto cleanup;\
 	}\
 	if (changed_expected && changed != changed_expected) {\
@@ -1278,6 +1279,78 @@ cleanup:
 	return retval;
 }
 
+int regression_zrangebyscore(int _commit)
+{
+	int retval = 0;
+	fprintf(stderr, "Start regression_zrangebyscore %d\n", _commit);
+
+	rlite *db = NULL;
+	RL_CALL_VERBOSE(setup_db, RL_OK, &db, _commit, 1);
+
+	unsigned char *key = (unsigned char *)"my key";
+	long keylen = strlen((char *)key);
+
+	unsigned char data[2];
+	// -inf a 1 b 2 c 3 d 4 e 5 f +inf g
+	data[0] = 'a';
+	RL_CALL_VERBOSE(rl_zadd, RL_OK, db, key, keylen, -INFINITY, data, 1);
+	data[0] = 'b';
+	RL_CALL_VERBOSE(rl_zadd, RL_OK, db, key, keylen, 1, data, 1);
+	data[0] = 'c';
+	RL_CALL_VERBOSE(rl_zadd, RL_OK, db, key, keylen, 2, data, 1);
+	data[0] = 'd';
+	RL_CALL_VERBOSE(rl_zadd, RL_OK, db, key, keylen, 3, data, 1);
+	data[0] = 'e';
+	RL_CALL_VERBOSE(rl_zadd, RL_OK, db, key, keylen, 4, data, 1);
+	data[0] = 'f';
+	RL_CALL_VERBOSE(rl_zadd, RL_OK, db, key, keylen, 5, data, 1);
+	data[0] = 'g';
+	RL_CALL_VERBOSE(rl_zadd, RL_OK, db, key, keylen, INFINITY, data, 1);
+	RL_CALL_VERBOSE(rl_is_balanced, RL_OK, db);
+
+	rl_zrangespec range;
+	range.min = 3;
+	range.minex = 0;
+	range.max = 6;
+	range.maxex = 0;
+	rl_zset_iterator *iterator;
+	RL_CALL_VERBOSE(rl_zrangebyscore, RL_OK, db, key, keylen, &range, 0, 0, &iterator);
+	if (iterator->size != 3) {
+		retval = RL_UNEXPECTED;
+		fprintf(stderr, "Expected iterator size to be %d, got %ld instead on line %d\n", 3, iterator->size, __LINE__);
+		goto cleanup;
+	}
+
+	double score;
+	RL_CALL_VERBOSE(rl_zset_iterator_next, RL_OK, iterator, &score, NULL, NULL);
+	if (score != 3.0) {
+		retval = RL_UNEXPECTED;
+		fprintf(stderr, "Expected score to be %f, got %lf instead on line %d\n", 3.0, score, __LINE__);
+		goto cleanup;
+	}
+	RL_CALL_VERBOSE(rl_zset_iterator_next, RL_OK, iterator, &score, NULL, NULL);
+	if (score != 4.0) {
+		retval = RL_UNEXPECTED;
+		fprintf(stderr, "Expected score to be %f, got %lf instead on line %d\n", 4.0, score, __LINE__);
+		goto cleanup;
+	}
+	RL_CALL_VERBOSE(rl_zset_iterator_next, RL_OK, iterator, &score, NULL, NULL);
+	if (score != 5.0) {
+		retval = RL_UNEXPECTED;
+		fprintf(stderr, "Expected score to be %f, got %lf instead on line %d\n", 5.0, score, __LINE__);
+		goto cleanup;
+	}
+	RL_CALL_VERBOSE(rl_zset_iterator_next, RL_END, iterator, NULL, NULL, NULL);
+
+	fprintf(stderr, "End regression_zrangebyscore\n");
+	retval = 0;
+cleanup:
+	if (db) {
+		rl_close(db);
+	}
+	return retval;
+}
+
 #define ZINTERSTORE_TESTS 7
 RL_TEST_MAIN_START(type_zset_test)
 {
@@ -1305,6 +1378,7 @@ RL_TEST_MAIN_START(type_zset_test)
 		RL_TEST(basic_test_zadd_zremrangebylex, i);
 		RL_TEST(basic_test_zadd_dupe, i);
 		RL_TEST(basic_test_zincrnan, i);
+		RL_TEST(regression_zrangebyscore, i);
 		for (j = 0; j < ZINTERSTORE_TESTS; j++) {
 			RL_TEST(basic_test_zadd_zinterstore, i, zinterunionstore_tests[j]);
 			RL_TEST(basic_test_zadd_zunionstore, i, zinterunionstore_tests[j]);
