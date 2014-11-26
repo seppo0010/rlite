@@ -453,7 +453,7 @@ static int lex_get_range(rlite *db, unsigned char *min, long minlen, unsigned ch
 		end = -1;
 	}
 	else {
-		RL_CALL(rl_skiplist_first_node, RL_FOUND, db, skiplist, score, max[0] == '(' ? RL_SKIPLIST_BEFORE_SCORE : RL_SKIPLIST_INCLUDE_SCORE, &max[1], maxlen - 1, NULL, &end);
+		RL_CALL(rl_skiplist_first_node, RL_FOUND, db, skiplist, score, max[0] == '(' ? RL_SKIPLIST_BEFORE_SCORE : RL_SKIPLIST_UPTO_SCORE, &max[1], maxlen - 1, NULL, &end);
 		if (retval != RL_FOUND) {
 			goto cleanup;
 		}

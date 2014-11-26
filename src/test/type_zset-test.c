@@ -437,25 +437,27 @@ int basic_test_zadd_zrangebylex(int _commit)
 	unsigned char min[3];
 	unsigned char max[3];
 
-#define run_test_zrangebylex(min0, min1, minlen, max0, max1, maxlen, initial, size, total_size, offset, limit)\
+#define run_test_zrangebylex(min0, min1, minlen, max0, max1, max2, maxlen, initial, size, total_size, offset, limit)\
 	min[0] = min0;\
 	min[1] = min1;\
 	max[0] = max0;\
 	max[1] = max1;\
+	max[2] = max2;\
 	retval = test_zrangebylex(db, key, keylen, initial, size, total_size, min, minlen, max, maxlen, offset, limit);\
 	if (retval != 0) {\
 		fprintf(stderr, "Failed zrangebylex on line %d\n", __LINE__);\
 		goto cleanup;\
 	}
 
-	run_test_zrangebylex('-', 0, 1, '(', 'a', 2, 0, 0, 0, 0, 0)
-	run_test_zrangebylex('-', 0, 1, '+', 0, 1, 0, ZRANGEBYLEX_SIZE, ZRANGEBYLEX_SIZE, 0, 0)
-	run_test_zrangebylex('-', 0, 1, '+', 0, 1, 1, ZRANGEBYLEX_SIZE - 1, ZRANGEBYLEX_SIZE, 1, 0)
-	run_test_zrangebylex('-', 0, 1, '+', 0, 1, 0, 1, ZRANGEBYLEX_SIZE, 0, 1)
-	run_test_zrangebylex('(', 'c', 2, '+', 0, 1, 5, ZRANGEBYLEX_SIZE - 5, ZRANGEBYLEX_SIZE, 0, 0)
-	run_test_zrangebylex('[', 'c', 2, '+', 0, 1, 4, ZRANGEBYLEX_SIZE - 4, ZRANGEBYLEX_SIZE, 0, 0)
-	run_test_zrangebylex('[', 'c', 2, '[', 'f', 2, 4, 7, 11, 0, 0)
-	run_test_zrangebylex('-', 0, 1, '[', 'f', 2, 0, 11, 11, 0, 0)
+	run_test_zrangebylex('-', 0, 1, '(', 'a', 0, 2, 0, 0, 0, 0, 0)
+	run_test_zrangebylex('-', 0, 1, '+', 0, 0, 1, 0, ZRANGEBYLEX_SIZE, ZRANGEBYLEX_SIZE, 0, 0)
+	run_test_zrangebylex('-', 0, 1, '+', 0, 0, 1, 1, ZRANGEBYLEX_SIZE - 1, ZRANGEBYLEX_SIZE, 1, 0)
+	run_test_zrangebylex('-', 0, 1, '+', 0, 0, 1, 0, 1, ZRANGEBYLEX_SIZE, 0, 1)
+	run_test_zrangebylex('(', 'c', 2, '+', 0, 0, 1, 5, ZRANGEBYLEX_SIZE - 5, ZRANGEBYLEX_SIZE, 0, 0)
+	run_test_zrangebylex('[', 'c', 2, '+', 0, 0, 1, 4, ZRANGEBYLEX_SIZE - 4, ZRANGEBYLEX_SIZE, 0, 0)
+	run_test_zrangebylex('[', 'c', 2, '[', 'f', 0, 2, 4, 7, 11, 0, 0)
+	run_test_zrangebylex('-', 0, 1, '[', 'f', 0, 2, 0, 11, 11, 0, 0)
+	run_test_zrangebylex('-', 0, 1, '[', 'c', 1, 3, 0, 5, 5, 0, 0)
 
 	fprintf(stderr, "End basic_test_zadd_zrangebylex\n");
 	retval = 0;
@@ -1264,11 +1266,11 @@ int basic_test_zadd_zremrangebylex(int _commit)
 	RL_CALL_VERBOSE(rl_is_balanced, RL_OK, db);
 
 	run_remrangebylex("-", "(a", 0);
-	run_test_zrangebylex('-', 0, 1, '+', 0, 1, 0, ZRANGEBYLEX_SIZE, ZRANGEBYLEX_SIZE, 0, 0)
+	run_test_zrangebylex('-', 0, 1, '+', 0, 0, 1, 0, ZRANGEBYLEX_SIZE, ZRANGEBYLEX_SIZE, 0, 0)
 	run_remrangebylex("-", "[a", 1);
-	run_test_zrangebylex('-', 0, 1, '+', 0, 1, 1, ZRANGEBYLEX_SIZE - 1, ZRANGEBYLEX_SIZE, 0, 0)
+	run_test_zrangebylex('-', 0, 1, '+', 0, 0, 1, 1, ZRANGEBYLEX_SIZE - 1, ZRANGEBYLEX_SIZE, 0, 0)
 	run_remrangebylex("(a", "[b", 2);
-	run_test_zrangebylex('-', 0, 1, '+', 0, 1, 3, ZRANGEBYLEX_SIZE - 3, ZRANGEBYLEX_SIZE, 0, 0)
+	run_test_zrangebylex('-', 0, 1, '+', 0, 0, 1, 3, ZRANGEBYLEX_SIZE - 3, ZRANGEBYLEX_SIZE, 0, 0)
 
 	fprintf(stderr, "End basic_test_zadd_zremrangebylex\n");
 	retval = 0;
