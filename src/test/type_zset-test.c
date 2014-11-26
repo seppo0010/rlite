@@ -450,6 +450,7 @@ int basic_test_zadd_zrangebylex(int _commit)
 	}
 
 	run_test_zrangebylex('-', 0, 1, '(', 'a', 0, 2, 0, 0, 0, 0, 0)
+	run_test_zrangebylex('-', 0, 1, '[', 'a' - 1, 'a' - 1, 3, 0, 0, 0, 0, 0)
 	run_test_zrangebylex('-', 0, 1, '+', 0, 0, 1, 0, ZRANGEBYLEX_SIZE, ZRANGEBYLEX_SIZE, 0, 0)
 	run_test_zrangebylex('-', 0, 1, '+', 0, 0, 1, 1, ZRANGEBYLEX_SIZE - 1, ZRANGEBYLEX_SIZE, 1, 0)
 	run_test_zrangebylex('-', 0, 1, '+', 0, 0, 1, 0, 1, ZRANGEBYLEX_SIZE, 0, 1)

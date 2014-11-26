@@ -310,7 +310,7 @@ int rl_skiplist_first_node(rlite *db, rl_skiplist *skiplist, double score, int r
 	if (range_mode == RL_SKIPLIST_UPTO_SCORE && update_node[0]->level[0].right) {
 		RL_CALL(rl_read, RL_FOUND, db, &rl_data_type_skiplist_node, update_node[0]->level[0].right, skiplist, (void **)&update_node[1], 1);
 		if (update_node[1]->score == score) {
-			if (!value || !update_node[0]->value) {
+			if (!value) {
 				cmp = 0;
 			}
 			else {
