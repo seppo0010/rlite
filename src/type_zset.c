@@ -648,6 +648,9 @@ int rl_zremrangebyrank(rlite *db, const unsigned char *key, long keylen, long st
 	RL_CALL(_zremiterator, RL_OK, db, key, keylen, levels_page_number, iterator, scores, scores_page, skiplist, skiplist_page, changed);
 	retval = RL_OK;
 cleanup:
+	if (retval != RL_OK && changed) {
+		*changed = 0;
+	}
 	return retval;
 }
 
@@ -666,6 +669,9 @@ int rl_zremrangebyscore(rlite *db, const unsigned char *key, long keylen, rl_zra
 	RL_CALL(_zremiterator, RL_OK, db, key, keylen, levels_page_number, iterator, scores, scores_page, skiplist, skiplist_page, changed);
 	retval = RL_OK;
 cleanup:
+	if (retval != RL_OK && changed) {
+		*changed = 0;
+	}
 	return retval;
 }
 
@@ -691,6 +697,9 @@ int rl_zremrangebylex(rlite *db, const unsigned char *key, long keylen, unsigned
 	RL_CALL(_zremiterator, RL_OK, db, key, keylen, levels_page_number, iterator, scores, scores_page, skiplist, skiplist_page, changed);
 	retval = RL_OK;
 cleanup:
+	if (retval != RL_OK && changed) {
+		*changed = 0;
+	}
 	return retval;
 }
 

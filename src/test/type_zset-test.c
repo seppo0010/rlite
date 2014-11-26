@@ -1187,7 +1187,7 @@ int basic_test_zadd_zremrangebyscore(int _commit)
 		fprintf(stderr, "Failed to zremrangebyscore, got %d on line %d (changed_expected is %d)\n", retval, __LINE__, changed_expected);\
 		goto cleanup;\
 	}\
-	if (changed_expected && changed != changed_expected) {\
+	if (changed != changed_expected) {\
 		fprintf(stderr, "Expected to delete %d elements, got %ld on line %d\n", changed_expected, changed, __LINE__);\
 		retval = RL_UNEXPECTED;\
 		goto cleanup;\
