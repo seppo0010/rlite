@@ -449,16 +449,16 @@ int basic_test_zadd_zrangebylex(int _commit)
 		goto cleanup;\
 	}
 
-	run_test_zrangebylex('-', 0, 1, '(', 'a', 0, 2, 0, 0, 0, 0, 0)
-	run_test_zrangebylex('-', 0, 1, '[', 'a' - 1, 'a' - 1, 3, 0, 0, 0, 0, 0)
-	run_test_zrangebylex('-', 0, 1, '+', 0, 0, 1, 0, ZRANGEBYLEX_SIZE, ZRANGEBYLEX_SIZE, 0, 0)
-	run_test_zrangebylex('-', 0, 1, '+', 0, 0, 1, 1, ZRANGEBYLEX_SIZE - 1, ZRANGEBYLEX_SIZE, 1, 0)
-	run_test_zrangebylex('-', 0, 1, '+', 0, 0, 1, 0, 1, ZRANGEBYLEX_SIZE, 0, 1)
-	run_test_zrangebylex('(', 'c', 2, '+', 0, 0, 1, 5, ZRANGEBYLEX_SIZE - 5, ZRANGEBYLEX_SIZE, 0, 0)
-	run_test_zrangebylex('[', 'c', 2, '+', 0, 0, 1, 4, ZRANGEBYLEX_SIZE - 4, ZRANGEBYLEX_SIZE, 0, 0)
-	run_test_zrangebylex('[', 'c', 2, '[', 'f', 0, 2, 4, 7, 11, 0, 0)
-	run_test_zrangebylex('-', 0, 1, '[', 'f', 0, 2, 0, 11, 11, 0, 0)
-	run_test_zrangebylex('-', 0, 1, '[', 'c', 1, 3, 0, 5, 5, 0, 0)
+	run_test_zrangebylex('-', 0, 1, '(', 'a', 0, 2, 0, 0, 0, 0, -1);
+	run_test_zrangebylex('-', 0, 1, '[', 'a' - 1, 'a' - 1, 3, 0, 0, 0, 0, -1);
+	run_test_zrangebylex('-', 0, 1, '+', 0, 0, 1, 0, ZRANGEBYLEX_SIZE, ZRANGEBYLEX_SIZE, 0, -1);
+	run_test_zrangebylex('-', 0, 1, '+', 0, 0, 1, 1, ZRANGEBYLEX_SIZE - 1, ZRANGEBYLEX_SIZE, 1, -1);
+	run_test_zrangebylex('-', 0, 1, '+', 0, 0, 1, 0, 1, ZRANGEBYLEX_SIZE, 0, 1);
+	run_test_zrangebylex('(', 'c', 2, '+', 0, 0, 1, 5, ZRANGEBYLEX_SIZE - 5, ZRANGEBYLEX_SIZE, 0, -1);
+	run_test_zrangebylex('[', 'c', 2, '+', 0, 0, 1, 4, ZRANGEBYLEX_SIZE - 4, ZRANGEBYLEX_SIZE, 0, -1);
+	run_test_zrangebylex('[', 'c', 2, '[', 'f', 0, 2, 4, 7, 11, 0, -1);
+	run_test_zrangebylex('-', 0, 1, '[', 'f', 0, 2, 0, 11, 11, 0, -1);
+	run_test_zrangebylex('-', 0, 1, '[', 'c', 1, 3, 0, 5, 5, 0, -1);
 
 	fprintf(stderr, "End basic_test_zadd_zrangebylex\n");
 	retval = 0;
@@ -472,7 +472,7 @@ cleanup:
 static int test_zrangebyscore(rlite *db, unsigned char *key, long keylen, rl_zrangespec *range, long size, double base_score, double step)
 {
 	rl_zset_iterator *iterator;
-	long offset = 0, limit = 0;
+	long offset = 0, limit = -1;
 	int retval = rl_zrangebyscore(db, key, keylen, range, offset, limit, &iterator);
 	if (size != 0 || retval != RL_NOT_FOUND) {
 		if (retval != RL_OK) {
@@ -1267,11 +1267,11 @@ int basic_test_zadd_zremrangebylex(int _commit)
 	RL_CALL_VERBOSE(rl_is_balanced, RL_OK, db);
 
 	run_remrangebylex("-", "(a", 0);
-	run_test_zrangebylex('-', 0, 1, '+', 0, 0, 1, 0, ZRANGEBYLEX_SIZE, ZRANGEBYLEX_SIZE, 0, 0)
+	run_test_zrangebylex('-', 0, 1, '+', 0, 0, 1, 0, ZRANGEBYLEX_SIZE, ZRANGEBYLEX_SIZE, 0, -1)
 	run_remrangebylex("-", "[a", 1);
-	run_test_zrangebylex('-', 0, 1, '+', 0, 0, 1, 1, ZRANGEBYLEX_SIZE - 1, ZRANGEBYLEX_SIZE, 0, 0)
+	run_test_zrangebylex('-', 0, 1, '+', 0, 0, 1, 1, ZRANGEBYLEX_SIZE - 1, ZRANGEBYLEX_SIZE, 0, -1)
 	run_remrangebylex("(a", "[b", 2);
-	run_test_zrangebylex('-', 0, 1, '+', 0, 0, 1, 3, ZRANGEBYLEX_SIZE - 3, ZRANGEBYLEX_SIZE, 0, 0)
+	run_test_zrangebylex('-', 0, 1, '+', 0, 0, 1, 3, ZRANGEBYLEX_SIZE - 3, ZRANGEBYLEX_SIZE, 0, -1)
 
 	fprintf(stderr, "End basic_test_zadd_zremrangebylex\n");
 	retval = 0;
@@ -1317,7 +1317,7 @@ int regression_zrangebyscore(int _commit)
 	range.max = 6;
 	range.maxex = 0;
 	rl_zset_iterator *iterator;
-	RL_CALL_VERBOSE(rl_zrangebyscore, RL_OK, db, key, keylen, &range, 0, 0, &iterator);
+	RL_CALL_VERBOSE(rl_zrangebyscore, RL_OK, db, key, keylen, &range, 0, -1, &iterator);
 	if (iterator->size != 3) {
 		retval = RL_UNEXPECTED;
 		fprintf(stderr, "Expected iterator size to be %d, got %ld instead on line %d\n", 3, iterator->size, __LINE__);

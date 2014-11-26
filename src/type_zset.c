@@ -400,7 +400,7 @@ int rl_zrangebyscore(rlite *db, const unsigned char *key, long keylen, rl_zrange
 	start += offset;
 
 	RL_CALL(_rl_zrange, RL_OK, db, skiplist, start, end, 1, iterator);
-	if (count > 0 && (*iterator)->size > count) {
+	if (count >= 0 && (*iterator)->size > count) {
 		(*iterator)->size = count;
 	}
 cleanup:
@@ -418,7 +418,7 @@ int rl_zrevrangebyscore(rlite *db, const unsigned char *key, long keylen, rl_zra
 	end -= offset;
 
 	RL_CALL(_rl_zrange, RL_OK, db, skiplist, start, end, -1, iterator);
-	if (count > 0 && (*iterator)->size > count) {
+	if (count >= 0 && (*iterator)->size > count) {
 		(*iterator)->size = count;
 	}
 cleanup:
@@ -502,7 +502,7 @@ int rl_zrevrangebylex(rlite *db, const unsigned char *key, long keylen, unsigned
 	end -= offset;
 
 	RL_CALL(_rl_zrange, RL_OK, db, skiplist, start, end, -1, iterator);
-	if (count > 0 && (*iterator)->size > count) {
+	if (count >= 0 && (*iterator)->size > count) {
 		(*iterator)->size = count;
 	}
 cleanup:
@@ -520,7 +520,7 @@ int rl_zrangebylex(rlite *db, const unsigned char *key, long keylen, unsigned ch
 	start += offset;
 
 	RL_CALL(_rl_zrange, RL_OK, db, skiplist, start, end, 1, iterator);
-	if (count > 0 && (*iterator)->size > count) {
+	if (count >= 0 && (*iterator)->size > count) {
 		(*iterator)->size = count;
 	}
 cleanup:
