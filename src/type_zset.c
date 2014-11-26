@@ -491,7 +491,7 @@ cleanup:
 	return retval;
 }
 
-int rl_zrevrangebylex(rlite *db, const unsigned char *key, long keylen, unsigned char *min, long minlen, unsigned char *max, long maxlen, long offset, long count, rl_zset_iterator **iterator)
+int rl_zrevrangebylex(rlite *db, const unsigned char *key, long keylen, unsigned char *max, long maxlen, unsigned char *min, long minlen, long offset, long count, rl_zset_iterator **iterator)
 {
 	long start, end;
 	rl_skiplist *skiplist;

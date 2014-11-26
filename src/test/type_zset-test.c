@@ -366,7 +366,7 @@ static int test_zrangebylex(rlite *db, unsigned char *key, long keylen, long ini
 		}
 	}
 
-	retval = rl_zrevrangebylex(db, key, keylen, min, minlen, max, maxlen, offset, limit, &iterator);
+	retval = rl_zrevrangebylex(db, key, keylen, max, maxlen, min, minlen, offset, limit, &iterator);
 	if (retval != RL_NOT_FOUND || size != 0) {
 		if (retval != RL_OK) {
 			fprintf(stderr, "Unable to zrangebylex, got %d\n", retval);

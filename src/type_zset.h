@@ -34,7 +34,7 @@ int rl_zrangebylex(struct rlite *db, const unsigned char *key, long keylen, unsi
 int rl_zrangebyscore(struct rlite *db, const unsigned char *key, long keylen, rl_zrangespec *range, long offset, long count, rl_zset_iterator **iterator);
 int rl_zrank(struct rlite *db, const unsigned char *key, long keylen, unsigned char *data, long datalen, long *rank);
 int rl_zrevrange(struct rlite *db, const unsigned char *key, long keylen, long start, long end, rl_zset_iterator **iterator);
-int rl_zrevrangebylex(struct rlite *db, const unsigned char *key, long keylen, unsigned char *min, long minlen, unsigned char *max, long maxlen, long offset, long count, rl_zset_iterator **iterator);
+int rl_zrevrangebylex(struct rlite *db, const unsigned char *key, long keylen, unsigned char *max, long maxlen, unsigned char *min, long minlen, long offset, long count, rl_zset_iterator **iterator);
 int rl_zrevrangebyscore(struct rlite *db, const unsigned char *key, long keylen, rl_zrangespec *range, long offset, long count, rl_zset_iterator **iterator);
 int rl_zrevrank(struct rlite *db, const unsigned char *key, long keylen, unsigned char *data, long datalen, long *revrank);
 int rl_zrem(struct rlite *db, const unsigned char *key, long keylen, long members_size, unsigned char **members, long *members_len, long *changed);
