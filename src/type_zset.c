@@ -925,6 +925,9 @@ static int zunionstore_minmax(rlite *db, long keys_size, unsigned char **keys, l
 			}
 		}
 	}
+	if (target_scores->number_of_elements == 0) {
+		RL_CALL(rl_zset_delete, RL_OK, db, keys[0], keys_len[0]);
+	}
 
 	retval = RL_OK;
 cleanup:
