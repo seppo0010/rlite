@@ -873,7 +873,7 @@ static int zunionstore_minmax(rlite *db, long keys_size, unsigned char **keys, l
 	int retval;
 	rl_skiplist_iterator **iterators = NULL;;
 	rl_skiplist *skiplist;
-	double *scores = NULL;
+	double *scores = NULL, score;
 	unsigned char **members = NULL;
 	long *memberslen = NULL, i;
 	long position;
@@ -914,9 +914,13 @@ static int zunionstore_minmax(rlite *db, long keys_size, unsigned char **keys, l
 			if (!iterators[i]) {
 				continue;
 			}
+			score = weights ? weights[position - 1] * scores[position] : scores[position];
+			if (isnan(score)) {
+				score = 0.0;
+			}
 			if ((position == -1) ||
-			        (aggregate == RL_ZSET_AGGREGATE_MAX && scores[i] > (weights ? weights[position - 1] * scores[position] : scores[position])) ||
-			        (aggregate == RL_ZSET_AGGREGATE_MIN && scores[i] < (weights ? weights[position - 1] * scores[position] : scores[position]))) {
+			        (aggregate == RL_ZSET_AGGREGATE_MAX && scores[i] > score) ||
+			        (aggregate == RL_ZSET_AGGREGATE_MIN && scores[i] < score)) {
 				position = i;
 			}
 		}
@@ -924,7 +928,11 @@ static int zunionstore_minmax(rlite *db, long keys_size, unsigned char **keys, l
 			break;
 		}
 
-		retval = add_member(db, target_scores, target_scores_page, target_skiplist, target_skiplist_page, (weights ? weights[position - 1] * scores[position] : scores[position]), members[position], memberslen[position]);
+		score = weights ? weights[position - 1] * scores[position] : scores[position];
+		if (isnan(score)) {
+			score = 0.0;
+		}
+		retval = add_member(db, target_scores, target_scores_page, target_skiplist, target_skiplist_page, score, members[position], memberslen[position]);
 		if (retval != RL_FOUND && retval != RL_OK) {
 			goto cleanup;
 		}
@@ -979,7 +987,13 @@ static int zunionstore_sum(rlite *db, long keys_size, unsigned char **keys, long
 		}
 		RL_CALL(rl_skiplist_iterator_create, RL_OK, db, &iterator, skiplist, 0, 1, 0);
 		while ((retval = rl_zset_iterator_next(iterator, &score, &member, &memberlen)) == RL_OK) {
-			retval = incrby(db, keys[0], keys_len[0], weights ? score * weights[i - 1] : score, member, memberlen, NULL, 1);
+			if (weights) {
+				score *= weights[i - 1];
+			}
+			if (isnan(score)) {
+				score = 0.0;
+			}
+			retval = incrby(db, keys[0], keys_len[0], score, member, memberlen, NULL, 1);
 			rl_free(member);
 			if (retval != RL_OK) {
 				goto cleanup;
