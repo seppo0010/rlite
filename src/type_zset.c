@@ -760,6 +760,10 @@ int rl_zinterstore(rlite *db, long keys_size, unsigned char **keys, long *keys_l
 		retval = RL_UNEXPECTED;
 		goto cleanup;
 	}
+	retval = rl_key_delete_with_value(db, keys[0], keys_len[0]);
+	if (retval != RL_OK && retval != RL_NOT_FOUND) {
+		goto cleanup;
+	}
 	rl_btree *btree, *btree_tmp;
 	rl_skiplist *skiplist = NULL, *skiplist_tmp;
 	long i;
