@@ -989,6 +989,10 @@ cleanup:
 int rl_zunionstore(rlite *db, long keys_size, unsigned char **keys, long *keys_len, double *weights, int aggregate)
 {
 	int retval;
+	retval = rl_key_delete_with_value(db, keys[0], keys_len[0]);
+	if (retval != RL_OK && retval != RL_NOT_FOUND) {
+		goto cleanup;
+	}
 	if (aggregate == RL_ZSET_AGGREGATE_SUM) {
 		RL_CALL(zunionstore_sum, RL_OK, db, keys_size, keys, keys_len, weights);
 	}
