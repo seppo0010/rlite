@@ -704,8 +704,7 @@ cleanup:
 }
 
 
-
-int rl_zincrby(rlite *db, const unsigned char *key, long keylen, double score, unsigned char *member, long memberlen, double *newscore)
+static int incrby(rlite *db, const unsigned char *key, long keylen, double score, unsigned char *member, long memberlen, double *newscore, int clearnan)
 {
 	rl_btree *scores;
 	rl_skiplist *skiplist;
@@ -720,8 +719,13 @@ int rl_zincrby(rlite *db, const unsigned char *key, long keylen, double score, u
 	else if (retval == RL_FOUND) {
 		score += existing_score;
 		if (isnan(score)) {
-			retval = RL_NAN;
-			goto cleanup;
+			if (clearnan) {
+				score = 0.0;
+			}
+			else {
+				retval = RL_NAN;
+				goto cleanup;
+			}
 		}
 		retval = remove_member(db, key, keylen, levels_page_number, scores, scores_page, skiplist, skiplist_page, member, memberlen);
 		if (retval == RL_DELETED) {
@@ -739,6 +743,11 @@ int rl_zincrby(rlite *db, const unsigned char *key, long keylen, double score, u
 	}
 cleanup:
 	return retval;
+}
+
+int rl_zincrby(rlite *db, const unsigned char *key, long keylen, double score, unsigned char *member, long memberlen, double *newscore)
+{
+	return incrby(db, key, keylen, score, member, memberlen, newscore, 0);
 }
 
 int rl_zinterstore(rlite *db, long keys_size, unsigned char **keys, long *keys_len, double *_weights, int aggregate)
@@ -769,6 +778,7 @@ int rl_zinterstore(rlite *db, long keys_size, unsigned char **keys, long *keys_l
 	long i;
 	// key in position 0 is the target key
 	// we'll store a pivot skiplist in btree/skiplist and the others in btrees/skiplists
+	// TODO: qsort instead
 	RL_MALLOC(weights, sizeof(double) * (keys_size - 2));
 	for (i = 1; i < keys_size; i++) {
 		weight_tmp = _weights ? _weights[i - 1] : 1.0;
@@ -833,7 +843,7 @@ int rl_zinterstore(rlite *db, long keys_size, unsigned char **keys, long *keys_l
 		}
 		if (found) {
 			RL_CALL(rl_multi_string_get, RL_OK, db, node->value, &member, &memberlen);
-			RL_CALL(add_member, RL_OK, db, target_btree, target_btree_page, target_skiplist, target_skiplist_page, skiplist_score, member, memberlen);
+			RL_CALL(add_member, RL_OK, db, target_btree, target_btree_page, target_skiplist, target_skiplist_page, isnan(skiplist_score) ? 0.0 : skiplist_score, member, memberlen);
 			rl_free(member);
 			member = NULL;
 		}
@@ -969,7 +979,7 @@ static int zunionstore_sum(rlite *db, long keys_size, unsigned char **keys, long
 		}
 		RL_CALL(rl_skiplist_iterator_create, RL_OK, db, &iterator, skiplist, 0, 1, 0);
 		while ((retval = rl_zset_iterator_next(iterator, &score, &member, &memberlen)) == RL_OK) {
-			retval = rl_zincrby(db, keys[0], keys_len[0], weights ? score * weights[i - 1] : score, member, memberlen, NULL);
+			retval = incrby(db, keys[0], keys_len[0], weights ? score * weights[i - 1] : score, member, memberlen, NULL, 1);
 			rl_free(member);
 			if (retval != RL_OK) {
 				goto cleanup;
