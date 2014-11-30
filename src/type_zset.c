@@ -482,7 +482,12 @@ int rl_zlexcount(rlite *db, const unsigned char *key, long keylen, unsigned char
 		end += skiplist->size;
 	}
 
-	*lexcount = end - start + 1;
+	if (end >= start) {
+		*lexcount = end - start + 1;
+	}
+	else {
+		*lexcount = 0;
+	}
 	retval = RL_OK;
 cleanup:
 	return retval;
