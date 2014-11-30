@@ -660,15 +660,16 @@ int rl_btree_remove_element(struct rlite *db, rl_btree *btree, long btree_page, 
 					if (parent_node->values) {
 						memmove(&parent_node->values[positions[i - 1] - 1], &parent_node->values[positions[i - 1]], sizeof(void *) * (parent_node->size - positions[i - 1]));
 					}
-					memmove(&parent_node->children[positions[i - 1]], &parent_node->children[positions[i - 1] + 1], sizeof(void *) * (parent_node->size - positions[i - 1]));
+					memmove(&parent_node->children[positions[i - 1]], &parent_node->children[positions[i - 1] + 1], sizeof(void *) * (parent_node->size - positions[i - 1] + 1));
 				}
 				parent_node->size--;
 				sibling_node->size += 1 + node->size;
 				RL_CALL(rl_write, RL_OK, db, btree->type->btree_node_type, sibling_node_page, sibling_node);
 				RL_CALL(rl_write, RL_OK, db, btree->type->btree_node_type, parent_node_page, parent_node);
-				RL_CALL(rl_write, RL_OK, db, btree->type->btree_node_type, node_page, node);
 				rl_free(node->scores);
 				node->scores = NULL;
+				rl_free(node->values);
+				node->values = NULL;
 				RL_CALL(rl_delete, RL_OK, db, node_page);
 				continue;
 			}
@@ -693,7 +694,7 @@ int rl_btree_remove_element(struct rlite *db, rl_btree *btree, long btree_page, 
 				if (parent_node->values) {
 					memmove(&parent_node->values[positions[i - 1]], &parent_node->values[positions[i - 1] + 1], sizeof(void *) * (parent_node->size - positions[i - 1] - 1));
 				}
-				memmove(&parent_node->children[positions[i - 1] + 1], &parent_node->children[positions[i - 1] + 2], sizeof(void *) * (parent_node->size - positions[i - 1] - 1));
+				memmove(&parent_node->children[positions[i - 1] + 1], &parent_node->children[positions[i - 1] + 2], sizeof(void *) * (parent_node->size - positions[i - 1]));
 
 				parent_node->size--;
 				node->size += 1 + sibling_node->size;
@@ -702,6 +703,8 @@ int rl_btree_remove_element(struct rlite *db, rl_btree *btree, long btree_page, 
 				// rl_freeing manually scores before calling destroy to avoid deleting scores that were handed over to `node`
 				rl_free(sibling_node->scores);
 				sibling_node->scores = NULL;
+				rl_free(sibling_node->values);
+				sibling_node->values = NULL;
 				RL_CALL(rl_delete, RL_OK, db, sibling_node_page);
 				continue;
 			}
