@@ -88,6 +88,7 @@ int rl_multi_string_cmp_str(struct rlite *db, long p1, unsigned char *str, long 
 	int first = 1;
 	long cmplen;
 	long stored_length = 0;
+	*cmp = 0;
 	do {
 		if (node_number1 == 0) {
 			*cmp = 0;
