@@ -911,12 +911,15 @@ static int zunionstore_minmax(rlite *db, long keys_size, unsigned char **keys, l
 			if (!iterators[i]) {
 				continue;
 			}
+			if (position == -1) {
+				position = i;
+				continue;
+			}
 			score = weights ? weights[position - 1] * scores[position] : scores[position];
 			if (isnan(score)) {
 				score = 0.0;
 			}
-			if ((position == -1) ||
-			        (aggregate == RL_ZSET_AGGREGATE_MAX && scores[i] > score) ||
+			if ((aggregate == RL_ZSET_AGGREGATE_MAX && scores[i] > score) ||
 			        (aggregate == RL_ZSET_AGGREGATE_MIN && scores[i] < score)) {
 				position = i;
 			}
