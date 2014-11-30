@@ -516,7 +516,7 @@ int rl_btree_remove_element(struct rlite *db, rl_btree *btree, long btree_page, 
 		else {
 			memmove(&node->scores[positions[i]], &node->scores[positions[i] + 1], sizeof(void *) * (node->size - positions[i] - 1));
 			if (node->values) {
-				memmove(&node->values[positions[i]], &node->values[positions[i] + 1], sizeof(void *) * (node->size - positions[i]));
+				memmove(&node->values[positions[i]], &node->values[positions[i] + 1], sizeof(void *) * (node->size - positions[i] - 1));
 			}
 
 			if (--node->size > 0) {
@@ -593,7 +593,7 @@ int rl_btree_remove_element(struct rlite *db, rl_btree *btree, long btree_page, 
 
 					parent_node->scores[positions[i - 1] - 1] = sibling_node->scores[sibling_node->size - 1];
 					if (parent_node->values) {
-						parent_node->values[0] = sibling_node->values[sibling_node->size - 1];
+						parent_node->values[positions[i - 1] - 1] = sibling_node->values[sibling_node->size - 1];
 					}
 
 					sibling_node->size--;
