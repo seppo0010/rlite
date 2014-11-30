@@ -308,7 +308,7 @@ int rl_zcount(rlite *db, const unsigned char *key, long keylen, rl_zrangespec *r
 
 	RL_CALL(rl_zset_get_objects, RL_OK, db, key, keylen, NULL, NULL, NULL, &skiplist, NULL, 0);
 
-	retval = rl_skiplist_first_node(db, skiplist, range->max, range->maxex ? RL_SKIPLIST_BEFORE_SCORE : RL_SKIPLIST_INCLUDE_SCORE, NULL, 0, NULL, &maxrank);
+	retval = rl_skiplist_first_node(db, skiplist, range->max, range->maxex ? RL_SKIPLIST_BEFORE_SCORE : RL_SKIPLIST_UPTO_SCORE, NULL, 0, NULL, &maxrank);
 	if (retval == RL_NOT_FOUND) {
 		maxrank = skiplist->size - 1;
 	}
@@ -316,10 +316,7 @@ int rl_zcount(rlite *db, const unsigned char *key, long keylen, rl_zrangespec *r
 		goto cleanup;
 	}
 	retval = rl_skiplist_first_node(db, skiplist, range->min, range->minex ? RL_SKIPLIST_EXCLUDE_SCORE : RL_SKIPLIST_INCLUDE_SCORE, NULL, 0, NULL, &minrank);
-	if (retval == RL_NOT_FOUND) {
-		minrank = skiplist->size;
-	}
-	else if (retval != RL_FOUND) {
+	if (retval != RL_FOUND) {
 		goto cleanup;
 	}
 	else if (minrank < 0) {
