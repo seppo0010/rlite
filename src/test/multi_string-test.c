@@ -161,6 +161,10 @@ static int test_cmp_different_length()
 	if (retval != 0) {
 		goto cleanup;
 	}
+	retval = assert_cmp(db, p1, data2, 0, 1);
+	if (retval != 0) {
+		goto cleanup;
+	}
 	retval = assert_cmp(db, p1, data2, size, 0);
 	if (retval != 0) {
 		goto cleanup;

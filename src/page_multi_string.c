@@ -40,6 +40,18 @@ int rl_multi_string_cmp(struct rlite *db, long p1, long p2, int *cmp)
 		node1 = _node;
 		RL_CALL(rl_read, RL_FOUND, db, list2->type->list_node_type, node_number2, list2, &_node, 0);
 		node2 = _node;
+		if (first) {
+			if (*(long *)node1->elements[0] == 0) {
+				*cmp = -1;
+				retval = RL_OK;
+				goto cleanup;
+			}
+			if (*(long *)node2->elements[0] == 0) {
+				*cmp = 1;
+				retval = RL_OK;
+				goto cleanup;
+			}
+		}
 		for (i = first ? 1 : 0; i < node1->size; i++) {
 			first = 0;
 			RL_CALL(rl_string_get, RL_OK, db, &str1, *(long *)node1->elements[i]);
@@ -91,13 +103,16 @@ int rl_multi_string_cmp_str(struct rlite *db, long p1, unsigned char *str, long 
 	*cmp = 0;
 	do {
 		if (node_number1 == 0) {
-			*cmp = 0;
+			*cmp = len == 0 ? 0 : -1;
 			break;
 		}
 		RL_CALL(rl_read, RL_FOUND, db, list1->type->list_node_type, node_number1, list1, &_node, 0);
 		node1 = _node;
 		if (first) {
 			stored_length = *(long *)node1->elements[0];
+			if (stored_length == 0) {
+				*cmp = len == 0 ? 0 : -1;
+			}
 		}
 		for (i = first ? 1 : 0; i < node1->size; i++) {
 			RL_CALL(rl_string_get, RL_OK, db, &str1, *(long *)node1->elements[i]);

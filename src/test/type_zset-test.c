@@ -7,6 +7,8 @@
 #include "../page_key.h"
 #include "test_util.h"
 
+#define UNSIGN(str) ((unsigned char *)(str))
+
 int basic_test_zadd_zscore(int _commit)
 {
 	int retval = 0;
@@ -14,10 +16,10 @@ int basic_test_zadd_zscore(int _commit)
 
 	rlite *db = NULL;
 	RL_CALL_VERBOSE(setup_db, RL_OK, &db, _commit, 1);
-	unsigned char *key = (unsigned char *)"my key";
+	unsigned char *key = UNSIGN("my key");
 	long keylen = strlen((char *)key);
 	double score = 1.41, score2;
-	unsigned char *data = (unsigned char *)"my data";
+	unsigned char *data = UNSIGN("my data");
 	long datalen = strlen((char *)data);
 
 	RL_CALL_VERBOSE(rl_zadd, RL_OK, db, key, keylen, score, data, datalen);
@@ -53,12 +55,12 @@ int basic_test_zadd_zscore2(int _commit)
 
 	rlite *db = NULL;
 	RL_CALL_VERBOSE(setup_db, RL_OK, &db, _commit, 1);
-	unsigned char *key = (unsigned char *)"my key";
+	unsigned char *key = UNSIGN("my key");
 	long keylen = strlen((char *)key);
 	double score = 8913.109, score2;
-	unsigned char *data = (unsigned char *)"my data";
+	unsigned char *data = UNSIGN("my data");
 	long datalen = strlen((char *)data);
-	unsigned char *data2 = (unsigned char *)"my data2";
+	unsigned char *data2 = UNSIGN("my data2");
 	long datalen2 = strlen((char *)data2);
 	long card;
 
@@ -128,13 +130,13 @@ int basic_test_zadd_zrank(int _commit)
 
 	rlite *db = NULL;
 	RL_CALL_VERBOSE(setup_db, RL_OK, &db, _commit, 1);
-	unsigned char *key = (unsigned char *)"my key";
+	unsigned char *key = UNSIGN("my key");
 	long keylen = strlen((char *)key);
 	double score = 8913.109;
 	long rank;
-	unsigned char *data = (unsigned char *)"my data";
+	unsigned char *data = UNSIGN("my data");
 	long datalen = strlen((char *)data);
-	unsigned char *data2 = (unsigned char *)"my data2";
+	unsigned char *data2 = UNSIGN("my data2");
 	long datalen2 = strlen((char *)data2);
 
 	RL_CALL_VERBOSE(rl_zadd, RL_OK, db, key, keylen, score, data, datalen);
@@ -204,7 +206,7 @@ int basic_test_zadd_zrange()
 	rlite *db = NULL;
 	RL_CALL_VERBOSE(setup_db, RL_OK, &db, 0, 1);
 
-	unsigned char *key = (unsigned char *)"my key";
+	unsigned char *key = UNSIGN("my key");
 	long keylen = strlen((char *)key);
 
 	long i, setdatalen = 1;
@@ -332,7 +334,7 @@ static int test_zrangebylex(rlite *db, unsigned char *key, long keylen, long ini
 			goto cleanup;
 		}
 		if (iterator->size != size) {
-			fprintf(stderr, "Expected zrangebylex size to be %ld, got %ld instead\n", size, iterator->size);
+			fprintf(stderr, "Expected zrangebylex size to be %ld, got %ld instead on line %d\n", size, iterator->size, __LINE__);
 			retval = RL_UNEXPECTED;
 			goto cleanup;
 		}
@@ -373,7 +375,7 @@ static int test_zrangebylex(rlite *db, unsigned char *key, long keylen, long ini
 			goto cleanup;
 		}
 		if (iterator->size != size) {
-			fprintf(stderr, "Expected zrangebylex size to be %ld, got %ld instead\n", size, iterator->size);
+			fprintf(stderr, "Expected zrangebylex size to be %ld, got %ld instead on line %d\n", size, iterator->size, __LINE__);
 			retval = RL_UNEXPECTED;
 			goto cleanup;
 		}
@@ -421,7 +423,7 @@ int basic_test_zadd_zrangebylex(int _commit)
 	rlite *db = NULL;
 	RL_CALL_VERBOSE(setup_db, RL_OK, &db, _commit, 1);
 
-	unsigned char *key = (unsigned char *)"my key";
+	unsigned char *key = UNSIGN("my key");
 	long keylen = strlen((char *)key);
 
 	unsigned char data[2];
@@ -461,6 +463,94 @@ int basic_test_zadd_zrangebylex(int _commit)
 	run_test_zrangebylex('-', 0, 1, '[', 'c', 1, 3, 0, 5, 5, 0, -1);
 
 	fprintf(stderr, "End basic_test_zadd_zrangebylex\n");
+	retval = 0;
+cleanup:
+	if (db) {
+		rl_close(db);
+	}
+	return retval;
+}
+
+int basic_test_zadd_zrangebylex_with_empty(int _commit)
+{
+	rl_zset_iterator *iterator;
+	int retval = 0;
+	fprintf(stderr, "Start basic_test_zadd_zrangebylex_with_empty %d\n", _commit);
+
+	rlite *db = NULL;
+	RL_CALL_VERBOSE(setup_db, RL_OK, &db, _commit, 1);
+
+	unsigned char *key = UNSIGN("my key");
+	long keylen = strlen((char *)key);
+
+	RL_CALL_VERBOSE(rl_zadd, RL_OK, db, key, keylen, 0.0, UNSIGN(""), 0);
+	RL_CALL_VERBOSE(rl_is_balanced, RL_OK, db);
+	RL_CALL_VERBOSE(rl_zadd, RL_OK, db, key, keylen, 0.0, UNSIGN("a"), 1);
+	RL_CALL_VERBOSE(rl_is_balanced, RL_OK, db);
+
+	unsigned char *min = UNSIGN("-");
+	unsigned char *max = UNSIGN("(a");
+	long lexcount;
+	// These test expect different values if offset or limit exist
+	retval = rl_zlexcount(db, key, keylen, min, 1, max, 2, &lexcount);
+	if (retval != RL_OK) {
+		fprintf(stderr, "Unable to rl_zlexcount, got %d\n", retval);
+		goto cleanup;
+	}
+	if (1 != lexcount) {
+		fprintf(stderr, "Expected lexcount to be %d, got %ld instead\n", 1, lexcount);
+		retval = RL_UNEXPECTED;
+		goto cleanup;
+	}
+
+	retval = rl_zrangebylex(db, key, keylen, min, 1, max, 2, 0, -1, &iterator);
+	if (retval != RL_OK) {
+		fprintf(stderr, "Unable to zrangebylex, got %d\n", retval);
+		goto cleanup;
+	}
+	if (iterator->size != 1) {
+		fprintf(stderr, "Expected zrangebylex size to be %d, got %ld instead on line %d\n", 1, iterator->size, __LINE__);
+		retval = RL_UNEXPECTED;
+		goto cleanup;
+	}
+	unsigned char *data2;
+	long data2_len;
+	retval = rl_zset_iterator_next(iterator, NULL, &data2, &data2_len);
+	if (data2_len != 0) {
+		fprintf(stderr, "Unexpected datalen %ld, expected %d in line %d\n", data2_len, 0, __LINE__);
+		goto cleanup;
+	}
+	rl_free(data2);
+
+	if (retval != RL_END) {
+		fprintf(stderr, "Iterator finished without RL_END, got %d\n", retval);
+		goto cleanup;
+	}
+
+	retval = rl_zrevrangebylex(db, key, keylen, max, 2, min, 1, 0, -1, &iterator);
+	if (retval != RL_OK) {
+		fprintf(stderr, "Unable to zrangebylex, got %d\n", retval);
+		goto cleanup;
+	}
+	if (iterator->size != 1) {
+		fprintf(stderr, "Expected zrangebylex size to be %d, got %ld instead\n", 1, iterator->size);
+		retval = RL_UNEXPECTED;
+		goto cleanup;
+	}
+
+	retval = rl_zset_iterator_next(iterator, NULL, &data2, &data2_len);
+	if (data2_len != 0) {
+		fprintf(stderr, "Unexpected datalen %ld, expected %d in line %d\n", data2_len, 0, __LINE__);
+		goto cleanup;
+	}
+	rl_free(data2);
+
+	if (retval != RL_END) {
+		fprintf(stderr, "Iterator finished without RL_END, got %d\n", retval);
+		goto cleanup;
+	}
+
+	fprintf(stderr, "End basic_test_zadd_zrangebylex_with_empty\n");
 	retval = 0;
 cleanup:
 	if (db) {
@@ -544,7 +634,7 @@ int basic_test_zadd_zrangebyscore(int _commit)
 	rlite *db = NULL;
 	RL_CALL_VERBOSE(setup_db, RL_OK, &db, _commit, 1);
 
-	unsigned char *key = (unsigned char *)"my key";
+	unsigned char *key = UNSIGN("my key");
 	long keylen = strlen((char *)key);
 
 	unsigned char data[1];
@@ -597,13 +687,13 @@ int basic_test_zadd_zrem(int _commit)
 	rlite *db = NULL;
 	RL_CALL_VERBOSE(setup_db, RL_OK, &db, _commit, 1);
 
-	unsigned char *key = (unsigned char *)"my key";
+	unsigned char *key = UNSIGN("my key");
 	long keylen = strlen((char *)key);
 	double score = 8913.109;
 	long rank;
-	unsigned char *data = (unsigned char *)"my data";
+	unsigned char *data = UNSIGN("my data");
 	long datalen = strlen((char *)data);
-	unsigned char *data2 = (unsigned char *)"my data2";
+	unsigned char *data2 = UNSIGN("my data2");
 	long datalen2 = strlen((char *)data2);
 
 	RL_CALL_VERBOSE(rl_zadd, RL_OK, db, key, keylen, score, data, datalen);
@@ -677,7 +767,7 @@ int basic_test_zadd_zcount(int _commit)
 	unsigned char *data = malloc(sizeof(unsigned char) * datalen);
 	RL_CALL_VERBOSE(setup_db, RL_OK, &db, _commit, 1);
 
-	unsigned char *key = (unsigned char *)"my key";
+	unsigned char *key = UNSIGN("my key");
 	long keylen = strlen((char *)key);
 	long i, count;
 
@@ -761,10 +851,10 @@ int basic_test_zadd_zincrby(int _commit)
 	rlite *db = NULL;
 	RL_CALL_VERBOSE(setup_db, RL_OK, &db, _commit, 1);
 
-	unsigned char *key = (unsigned char *)"my key";
+	unsigned char *key = UNSIGN("my key");
 	long keylen = strlen((char *)key);
 	double score = 4.2;
-	unsigned char *data = (unsigned char *)"my data";
+	unsigned char *data = UNSIGN("my data");
 	long datalen = strlen((char *)data);
 	double newscore;
 
@@ -809,10 +899,10 @@ int basic_test_zadd_dupe(int _commit)
 	rlite *db = NULL;
 	RL_CALL_VERBOSE(setup_db, RL_OK, &db, _commit, 1);
 
-	unsigned char *key = (unsigned char *)"my key";
+	unsigned char *key = UNSIGN("my key");
 	long keylen = strlen((char *)key);
 	double score = 4.2, newscore;
-	unsigned char *data = (unsigned char *)"my data";
+	unsigned char *data = UNSIGN("my data");
 	long datalen = strlen((char *)data);
 
 	RL_CALL_VERBOSE(rl_zadd, RL_OK, db, key, keylen, score, data, datalen);
@@ -850,9 +940,9 @@ static int basic_test_zincrnan(int _commit)
 	rlite *db = NULL;
 	RL_CALL_VERBOSE(setup_db, RL_OK, &db, _commit, 1);
 
-	unsigned char *key = (unsigned char *)"my key";
+	unsigned char *key = UNSIGN("my key");
 	long keylen = strlen((char *)key);
-	unsigned char *data = (unsigned char *)"my data";
+	unsigned char *data = UNSIGN("my data");
 	long datalen = strlen((char *)data);
 
 	RL_CALL_VERBOSE(rl_zadd, RL_OK, db, key, keylen, INFINITY, data, datalen);
@@ -1093,7 +1183,7 @@ int basic_test_zadd_zremrangebyrank(int _commit)
 	RL_CALL_VERBOSE(setup_db, RL_OK, &db, _commit, 1);
 
 #define ZREMRANGEBYRANK_SIZE 20
-	unsigned char *key = (unsigned char *)"my key";
+	unsigned char *key = UNSIGN("my key");
 	long keylen = strlen((char *)key), i, changed;
 	unsigned char data[1];
 	for (i = 0; i < ZREMRANGEBYRANK_SIZE; i++) {
@@ -1161,7 +1251,7 @@ int basic_test_zadd_zremrangebyscore(int _commit)
 	RL_CALL_VERBOSE(setup_db, RL_OK, &db, _commit, 1);
 
 #define ZREMRANGEBYSCORE_SIZE 20
-	unsigned char *key = (unsigned char *)"my key";
+	unsigned char *key = UNSIGN("my key");
 	long keylen = strlen((char *)key), i, changed;
 	unsigned char data[1];
 	for (i = 0; i < ZREMRANGEBYSCORE_SIZE; i++) {
@@ -1237,7 +1327,7 @@ int basic_test_zadd_zremrangebylex(int _commit)
 	rlite *db = NULL;
 	RL_CALL_VERBOSE(setup_db, RL_OK, &db, _commit, 1);
 
-	unsigned char *key = (unsigned char *)"my key";
+	unsigned char *key = UNSIGN("my key");
 	long keylen = strlen((char *)key);
 
 	unsigned char data[2];
@@ -1254,7 +1344,7 @@ int basic_test_zadd_zremrangebylex(int _commit)
 
 	long changed;
 #define run_remrangebylex(min, max, expected_changed)\
-	retval = rl_zremrangebylex(db, key, keylen, (unsigned char *)min, strlen(min), (unsigned char *)max, strlen(max), &changed);\
+	retval = rl_zremrangebylex(db, key, keylen, UNSIGN(min), strlen(min), UNSIGN(max), strlen(max), &changed);\
 	if (retval != RL_OK) {\
 		fprintf(stderr, "Failed rl_zremrangebylex on line %d, got %d\n", __LINE__, retval);\
 		goto cleanup;\
@@ -1290,7 +1380,7 @@ int regression_zrangebyscore(int _commit)
 	rlite *db = NULL;
 	RL_CALL_VERBOSE(setup_db, RL_OK, &db, _commit, 1);
 
-	unsigned char *key = (unsigned char *)"my key";
+	unsigned char *key = UNSIGN("my key");
 	long keylen = strlen((char *)key);
 
 	unsigned char data[2];
@@ -1375,6 +1465,7 @@ RL_TEST_MAIN_START(type_zset_test)
 		RL_TEST(basic_test_zadd_zcount, i);
 		RL_TEST(basic_test_zadd_zincrby, i);
 		RL_TEST(basic_test_zadd_zrangebylex, i);
+		RL_TEST(basic_test_zadd_zrangebylex_with_empty, i);
 		RL_TEST(basic_test_zadd_zrangebyscore, i);
 		RL_TEST(basic_test_zadd_zremrangebyrank, i);
 		RL_TEST(basic_test_zadd_zremrangebyscore, i);
