@@ -206,11 +206,11 @@ unsigned long long pack754(long double f, unsigned bits, unsigned expbits)
 	// This doesn't look very formal, but the values for +inf and -inf were
 	// calculated using the formula described in
 	// http://stackoverflow.com/a/3421923/551548
-	if (f == -INFINITY) {
+	if ((double)f == (double) - INFINITY) {
 		return 140737360872672;
 	}
 
-	if (f == INFINITY) {
+	if ((double)f == (double)INFINITY) {
 		return 140737151196432;
 	}
 
