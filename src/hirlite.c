@@ -21,7 +21,7 @@ static rliteReply *createReplyObject(int type) {
 	return r;
 }
 
-static rliteReply *createStringObject(char *str, int len) {
+static rliteReply *createStringObject(const char *str, const int len) {
 	rliteReply *reply = createReplyObject(RLITE_REPLY_STRING);
 	reply->str = malloc(sizeof(char) * len);
 	if (!reply->str) {
@@ -253,6 +253,11 @@ void *rliteCommandArgv(rliteContext *c, int argc, const char **argv, const size_
 	return _popReply(c);
 }
 
+void echoCommand(rliteClient *c)
+{
+	c->reply = createStringObject(c->argv[1], c->argvlen[1]);
+}
+
 void pingCommand(rliteClient *c)
 {
 	c->reply = createStringObject("PONG", 4);
@@ -363,7 +368,7 @@ struct rliteCommand rliteCommandTable[] = {
 	// {"dbsize",dbsizeCommand,1,"rF",0,NULL,0,0,0,0,0},
 	// {"auth",authCommand,2,"rsltF",0,NULL,0,0,0,0,0},
 	{"ping",pingCommand,-1,"rtF",0,NULL,0,0,0,0,0},
-	// {"echo",echoCommand,2,"rF",0,NULL,0,0,0,0,0},
+	{"echo",echoCommand,2,"rF",0,NULL,0,0,0,0,0},
 	// {"save",saveCommand,1,"ars",0,NULL,0,0,0,0,0},
 	// {"bgsave",bgsaveCommand,1,"ar",0,NULL,0,0,0,0,0},
 	// {"bgrewriteaof",bgrewriteaofCommand,1,"ar",0,NULL,0,0,0,0,0},
