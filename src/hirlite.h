@@ -135,6 +135,31 @@ void *rlitevCommand(rliteContext *c, const char *format, va_list ap);
 void *rliteCommand(rliteContext *c, const char *format, ...);
 void *rliteCommandArgv(rliteContext *c, int argc, const char **argv, const size_t *argvlen);
 
+typedef struct {
+	int argc;
+	const char **argv;
+	const size_t *argvlen;
+	rliteReply *reply;
+} rliteClient;
+
+typedef void rliteCommandProc(rliteClient *c);
+
+struct rliteCommand {
+    char *name;
+    rliteCommandProc *proc;
+    int arity;
+    char *sflags; /* Flags as string representation, one char per flag. */
+    int flags;    /* The actual flags, obtained from the 'sflags' field. */
+    /* Use a function to determine keys arguments in a command line.
+     * Used for Redis Cluster redirect. */
+    // rliteGetKeysProc *getkeys_proc;
+    /* What keys should be loaded in background when calling this command? */
+    int firstkey; /* The first argument that's a key (0 = no keys) */
+    int lastkey;  /* The last argument that's a key */
+    int keystep;  /* The step between first and last key */
+    long long microseconds, calls;
+};
+
 #ifdef __cplusplus
 }
 #endif

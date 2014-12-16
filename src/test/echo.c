@@ -8,12 +8,12 @@ int main() {
 	argv[0] = "PING";
 	rliteContext *context = rliteConnect(":memory:", 0);
 	reply = rliteCommandArgv(context, 1, (const char **)argv, (const size_t*)argvlen);
-	if (reply->type != RLITE_REPLY_INTEGER) {
-		fprintf(stderr, "Expected reply to be INTEGER, got %d instead on line %d\n", reply->type, __LINE__);
+	if (reply->type != RLITE_REPLY_STRING) {
+		fprintf(stderr, "Expected reply to be STRING, got %d instead on line %d\n", reply->type, __LINE__);
 		return 1;
 	}
-	if (reply->integer != 1234) {
-		fprintf(stderr, "Expected reply to be %d, got %lld instead on line %d\n", 1234, reply->integer, __LINE__);
+	if (memcmp(reply->str, "PONG", 4) != 0) {
+		fprintf(stderr, "Expected reply to be %s, got %s instead on line %d\n", "PONG", reply->str, __LINE__);
 		return 1;
 	}
 

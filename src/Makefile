@@ -43,7 +43,7 @@ vtest: buildtest
 	valgrind --leak-check=full ./hirlite-test
 
 clean:
-	rm *.o *.a
+	rm -f *.o *.a
 
 distclean: clean
 	cd ../deps/rlite && make clean
