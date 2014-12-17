@@ -4,12 +4,14 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
+#include <strings.h>
 #include <unistd.h>
 
 #include "hirlite.h"
 #include "util.h"
 
 struct rliteCommand *lookupCommand(const char *name, size_t UNUSED(len));
+void __rliteSetError(rliteContext *c, int type, const char *str);
 
 static rliteReply *createReplyObject(int type) {
 	rliteReply *r = calloc(1,sizeof(*r));
@@ -31,6 +33,46 @@ static rliteReply *createStringObject(const char *str, const int len) {
 	memcpy(reply->str, str, len);
 	reply->len = len;
 	return reply;
+}
+
+static int addReply(rliteContext* c, rliteReply *reply) {
+	if (c->replyPosition == c->replyAlloc) {
+		void *tmp;
+		c->replyAlloc *= 2;
+		tmp = realloc(c->replies, sizeof(rliteReply*) * c->replyAlloc);
+		if (!tmp) {
+			__rliteSetError(c,RLITE_ERR_OOM,"Out of memory");
+			return RLITE_ERR;
+		}
+		c->replies = tmp;
+	}
+
+	c->replies[c->replyPosition] = reply;
+	c->replyLength++;
+	return RLITE_OK;
+}
+
+static int addReplyErrorFormat(rliteContext *c, const char *fmt, ...) {
+	int maxlen = strlen(fmt) * 2;
+	char *str = malloc(maxlen * sizeof(char));
+	va_list ap;
+	va_start(ap, fmt);
+	int written = vsnprintf(str, maxlen, fmt, ap);
+	va_end(ap);
+	if (written < 0) {
+		fprintf(stderr, "Failed to vsnprintf near line %d, got %d\n", __LINE__, written);
+		free(str);
+		return RLITE_ERR;
+	}
+	rliteReply *reply = createReplyObject(RLITE_REPLY_ERROR);
+	if (!reply) {
+		free(str);
+		__rliteSetError(c,RLITE_ERR_OOM,"Out of memory");
+		return RLITE_ERR;
+	}
+	reply->str = str;
+	addReply(c, reply);
+	return RLITE_OK;
 }
 
 void __rliteSetError(rliteContext *c, int type, const char *str) {
@@ -189,31 +231,23 @@ int __rliteAppendCommandArgv(rliteContext *c, int argc, const char **argv, const
 		return RLITE_ERR;
 	}
 
-	if (c->replyPosition == c->replyAlloc) {
-		void *tmp;
-		c->replyAlloc *= 2;
-		tmp = realloc(c->replies, sizeof(rliteReply*) * c->replyAlloc);
-		if (!tmp) {
-			__rliteSetError(c,RLITE_ERR_OOM,"Out of memory");
-			return RLITE_ERR;
-		}
-		c->replies = tmp;
-	}
-
 	rliteClient client;
 	client.argc = argc;
 	client.argv = argv;
 	client.argvlen = argvlen;
 
 	struct rliteCommand *command = lookupCommand(argv[0], argvlen[0]);
+	int retval;
 	if (!command) {
-		return RLITE_ERR;
+		retval = addReplyErrorFormat(c, "unknown command '%s'", (char*)argv[0]);
+	} else if ((command->arity > 0 && command->arity != argc) ||
+		(argc < -command->arity)) {
+		retval = addReplyErrorFormat(c, "wrong number of arguments for '%s' command", command->name);
+	} else {
+		command->proc(&client);
+		retval = addReply(c, client.reply);
 	}
-
-	command->proc(&client);
-	c->replies[c->replyPosition] = client.reply;
-	c->replyLength++;
-	return RLITE_OK;
+	return retval;
 }
 
 int rliteAppendFormattedCommand(rliteContext *UNUSED(c), const char *UNUSED(cmd), size_t UNUSED(len)) {
@@ -367,8 +401,8 @@ struct rliteCommand rliteCommandTable[] = {
 	// {"scan",scanCommand,-2,"rR",0,NULL,0,0,0,0,0},
 	// {"dbsize",dbsizeCommand,1,"rF",0,NULL,0,0,0,0,0},
 	// {"auth",authCommand,2,"rsltF",0,NULL,0,0,0,0,0},
-	{"ping",pingCommand,-1,"rtF",0,NULL,0,0,0,0,0},
-	{"echo",echoCommand,2,"rF",0,NULL,0,0,0,0,0},
+	{"ping",pingCommand,-1,"rtF",0,0,0,0,0,0},
+	{"echo",echoCommand,2,"rF",0,0,0,0,0,0},
 	// {"save",saveCommand,1,"ars",0,NULL,0,0,0,0,0},
 	// {"bgsave",bgsaveCommand,1,"ar",0,NULL,0,0,0,0,0},
 	// {"bgrewriteaof",bgrewriteaofCommand,1,"ar",0,NULL,0,0,0,0,0},

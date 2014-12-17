@@ -40,7 +40,7 @@ test: buildtest
 	./hirlite-test
 
 vtest: buildtest
-	valgrind --leak-check=full ./hirlite-test
+	valgrind --leak-check=full --track-origins=yes --show-reachable=yes ./hirlite-test
 
 clean:
 	rm -f *.o *.a
