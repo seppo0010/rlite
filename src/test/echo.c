@@ -80,4 +80,5 @@ int run_echo() {
 	if (test_echo_wrong_arity() != 0) {
 		return 1;
 	}
+	return 0;
 }

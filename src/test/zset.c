@@ -42,4 +42,5 @@ int run_zset() {
 	if (test_zadd() != 0) {
 		return 1;
 	}
+	return 0;
 }
