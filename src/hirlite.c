@@ -62,16 +62,15 @@ static rliteReply *createErrorObject(const char *str) {
 }
 
 static rliteReply *createDoubleObject(double d) {
-	char dbuf[128], sbuf[128];
-	int dlen, slen;
+	char dbuf[128];
+	int dlen;
 	if (isinf(d)) {
 		/* Libc in odd systems (Hi Solaris!) will format infinite in a
 		 * different way, so better to handle it in an explicit way. */
 		return createCStringObject(d > 0 ? "inf" : "-inf");
 	} else {
 		dlen = snprintf(dbuf,sizeof(dbuf),"%.17g",d);
-		slen = snprintf(sbuf,sizeof(sbuf),"$%d\r\n%s\r\n",dlen,dbuf);
-		return createStringObject(sbuf, slen);
+		return createStringObject(dbuf, dlen);
 	}
 }
 
@@ -79,6 +78,41 @@ static rliteReply *createLongLongObject(long long value) {
 	rliteReply *reply = createReplyObject(RLITE_REPLY_INTEGER);
 	reply->integer = value;
 	return reply;
+}
+
+static void addZsetIteratorReply(rliteClient *c, int retval, rl_zset_iterator *iterator, int withscores)
+{
+	unsigned char *vstr;
+	long vlen, i;
+	double score;
+
+	c->reply = createReplyObject(RLITE_REPLY_ARRAY);
+	if (retval == RL_NOT_FOUND) {
+		c->reply->elements = 0;
+		return;
+	}
+	c->reply->elements = withscores ? (iterator->size * 2) : iterator->size;
+	c->reply->element = malloc(sizeof(rliteReply*) * c->reply->elements);
+	i = 0;
+	while ((retval = rl_zset_iterator_next(iterator, withscores ? &score : NULL, &vstr, &vlen)) == RL_OK) {
+		c->reply->element[i] = createStringObject((char *)vstr, vlen);
+		i++;
+		if (withscores) {
+			c->reply->element[i] = createDoubleObject(score);
+			i++;
+		}
+		rl_free(vstr);
+	}
+
+	if (retval != RL_END) {
+		__rliteSetError(c->context, RLITE_ERR, "Unexpected early end");
+		goto cleanup;
+	}
+	iterator = NULL;
+cleanup:
+	if (iterator) {
+		rl_zset_iterator_destroy(iterator);
+	}
 }
 
 static int addReply(rliteContext* c, rliteReply *reply) {
@@ -152,6 +186,52 @@ static int getDoubleFromObjectOrReply(rliteClient *c, const char *o, double *tar
 	return RLITE_OK;
 }
 
+int getLongLongFromObject(const char *o, long long *target) {
+	long long value;
+	char *eptr;
+
+	if (o == NULL) {
+		value = 0;
+	} else {
+		errno = 0;
+		value = strtoll(o, &eptr, 10);
+		if (isspace(((char*)o)[0]) || eptr[0] != '\0' || errno == ERANGE) {
+			return RLITE_ERR;
+		}
+	}
+	if (target) *target = value;
+	return RLITE_OK;
+}
+
+int getLongLongFromObjectOrReply(rliteClient *c, const char *o, long long *target, const char *msg) {
+	long long value;
+	if (getLongLongFromObject(o, &value) != RLITE_OK) {
+		if (msg != NULL) {
+			c->reply = createErrorObject(msg);
+		} else {
+			c->reply = createErrorObject("value is not an integer or out of range");
+		}
+		return RLITE_ERR;
+	}
+	*target = value;
+	return RLITE_OK;
+}
+
+int getLongFromObjectOrReply(rliteClient *c, const char *o, long *target, const char *msg) {
+	long long value;
+
+	if (getLongLongFromObjectOrReply(c, o, &value, msg) != RLITE_OK) return RLITE_ERR;
+	if (value < LONG_MIN || value > LONG_MAX) {
+		if (msg != NULL) {
+			c->reply = createErrorObject(msg);
+		} else {
+			c->reply = createErrorObject("value is out of range");
+		}
+		return RLITE_ERR;
+	}
+	*target = value;
+	return RLITE_OK;
+}
 void __rliteSetError(rliteContext *c, int type, const char *str) {
 	size_t len;
 
@@ -427,6 +507,34 @@ void zincrbyCommand(rliteClient *c) {
 	zaddGenericCommand(c,1);
 }
 
+void zrangeGenericCommand(rliteClient *c, int reverse) {
+	rl_zset_iterator *iterator;
+	int withscores = 0;
+	long start;
+	long end;
+
+	if ((getLongFromObjectOrReply(c, c->argv[2], &start, NULL) != RLITE_OK) ||
+		(getLongFromObjectOrReply(c, c->argv[3], &end, NULL) != RLITE_OK)) return;
+
+	if (c->argc == 5 && !strcasecmp(c->argv[4], "withscores")) {
+		withscores = 1;
+	} else if (c->argc >= 5) {
+		c->reply = createErrorObject(RLITE_SYNTAXERR);
+		return;
+	}
+
+	int retval = (reverse ? rl_zrevrange : rl_zrange)(c->context->db, UNSIGN(c->argv[1]), c->argvlen[1], start, end, &iterator);
+	addZsetIteratorReply(c, retval, iterator, withscores);
+}
+
+void zrangeCommand(rliteClient *c) {
+	zrangeGenericCommand(c, 0);
+}
+
+void zrevrangeCommand(rliteClient *c) {
+	zrangeGenericCommand(c, 1);
+}
+
 struct rliteCommand rliteCommandTable[] = {
 	// {"get",getCommand,2,"rF",0,NULL,1,1,1,0,0},
 	// {"set",setCommand,-3,"wm",0,NULL,1,1,1,0,0},
@@ -485,14 +593,14 @@ struct rliteCommand rliteCommandTable[] = {
 	// {"zremrangebylex",zremrangebylexCommand,4,"w",0,NULL,1,1,1,0,0},
 	// {"zunionstore",zunionstoreCommand,-4,"wm",0,zunionInterGetKeys,0,0,0,0,0},
 	// {"zinterstore",zinterstoreCommand,-4,"wm",0,zunionInterGetKeys,0,0,0,0,0},
-	// {"zrange",zrangeCommand,-4,"r",0,NULL,1,1,1,0,0},
+	{"zrange",zrangeCommand,-4,"r",0,1,1,1,0,0},
 	// {"zrangebyscore",zrangebyscoreCommand,-4,"r",0,NULL,1,1,1,0,0},
 	// {"zrevrangebyscore",zrevrangebyscoreCommand,-4,"r",0,NULL,1,1,1,0,0},
 	// {"zrangebylex",zrangebylexCommand,-4,"r",0,NULL,1,1,1,0,0},
 	// {"zrevrangebylex",zrevrangebylexCommand,-4,"r",0,NULL,1,1,1,0,0},
 	// {"zcount",zcountCommand,4,"rF",0,NULL,1,1,1,0,0},
 	// {"zlexcount",zlexcountCommand,4,"rF",0,NULL,1,1,1,0,0},
-	// {"zrevrange",zrevrangeCommand,-4,"r",0,NULL,1,1,1,0,0},
+	{"zrevrange",zrevrangeCommand,-4,"r",0,1,1,1,0,0},
 	// {"zcard",zcardCommand,2,"rF",0,NULL,1,1,1,0,0},
 	// {"zscore",zscoreCommand,3,"rF",0,NULL,1,1,1,0,0},
 	// {"zrank",zrankCommand,3,"rF",0,NULL,1,1,1,0,0},
