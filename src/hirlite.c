@@ -1,6 +1,7 @@
 #include <assert.h>
 #include <errno.h>
 #include <ctype.h>
+#include <math.h>
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
@@ -9,6 +10,19 @@
 
 #include "hirlite.h"
 #include "util.h"
+#include "constants.h"
+
+#define UNSIGN(val) ((unsigned char *)val)
+
+#define RLITE_SERVER_ERR(c, retval)\
+	if (retval == RL_WRONG_TYPE) {\
+		c->reply = createErrorObject(RLITE_WRONGTYPEERR);\
+		goto cleanup;\
+	}\
+	if (retval == RL_NAN) {\
+		c->reply = createErrorObject("resulting score is not a number (NaN)");\
+		goto cleanup;\
+	}\
 
 struct rliteCommand *lookupCommand(const char *name, size_t UNUSED(len));
 void __rliteSetError(rliteContext *c, int type, const char *str);
@@ -23,8 +37,8 @@ static rliteReply *createReplyObject(int type) {
 	return r;
 }
 
-static rliteReply *createStringObject(const char *str, const int len) {
-	rliteReply *reply = createReplyObject(RLITE_REPLY_STRING);
+static rliteReply *createStringTypeObject(int type, const char *str, const int len) {
+	rliteReply *reply = createReplyObject(type);
 	reply->str = malloc(sizeof(char) * len);
 	if (!reply->str) {
 		freeReplyObject(reply);
@@ -32,6 +46,38 @@ static rliteReply *createStringObject(const char *str, const int len) {
 	}
 	memcpy(reply->str, str, len);
 	reply->len = len;
+	return reply;
+}
+
+static rliteReply *createStringObject(const char *str, const int len) {
+	return createStringTypeObject(RLITE_REPLY_STRING, str, len);
+}
+
+static rliteReply *createCStringObject(const char *str) {
+	return createStringObject(str, strlen(str));
+}
+
+static rliteReply *createErrorObject(const char *str) {
+	return createStringTypeObject(RLITE_REPLY_ERROR, str, strlen((char *)str));
+}
+
+static rliteReply *createDoubleObject(double d) {
+	char dbuf[128], sbuf[128];
+	int dlen, slen;
+	if (isinf(d)) {
+		/* Libc in odd systems (Hi Solaris!) will format infinite in a
+		 * different way, so better to handle it in an explicit way. */
+		return createCStringObject(d > 0 ? "inf" : "-inf");
+	} else {
+		dlen = snprintf(dbuf,sizeof(dbuf),"%.17g",d);
+		slen = snprintf(sbuf,sizeof(sbuf),"$%d\r\n%s\r\n",dlen,dbuf);
+		return createStringObject(sbuf, slen);
+	}
+}
+
+static rliteReply *createLongLongObject(long long value) {
+	rliteReply *reply = createReplyObject(RLITE_REPLY_INTEGER);
+	reply->integer = value;
 	return reply;
 }
 
@@ -72,6 +118,37 @@ static int addReplyErrorFormat(rliteContext *c, const char *fmt, ...) {
 	}
 	reply->str = str;
 	addReply(c, reply);
+	return RLITE_OK;
+}
+
+int getDoubleFromObject(const char *o, double *target) {
+	double value;
+	char *eptr;
+
+	if (o == NULL) {
+		value = 0;
+	} else {
+		errno = 0;
+		value = strtod(o, &eptr);
+		if (isspace(((char*)o)[0]) || eptr[0] != '\0' ||
+				(errno == ERANGE && (value == HUGE_VAL ||
+									 value == -HUGE_VAL || value == 0)) ||
+				errno == EINVAL || isnan(value))
+		return RLITE_ERR;
+	}
+	*target = value;
+	return RLITE_OK;
+}
+
+static int getDoubleFromObjectOrReply(rliteClient *c, const char *o, double *target, const char *msg) {
+	if (getDoubleFromObject(o, target) != RLITE_OK) {
+		if (msg != NULL) {
+			c->reply = createErrorObject(msg);
+		} else {
+			c->reply = createErrorObject("value is not a valid float");
+		}
+		return RLITE_ERR;
+	}
 	return RLITE_OK;
 }
 
@@ -232,6 +309,7 @@ int __rliteAppendCommandArgv(rliteContext *c, int argc, const char **argv, const
 	}
 
 	rliteClient client;
+	client.context = c;
 	client.argc = argc;
 	client.argv = argv;
 	client.argvlen = argvlen;
@@ -297,6 +375,58 @@ void pingCommand(rliteClient *c)
 	c->reply = createStringObject("PONG", 4);
 }
 
+void zaddGenericCommand(rliteClient *c, int incr) {
+	const unsigned char *key = UNSIGN(c->argv[1]);
+	size_t keylen = c->argvlen[1];
+	double score = 0, *scores = NULL;
+	int j, elements = (c->argc - 2) / 2;
+	int added = 0;
+
+	if (c->argc % 2) {
+		c->reply = createErrorObject(RLITE_SYNTAXERR);
+		return;
+	}
+
+	/* Start parsing all the scores, we need to emit any syntax error
+	 * before executing additions to the sorted set, as the command should
+	 * either execute fully or nothing at all. */
+	scores = malloc(sizeof(double) * elements);
+	for (j = 0; j < elements; j++) {
+		if (getDoubleFromObjectOrReply(c,c->argv[2+j*2],&scores[j],NULL)
+			!= RLITE_OK) goto cleanup;
+	}
+
+	int retval;
+	for (j = 0; j < elements; j++) {
+		score = scores[j];
+		if (incr) {
+			retval = rl_zincrby(c->context->db, key, keylen, score, UNSIGN(c->argv[3+j*2]), c->argvlen[3+j*2], NULL);
+			RLITE_SERVER_ERR(c, retval);
+		} else {
+			retval = rl_zadd(c->context->db, key, keylen, score, UNSIGN(c->argv[3+j*2]), c->argvlen[3+j*2]);
+			RLITE_SERVER_ERR(c, retval);
+			if (retval == RL_OK) {
+				added++;
+			}
+		}
+	}
+	if (incr) /* ZINCRBY */
+		c->reply = createDoubleObject(score);
+	else /* ZADD */
+		c->reply = createLongLongObject(added);
+
+cleanup:
+	free(scores);
+}
+
+void zaddCommand(rliteClient *c) {
+	zaddGenericCommand(c,0);
+}
+
+void zincrbyCommand(rliteClient *c) {
+	zaddGenericCommand(c,1);
+}
+
 struct rliteCommand rliteCommandTable[] = {
 	// {"get",getCommand,2,"rF",0,NULL,1,1,1,0,0},
 	// {"set",setCommand,-3,"wm",0,NULL,1,1,1,0,0},
@@ -347,8 +477,8 @@ struct rliteCommand rliteCommandTable[] = {
 	// {"sdiffstore",sdiffstoreCommand,-3,"wm",0,NULL,1,-1,1,0,0},
 	// {"smembers",sinterCommand,2,"rS",0,NULL,1,1,1,0,0},
 	// {"sscan",sscanCommand,-3,"rR",0,NULL,1,1,1,0,0},
-	// {"zadd",zaddCommand,-4,"wmF",0,NULL,1,1,1,0,0},
-	// {"zincrby",zincrbyCommand,4,"wmF",0,NULL,1,1,1,0,0},
+	{"zadd",zaddCommand,-4,"wmF",0,1,1,1,0,0},
+	{"zincrby",zincrbyCommand,4,"wmF",0,1,1,1,0,0},
 	// {"zrem",zremCommand,-3,"wF",0,NULL,1,1,1,0,0},
 	// {"zremrangebyscore",zremrangebyscoreCommand,4,"w",0,NULL,1,1,1,0,0},
 	// {"zremrangebyrank",zremrangebyrankCommand,4,"w",0,NULL,1,1,1,0,0},

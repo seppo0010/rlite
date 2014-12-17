@@ -1,3 +1,4 @@
+#include <string.h>
 #include "hirlite.h"
 
 int test_ping() {
@@ -69,7 +70,7 @@ int test_echo_wrong_arity() {
 	return 0;
 }
 
-int main() {
+int run_echo() {
 	if (test_ping() != 0) {
 		return 1;
 	}

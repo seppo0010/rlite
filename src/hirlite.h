@@ -140,6 +140,7 @@ typedef struct {
 	const char **argv;
 	const size_t *argvlen;
 	rliteReply *reply;
+	rliteContext *context;
 } rliteClient;
 
 typedef void rliteCommandProc(rliteClient *c);
