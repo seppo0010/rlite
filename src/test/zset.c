@@ -159,6 +159,72 @@ int test_zrevrange() {
 	return 0;
 }
 
+int test_zrem() {
+	rliteContext *context = rliteConnect(":memory:", 0);
+	if (_zadd(context) != 0) {
+		return 1;
+	}
+
+	size_t argvlen[4];
+	char* argv[4];
+	rliteReply* reply;
+	argvlen[0] = 4;
+	argv[0] = "ZREM";
+	argvlen[1] = 5;
+	argv[1] = "mykey";
+	argvlen[2] = 3;
+	argv[2] = "two";
+	argvlen[3] = 3;
+	argv[3] = "three";
+	reply = rliteCommandArgv(context, 4, (const char **)argv, (const size_t*)argvlen);
+	if (reply->type == RLITE_REPLY_ERROR) {
+		fprintf(stderr, "Expected reply not to be ERROR, got \"%s\" instead on line %d\n", reply->str, __LINE__);
+		return 1;
+	}
+	if (reply->type != RLITE_REPLY_INTEGER) {
+		fprintf(stderr, "Expected reply to be INTEGER, got %d instead on line %d\n", reply->type, __LINE__);
+		return 1;
+	}
+	if (reply->integer != 1) {
+		fprintf(stderr, "Expected reply to be %d, got %lld instead on line %d\n", 1, reply->integer, __LINE__);
+		return 1;
+	}
+	freeReplyObject(reply);
+
+	argvlen[0] = 6;
+	argv[0] = "ZRANGE";
+	argvlen[2] = 1;
+	argv[2] = "0";
+	argvlen[3] = 2;
+	argv[3] = "-1";
+	reply = rliteCommandArgv(context, 4, (const char **)argv, (const size_t*)argvlen);
+	if (reply->type != RLITE_REPLY_ARRAY) {
+		fprintf(stderr, "Expected reply to be ARRAY, got %d instead on line %d\n", reply->type, __LINE__);
+		return 1;
+	}
+	if (reply->elements != 1) {
+		fprintf(stderr, "Expected reply size to be %d, got %lu instead on line %d\n", 1, reply->elements, __LINE__);
+		return 1;
+	}
+	if (reply->element[0]->type != RLITE_REPLY_STRING) {
+		fprintf(stderr, "Expected reply element[0] to be %d, got %d instead on line %d\n", RLITE_REPLY_STRING, reply->element[0]->type, __LINE__);
+		return 1;
+	}
+	if (reply->element[0]->len != 3) {
+		fprintf(stderr, "Expected reply element[0] length to be %d, got %d instead on line %d\n", 3, reply->element[0]->len, __LINE__);
+		return 1;
+	}
+
+	if (memcmp(reply->element[0]->str, "one", 3) != 0) {
+		fprintf(stderr, "Expected reply element[0] to be \"%s\", got \"%s\" instead on line %d\n", "one", reply->element[0]->str, __LINE__);
+		return 1;
+	}
+	freeReplyObject(reply);
+
+	rliteFree(context);
+	return 0;
+}
+
 int run_zset() {
 	if (test_zadd() != 0) {
 		return 1;
@@ -167,6 +233,9 @@ int run_zset() {
 		return 1;
 	}
 	if (test_zrevrange() != 0) {
+		return 1;
+	}
+	if (test_zrem() != 0) {
 		return 1;
 	}
 	return 0;

@@ -535,6 +535,31 @@ void zrevrangeCommand(rliteClient *c) {
 	zrangeGenericCommand(c, 1);
 }
 
+void zremCommand(rliteClient *c) {
+    const unsigned char *key = UNSIGN(c->argv[1]);
+    const size_t keylen = c->argvlen[1];
+    long deleted = 0;
+	int j;
+
+    // memberslen needs long, we have size_t (unsigned long)
+    // it would be great not to need this
+    long *memberslen = malloc(sizeof(long) * (c->argc - 2));
+    if (!memberslen) {
+        __rliteSetError(c->context, RLITE_ERR_OOM, "Out of memory");
+        goto cleanup;
+    }
+    for (j = 2; j < c->argc; j++) {
+        memberslen[j - 2] = c->argvlen[j];
+    }
+    int retval = rl_zrem(c->context->db, key, keylen, c->argc - 2, (unsigned char **)&c->argv[2], (long *)&c->argvlen[2], &deleted);
+    free(memberslen);
+    RLITE_SERVER_ERR(c, retval);
+
+    c->reply = createLongLongObject(deleted);
+cleanup:
+    return;
+}
+
 struct rliteCommand rliteCommandTable[] = {
 	// {"get",getCommand,2,"rF",0,NULL,1,1,1,0,0},
 	// {"set",setCommand,-3,"wm",0,NULL,1,1,1,0,0},
@@ -587,7 +612,7 @@ struct rliteCommand rliteCommandTable[] = {
 	// {"sscan",sscanCommand,-3,"rR",0,NULL,1,1,1,0,0},
 	{"zadd",zaddCommand,-4,"wmF",0,1,1,1,0,0},
 	{"zincrby",zincrbyCommand,4,"wmF",0,1,1,1,0,0},
-	// {"zrem",zremCommand,-3,"wF",0,NULL,1,1,1,0,0},
+	{"zrem",zremCommand,-3,"wF",0,1,1,1,0,0},
 	// {"zremrangebyscore",zremrangebyscoreCommand,4,"w",0,NULL,1,1,1,0,0},
 	// {"zremrangebyrank",zremrangebyrankCommand,4,"w",0,NULL,1,1,1,0,0},
 	// {"zremrangebylex",zremrangebylexCommand,4,"w",0,NULL,1,1,1,0,0},
