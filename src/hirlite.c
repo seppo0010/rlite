@@ -635,6 +635,105 @@ void zremrangebylexCommand(rliteClient *c) {
 	zremrangeGenericCommand(c,ZRANGE_LEX);
 }
 
+void zcardCommand(rliteClient *c) {
+	long card = 0;
+	int retval = rl_zcard(c->context->db, UNSIGN(c->argv[1]), c->argvlen[1], &card);
+	RLITE_SERVER_ERR(c, retval);
+	c->reply = createLongLongObject(card);
+cleanup:
+	return;
+}
+#define RLITE_AGGR_SUM 1
+#define RLITE_AGGR_MIN 2
+#define RLITE_AGGR_MAX 3
+#define RLITE_OP_UNION 1
+#define RLITE_OP_INTER 2
+
+void zunionInterGenericCommand(rliteClient *c, int op) {
+	int i, j;
+	long setnum;
+	int aggregate = RL_ZSET_AGGREGATE_SUM;
+	double *weights = NULL;
+
+	/* expect setnum input keys to be given */
+	if ((getLongFromObjectOrReply(c, c->argv[2], &setnum, NULL) != RLITE_OK))
+		return;
+
+	if (setnum < 1) {
+		c->reply = createErrorObject("at least 1 input key is needed for ZUNIONSTORE/ZINTERSTORE");
+		return;
+	}
+
+	/* test if the expected number of keys would overflow */
+	if (setnum > c->argc - 3) {
+		c->reply = createErrorObject(RLITE_SYNTAXERR);
+		return;
+	}
+
+	if (c->argc > 3 + setnum) {
+		j = 3 + setnum;
+		if (strcasecmp(c->argv[j], "weights") == 0) {
+			if (j + 1 + setnum > c->argc) {
+				c->reply = createErrorObject(RLITE_SYNTAXERR);
+				return;
+			}
+			weights = malloc(sizeof(double) * setnum);
+			for (i = 0; i < setnum; i++) {
+				if (getDoubleFromObjectOrReply(c,c->argv[j + 1 + i], &weights[i],
+						"weight value is not a float") != RLITE_OK) {
+					free(weights);
+					return;
+				}
+			}
+			j += setnum + 1;
+		}
+		if (c->argc > j && c->argvlen[j] == 9 && memcmp(c->argv[j], "aggregate", 9) == 0) {
+			if (strcasecmp(c->argv[j + 1], "min") == 0) {
+				aggregate = RL_ZSET_AGGREGATE_MIN;
+			} else if (strcasecmp(c->argv[j + 1], "max") == 0) {
+				aggregate = RL_ZSET_AGGREGATE_MAX;
+			} else if (strcasecmp(c->argv[j + 1], "sum") == 0) {
+				aggregate = RL_ZSET_AGGREGATE_SUM;
+			} else {
+				free(weights);
+				c->reply = createErrorObject(RLITE_SYNTAXERR);
+				return;
+			}
+			j += 2;
+		}
+		if (j != c->argc) {
+			free(weights);
+			c->reply = createErrorObject(RLITE_SYNTAXERR);
+			return;
+		}
+	}
+
+	unsigned char **keys = malloc(sizeof(unsigned char *) * (1 + setnum));
+	long *keys_len = malloc(sizeof(long) * (1 + setnum));
+	keys[0] = UNSIGN(c->argv[1]);
+	keys_len[0] = (long)c->argvlen[1];
+	for (i = 0; i < setnum; i++) {
+		keys[i + 1] = UNSIGN(c->argv[3 + i]);
+		keys_len[i + 1] = c->argvlen[3 + i];
+	}
+	int retval = (op == RLITE_OP_UNION ? rl_zunionstore : rl_zinterstore)(c->context->db, setnum + 1, keys, keys_len, weights, aggregate);
+	free(keys);
+	free(keys_len);
+	free(weights);
+	RLITE_SERVER_ERR(c, retval);
+	zcardCommand(c);
+cleanup:
+	return;
+}
+
+void zunionstoreCommand(rliteClient *c) {
+	zunionInterGenericCommand(c, RLITE_OP_UNION);
+}
+
+void zinterstoreCommand(rliteClient *c) {
+	zunionInterGenericCommand(c, RLITE_OP_INTER);
+}
+
 struct rliteCommand rliteCommandTable[] = {
 	// {"get",getCommand,2,"rF",0,NULL,1,1,1,0,0},
 	// {"set",setCommand,-3,"wm",0,NULL,1,1,1,0,0},
@@ -691,8 +790,8 @@ struct rliteCommand rliteCommandTable[] = {
 	{"zremrangebyscore",zremrangebyscoreCommand,4,"w",0,1,1,1,0,0},
 	{"zremrangebyrank",zremrangebyrankCommand,4,"w",0,1,1,1,0,0},
 	{"zremrangebylex",zremrangebylexCommand,4,"w",0,1,1,1,0,0},
-	// {"zunionstore",zunionstoreCommand,-4,"wm",0,zunionInterGetKeys,0,0,0,0,0},
-	// {"zinterstore",zinterstoreCommand,-4,"wm",0,zunionInterGetKeys,0,0,0,0,0},
+	{"zunionstore",zunionstoreCommand,-4,"wm",0,0,0,0,0,0},
+	{"zinterstore",zinterstoreCommand,-4,"wm",0,0,0,0,0,0},
 	{"zrange",zrangeCommand,-4,"r",0,1,1,1,0,0},
 	// {"zrangebyscore",zrangebyscoreCommand,-4,"r",0,NULL,1,1,1,0,0},
 	// {"zrevrangebyscore",zrevrangebyscoreCommand,-4,"r",0,NULL,1,1,1,0,0},
@@ -701,7 +800,7 @@ struct rliteCommand rliteCommandTable[] = {
 	// {"zcount",zcountCommand,4,"rF",0,NULL,1,1,1,0,0},
 	// {"zlexcount",zlexcountCommand,4,"rF",0,NULL,1,1,1,0,0},
 	{"zrevrange",zrevrangeCommand,-4,"r",0,1,1,1,0,0},
-	// {"zcard",zcardCommand,2,"rF",0,NULL,1,1,1,0,0},
+	{"zcard",zcardCommand,2,"rF",0,1,1,1,0,0},
 	// {"zscore",zscoreCommand,3,"rF",0,NULL,1,1,1,0,0},
 	// {"zrank",zrankCommand,3,"rF",0,NULL,1,1,1,0,0},
 	// {"zrevrank",zrevrankCommand,3,"rF",0,NULL,1,1,1,0,0},
