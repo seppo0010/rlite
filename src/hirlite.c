@@ -789,6 +789,52 @@ void zrevrangebyscoreCommand(rliteClient *c) {
 	genericZrangebyscoreCommand(c, 1);
 }
 
+void zlexcountCommand(rliteClient *c) {
+	long count = 0;
+
+	int retval = rl_zlexcount(c->context->db, UNSIGN(c->argv[1]), c->argvlen[1], UNSIGN(c->argv[2]), c->argvlen[2], UNSIGN(c->argv[3]), c->argvlen[3], &count);
+	RLITE_SERVER_ERR(c, retval);
+	if (retval == RL_NOT_FOUND) {
+		count = 0;
+	}
+	c->reply = createLongLongObject(count);
+cleanup:
+	return;
+}
+
+/* This command implements ZRANGEBYLEX, ZREVRANGEBYLEX. */
+void genericZrangebylexCommand(rliteClient *c, int reverse) {
+	rl_zset_iterator *iterator;
+	long offset = 0, limit = -1;
+
+	if (c->argc > 4) {
+		int remaining = c->argc - 4;
+		int pos = 4;
+
+		while (remaining) {
+			if (remaining >= 3 && !strcasecmp(c->argv[pos],"limit")) {
+				if ((getLongFromObjectOrReply(c, c->argv[pos+1], &offset, NULL) != RLITE_OK) ||
+					(getLongFromObjectOrReply(c, c->argv[pos+2], &limit, NULL) != RLITE_OK)) return;
+				pos += 3; remaining -= 3;
+			} else {
+				c->reply = createErrorObject(RLITE_SYNTAXERR);
+				return;
+			}
+		}
+	}
+
+	int retval = (reverse ? rl_zrevrangebylex : rl_zrangebylex)(c->context->db, UNSIGN(c->argv[1]), c->argvlen[1], UNSIGN(c->argv[2]), c->argvlen[2], UNSIGN(c->argv[3]), c->argvlen[3], offset, limit, &iterator);
+	addZsetIteratorReply(c, retval, iterator, 0);
+}
+
+void zrangebylexCommand(rliteClient *c) {
+	genericZrangebylexCommand(c,0);
+}
+
+void zrevrangebylexCommand(rliteClient *c) {
+	genericZrangebylexCommand(c,1);
+}
+
 struct rliteCommand rliteCommandTable[] = {
 	// {"get",getCommand,2,"rF",0,NULL,1,1,1,0,0},
 	// {"set",setCommand,-3,"wm",0,NULL,1,1,1,0,0},
@@ -850,10 +896,10 @@ struct rliteCommand rliteCommandTable[] = {
 	{"zrange",zrangeCommand,-4,"r",0,1,1,1,0,0},
 	{"zrangebyscore",zrangebyscoreCommand,-4,"r",0,1,1,1,0,0},
 	{"zrevrangebyscore",zrevrangebyscoreCommand,-4,"r",0,1,1,1,0,0},
-	// {"zrangebylex",zrangebylexCommand,-4,"r",0,NULL,1,1,1,0,0},
-	// {"zrevrangebylex",zrevrangebylexCommand,-4,"r",0,NULL,1,1,1,0,0},
+	{"zrangebylex",zrangebylexCommand,-4,"r",0,1,1,1,0,0},
+	{"zrevrangebylex",zrevrangebylexCommand,-4,"r",0,1,1,1,0,0},
 	// {"zcount",zcountCommand,4,"rF",0,NULL,1,1,1,0,0},
-	// {"zlexcount",zlexcountCommand,4,"rF",0,NULL,1,1,1,0,0},
+	{"zlexcount",zlexcountCommand,4,"rF",0,1,1,1,0,0},
 	{"zrevrange",zrevrangeCommand,-4,"r",0,1,1,1,0,0},
 	{"zcard",zcardCommand,2,"rF",0,1,1,1,0,0},
 	// {"zscore",zscoreCommand,3,"rF",0,NULL,1,1,1,0,0},

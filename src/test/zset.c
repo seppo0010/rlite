@@ -507,6 +507,112 @@ int test_zrevrangebyscore() {
 	return 0;
 }
 
+int test_zrangebylex() {
+	rliteContext *context = rliteConnect(":memory:", 0);
+
+	rliteReply* reply;
+	char* argv[100] = {"ZADD", "mykey", "0", "a", "0", "b", "0", "c", NULL};
+	size_t argvlen[100];
+
+	reply = rliteCommandArgv(context, populateArgvlen(argv, argvlen), (const char **)argv, (const size_t*)argvlen);
+	freeReplyObject(reply);
+
+	char *argv2[100] = {"ZRANGEBYLEX", "mykey", "-inf", "[b", NULL};
+	reply = rliteCommandArgv(context, populateArgvlen(argv2, argvlen), (const char **)argv2, (const size_t*)argvlen);
+	if (reply->type == RLITE_REPLY_ERROR) {
+		fprintf(stderr, "Expected reply not to be ERROR, got \"%s\" instead on line %d\n", reply->str, __LINE__);
+		return 1;
+	}
+	if (reply->type != RLITE_REPLY_ARRAY) {
+		fprintf(stderr, "Expected reply to be ARRAY, got %d instead on line %d\n", reply->type, __LINE__);
+		return 1;
+	}
+	if (reply->elements != 2) {
+		fprintf(stderr, "Expected reply elements to be %d, got %lu instead on line %d\n", 2, reply->elements, __LINE__);
+		return 1;
+	}
+	int i;
+	char *expected[2] = {"a", "b"};
+	for (i = 0; i < 2; i++) {
+		if (memcmp(reply->element[i]->str, expected[i], reply->element[i]->len)) {
+			fprintf(stderr, "Expected element[%d] to be %s, got %s instead on line %d\n", i, expected[i], reply->element[i]->str, __LINE__);
+			return 1;
+		}
+	}
+	freeReplyObject(reply);
+
+	rliteFree(context);
+	return 0;
+}
+
+int test_zrevrangebylex() {
+	rliteContext *context = rliteConnect(":memory:", 0);
+
+	rliteReply* reply;
+	char* argv[100] = {"ZADD", "mykey", "0", "a", "0", "b", "0", "c", NULL};
+	size_t argvlen[100];
+
+	reply = rliteCommandArgv(context, populateArgvlen(argv, argvlen), (const char **)argv, (const size_t*)argvlen);
+	freeReplyObject(reply);
+
+	char *argv2[100] = {"ZREVRANGEBYLEX", "mykey", "[b", "-inf", NULL};
+	reply = rliteCommandArgv(context, populateArgvlen(argv2, argvlen), (const char **)argv2, (const size_t*)argvlen);
+	if (reply->type == RLITE_REPLY_ERROR) {
+		fprintf(stderr, "Expected reply not to be ERROR, got \"%s\" instead on line %d\n", reply->str, __LINE__);
+		return 1;
+	}
+	if (reply->type != RLITE_REPLY_ARRAY) {
+		fprintf(stderr, "Expected reply to be ARRAY, got %d instead on line %d\n", reply->type, __LINE__);
+		return 1;
+	}
+	if (reply->elements != 2) {
+		fprintf(stderr, "Expected reply elements to be %d, got %lu instead on line %d\n", 2, reply->elements, __LINE__);
+		return 1;
+	}
+	int i;
+	char *expected[2] = {"b", "a"};
+	for (i = 0; i < 2; i++) {
+		if (memcmp(reply->element[i]->str, expected[i], reply->element[i]->len)) {
+			fprintf(stderr, "Expected element[%d] to be %s, got %s instead on line %d\n", i, expected[i], reply->element[i]->str, __LINE__);
+			return 1;
+		}
+	}
+	freeReplyObject(reply);
+
+	rliteFree(context);
+	return 0;
+}
+
+int test_zlexcount() {
+	rliteContext *context = rliteConnect(":memory:", 0);
+
+	rliteReply* reply;
+	char* argv[100] = {"ZADD", "mykey", "0", "a", "0", "b", "0", "c", NULL};
+	size_t argvlen[100];
+
+	reply = rliteCommandArgv(context, populateArgvlen(argv, argvlen), (const char **)argv, (const size_t*)argvlen);
+	freeReplyObject(reply);
+
+	char *argv2[100] = {"ZLEXCOUNT", "mykey", "-inf", "[b", NULL};
+	reply = rliteCommandArgv(context, populateArgvlen(argv2, argvlen), (const char **)argv2, (const size_t*)argvlen);
+	if (reply->type == RLITE_REPLY_ERROR) {
+		fprintf(stderr, "Expected reply not to be ERROR, got \"%s\" instead on line %d\n", reply->str, __LINE__);
+		return 1;
+	}
+	if (reply->type != RLITE_REPLY_INTEGER) {
+		fprintf(stderr, "Expected reply to be ARRAY, got %d instead on line %d\n", reply->type, __LINE__);
+		return 1;
+	}
+	if (reply->integer != 2) {
+		fprintf(stderr, "Expected reply elements to be %d, got %lld instead on line %d\n", 2, reply->integer, __LINE__);
+		return 1;
+	}
+	freeReplyObject(reply);
+
+	rliteFree(context);
+	return 0;
+}
+
 int run_zset() {
 	if (test_zadd() != 0) {
 		return 1;
@@ -539,6 +645,15 @@ int run_zset() {
 		return 1;
 	}
 	if (test_zrevrangebyscore() != 0) {
+		return 1;
+	}
+	if (test_zrangebylex() != 0) {
+		return 1;
+	}
+	if (test_zrevrangebylex() != 0) {
+		return 1;
+	}
+	if (test_zlexcount() != 0) {
 		return 1;
 	}
 	return 0;
