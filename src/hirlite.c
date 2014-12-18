@@ -874,6 +874,26 @@ void zrevrankCommand(rliteClient *c) {
 	zrankGenericCommand(c, 1);
 }
 
+void zcountCommand(rliteClient *c) {
+	rl_zrangespec rlrange;
+	long count;
+
+	/* Parse the range arguments */
+	if (zslParseRange(c->argv[2],c->argv[3],&rlrange) != RLITE_OK) {
+		c->reply = createErrorObject("min or max is not a float");
+		return;
+	}
+
+	int retval = rl_zcount(c->context->db, UNSIGN(c->argv[1]), c->argvlen[1], &rlrange, &count);
+	RLITE_SERVER_ERR(c, retval);
+	if (retval == RL_NOT_FOUND) {
+		count = 0;
+	}
+	c->reply = createLongLongObject(count);
+cleanup:
+	return;
+}
+
 struct rliteCommand rliteCommandTable[] = {
 	// {"get",getCommand,2,"rF",0,NULL,1,1,1,0,0},
 	// {"set",setCommand,-3,"wm",0,NULL,1,1,1,0,0},
@@ -937,7 +957,7 @@ struct rliteCommand rliteCommandTable[] = {
 	{"zrevrangebyscore",zrevrangebyscoreCommand,-4,"r",0,1,1,1,0,0},
 	{"zrangebylex",zrangebylexCommand,-4,"r",0,1,1,1,0,0},
 	{"zrevrangebylex",zrevrangebylexCommand,-4,"r",0,1,1,1,0,0},
-	// {"zcount",zcountCommand,4,"rF",0,NULL,1,1,1,0,0},
+	{"zcount",zcountCommand,4,"rF",0,1,1,1,0,0},
 	{"zlexcount",zlexcountCommand,4,"rF",0,1,1,1,0,0},
 	{"zrevrange",zrevrangeCommand,-4,"r",0,1,1,1,0,0},
 	{"zcard",zcardCommand,2,"rF",0,1,1,1,0,0},
