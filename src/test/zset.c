@@ -225,6 +225,112 @@ int test_zrem() {
 	return 0;
 }
 
+int test_zremrangebyrank() {
+	rliteContext *context = rliteConnect(":memory:", 0);
+	if (_zadd(context) != 0) {
+		return 1;
+	}
+
+	size_t argvlen[4];
+	char* argv[4];
+	rliteReply* reply;
+	argv[0] = "ZREMRANGEBYRANK";
+	argvlen[0] = strlen(argv[0]);
+	argvlen[1] = 5;
+	argv[1] = "mykey";
+	argvlen[2] = 1;
+	argv[2] = "0";
+	argvlen[3] = 1;
+	argv[3] = "3";
+	reply = rliteCommandArgv(context, 4, (const char **)argv, (const size_t*)argvlen);
+	if (reply->type == RLITE_REPLY_ERROR) {
+		fprintf(stderr, "Expected reply not to be ERROR, got \"%s\" instead on line %d\n", reply->str, __LINE__);
+		return 1;
+	}
+	if (reply->type != RLITE_REPLY_INTEGER) {
+		fprintf(stderr, "Expected reply to be INTEGER, got %d instead on line %d\n", reply->type, __LINE__);
+		return 1;
+	}
+	if (reply->integer != 2) {
+		fprintf(stderr, "Expected reply to be %d, got %lld instead on line %d\n", 2, reply->integer, __LINE__);
+		return 1;
+	}
+	freeReplyObject(reply);
+
+	argvlen[0] = 6;
+	argv[0] = "ZRANGE";
+	argvlen[2] = 1;
+	argv[2] = "0";
+	argvlen[3] = 2;
+	argv[3] = "-1";
+	reply = rliteCommandArgv(context, 4, (const char **)argv, (const size_t*)argvlen);
+	if (reply->type != RLITE_REPLY_ARRAY) {
+		fprintf(stderr, "Expected reply to be ARRAY, got %d instead on line %d\n", reply->type, __LINE__);
+		return 1;
+	}
+	if (reply->elements != 0) {
+		fprintf(stderr, "Expected reply size to be %d, got %lu instead on line %d\n", 0, reply->elements, __LINE__);
+		return 1;
+	}
+	freeReplyObject(reply);
+
+	rliteFree(context);
+	return 0;
+}
+
+int test_zremrangebyscore() {
+	rliteContext *context = rliteConnect(":memory:", 0);
+	if (_zadd(context) != 0) {
+		return 1;
+	}
+
+	size_t argvlen[4];
+	char* argv[4];
+	rliteReply* reply;
+	argv[0] = "ZREMRANGEBYscore";
+	argvlen[0] = strlen(argv[0]);
+	argvlen[1] = 5;
+	argv[1] = "mykey";
+	argvlen[2] = 1;
+	argv[2] = "0";
+	argvlen[3] = 1;
+	argv[3] = "3";
+	reply = rliteCommandArgv(context, 4, (const char **)argv, (const size_t*)argvlen);
+	if (reply->type == RLITE_REPLY_ERROR) {
+		fprintf(stderr, "Expected reply not to be ERROR, got \"%s\" instead on line %d\n", reply->str, __LINE__);
+		return 1;
+	}
+	if (reply->type != RLITE_REPLY_INTEGER) {
+		fprintf(stderr, "Expected reply to be INTEGER, got %d instead on line %d\n", reply->type, __LINE__);
+		return 1;
+	}
+	if (reply->integer != 2) {
+		fprintf(stderr, "Expected reply to be %d, got %lld instead on line %d\n", 2, reply->integer, __LINE__);
+		return 1;
+	}
+	freeReplyObject(reply);
+
+	argvlen[0] = 6;
+	argv[0] = "ZRANGE";
+	argvlen[2] = 1;
+	argv[2] = "0";
+	argvlen[3] = 2;
+	argv[3] = "-1";
+	reply = rliteCommandArgv(context, 4, (const char **)argv, (const size_t*)argvlen);
+	if (reply->type != RLITE_REPLY_ARRAY) {
+		fprintf(stderr, "Expected reply to be ARRAY, got %d instead on line %d\n", reply->type, __LINE__);
+		return 1;
+	}
+	if (reply->elements != 0) {
+		fprintf(stderr, "Expected reply size to be %d, got %lu instead on line %d\n", 0, reply->elements, __LINE__);
+		return 1;
+	}
+	freeReplyObject(reply);
+
+	rliteFree(context);
+	return 0;
+}
+
 int run_zset() {
 	if (test_zadd() != 0) {
 		return 1;
@@ -236,6 +342,12 @@ int run_zset() {
 		return 1;
 	}
 	if (test_zrem() != 0) {
+		return 1;
+	}
+	if (test_zremrangebyrank() != 0) {
+		return 1;
+	}
+	if (test_zremrangebyscore() != 0) {
 		return 1;
 	}
 	return 0;

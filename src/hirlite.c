@@ -536,28 +536,103 @@ void zrevrangeCommand(rliteClient *c) {
 }
 
 void zremCommand(rliteClient *c) {
-    const unsigned char *key = UNSIGN(c->argv[1]);
-    const size_t keylen = c->argvlen[1];
-    long deleted = 0;
+	const unsigned char *key = UNSIGN(c->argv[1]);
+	const size_t keylen = c->argvlen[1];
+	long deleted = 0;
 	int j;
 
-    // memberslen needs long, we have size_t (unsigned long)
-    // it would be great not to need this
-    long *memberslen = malloc(sizeof(long) * (c->argc - 2));
-    if (!memberslen) {
-        __rliteSetError(c->context, RLITE_ERR_OOM, "Out of memory");
-        goto cleanup;
-    }
-    for (j = 2; j < c->argc; j++) {
-        memberslen[j - 2] = c->argvlen[j];
-    }
-    int retval = rl_zrem(c->context->db, key, keylen, c->argc - 2, (unsigned char **)&c->argv[2], (long *)&c->argvlen[2], &deleted);
-    free(memberslen);
-    RLITE_SERVER_ERR(c, retval);
+	// memberslen needs long, we have size_t (unsigned long)
+	// it would be great not to need this
+	long *memberslen = malloc(sizeof(long) * (c->argc - 2));
+	if (!memberslen) {
+		__rliteSetError(c->context, RLITE_ERR_OOM, "Out of memory");
+		goto cleanup;
+	}
+	for (j = 2; j < c->argc; j++) {
+		memberslen[j - 2] = c->argvlen[j];
+	}
+	int retval = rl_zrem(c->context->db, key, keylen, c->argc - 2, (unsigned char **)&c->argv[2], (long *)&c->argvlen[2], &deleted);
+	free(memberslen);
+	RLITE_SERVER_ERR(c, retval);
 
-    c->reply = createLongLongObject(deleted);
+	c->reply = createLongLongObject(deleted);
 cleanup:
-    return;
+	return;
+}
+
+/* Populate the rangespec according to the objects min and max. */
+static int zslParseRange(const char *min, const char *max, rl_zrangespec *spec) {
+	char *eptr;
+	spec->minex = spec->maxex = 0;
+
+	/* Parse the min-max interval. If one of the values is prefixed
+	 * by the "(" character, it's considered "open". For instance
+	 * ZRANGEBYSCORE zset (1.5 (2.5 will match min < x < max
+	 * ZRANGEBYSCORE zset 1.5 2.5 will instead match min <= x <= max */
+	if (min[0] == '(') {
+		spec->min = strtod((char*)min+1,&eptr);
+		if (eptr[0] != '\0' || isnan(spec->min)) return RLITE_ERR;
+		spec->minex = 1;
+	} else {
+		spec->min = strtod((char*)min,&eptr);
+		if (eptr[0] != '\0' || isnan(spec->min)) return RLITE_ERR;
+	}
+	if (((char*)max)[0] == '(') {
+		spec->max = strtod((char*)max+1,&eptr);
+		if (eptr[0] != '\0' || isnan(spec->max)) return RLITE_ERR;
+		spec->maxex = 1;
+	} else {
+		spec->max = strtod((char*)max,&eptr);
+		if (eptr[0] != '\0' || isnan(spec->max)) return RLITE_ERR;
+	}
+
+	return RLITE_OK;
+}
+/* Implements ZREMRANGEBYRANK, ZREMRANGEBYSCORE, ZREMRANGEBYLEX commands. */
+#define ZRANGE_RANK 0
+#define ZRANGE_SCORE 1
+#define ZRANGE_LEX 2
+void zremrangeGenericCommand(rliteClient *c, int rangetype) {
+	int retval;
+	long deleted;
+	rl_zrangespec rlrange;
+	long start, end;
+
+	/* Step 1: Parse the range. */
+	if (rangetype == ZRANGE_RANK) {
+		if ((getLongFromObjectOrReply(c,c->argv[2],&start,NULL) != RLITE_OK) ||
+			(getLongFromObjectOrReply(c,c->argv[3],&end,NULL) != RLITE_OK))
+			return;
+		retval = rl_zremrangebyrank(c->context->db, UNSIGN(c->argv[1]), c->argvlen[1], start, end, &deleted);
+	} else if (rangetype == ZRANGE_SCORE) {
+		if (zslParseRange(c->argv[2],c->argv[3],&rlrange) != RLITE_OK) {
+			c->reply = createErrorObject("min or max is not a float");
+			return;
+		}
+		retval = rl_zremrangebyscore(c->context->db, UNSIGN(c->argv[1]), c->argvlen[1], &rlrange, &deleted);
+	} else if (rangetype == ZRANGE_LEX) {
+		retval = rl_zremrangebylex(c->context->db, UNSIGN(c->argv[1]), c->argvlen[1], UNSIGN(c->argv[2]), c->argvlen[2], UNSIGN(c->argv[3]), c->argvlen[3], &deleted);
+	} else {
+		__rliteSetError(c->context, RLITE_ERR, "Unexpected rangetype");
+		goto cleanup;
+	}
+	RLITE_SERVER_ERR(c, retval);
+
+	c->reply = createLongLongObject(deleted);
+cleanup:
+	return;
+}
+
+void zremrangebyrankCommand(rliteClient *c) {
+	zremrangeGenericCommand(c,ZRANGE_RANK);
+}
+
+void zremrangebyscoreCommand(rliteClient *c) {
+	zremrangeGenericCommand(c,ZRANGE_SCORE);
+}
+
+void zremrangebylexCommand(rliteClient *c) {
+	zremrangeGenericCommand(c,ZRANGE_LEX);
 }
 
 struct rliteCommand rliteCommandTable[] = {
@@ -613,9 +688,9 @@ struct rliteCommand rliteCommandTable[] = {
 	{"zadd",zaddCommand,-4,"wmF",0,1,1,1,0,0},
 	{"zincrby",zincrbyCommand,4,"wmF",0,1,1,1,0,0},
 	{"zrem",zremCommand,-3,"wF",0,1,1,1,0,0},
-	// {"zremrangebyscore",zremrangebyscoreCommand,4,"w",0,NULL,1,1,1,0,0},
-	// {"zremrangebyrank",zremrangebyrankCommand,4,"w",0,NULL,1,1,1,0,0},
-	// {"zremrangebylex",zremrangebylexCommand,4,"w",0,NULL,1,1,1,0,0},
+	{"zremrangebyscore",zremrangebyscoreCommand,4,"w",0,1,1,1,0,0},
+	{"zremrangebyrank",zremrangebyrankCommand,4,"w",0,1,1,1,0,0},
+	{"zremrangebylex",zremrangebylexCommand,4,"w",0,1,1,1,0,0},
 	// {"zunionstore",zunionstoreCommand,-4,"wm",0,zunionInterGetKeys,0,0,0,0,0},
 	// {"zinterstore",zinterstoreCommand,-4,"wm",0,zunionInterGetKeys,0,0,0,0,0},
 	{"zrange",zrangeCommand,-4,"r",0,1,1,1,0,0},
