@@ -835,6 +835,45 @@ void zrevrangebylexCommand(rliteClient *c) {
 	genericZrangebylexCommand(c,1);
 }
 
+void zscoreCommand(rliteClient *c) {
+	double score;
+
+	int retval = rl_zscore(c->context->db, UNSIGN(c->argv[1]), c->argvlen[1], UNSIGN(c->argv[2]), c->argvlen[2], &score);
+	RLITE_SERVER_ERR(c, retval);
+
+	if (retval == RL_FOUND) {
+		c->reply = createDoubleObject(score);
+	} else if (retval == RL_NOT_FOUND) {
+		c->reply = createReplyObject(RLITE_REPLY_NIL);
+	}
+
+cleanup:
+	return;
+}
+
+void zrankGenericCommand(rliteClient *c, int reverse) {
+	long rank;
+
+	int retval = (reverse ? rl_zrevrank : rl_zrank)(c->context->db, UNSIGN(c->argv[1]), c->argvlen[1], UNSIGN(c->argv[2]), c->argvlen[2], &rank);
+	RLITE_SERVER_ERR(c, retval);
+
+	if (retval == RL_NOT_FOUND) {
+		c->reply = createReplyObject(RLITE_REPLY_NIL);
+	} else if (retval == RL_FOUND) {
+		c->reply = createLongLongObject(rank);
+	}
+cleanup:
+	return;
+}
+
+void zrankCommand(rliteClient *c) {
+	zrankGenericCommand(c, 0);
+}
+
+void zrevrankCommand(rliteClient *c) {
+	zrankGenericCommand(c, 1);
+}
+
 struct rliteCommand rliteCommandTable[] = {
 	// {"get",getCommand,2,"rF",0,NULL,1,1,1,0,0},
 	// {"set",setCommand,-3,"wm",0,NULL,1,1,1,0,0},
@@ -902,9 +941,9 @@ struct rliteCommand rliteCommandTable[] = {
 	{"zlexcount",zlexcountCommand,4,"rF",0,1,1,1,0,0},
 	{"zrevrange",zrevrangeCommand,-4,"r",0,1,1,1,0,0},
 	{"zcard",zcardCommand,2,"rF",0,1,1,1,0,0},
-	// {"zscore",zscoreCommand,3,"rF",0,NULL,1,1,1,0,0},
-	// {"zrank",zrankCommand,3,"rF",0,NULL,1,1,1,0,0},
-	// {"zrevrank",zrevrankCommand,3,"rF",0,NULL,1,1,1,0,0},
+	{"zscore",zscoreCommand,3,"rF",0,1,1,1,0,0},
+	{"zrank",zrankCommand,3,"rF",0,1,1,1,0,0},
+	{"zrevrank",zrevrankCommand,3,"rF",0,1,1,1,0,0},
 	// {"zscan",zscanCommand,-3,"rR",0,NULL,1,1,1,0,0},
 	// {"hset",hsetCommand,4,"wmF",0,NULL,1,1,1,0,0},
 	// {"hsetnx",hsetnxCommand,4,"wmF",0,NULL,1,1,1,0,0},
