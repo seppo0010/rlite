@@ -431,6 +431,81 @@ int test_zunionstore() {
 	return 0;
 }
 
+int test_zrangebyscore() {
+	rliteContext *context = rliteConnect(":memory:", 0);
+
+	rliteReply* reply;
+	char* argv[100] = {"ZADD", "mykey", "1", "one", "2", "two", "3", "three", NULL};
+	size_t argvlen[100];
+
+	reply = rliteCommandArgv(context, populateArgvlen(argv, argvlen), (const char **)argv, (const size_t*)argvlen);
+	freeReplyObject(reply);
+
+	char *argv2[100] = {"ZRANGEBYSCORE", "mykey", "0", "2", NULL};
+	reply = rliteCommandArgv(context, populateArgvlen(argv2, argvlen), (const char **)argv2, (const size_t*)argvlen);
+	if (reply->type == RLITE_REPLY_ERROR) {
+		fprintf(stderr, "Expected reply not to be ERROR, got \"%s\" instead on line %d\n", reply->str, __LINE__);
+		return 1;
+	}
+	if (reply->type != RLITE_REPLY_ARRAY) {
+		fprintf(stderr, "Expected reply to be ARRAY, got %d instead on line %d\n", reply->type, __LINE__);
+		return 1;
+	}
+	if (reply->elements != 2) {
+		fprintf(stderr, "Expected reply elements to be %d, got %lu instead on line %d\n", 2, reply->elements, __LINE__);
+		return 1;
+	}
+	int i;
+	char *expected[2] = {"one", "two"};
+	for (i = 0; i < 2; i++) {
+		if (memcmp(reply->element[i]->str, expected[i], reply->element[i]->len)) {
+			fprintf(stderr, "Expected element[%d] to be %s, got %s instead on line %d\n", i, expected[i], reply->element[i]->str, __LINE__);
+			return 1;
+		}
+	}
+	freeReplyObject(reply);
+
+	rliteFree(context);
+	return 0;
+}
+
+int test_zrevrangebyscore() {
+	rliteContext *context = rliteConnect(":memory:", 0);
+
+	rliteReply* reply;
+	char* argv[100] = {"ZADD", "mykey", "1", "one", "2", "two", "3", "three", NULL};
+	size_t argvlen[100];
+
+	reply = rliteCommandArgv(context, populateArgvlen(argv, argvlen), (const char **)argv, (const size_t*)argvlen);
+	freeReplyObject(reply);
+
+	char *argv2[100] = {"ZREVRANGEBYSCORE", "mykey", "2", "0", NULL};
+	reply = rliteCommandArgv(context, populateArgvlen(argv2, argvlen), (const char **)argv2, (const size_t*)argvlen);
+	if (reply->type == RLITE_REPLY_ERROR) {
+		fprintf(stderr, "Expected reply not to be ERROR, got \"%s\" instead on line %d\n", reply->str, __LINE__);
+		return 1;
+	}
+	if (reply->type != RLITE_REPLY_ARRAY) {
+		fprintf(stderr, "Expected reply to be ARRAY, got %d instead on line %d\n", reply->type, __LINE__);
+		return 1;
+	}
+	if (reply->elements != 2) {
+		fprintf(stderr, "Expected reply elements to be %d, got %lu instead on line %d\n", 2, reply->elements, __LINE__);
+		return 1;
+	}
+	int i;
+	char *expected[2] = {"two", "one"};
+	for (i = 0; i < 2; i++) {
+		if (memcmp(reply->element[i]->str, expected[i], reply->element[i]->len)) {
+			fprintf(stderr, "Expected element[%d] to be %s, got %s instead on line %d\n", i, expected[i], reply->element[i]->str, __LINE__);
+			return 1;
+		}
+	}
+	freeReplyObject(reply);
+
+	rliteFree(context);
+	return 0;
+}
 
 int run_zset() {
 	if (test_zadd() != 0) {
@@ -458,6 +533,12 @@ int run_zset() {
 		return 1;
 	}
 	if (test_zunionstore() != 0) {
+		return 1;
+	}
+	if (test_zrangebyscore() != 0) {
+		return 1;
+	}
+	if (test_zrevrangebyscore() != 0) {
 		return 1;
 	}
 	return 0;

@@ -734,6 +734,61 @@ void zinterstoreCommand(rliteClient *c) {
 	zunionInterGenericCommand(c, RLITE_OP_INTER);
 }
 
+/* This command implements ZRANGEBYSCORE, ZREVRANGEBYSCORE. */
+void genericZrangebyscoreCommand(rliteClient *c, int reverse) {
+	rl_zrangespec range;
+	long offset = 0, limit = -1;
+	int withscores = 0;
+	int minidx, maxidx;
+
+	/* Parse the range arguments. */
+	if (reverse) {
+		/* Range is given as [max,min] */
+		maxidx = 2; minidx = 3;
+	} else {
+		/* Range is given as [min,max] */
+		minidx = 2; maxidx = 3;
+	}
+
+	if (zslParseRange(c->argv[minidx],c->argv[maxidx],&range) != RLITE_OK) {
+		c->reply = createErrorObject("min or max is not a float");
+		return;
+	}
+
+	/* Parse optional extra arguments. Note that ZCOUNT will exactly have
+	 * 4 arguments, so we'll never enter the following code path. */
+	if (c->argc > 4) {
+		int remaining = c->argc - 4;
+		int pos = 4;
+
+		while (remaining) {
+			if (remaining >= 1 && !strcasecmp(c->argv[pos],"withscores")) {
+				pos++; remaining--;
+				withscores = 1;
+			} else if (remaining >= 3 && !strcasecmp(c->argv[pos],"limit")) {
+				if ((getLongFromObjectOrReply(c, c->argv[pos+1], &offset, NULL) != RLITE_OK) ||
+					(getLongFromObjectOrReply(c, c->argv[pos+2], &limit, NULL) != RLITE_OK)) return;
+				pos += 3; remaining -= 3;
+			} else {
+				c->reply = createErrorObject(RLITE_SYNTAXERR);
+				return;
+			}
+		}
+	}
+
+	rl_zset_iterator *iterator;
+	int retval = (reverse ? rl_zrevrangebyscore : rl_zrangebyscore)(c->context->db, UNSIGN(c->argv[1]), c->argvlen[1], &range, offset, limit, &iterator);
+	addZsetIteratorReply(c, retval, iterator, withscores);
+}
+
+void zrangebyscoreCommand(rliteClient *c) {
+	genericZrangebyscoreCommand(c, 0);
+}
+
+void zrevrangebyscoreCommand(rliteClient *c) {
+	genericZrangebyscoreCommand(c, 1);
+}
+
 struct rliteCommand rliteCommandTable[] = {
 	// {"get",getCommand,2,"rF",0,NULL,1,1,1,0,0},
 	// {"set",setCommand,-3,"wm",0,NULL,1,1,1,0,0},
@@ -793,8 +848,8 @@ struct rliteCommand rliteCommandTable[] = {
 	{"zunionstore",zunionstoreCommand,-4,"wm",0,0,0,0,0,0},
 	{"zinterstore",zinterstoreCommand,-4,"wm",0,0,0,0,0,0},
 	{"zrange",zrangeCommand,-4,"r",0,1,1,1,0,0},
-	// {"zrangebyscore",zrangebyscoreCommand,-4,"r",0,NULL,1,1,1,0,0},
-	// {"zrevrangebyscore",zrevrangebyscoreCommand,-4,"r",0,NULL,1,1,1,0,0},
+	{"zrangebyscore",zrangebyscoreCommand,-4,"r",0,1,1,1,0,0},
+	{"zrevrangebyscore",zrevrangebyscoreCommand,-4,"r",0,1,1,1,0,0},
 	// {"zrangebylex",zrangebylexCommand,-4,"r",0,NULL,1,1,1,0,0},
 	// {"zrevrangebylex",zrevrangebylexCommand,-4,"r",0,NULL,1,1,1,0,0},
 	// {"zcount",zcountCommand,4,"rF",0,NULL,1,1,1,0,0},
