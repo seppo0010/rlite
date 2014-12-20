@@ -1,3 +1,4 @@
+#include "constants.h"
 #include <assert.h>
 #include <errno.h>
 #include <ctype.h>
@@ -6,11 +7,12 @@
 #include <stdio.h>
 #include <string.h>
 #include <strings.h>
+#include <sys/time.h>
+#include <time.h>
 #include <unistd.h>
 
 #include "hirlite.h"
 #include "util.h"
-#include "constants.h"
 
 #define UNSIGN(val) ((unsigned char *)val)
 
@@ -59,6 +61,10 @@ static rliteReply *createCStringObject(const char *str) {
 
 static rliteReply *createErrorObject(const char *str) {
 	return createStringTypeObject(RLITE_REPLY_ERROR, str, strlen((char *)str));
+}
+
+static rliteReply *createStatusObject(const char *str) {
+	return createStringTypeObject(RLITE_REPLY_STATUS, str, strlen((char *)str));
 }
 
 static rliteReply *createDoubleObject(double d) {
@@ -129,6 +135,29 @@ static int addReply(rliteContext* c, rliteReply *reply) {
 
 	c->replies[c->replyPosition] = reply;
 	c->replyLength++;
+	return RLITE_OK;
+}
+
+static int addReplyStatusFormat(rliteContext *c, const char *fmt, ...) {
+	int maxlen = strlen(fmt) * 2;
+	char *str = malloc(maxlen * sizeof(char));
+	va_list ap;
+	va_start(ap, fmt);
+	int written = vsnprintf(str, maxlen, fmt, ap);
+	va_end(ap);
+	if (written < 0) {
+		fprintf(stderr, "Failed to vsnprintf near line %d, got %d\n", __LINE__, written);
+		free(str);
+		return RLITE_ERR;
+	}
+	rliteReply *reply = createReplyObject(RLITE_REPLY_STATUS);
+	if (!reply) {
+		free(str);
+		__rliteSetError(c,RLITE_ERR_OOM,"Out of memory");
+		return RLITE_ERR;
+	}
+	reply->str = str;
+	addReply(c, reply);
 	return RLITE_OK;
 }
 
@@ -395,15 +424,18 @@ int __rliteAppendCommandArgv(rliteContext *c, int argc, const char **argv, const
 	client.argvlen = argvlen;
 
 	struct rliteCommand *command = lookupCommand(argv[0], argvlen[0]);
-	int retval;
+	int retval = RLITE_OK;
 	if (!command) {
 		retval = addReplyErrorFormat(c, "unknown command '%s'", (char*)argv[0]);
 	} else if ((command->arity > 0 && command->arity != argc) ||
 		(argc < -command->arity)) {
 		retval = addReplyErrorFormat(c, "wrong number of arguments for '%s' command", command->name);
 	} else {
+		client.reply = NULL;
 		command->proc(&client);
-		retval = addReply(c, client.reply);
+		if (client.reply) {
+			retval = addReply(c, client.reply);
+		}
 	}
 	return retval;
 }
@@ -894,6 +926,78 @@ cleanup:
 	return;
 }
 
+void delCommand(rliteClient *c) {
+	int deleted = 0, j, retval;
+
+	for (j = 1; j < c->argc; j++) {
+		retval = rl_key_delete_with_value(c->context->db, UNSIGN(c->argv[j]), c->argvlen[j]);
+		if (retval == RL_OK) {
+			deleted++;
+		}
+	}
+	c->reply = createLongLongObject(deleted);
+}
+
+void existsCommand(rliteClient *c) {
+	int retval = rl_key_get(c->context->db, UNSIGN(c->argv[1]), c->argvlen[1], NULL, NULL, NULL, NULL);
+	c->reply = createLongLongObject(retval == RL_FOUND ? 1 : 0);
+}
+
+void debugCommand(rliteClient *c) {
+	if (!strcasecmp(c->argv[1],"segfault")) {
+		*((char*)-1) = 'x';
+	} else if (!strcasecmp(c->argv[1],"oom")) {
+		void *ptr = malloc(ULONG_MAX); /* Should trigger an out of memory. */
+		free(ptr);
+		c->reply = createStatusObject(RLITE_STR_OK);
+	} else if (!strcasecmp(c->argv[1],"assert")) {
+		// TODO
+		c->reply = createErrorObject("Not implemented");
+	} else if (!strcasecmp(c->argv[1],"reload")) {
+		c->reply = createStatusObject(RLITE_STR_OK);
+	} else if (!strcasecmp(c->argv[1],"loadaof")) {
+		c->reply = createStatusObject(RLITE_STR_OK);
+	} else if (!strcasecmp(c->argv[1],"object") && c->argc == 3) {
+		unsigned char type;
+		if (rl_key_get(c->context->db, UNSIGN(c->argv[2]), c->argvlen[2], &type, NULL, NULL, NULL)) {
+			if (type == RL_TYPE_ZSET) {
+				addReplyStatusFormat(c->context,
+					"Value at:0xfaceadd refcount:1 "
+					"encoding:%s serializedlength:0 "
+					"lru:0 lru_seconds_idle:0", 0 == 0 ? "skiplist" : "ziplist");
+			}
+			return;
+		}
+	} else if (!strcasecmp(c->argv[1],"sdslen") && c->argc == 3) {
+		// TODO
+		c->reply = createErrorObject("Not implemented");
+	} else if (!strcasecmp(c->argv[1],"populate") &&
+			   (c->argc == 3 || c->argc == 4)) {
+		c->reply = createErrorObject("Not implemented");
+	} else if (!strcasecmp(c->argv[1],"digest") && c->argc == 2) {
+		c->reply = createErrorObject("Not implemented");
+	} else if (!strcasecmp(c->argv[1],"sleep") && c->argc == 3) {
+		double dtime = strtod(c->argv[2], NULL);
+		long long utime = dtime*1000000;
+		struct timespec tv;
+
+		tv.tv_sec = utime / 1000000;
+		tv.tv_nsec = (utime % 1000000) * 1000;
+		nanosleep(&tv, NULL);
+		c->reply = createStatusObject(RLITE_STR_OK);
+	} else if (!strcasecmp(c->argv[1],"set-active-expire") &&
+			   c->argc == 3)
+	{
+		c->reply = createErrorObject("Not implemented");
+	} else if (!strcasecmp(c->argv[1],"error") && c->argc == 3) {
+		c->reply = createStringObject(c->argv[2], c->argvlen[2]);
+	} else {
+		c->reply = createStringObject(c->argv[2], c->argvlen[2]);
+		addReplyErrorFormat(c->context, "Unknown DEBUG subcommand or wrong number of arguments for '%s'",
+			(char*)c->argv[1]);
+	}
+}
+
 struct rliteCommand rliteCommandTable[] = {
 	// {"get",getCommand,2,"rF",0,NULL,1,1,1,0,0},
 	// {"set",setCommand,-3,"wm",0,NULL,1,1,1,0,0},
@@ -902,8 +1006,8 @@ struct rliteCommand rliteCommandTable[] = {
 	// {"psetex",psetexCommand,4,"wm",0,NULL,1,1,1,0,0},
 	// {"append",appendCommand,3,"wm",0,NULL,1,1,1,0,0},
 	// {"strlen",strlenCommand,2,"rF",0,NULL,1,1,1,0,0},
-	// {"del",delCommand,-2,"w",0,NULL,1,-1,1,0,0},
-	// {"exists",existsCommand,2,"rF",0,NULL,1,1,1,0,0},
+	{"del",delCommand,-2,"w",0,1,-1,1,0,0},
+	{"exists",existsCommand,2,"rF",0,1,1,1,0,0},
 	// {"setbit",setbitCommand,4,"wm",0,NULL,1,1,1,0,0},
 	// {"getbit",getbitCommand,3,"rF",0,NULL,1,1,1,0,0},
 	// {"setrange",setrangeCommand,4,"wm",0,NULL,1,1,1,0,0},
@@ -1022,7 +1126,7 @@ struct rliteCommand rliteCommandTable[] = {
 	// {"persist",persistCommand,2,"wF",0,NULL,1,1,1,0,0},
 	// {"slaveof",slaveofCommand,3,"ast",0,NULL,0,0,0,0,0},
 	// {"role",roleCommand,1,"last",0,NULL,0,0,0,0,0},
-	// {"debug",debugCommand,-2,"as",0,NULL,0,0,0,0,0},
+	{"debug",debugCommand,-2,"as",0,0,0,0,0,0},
 	// {"config",configCommand,-2,"art",0,NULL,0,0,0,0,0},
 	// {"subscribe",subscribeCommand,-2,"rpslt",0,NULL,0,0,0,0,0},
 	// {"unsubscribe",unsubscribeCommand,-1,"rpslt",0,NULL,0,0,0,0,0},
