@@ -78,7 +78,7 @@ typedef struct rliteReply {
 } rliteReply;
 
 /* Function to free the reply objects hirlite returns by default. */
-void freeReplyObject(void *reply);
+void rliteFreeReplyObject(void *reply);
 
 /* Functions to format a command according to the protocol. */
 int rlitevFormatCommand(struct rliteClient *client, const char *format, va_list ap);

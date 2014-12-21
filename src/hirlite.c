@@ -26,8 +26,8 @@
 		goto cleanup;\
 	}\
 
-struct rliteCommand *lookupCommand(const char *name, size_t UNUSED(len));
-void __rliteSetError(rliteContext *c, int type, const char *str);
+static struct rliteCommand *lookupCommand(const char *name, size_t UNUSED(len));
+static void __rliteSetError(rliteContext *c, int type, const char *str);
 
 static int catvprintf(char** s, size_t *slen, const char *fmt, va_list ap) {
 	va_list cpy;
@@ -71,7 +71,7 @@ static rliteReply *createStringTypeObject(int type, const char *str, const int l
 	rliteReply *reply = createReplyObject(type);
 	reply->str = malloc(sizeof(char) * len);
 	if (!reply->str) {
-		freeReplyObject(reply);
+		rliteFreeReplyObject(reply);
 		return NULL;
 	}
 	memcpy(reply->str, str, len);
@@ -212,7 +212,7 @@ static int addReplyErrorFormat(rliteContext *c, const char *fmt, ...) {
 	return RLITE_OK;
 }
 
-int getDoubleFromObject(const char *o, double *target) {
+static int getDoubleFromObject(const char *o, double *target) {
 	double value;
 	char *eptr;
 
@@ -243,7 +243,7 @@ static int getDoubleFromObjectOrReply(rliteClient *c, const char *o, double *tar
 	return RLITE_OK;
 }
 
-int getLongLongFromObject(const char *o, long long *target) {
+static int getLongLongFromObject(const char *o, long long *target) {
 	long long value;
 	char *eptr;
 
@@ -260,7 +260,7 @@ int getLongLongFromObject(const char *o, long long *target) {
 	return RLITE_OK;
 }
 
-int getLongLongFromObjectOrReply(rliteClient *c, const char *o, long long *target, const char *msg) {
+static int getLongLongFromObjectOrReply(rliteClient *c, const char *o, long long *target, const char *msg) {
 	long long value;
 	if (getLongLongFromObject(o, &value) != RLITE_OK) {
 		if (msg != NULL) {
@@ -274,7 +274,7 @@ int getLongLongFromObjectOrReply(rliteClient *c, const char *o, long long *targe
 	return RLITE_OK;
 }
 
-int getLongFromObjectOrReply(rliteClient *c, const char *o, long *target, const char *msg) {
+static int getLongFromObjectOrReply(rliteClient *c, const char *o, long *target, const char *msg) {
 	long long value;
 
 	if (getLongLongFromObjectOrReply(c, o, &value, msg) != RLITE_OK) return RLITE_ERR;
@@ -289,7 +289,7 @@ int getLongFromObjectOrReply(rliteClient *c, const char *o, long *target, const 
 	*target = value;
 	return RLITE_OK;
 }
-void __rliteSetError(rliteContext *c, int type, const char *str) {
+static void __rliteSetError(rliteContext *c, int type, const char *str) {
 	size_t len;
 
 	c->err = type;
@@ -305,7 +305,7 @@ void __rliteSetError(rliteContext *c, int type, const char *str) {
 	}
 }
 /* Free a reply object */
-void freeReplyObject(void *reply) {
+void rliteFreeReplyObject(void *reply) {
 	rliteReply *r = reply;
 	size_t j;
 
@@ -319,7 +319,7 @@ void freeReplyObject(void *reply) {
 		if (r->element != NULL) {
 			for (j = 0; j < r->elements; j++)
 				if (r->element[j] != NULL)
-					freeReplyObject(r->element[j]);
+					rliteFreeReplyObject(r->element[j]);
 			free(r->element);
 		}
 		break;
@@ -625,7 +625,7 @@ void rliteFree(rliteContext *c) {
 	rl_close(c->db);
 	int i;
 	for (i = c->replyPosition; i < c->replyLength; i++) {
-		freeReplyObject(c->replies[i]);
+		rliteFreeReplyObject(c->replies[i]);
 	}
 	free(c->replies);
 	free(c);
@@ -740,17 +740,17 @@ void *rliteCommandArgv(rliteContext *c, int argc, const char **argv, const size_
 	return _popReply(c);
 }
 
-void echoCommand(rliteClient *c)
+static void echoCommand(rliteClient *c)
 {
 	c->reply = createStringObject(c->argv[1], c->argvlen[1]);
 }
 
-void pingCommand(rliteClient *c)
+static void pingCommand(rliteClient *c)
 {
 	c->reply = createStringObject("PONG", 4);
 }
 
-void zaddGenericCommand(rliteClient *c, int incr) {
+static void zaddGenericCommand(rliteClient *c, int incr) {
 	const unsigned char *key = UNSIGN(c->argv[1]);
 	size_t keylen = c->argvlen[1];
 	double score = 0, *scores = NULL;
@@ -794,15 +794,15 @@ cleanup:
 	free(scores);
 }
 
-void zaddCommand(rliteClient *c) {
+static void zaddCommand(rliteClient *c) {
 	zaddGenericCommand(c,0);
 }
 
-void zincrbyCommand(rliteClient *c) {
+static void zincrbyCommand(rliteClient *c) {
 	zaddGenericCommand(c,1);
 }
 
-void zrangeGenericCommand(rliteClient *c, int reverse) {
+static void zrangeGenericCommand(rliteClient *c, int reverse) {
 	rl_zset_iterator *iterator;
 	int withscores = 0;
 	long start;
@@ -822,15 +822,15 @@ void zrangeGenericCommand(rliteClient *c, int reverse) {
 	addZsetIteratorReply(c, retval, iterator, withscores);
 }
 
-void zrangeCommand(rliteClient *c) {
+static void zrangeCommand(rliteClient *c) {
 	zrangeGenericCommand(c, 0);
 }
 
-void zrevrangeCommand(rliteClient *c) {
+static void zrevrangeCommand(rliteClient *c) {
 	zrangeGenericCommand(c, 1);
 }
 
-void zremCommand(rliteClient *c) {
+static void zremCommand(rliteClient *c) {
 	const unsigned char *key = UNSIGN(c->argv[1]);
 	const size_t keylen = c->argvlen[1];
 	long deleted = 0;
@@ -887,7 +887,7 @@ static int zslParseRange(const char *min, const char *max, rl_zrangespec *spec) 
 #define ZRANGE_RANK 0
 #define ZRANGE_SCORE 1
 #define ZRANGE_LEX 2
-void zremrangeGenericCommand(rliteClient *c, int rangetype) {
+static void zremrangeGenericCommand(rliteClient *c, int rangetype) {
 	int retval;
 	long deleted;
 	rl_zrangespec rlrange;
@@ -918,19 +918,19 @@ cleanup:
 	return;
 }
 
-void zremrangebyrankCommand(rliteClient *c) {
+static void zremrangebyrankCommand(rliteClient *c) {
 	zremrangeGenericCommand(c,ZRANGE_RANK);
 }
 
-void zremrangebyscoreCommand(rliteClient *c) {
+static void zremrangebyscoreCommand(rliteClient *c) {
 	zremrangeGenericCommand(c,ZRANGE_SCORE);
 }
 
-void zremrangebylexCommand(rliteClient *c) {
+static void zremrangebylexCommand(rliteClient *c) {
 	zremrangeGenericCommand(c,ZRANGE_LEX);
 }
 
-void zcardCommand(rliteClient *c) {
+static void zcardCommand(rliteClient *c) {
 	long card = 0;
 	int retval = rl_zcard(c->context->db, UNSIGN(c->argv[1]), c->argvlen[1], &card);
 	RLITE_SERVER_ERR(c, retval);
@@ -944,7 +944,7 @@ cleanup:
 #define RLITE_OP_UNION 1
 #define RLITE_OP_INTER 2
 
-void zunionInterGenericCommand(rliteClient *c, int op) {
+static void zunionInterGenericCommand(rliteClient *c, int op) {
 	int i, j;
 	long setnum;
 	int aggregate = RL_ZSET_AGGREGATE_SUM;
@@ -1021,16 +1021,16 @@ cleanup:
 	return;
 }
 
-void zunionstoreCommand(rliteClient *c) {
+static void zunionstoreCommand(rliteClient *c) {
 	zunionInterGenericCommand(c, RLITE_OP_UNION);
 }
 
-void zinterstoreCommand(rliteClient *c) {
+static void zinterstoreCommand(rliteClient *c) {
 	zunionInterGenericCommand(c, RLITE_OP_INTER);
 }
 
 /* This command implements ZRANGEBYSCORE, ZREVRANGEBYSCORE. */
-void genericZrangebyscoreCommand(rliteClient *c, int reverse) {
+static void genericZrangebyscoreCommand(rliteClient *c, int reverse) {
 	rl_zrangespec range;
 	long offset = 0, limit = -1;
 	int withscores = 0;
@@ -1076,15 +1076,15 @@ void genericZrangebyscoreCommand(rliteClient *c, int reverse) {
 	addZsetIteratorReply(c, retval, iterator, withscores);
 }
 
-void zrangebyscoreCommand(rliteClient *c) {
+static void zrangebyscoreCommand(rliteClient *c) {
 	genericZrangebyscoreCommand(c, 0);
 }
 
-void zrevrangebyscoreCommand(rliteClient *c) {
+static void zrevrangebyscoreCommand(rliteClient *c) {
 	genericZrangebyscoreCommand(c, 1);
 }
 
-void zlexcountCommand(rliteClient *c) {
+static void zlexcountCommand(rliteClient *c) {
 	long count = 0;
 
 	int retval = rl_zlexcount(c->context->db, UNSIGN(c->argv[1]), c->argvlen[1], UNSIGN(c->argv[2]), c->argvlen[2], UNSIGN(c->argv[3]), c->argvlen[3], &count);
@@ -1098,7 +1098,7 @@ cleanup:
 }
 
 /* This command implements ZRANGEBYLEX, ZREVRANGEBYLEX. */
-void genericZrangebylexCommand(rliteClient *c, int reverse) {
+static void genericZrangebylexCommand(rliteClient *c, int reverse) {
 	rl_zset_iterator *iterator;
 	long offset = 0, limit = -1;
 
@@ -1122,15 +1122,15 @@ void genericZrangebylexCommand(rliteClient *c, int reverse) {
 	addZsetIteratorReply(c, retval, iterator, 0);
 }
 
-void zrangebylexCommand(rliteClient *c) {
+static void zrangebylexCommand(rliteClient *c) {
 	genericZrangebylexCommand(c,0);
 }
 
-void zrevrangebylexCommand(rliteClient *c) {
+static void zrevrangebylexCommand(rliteClient *c) {
 	genericZrangebylexCommand(c,1);
 }
 
-void zscoreCommand(rliteClient *c) {
+static void zscoreCommand(rliteClient *c) {
 	double score;
 
 	int retval = rl_zscore(c->context->db, UNSIGN(c->argv[1]), c->argvlen[1], UNSIGN(c->argv[2]), c->argvlen[2], &score);
@@ -1146,7 +1146,7 @@ cleanup:
 	return;
 }
 
-void zrankGenericCommand(rliteClient *c, int reverse) {
+static void zrankGenericCommand(rliteClient *c, int reverse) {
 	long rank;
 
 	int retval = (reverse ? rl_zrevrank : rl_zrank)(c->context->db, UNSIGN(c->argv[1]), c->argvlen[1], UNSIGN(c->argv[2]), c->argvlen[2], &rank);
@@ -1161,15 +1161,15 @@ cleanup:
 	return;
 }
 
-void zrankCommand(rliteClient *c) {
+static void zrankCommand(rliteClient *c) {
 	zrankGenericCommand(c, 0);
 }
 
-void zrevrankCommand(rliteClient *c) {
+static void zrevrankCommand(rliteClient *c) {
 	zrankGenericCommand(c, 1);
 }
 
-void zcountCommand(rliteClient *c) {
+static void zcountCommand(rliteClient *c) {
 	rl_zrangespec rlrange;
 	long count;
 
@@ -1189,7 +1189,7 @@ cleanup:
 	return;
 }
 
-void delCommand(rliteClient *c) {
+static void delCommand(rliteClient *c) {
 	int deleted = 0, j, retval;
 
 	for (j = 1; j < c->argc; j++) {
@@ -1201,12 +1201,12 @@ void delCommand(rliteClient *c) {
 	c->reply = createLongLongObject(deleted);
 }
 
-void existsCommand(rliteClient *c) {
+static void existsCommand(rliteClient *c) {
 	int retval = rl_key_get(c->context->db, UNSIGN(c->argv[1]), c->argvlen[1], NULL, NULL, NULL, NULL);
 	c->reply = createLongLongObject(retval == RL_FOUND ? 1 : 0);
 }
 
-void debugCommand(rliteClient *c) {
+static void debugCommand(rliteClient *c) {
 	if (!strcasecmp(c->argv[1],"segfault")) {
 		*((char*)-1) = 'x';
 	} else if (!strcasecmp(c->argv[1],"oom")) {
@@ -1427,7 +1427,7 @@ struct rliteCommand rliteCommandTable[] = {
 	// {"latency",latencyCommand,-2,"arslt",0,NULL,0,0,0,0,0}
 };
 
-struct rliteCommand *lookupCommand(const char *name, size_t len) {
+static struct rliteCommand *lookupCommand(const char *name, size_t len) {
 	char _name[100];
 	if (len >= 100) {
 		return NULL;

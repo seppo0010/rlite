@@ -18,7 +18,7 @@ int test_ping() {
 		return 1;
 	}
 
-	freeReplyObject(reply);
+	rliteFreeReplyObject(reply);
 	rliteFree(context);
 	return 0;
 }
@@ -42,7 +42,7 @@ int test_echo() {
 		return 1;
 	}
 
-	freeReplyObject(reply);
+	rliteFreeReplyObject(reply);
 	rliteFree(context);
 	return 0;
 }
@@ -65,7 +65,7 @@ int test_echo_wrong_arity() {
 		return 1;
 	}
 
-	freeReplyObject(reply);
+	rliteFreeReplyObject(reply);
 	rliteFree(context);
 	return 0;
 }

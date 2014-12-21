@@ -31,7 +31,7 @@ static int _zadd(rliteContext *context) {
 		return 1;
 	}
 
-	freeReplyObject(reply);
+	rliteFreeReplyObject(reply);
 	return 0;
 }
 int test_zadd() {
@@ -95,7 +95,7 @@ int test_zrange() {
 		}
 	}
 
-	freeReplyObject(reply);
+	rliteFreeReplyObject(reply);
 
 	rliteFree(context);
 	return 0;
@@ -153,7 +153,7 @@ int test_zrevrange() {
 		}
 	}
 
-	freeReplyObject(reply);
+	rliteFreeReplyObject(reply);
 
 	rliteFree(context);
 	return 0;
@@ -189,7 +189,7 @@ int test_zrem() {
 		fprintf(stderr, "Expected reply to be %d, got %lld instead on line %d\n", 1, reply->integer, __LINE__);
 		return 1;
 	}
-	freeReplyObject(reply);
+	rliteFreeReplyObject(reply);
 
 	argvlen[0] = 6;
 	argv[0] = "ZRANGE";
@@ -219,7 +219,7 @@ int test_zrem() {
 		fprintf(stderr, "Expected reply element[0] to be \"%s\", got \"%s\" instead on line %d\n", "one", reply->element[0]->str, __LINE__);
 		return 1;
 	}
-	freeReplyObject(reply);
+	rliteFreeReplyObject(reply);
 
 	rliteFree(context);
 	return 0;
@@ -255,7 +255,7 @@ int test_zremrangebyrank() {
 		fprintf(stderr, "Expected reply to be %d, got %lld instead on line %d\n", 2, reply->integer, __LINE__);
 		return 1;
 	}
-	freeReplyObject(reply);
+	rliteFreeReplyObject(reply);
 
 	argvlen[0] = 6;
 	argv[0] = "ZRANGE";
@@ -272,7 +272,7 @@ int test_zremrangebyrank() {
 		fprintf(stderr, "Expected reply size to be %d, got %lu instead on line %d\n", 0, reply->elements, __LINE__);
 		return 1;
 	}
-	freeReplyObject(reply);
+	rliteFreeReplyObject(reply);
 
 	rliteFree(context);
 	return 0;
@@ -308,7 +308,7 @@ int test_zremrangebyscore() {
 		fprintf(stderr, "Expected reply to be %d, got %lld instead on line %d\n", 2, reply->integer, __LINE__);
 		return 1;
 	}
-	freeReplyObject(reply);
+	rliteFreeReplyObject(reply);
 
 	argvlen[0] = 6;
 	argv[0] = "ZRANGE";
@@ -325,7 +325,7 @@ int test_zremrangebyscore() {
 		fprintf(stderr, "Expected reply size to be %d, got %lu instead on line %d\n", 0, reply->elements, __LINE__);
 		return 1;
 	}
-	freeReplyObject(reply);
+	rliteFreeReplyObject(reply);
 
 	rliteFree(context);
 	return 0;
@@ -357,7 +357,7 @@ int test_zcard() {
 		fprintf(stderr, "Expected reply to be %d, got %lld instead on line %d\n", 2, reply->integer, __LINE__);
 		return 1;
 	}
-	freeReplyObject(reply);
+	rliteFreeReplyObject(reply);
 
 	rliteFree(context);
 	return 0;
@@ -371,11 +371,11 @@ int test_zinterstore() {
 	size_t argvlen[100];
 
 	reply = rliteCommandArgv(context, populateArgvlen(argv, argvlen), (const char **)argv, (const size_t*)argvlen);
-	freeReplyObject(reply);
+	rliteFreeReplyObject(reply);
 
 	char *argv2[100] = {"ZADD", "key2", "1", "one", "2", "two", NULL};
 	reply = rliteCommandArgv(context, populateArgvlen(argv2, argvlen), (const char **)argv2, (const size_t*)argvlen);
-	freeReplyObject(reply);
+	rliteFreeReplyObject(reply);
 
 	char *argv3[100] = {"ZINTERSTORE", "out", "2", "key1", "key2", NULL};
 	reply = rliteCommandArgv(context, populateArgvlen(argv3, argvlen), (const char **)argv3, (const size_t*)argvlen);
@@ -391,7 +391,7 @@ int test_zinterstore() {
 		fprintf(stderr, "Expected reply to be %d, got %lld instead on line %d\n", 2, reply->integer, __LINE__);
 		return 1;
 	}
-	freeReplyObject(reply);
+	rliteFreeReplyObject(reply);
 
 	rliteFree(context);
 	return 0;
@@ -405,11 +405,11 @@ int test_zunionstore() {
 	size_t argvlen[100];
 
 	reply = rliteCommandArgv(context, populateArgvlen(argv, argvlen), (const char **)argv, (const size_t*)argvlen);
-	freeReplyObject(reply);
+	rliteFreeReplyObject(reply);
 
 	char *argv2[100] = {"ZADD", "key2", "1", "one", "2", "two", NULL};
 	reply = rliteCommandArgv(context, populateArgvlen(argv2, argvlen), (const char **)argv2, (const size_t*)argvlen);
-	freeReplyObject(reply);
+	rliteFreeReplyObject(reply);
 
 	char *argv3[100] = {"ZUNIONSTORE", "out", "2", "key1", "key2", NULL};
 	reply = rliteCommandArgv(context, populateArgvlen(argv3, argvlen), (const char **)argv3, (const size_t*)argvlen);
@@ -425,7 +425,7 @@ int test_zunionstore() {
 		fprintf(stderr, "Expected reply to be %d, got %lld instead on line %d\n", 3, reply->integer, __LINE__);
 		return 1;
 	}
-	freeReplyObject(reply);
+	rliteFreeReplyObject(reply);
 
 	rliteFree(context);
 	return 0;
@@ -439,7 +439,7 @@ int test_zrangebyscore() {
 	size_t argvlen[100];
 
 	reply = rliteCommandArgv(context, populateArgvlen(argv, argvlen), (const char **)argv, (const size_t*)argvlen);
-	freeReplyObject(reply);
+	rliteFreeReplyObject(reply);
 
 	char *argv2[100] = {"ZRANGEBYSCORE", "mykey", "0", "2", NULL};
 	reply = rliteCommandArgv(context, populateArgvlen(argv2, argvlen), (const char **)argv2, (const size_t*)argvlen);
@@ -463,7 +463,7 @@ int test_zrangebyscore() {
 			return 1;
 		}
 	}
-	freeReplyObject(reply);
+	rliteFreeReplyObject(reply);
 
 	rliteFree(context);
 	return 0;
@@ -477,7 +477,7 @@ int test_zrevrangebyscore() {
 	size_t argvlen[100];
 
 	reply = rliteCommandArgv(context, populateArgvlen(argv, argvlen), (const char **)argv, (const size_t*)argvlen);
-	freeReplyObject(reply);
+	rliteFreeReplyObject(reply);
 
 	char *argv2[100] = {"ZREVRANGEBYSCORE", "mykey", "2", "0", NULL};
 	reply = rliteCommandArgv(context, populateArgvlen(argv2, argvlen), (const char **)argv2, (const size_t*)argvlen);
@@ -501,7 +501,7 @@ int test_zrevrangebyscore() {
 			return 1;
 		}
 	}
-	freeReplyObject(reply);
+	rliteFreeReplyObject(reply);
 
 	rliteFree(context);
 	return 0;
@@ -515,7 +515,7 @@ int test_zrangebylex() {
 	size_t argvlen[100];
 
 	reply = rliteCommandArgv(context, populateArgvlen(argv, argvlen), (const char **)argv, (const size_t*)argvlen);
-	freeReplyObject(reply);
+	rliteFreeReplyObject(reply);
 
 	char *argv2[100] = {"ZRANGEBYLEX", "mykey", "-inf", "[b", NULL};
 	reply = rliteCommandArgv(context, populateArgvlen(argv2, argvlen), (const char **)argv2, (const size_t*)argvlen);
@@ -539,7 +539,7 @@ int test_zrangebylex() {
 			return 1;
 		}
 	}
-	freeReplyObject(reply);
+	rliteFreeReplyObject(reply);
 
 	rliteFree(context);
 	return 0;
@@ -553,7 +553,7 @@ int test_zrevrangebylex() {
 	size_t argvlen[100];
 
 	reply = rliteCommandArgv(context, populateArgvlen(argv, argvlen), (const char **)argv, (const size_t*)argvlen);
-	freeReplyObject(reply);
+	rliteFreeReplyObject(reply);
 
 	char *argv2[100] = {"ZREVRANGEBYLEX", "mykey", "[b", "-inf", NULL};
 	reply = rliteCommandArgv(context, populateArgvlen(argv2, argvlen), (const char **)argv2, (const size_t*)argvlen);
@@ -577,7 +577,7 @@ int test_zrevrangebylex() {
 			return 1;
 		}
 	}
-	freeReplyObject(reply);
+	rliteFreeReplyObject(reply);
 
 	rliteFree(context);
 	return 0;
@@ -591,7 +591,7 @@ int test_zlexcount() {
 	size_t argvlen[100];
 
 	reply = rliteCommandArgv(context, populateArgvlen(argv, argvlen), (const char **)argv, (const size_t*)argvlen);
-	freeReplyObject(reply);
+	rliteFreeReplyObject(reply);
 
 	char *argv2[100] = {"ZLEXCOUNT", "mykey", "-inf", "[b", NULL};
 	reply = rliteCommandArgv(context, populateArgvlen(argv2, argvlen), (const char **)argv2, (const size_t*)argvlen);
@@ -607,7 +607,7 @@ int test_zlexcount() {
 		fprintf(stderr, "Expected reply elements to be %d, got %lld instead on line %d\n", 2, reply->integer, __LINE__);
 		return 1;
 	}
-	freeReplyObject(reply);
+	rliteFreeReplyObject(reply);
 
 	rliteFree(context);
 	return 0;
@@ -637,7 +637,7 @@ int test_zscore() {
 		fprintf(stderr, "Expected reply string to be \"%s\", got \"%s\" instead on line %d\n", "1", reply->str, __LINE__);
 		return 1;
 	}
-	freeReplyObject(reply);
+	rliteFreeReplyObject(reply);
 
 	rliteFree(context);
 	return 0;
@@ -667,7 +667,7 @@ int test_zrank() {
 		fprintf(stderr, "Expected reply to be %d, got %lld instead on line %d\n", 0, reply->integer, __LINE__);
 		return 1;
 	}
-	freeReplyObject(reply);
+	rliteFreeReplyObject(reply);
 
 	rliteFree(context);
 	return 0;
@@ -697,7 +697,7 @@ int test_zrevrank() {
 		fprintf(stderr, "Expected reply to be %d, got %lld instead on line %d\n", 1, reply->integer, __LINE__);
 		return 1;
 	}
-	freeReplyObject(reply);
+	rliteFreeReplyObject(reply);
 
 	rliteFree(context);
 	return 0;
@@ -727,7 +727,7 @@ int test_zcount() {
 		fprintf(stderr, "Expected reply to be %d, got %lld instead on line %d\n", 2, reply->integer, __LINE__);
 		return 1;
 	}
-	freeReplyObject(reply);
+	rliteFreeReplyObject(reply);
 
 	rliteFree(context);
 	return 0;
@@ -757,7 +757,7 @@ int test_exists() {
 		fprintf(stderr, "Expected reply to be %d, got %lld instead on line %d\n", 1, reply->integer, __LINE__);
 		return 1;
 	}
-	freeReplyObject(reply);
+	rliteFreeReplyObject(reply);
 
 	rliteFree(context);
 	return 0;
@@ -787,7 +787,7 @@ int test_del() {
 		fprintf(stderr, "Expected reply to be %d, got %lld instead on line %d\n", 1, reply->integer, __LINE__);
 		return 1;
 	}
-	freeReplyObject(reply);
+	rliteFreeReplyObject(reply);
 
 	char* argv2[100] = {"exists", "mykey", NULL};
 
@@ -804,7 +804,7 @@ int test_del() {
 		fprintf(stderr, "Expected reply to be %d, got %lld instead on line %d\n", 0, reply->integer, __LINE__);
 		return 1;
 	}
-	freeReplyObject(reply);
+	rliteFreeReplyObject(reply);
 
 	rliteFree(context);
 	return 0;
@@ -830,7 +830,7 @@ int test_debug() {
 		fprintf(stderr, "Expected reply to be STATUS, got %d instead on line %d\n", reply->type, __LINE__);
 		return 1;
 	}
-	freeReplyObject(reply);
+	rliteFreeReplyObject(reply);
 
 	rliteFree(context);
 	return 0;

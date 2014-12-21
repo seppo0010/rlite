@@ -138,7 +138,7 @@ int test_append_sparam() {
 		return 1;
 	}
 
-	freeReplyObject(reply);
+	rliteFreeReplyObject(reply);
 	rliteFree(context);
 	return 0;
 }
@@ -163,7 +163,7 @@ int test_command_bparam() {
 		return 1;
 	}
 
-	freeReplyObject(reply);
+	rliteFreeReplyObject(reply);
 	rliteFree(context);
 	return 0;
 }
