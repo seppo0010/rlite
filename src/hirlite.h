@@ -94,6 +94,7 @@ typedef struct rliteContext {
 	int replyLength;
 	int replyAlloc;
 	rlite *db;
+	int debugSkiplist;
 } rliteContext;
 
 rliteContext *rliteConnect(const char *ip, int port);

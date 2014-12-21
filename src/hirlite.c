@@ -573,6 +573,7 @@ static rliteContext *_rliteConnect(const char *path) {
 	context->replyPosition = 0;
 	context->replyLength = 0;
 	context->replyAlloc = DEFAULT_REPLIES_SIZE;
+	context->debugSkiplist = 0;
 	int retval = rl_open(path, &context->db, RLITE_OPEN_READWRITE | RLITE_OPEN_CREATE);
 	if (retval != RL_OK) {
 		free(context);
@@ -1227,7 +1228,7 @@ static void debugCommand(rliteClient *c) {
 				addReplyStatusFormat(c->context,
 					"Value at:0xfaceadd refcount:1 "
 					"encoding:%s serializedlength:0 "
-					"lru:0 lru_seconds_idle:0", 0 == 0 ? "skiplist" : "ziplist");
+					"lru:0 lru_seconds_idle:0", c->context->debugSkiplist ? "skiplist" : "ziplist");
 			}
 			return;
 		}
