@@ -422,19 +422,25 @@ cleanup:
 	return retval;
 }
 
-static int lex_get_range(rlite *db, unsigned char *min, long minlen, unsigned char *max, long maxlen, rl_skiplist *skiplist, long *_start, long *_end)
+static int validate_lex_range(unsigned char *min, long minlen, unsigned char *max, long maxlen)
 {
-	if (min[0] != '-' && min[0] != '(' && min[0] != '[') {
+	if ((minlen != 1 || min[0] != '-') && min[0] != '(' && min[0] != '[') {
 		return RL_UNEXPECTED;
 	}
 
-	if (max[0] != '+' && max[0] != '(' && max[0] != '[') {
+	if ((maxlen != 1 || max[0] != '+') && max[0] != '(' && max[0] != '[') {
 		return RL_UNEXPECTED;
 	}
+	return RL_OK;
+}
+
+static int lex_get_range(rlite *db, unsigned char *min, long minlen, unsigned char *max, long maxlen, rl_skiplist *skiplist, long *_start, long *_end)
+{
+	int retval;
+	RL_CALL(validate_lex_range, RL_OK, min, minlen, max, maxlen);
 
 	rl_skiplist_node *node;
 	double score;
-	int retval;
 	RL_CALL(rl_skiplist_first_node, RL_FOUND, db, skiplist, -INFINITY, RL_SKIPLIST_EXCLUDE_SCORE, NULL, 0, &node, NULL);
 	score = node->score;
 
@@ -476,6 +482,7 @@ int rl_zlexcount(rlite *db, const unsigned char *key, long keylen, unsigned char
 	long start, end;
 	rl_skiplist *skiplist;
 	int retval;
+	RL_CALL(validate_lex_range, RL_OK, min, minlen, max, maxlen);
 	RL_CALL(rl_zset_get_objects, RL_OK, db, key, keylen, NULL, NULL, NULL, &skiplist, NULL, 0);
 	RL_CALL(lex_get_range, RL_OK, db, min, minlen, max, maxlen, skiplist, &start, &end);
 	if (end < 0) {
@@ -498,6 +505,7 @@ int rl_zrevrangebylex(rlite *db, const unsigned char *key, long keylen, unsigned
 	long start, end;
 	rl_skiplist *skiplist;
 	int retval;
+	RL_CALL(validate_lex_range, RL_OK, min, minlen, max, maxlen);
 	RL_CALL(rl_zset_get_objects, RL_OK, db, key, keylen, NULL, NULL, NULL, &skiplist, NULL, 0);
 	RL_CALL(lex_get_range, RL_OK, db, min, minlen, max, maxlen, skiplist, &start, &end);
 
@@ -516,6 +524,7 @@ int rl_zrangebylex(rlite *db, const unsigned char *key, long keylen, unsigned ch
 	long start, end;
 	rl_skiplist *skiplist;
 	int retval;
+	RL_CALL(validate_lex_range, RL_OK, min, minlen, max, maxlen);
 	RL_CALL(rl_zset_get_objects, RL_OK, db, key, keylen, NULL, NULL, NULL, &skiplist, NULL, 0);
 	RL_CALL(lex_get_range, RL_OK, db, min, minlen, max, maxlen, skiplist, &start, &end);
 
@@ -684,6 +693,7 @@ int rl_zremrangebylex(rlite *db, const unsigned char *key, long keylen, unsigned
 	rl_skiplist *skiplist;
 	long scores_page, skiplist_page, start, end, levels_page_number;
 	int retval;
+	RL_CALL(validate_lex_range, RL_OK, min, minlen, max, maxlen);
 	RL_CALL(rl_zset_get_objects, RL_OK, db, key, keylen, &levels_page_number, &scores, &scores_page, &skiplist, &skiplist_page, 1);
 	retval = lex_get_range(db, min, minlen, max, maxlen, skiplist, &start, &end);
 	if (retval == RL_NOT_FOUND) {

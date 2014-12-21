@@ -198,6 +198,30 @@ cleanup:
 	return retval;
 }
 
+int basic_test_invalidlex()
+{
+	int retval = 0;
+	fprintf(stderr, "Start basic_test_invalidlex %d\n", 0);
+
+	rlite *db = NULL;
+	RL_CALL_VERBOSE(setup_db, RL_OK, &db, 0, 1);
+	unsigned char *key = UNSIGN("my key");
+	long keylen = strlen((char *)key);
+	double score = 1.41;
+	unsigned char *data = UNSIGN("my data");
+	long datalen = strlen((char *)data);
+
+	RL_CALL_VERBOSE(rl_zadd, RL_OK, db, key, keylen, score, data, datalen);
+	RL_CALL_VERBOSE(rl_zrangebylex, RL_UNEXPECTED, db, key, keylen, UNSIGN("foo"), 3, UNSIGN("bar"), 3, 0, -1, NULL);
+	fprintf(stderr, "End basic_test_invalidlex\n");
+    retval = 0;
+cleanup:
+	if (db) {
+		rl_close(db);
+	}
+	return retval;
+}
+
 int basic_test_zadd_zrange()
 {
 	int retval = 0;
@@ -1479,5 +1503,6 @@ RL_TEST_MAIN_START(type_zset_test)
 		}
 	}
 	RL_TEST(basic_test_zadd_zrange, 0);
+	RL_TEST(basic_test_invalidlex, 0);
 }
 RL_TEST_MAIN_END
