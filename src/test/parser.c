@@ -114,6 +114,60 @@ int test_format_dparam() {
 	return 0;
 }
 
+int test_append_sparam() {
+	rliteContext *context = rliteConnect(":memory:", 0);
+	rliteReply *reply;
+	void *_reply;
+	if (rliteAppendCommand(context, "ECHO %s", "helloworld") != 0) {
+		return 1;
+	}
+	if (rliteGetReply(context, &_reply) != 0) {
+		return 1;
+	}
+	reply = _reply;
+	if (reply->type == RLITE_REPLY_ERROR) {
+		fprintf(stderr, "Expected reply not to be ERROR, got \"%s\" instead on line %d\n", reply->str, __LINE__);
+		return 1;
+	}
+	if (reply->type != RLITE_REPLY_STRING) {
+		fprintf(stderr, "Expected reply to be STRING, got %d instead on line %d\n", reply->type, __LINE__);
+		return 1;
+	}
+	if (memcmp(reply->str, "helloworld", 10) != 0) {
+		fprintf(stderr, "Expected reply to be %s, got %s instead on line %d\n", "helloworld", reply->str, __LINE__);
+		return 1;
+	}
+
+	freeReplyObject(reply);
+	rliteFree(context);
+	return 0;
+}
+
+int test_command_bparam() {
+	rliteContext *context = rliteConnect(":memory:", 0);
+	rliteReply *reply = rliteCommand(context, "ECHO %b", "helloworld", 10);
+	if (!reply) {
+		fprintf(stderr, "Expected reply on line %d\n", __LINE__);
+		return 1;
+	}
+	if (reply->type == RLITE_REPLY_ERROR) {
+		fprintf(stderr, "Expected reply not to be ERROR, got \"%s\" instead on line %d\n", reply->str, __LINE__);
+		return 1;
+	}
+	if (reply->type != RLITE_REPLY_STRING) {
+		fprintf(stderr, "Expected reply to be STRING, got %d instead on line %d\n", reply->type, __LINE__);
+		return 1;
+	}
+	if (memcmp(reply->str, "helloworld", 10) != 0) {
+		fprintf(stderr, "Expected reply to be %s, got %s instead on line %d\n", "helloworld", reply->str, __LINE__);
+		return 1;
+	}
+
+	freeReplyObject(reply);
+	rliteFree(context);
+	return 0;
+}
+
 int run_parser() {
 	if (test_format_noparam() != 0) {
 		return 1;
@@ -122,6 +176,12 @@ int run_parser() {
 		return 1;
 	}
 	if (test_format_bparam() != 0) {
+		return 1;
+	}
+	if (test_append_sparam() != 0) {
+		return 1;
+	}
+	if (test_command_bparam() != 0) {
 		return 1;
 	}
 	return 0;

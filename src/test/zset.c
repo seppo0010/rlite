@@ -52,7 +52,7 @@ int test_zrange() {
 	size_t argvlen[5];
 	char* argv[5];
 	rliteReply* reply;
-	argvlen[0] = 4;
+	argvlen[0] = 6;
 	argv[0] = "ZRANGE";
 	argvlen[1] = 5;
 	argv[1] = "mykey";
@@ -110,8 +110,8 @@ int test_zrevrange() {
 	size_t argvlen[5];
 	char* argv[5];
 	rliteReply* reply;
-	argvlen[0] = 4;
 	argv[0] = "ZREVRANGE";
+	argvlen[0] = strlen(argv[0]);
 	argvlen[1] = 5;
 	argv[1] = "mykey";
 	argvlen[2] = 1;

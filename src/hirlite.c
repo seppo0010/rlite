@@ -662,51 +662,61 @@ int rliteGetReply(rliteContext *c, void **reply) {
 	return RLITE_OK;
 }
 
-int __rliteAppendCommandArgv(rliteContext *c, int argc, const char **argv, const size_t *argvlen) {
-	if (argc == 0) {
+static int __rliteAppendCommandClient(rliteClient *client) {
+	if (client->argc == 0) {
 		return RLITE_ERR;
 	}
 
-	rliteClient client;
-	client.context = c;
-	client.argc = argc;
-	client.argv = argv;
-	client.argvlen = argvlen;
-
-	struct rliteCommand *command = lookupCommand(argv[0], argvlen[0]);
+	struct rliteCommand *command = lookupCommand(client->argv[0], client->argvlen[0]);
 	int retval = RLITE_OK;
 	if (!command) {
-		retval = addReplyErrorFormat(c, "unknown command '%s'", (char*)argv[0]);
-	} else if ((command->arity > 0 && command->arity != argc) ||
-		(argc < -command->arity)) {
-		retval = addReplyErrorFormat(c, "wrong number of arguments for '%s' command", command->name);
+		retval = addReplyErrorFormat(client->context, "unknown command '%s'", (char*)client->argv[0]);
+	} else if ((command->arity > 0 && command->arity != client->argc) ||
+		(client->argc < -command->arity)) {
+		retval = addReplyErrorFormat(client->context, "wrong number of arguments for '%s' command", command->name);
 	} else {
-		client.reply = NULL;
-		command->proc(&client);
-		if (client.reply) {
-			retval = addReply(c, client.reply);
+		client->reply = NULL;
+		command->proc(client);
+		if (client->reply) {
+			retval = addReply(client->context, client->reply);
 		}
 	}
 	return retval;
 }
 
 int rliteAppendFormattedCommand(rliteContext *UNUSED(c), const char *UNUSED(cmd), size_t UNUSED(len)) {
-	// TODO
+	// Not implemented
+	// cmd is formatted for redis server, and we don't have a parser for it... yet.
 	return RLITE_ERR;
 }
 
-int rlitevAppendCommand(rliteContext *UNUSED(c), const char *UNUSED(format), va_list UNUSED(ap)) {
-	// TODO
-	return RLITE_ERR;
+int rlitevAppendCommand(rliteContext *c, const char *format, va_list ap) {
+	rliteClient client;
+	client.context = c;
+	if (rlitevFormatCommand(&client, format, ap) != RLITE_OK) {
+		return RLITE_ERR;
+	}
+
+	return __rliteAppendCommandClient(&client);
 }
 
-int rliteAppendCommand(rliteContext *UNUSED(c), const char *UNUSED(format), ...) {
-	// TODO
-	return RLITE_ERR;
+int rliteAppendCommand(rliteContext *c, const char *format, ...) {
+	va_list ap;
+	int retval;
+	va_start(ap,format);
+	retval = rlitevAppendCommand(c, format, ap);
+	va_end(ap);
+	return retval;
 }
 
 int rliteAppendCommandArgv(rliteContext *c, int argc, const char **argv, const size_t *argvlen) {
-	return __rliteAppendCommandArgv(c, argc, argv, argvlen);
+	rliteClient client;
+	client.context = c;
+	client.argc = argc;
+	client.argv = argv;
+	client.argvlen = argvlen;
+
+	return __rliteAppendCommandClient(&client);
 }
 
 void *rlitevCommand(rliteContext *c, const char *format, va_list ap) {
@@ -1417,13 +1427,19 @@ struct rliteCommand rliteCommandTable[] = {
 	// {"latency",latencyCommand,-2,"arslt",0,NULL,0,0,0,0,0}
 };
 
-struct rliteCommand *lookupCommand(const char *name, size_t UNUSED(len)) {
+struct rliteCommand *lookupCommand(const char *name, size_t len) {
+	char _name[100];
+	if (len >= 100) {
+		return NULL;
+	}
+	memcpy(_name, name, len);
+	_name[len] = '\0';
 	int j;
 	int numcommands = sizeof(rliteCommandTable)/sizeof(struct rliteCommand);
 
 	for (j = 0; j < numcommands; j++) {
 		struct rliteCommand *c = rliteCommandTable+j;
-		if (strcasecmp(c->name, name) == 0) {
+		if (strcasecmp(c->name, _name) == 0) {
 			return c;
 		}
 	}
