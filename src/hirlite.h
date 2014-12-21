@@ -65,6 +65,8 @@
 extern "C" {
 #endif
 
+struct rliteClient;
+
 /* This is the reply object returned by rliteCommand() */
 typedef struct rliteReply {
 	int type; /* RLITE_REPLY_* */
@@ -79,9 +81,9 @@ typedef struct rliteReply {
 void freeReplyObject(void *reply);
 
 /* Functions to format a command according to the protocol. */
-int rlitevFormatCommand(char **target, const char *format, va_list ap);
-int rliteFormatCommand(char **target, const char *format, ...);
-int rliteFormatCommandArgv(char **target, int argc, const char **argv, const size_t *argvlen);
+int rlitevFormatCommand(struct rliteClient *client, const char *format, va_list ap);
+int rliteFormatCommand(struct rliteClient *client, const char *format, ...);
+int rliteFormatCommandArgv(struct rliteClient *client, int argc, const char **argv, const size_t *argvlen);
 
 /* Context for a connection to Redis */
 typedef struct rliteContext {
@@ -135,7 +137,7 @@ void *rlitevCommand(rliteContext *c, const char *format, va_list ap);
 void *rliteCommand(rliteContext *c, const char *format, ...);
 void *rliteCommandArgv(rliteContext *c, int argc, const char **argv, const size_t *argvlen);
 
-typedef struct {
+typedef struct rliteClient {
 	int argc;
 	const char **argv;
 	const size_t *argvlen;

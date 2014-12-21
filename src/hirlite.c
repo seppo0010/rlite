@@ -29,6 +29,34 @@
 struct rliteCommand *lookupCommand(const char *name, size_t UNUSED(len));
 void __rliteSetError(rliteContext *c, int type, const char *str);
 
+static int catvprintf(char** s, size_t *slen, const char *fmt, va_list ap) {
+	va_list cpy;
+	char *buf, *t;
+	size_t buflen = 16;
+
+	while(1) {
+		buf = malloc(buflen);
+		if (buf == NULL) return RLITE_ERR;
+		buf[buflen-2] = '\0';
+		va_copy(cpy,ap);
+		vsnprintf(buf, buflen, fmt, cpy);
+		if (buf[buflen-2] != '\0') {
+			free(buf);
+			buflen *= 2;
+			continue;
+		}
+		break;
+	}
+	t = realloc(*s, sizeof(char) * (*slen + buflen));
+	if (!t) {
+		free(buf);
+		return RLITE_ERR;
+	}
+	memmove(&t[*slen], buf, buflen);
+	free(buf);
+	return RLITE_OK;
+}
+
 static rliteReply *createReplyObject(int type) {
 	rliteReply *r = calloc(1,sizeof(*r));
 
@@ -304,9 +332,231 @@ void freeReplyObject(void *reply) {
 	}
 	free(r);
 }
-int rlitevFormatCommand(char **UNUSED(target), const char *UNUSED(format), va_list UNUSED(ap)) { return 1; }
-int rliteFormatCommand(char **UNUSED(target), const char *UNUSED(format), ...) { return 1; }
-int rliteFormatCommandArgv(char **UNUSED(target), int UNUSED(argc), const char **UNUSED(argv), const size_t *UNUSED(argvlen)) { return 1; }
+
+int rlitevFormatCommand(rliteClient *client, const char *format, va_list ap) {
+	const char *c = format;
+	char *curarg, *newarg; /* current argument */
+	size_t curarglen;
+	int touched = 0; /* was the current argument touched? */
+	char **curargv = NULL, **newargv = NULL;
+	size_t *curargvlen = NULL, *newargvlen = NULL;
+	int argc = 0;
+
+	/* Build the command string accordingly to protocol */
+	curarg = NULL;
+	curarglen = 0;
+
+	while(*c != '\0') {
+		if (*c != '%' || c[1] == '\0') {
+			if (*c == ' ') {
+				if (touched) {
+					newargv = realloc(curargv, sizeof(char*)*(argc+1));
+					if (newargv == NULL) goto err;
+					newargvlen = realloc(curargvlen, sizeof(size_t)*(argc+1));
+					if (newargvlen == NULL) goto err;
+					curargv = newargv;
+					curargvlen = newargvlen;
+					curargv[argc] = curarg;
+					curargvlen[argc++] = curarglen;
+
+					/* curarg is put in argv so it can be overwritten. */
+					curarg = NULL;
+					curarglen = 0;
+					touched = 0;
+				}
+			} else {
+				newarg = realloc(curarg, sizeof(char) * (curarglen + 1));
+				if (newarg == NULL) goto err;
+				newarg[curarglen++] = *c;
+				curarg = newarg;
+				touched = 1;
+			}
+		} else {
+			char *arg;
+			size_t size;
+
+			/* Set newarg so it can be checked even if it is not touched. */
+			newarg = curarg;
+
+			switch(c[1]) {
+			case 's':
+				arg = va_arg(ap,char*);
+				size = strlen(arg);
+				if (size > 0) {
+					newarg = realloc(curarg, sizeof(char) * (curarglen + size));
+					memcpy(&newarg[curarglen], arg, size);
+					curarglen += size;
+				}
+				break;
+			case 'b':
+				arg = va_arg(ap,char*);
+				size = va_arg(ap,size_t);
+				if (size > 0) {
+					newarg = realloc(curarg, sizeof(char) * (curarglen + size));
+					memcpy(&newarg[curarglen], arg, size);
+					curarglen += size;
+				}
+				break;
+			case '%':
+				newarg = realloc(curarg, sizeof(char) * (curarglen + 1));
+				newarg[curarglen] = '%';
+				curarglen += 1;
+				break;
+			default:
+				/* Try to detect printf format */
+				{
+					static const char intfmts[] = "diouxX";
+					char _format[16];
+					const char *_p = c+1;
+					size_t _l = 0;
+					va_list _cpy;
+
+					/* Flags */
+					if (*_p != '\0' && *_p == '#') _p++;
+					if (*_p != '\0' && *_p == '0') _p++;
+					if (*_p != '\0' && *_p == '-') _p++;
+					if (*_p != '\0' && *_p == ' ') _p++;
+					if (*_p != '\0' && *_p == '+') _p++;
+
+					/* Field width */
+					while (*_p != '\0' && isdigit(*_p)) _p++;
+
+					/* Precision */
+					if (*_p == '.') {
+						_p++;
+						while (*_p != '\0' && isdigit(*_p)) _p++;
+					}
+
+					/* Copy va_list before consuming with va_arg */
+					va_copy(_cpy,ap);
+
+					/* Integer conversion (without modifiers) */
+					if (strchr(intfmts,*_p) != NULL) {
+						va_arg(ap,int);
+						goto fmt_valid;
+					}
+
+					/* Double conversion (without modifiers) */
+					if (strchr("eEfFgGaA",*_p) != NULL) {
+						va_arg(ap,double);
+						goto fmt_valid;
+					}
+
+					/* Size: char */
+					if (_p[0] == 'h' && _p[1] == 'h') {
+						_p += 2;
+						if (*_p != '\0' && strchr(intfmts,*_p) != NULL) {
+							va_arg(ap,int); /* char gets promoted to int */
+							goto fmt_valid;
+						}
+						goto fmt_invalid;
+					}
+
+					/* Size: short */
+					if (_p[0] == 'h') {
+						_p += 1;
+						if (*_p != '\0' && strchr(intfmts,*_p) != NULL) {
+							va_arg(ap,int); /* short gets promoted to int */
+							goto fmt_valid;
+						}
+						goto fmt_invalid;
+					}
+
+					/* Size: long long */
+					if (_p[0] == 'l' && _p[1] == 'l') {
+						_p += 2;
+						if (*_p != '\0' && strchr(intfmts,*_p) != NULL) {
+							va_arg(ap,long long);
+							goto fmt_valid;
+						}
+						goto fmt_invalid;
+					}
+
+					/* Size: long */
+					if (_p[0] == 'l') {
+						_p += 1;
+						if (*_p != '\0' && strchr(intfmts,*_p) != NULL) {
+							va_arg(ap,long);
+							goto fmt_valid;
+						}
+						goto fmt_invalid;
+					}
+
+				fmt_invalid:
+					va_end(_cpy);
+					goto err;
+
+				fmt_valid:
+					_l = (_p+1)-c;
+					if (_l < sizeof(_format)-2) {
+						memcpy(_format,c,_l);
+						_format[_l] = '\0';
+						newarg = curarg;
+						if (RLITE_ERR == catvprintf(&newarg, &curarglen, _format,_cpy)) {
+							goto err;
+						}
+
+						c = _p-1;
+					}
+
+					va_end(_cpy);
+					break;
+				}
+			}
+
+			if (newarg == NULL) goto err;
+			curarg = newarg;
+
+			touched = 1;
+			c++;
+		}
+		c++;
+	}
+
+	/* Add the last argument if needed */
+	if (touched) {
+		newargv = realloc(curargv,sizeof(char*)*(argc+1));
+		if (newargv == NULL) goto err;
+		curargv = newargv;
+		curargv[argc] = curarg;
+		curargvlen[argc++] = curarglen;
+	} else {
+		free(curarg);
+	}
+
+	/* Clear curarg because it was put in curargv or was free'd. */
+	curarg = NULL;
+
+	client->argc = argc;
+	client->argv = (const char **)curargv;
+	client->argvlen = (const size_t *) curargvlen;
+	return RLITE_OK;
+err:
+	while(argc--)
+		free(curargv[argc]);
+	free(curargv);
+
+	if (curarg != NULL)
+		free(curarg);
+
+	return RLITE_ERR;
+}
+
+int rliteFormatCommand(rliteClient *client, const char *format, ...) {
+	va_list ap;
+	int retval;
+	va_start(ap,format);
+	retval = rlitevFormatCommand(client, format, ap);
+	va_end(ap);
+	return retval;
+}
+
+int rliteFormatCommandArgv(rliteClient *client, int argc, const char **argv, const size_t *argvlen) {
+	client->argc = argc;
+	client->argv = argv;
+	client->argvlen = argvlen;
+	return RLITE_OK;
+}
 
 #define DEFAULT_REPLIES_SIZE 16
 static rliteContext *_rliteConnect(const char *path) {
@@ -441,14 +691,17 @@ int __rliteAppendCommandArgv(rliteContext *c, int argc, const char **argv, const
 }
 
 int rliteAppendFormattedCommand(rliteContext *UNUSED(c), const char *UNUSED(cmd), size_t UNUSED(len)) {
+	// TODO
 	return RLITE_ERR;
 }
 
 int rlitevAppendCommand(rliteContext *UNUSED(c), const char *UNUSED(format), va_list UNUSED(ap)) {
+	// TODO
 	return RLITE_ERR;
 }
 
 int rliteAppendCommand(rliteContext *UNUSED(c), const char *UNUSED(format), ...) {
+	// TODO
 	return RLITE_ERR;
 }
 
