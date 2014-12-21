@@ -1120,7 +1120,11 @@ static void genericZrangebylexCommand(rliteClient *c, int reverse) {
 	}
 
 	int retval = (reverse ? rl_zrevrangebylex : rl_zrangebylex)(c->context->db, UNSIGN(c->argv[1]), c->argvlen[1], UNSIGN(c->argv[2]), c->argvlen[2], UNSIGN(c->argv[3]), c->argvlen[3], offset, limit, &iterator);
-	addZsetIteratorReply(c, retval, iterator, 0);
+	if (retval == RL_UNEXPECTED) {
+		c->reply = createErrorObject(RLITE_INVALIDMINMAXERR);
+	} else {
+		addZsetIteratorReply(c, retval, iterator, 0);
+	}
 }
 
 static void zrangebylexCommand(rliteClient *c) {
