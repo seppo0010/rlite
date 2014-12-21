@@ -685,6 +685,7 @@ int basic_test_zadd_zrangebyscore(int _commit)
 	run_test_zrangebyscore(-INFINITY, 0, INFINITY, 1, ZRANGEBYSCORE_SIZE, 0);
 	run_test_zrangebyscore(-INFINITY, 1, INFINITY, 0, ZRANGEBYSCORE_SIZE, 0);
 	run_test_zrangebyscore(-INFINITY, 0, INFINITY, 0, ZRANGEBYSCORE_SIZE, 0);
+	run_test_zrangebyscore(-INFINITY, 0, 1, 1, 1, 0);
 	run_test_zrangebyscore(-5, 0, INFINITY, 0, ZRANGEBYSCORE_SIZE, 0);
 	run_test_zrangebyscore(5, 0, INFINITY, 0, ZRANGEBYSCORE_SIZE - 5, 5);
 	run_test_zrangebyscore(5, 0, 6, 1, 1, 5);

@@ -371,7 +371,7 @@ static int _rl_zrangebyscore(rlite *db, rl_skiplist *skiplist, rl_zrangespec *ra
 		goto cleanup;
 	}
 
-	if (retval == RL_FOUND && end == 0 && (range->maxex || node->score > range->max)) {
+	if (retval == RL_FOUND && end == 0 && ((range->maxex && node->score == range->max) || node->score > range->max)) {
 		retval = RL_NOT_FOUND;
 		goto cleanup;
 	}
