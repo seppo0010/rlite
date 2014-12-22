@@ -11,7 +11,6 @@
 static int basic_test_hset_hget(int _commit)
 {
 	int retval = 0;
-	long added;
 	fprintf(stderr, "Start basic_test_hset_hget %d\n", _commit);
 
 	rlite *db = NULL;
@@ -25,7 +24,7 @@ static int basic_test_hset_hget(int _commit)
 	unsigned char *data2 = NULL;
 	long data2len;
 
-	RL_CALL_VERBOSE(rl_hset, RL_OK, db, key, keylen, field, fieldlen, data, datalen, &added);
+	RL_CALL_VERBOSE(rl_hset, RL_OK, db, key, keylen, field, fieldlen, data, datalen, NULL, 0);
 
 	RL_CALL_VERBOSE(rl_is_balanced, RL_OK, db);
 
@@ -61,7 +60,6 @@ cleanup:
 static int basic_test_hset_hexists(int _commit)
 {
 	int retval = 0;
-	long added;
 	fprintf(stderr, "Start basic_test_hset_hexists %d\n", _commit);
 
 	rlite *db = NULL;
@@ -75,7 +73,7 @@ static int basic_test_hset_hexists(int _commit)
 	unsigned char *data = UNSIGN("my data");
 	long datalen = strlen((char *)data);
 
-	RL_CALL_VERBOSE(rl_hset, RL_OK, db, key, keylen, field, fieldlen, data, datalen, &added);
+	RL_CALL_VERBOSE(rl_hset, RL_OK, db, key, keylen, field, fieldlen, data, datalen, NULL, 0);
 
 	RL_CALL_VERBOSE(rl_is_balanced, RL_OK, db);
 
@@ -100,7 +98,6 @@ cleanup:
 static int basic_test_hset_hdel(int _commit)
 {
 	int retval = 0;
-	long added;
 	fprintf(stderr, "Start basic_test_hset_hdel %d\n", _commit);
 
 	rlite *db = NULL;
@@ -119,7 +116,7 @@ static int basic_test_hset_hdel(int _commit)
 	unsigned char *data = UNSIGN("my data");
 	long datalen = strlen((char *)data);
 
-	RL_CALL_VERBOSE(rl_hset, RL_OK, db, key, keylen, field, fieldlen, data, datalen, &added);
+	RL_CALL_VERBOSE(rl_hset, RL_OK, db, key, keylen, field, fieldlen, data, datalen, NULL, 0);
 	RL_CALL_VERBOSE(rl_is_balanced, RL_OK, db);
 
 	if (_commit) {
@@ -127,7 +124,7 @@ static int basic_test_hset_hdel(int _commit)
 		RL_CALL_VERBOSE(rl_is_balanced, RL_OK, db);
 	}
 
-	RL_CALL_VERBOSE(rl_hset, RL_OK, db, key, keylen, field2, field2len, data, datalen, &added);
+	RL_CALL_VERBOSE(rl_hset, RL_OK, db, key, keylen, field2, field2len, data, datalen, NULL, 0);
 	RL_CALL_VERBOSE(rl_is_balanced, RL_OK, db);
 
 	if (_commit) {
@@ -164,7 +161,6 @@ cleanup:
 static int basic_test_hset_hgetall(int _commit)
 {
 	int retval = 0;
-	long added;
 	fprintf(stderr, "Start basic_test_hset_hgetall %d\n", _commit);
 
 	rlite *db = NULL;
@@ -185,7 +181,7 @@ static int basic_test_hset_hgetall(int _commit)
 	unsigned char *data2 = UNSIGN("my data2");
 	long data2len = strlen((char *)data2);
 
-	RL_CALL_VERBOSE(rl_hset, RL_OK, db, key, keylen, field, fieldlen, data, datalen, &added);
+	RL_CALL_VERBOSE(rl_hset, RL_OK, db, key, keylen, field, fieldlen, data, datalen, NULL, 0);
 	RL_CALL_VERBOSE(rl_is_balanced, RL_OK, db);
 
 	if (_commit) {
@@ -193,7 +189,7 @@ static int basic_test_hset_hgetall(int _commit)
 		RL_CALL_VERBOSE(rl_is_balanced, RL_OK, db);
 	}
 
-	RL_CALL_VERBOSE(rl_hset, RL_OK, db, key, keylen, field2, field2len, data2, data2len, &added);
+	RL_CALL_VERBOSE(rl_hset, RL_OK, db, key, keylen, field2, field2len, data2, data2len, NULL, 0);
 	RL_CALL_VERBOSE(rl_is_balanced, RL_OK, db);
 
 	if (_commit) {
@@ -280,7 +276,7 @@ static int basic_test_hset_hlen(int _commit)
 	unsigned char *data2 = UNSIGN("my data2");
 	long data2len = strlen((char *)data2);
 
-	RL_CALL_VERBOSE(rl_hset, RL_OK, db, key, keylen, field, fieldlen, data, datalen, NULL);
+	RL_CALL_VERBOSE(rl_hset, RL_OK, db, key, keylen, field, fieldlen, data, datalen, NULL, 0);
 	RL_CALL_VERBOSE(rl_is_balanced, RL_OK, db);
 
 	if (_commit) {
@@ -288,7 +284,7 @@ static int basic_test_hset_hlen(int _commit)
 		RL_CALL_VERBOSE(rl_is_balanced, RL_OK, db);
 	}
 
-	RL_CALL_VERBOSE(rl_hset, RL_OK, db, key, keylen, field2, field2len, data2, data2len, NULL);
+	RL_CALL_VERBOSE(rl_hset, RL_OK, db, key, keylen, field2, field2len, data2, data2len, NULL, 0);
 	RL_CALL_VERBOSE(rl_is_balanced, RL_OK, db);
 
 	if (_commit) {
@@ -313,6 +309,97 @@ cleanup:
 	return retval;
 }
 
+static int basic_test_hsetnx(int _commit)
+{
+	int retval = 0;
+	long added;
+	fprintf(stderr, "Start basic_test_hsetnx %d\n", _commit);
+
+	rlite *db = NULL;
+	RL_CALL_VERBOSE(setup_db, RL_OK, &db, _commit, 1);
+	unsigned char *key = UNSIGN("my key");
+	long keylen = strlen((char *)key);
+	unsigned char *field = UNSIGN("my field");
+	long fieldlen = strlen((char *)field);
+	unsigned char *data = UNSIGN("my data");
+	long datalen = strlen((char *)data);
+	unsigned char *data2 = UNSIGN("my data2");
+	long data2len = strlen((char *)data2);
+	unsigned char *data3;
+	long data3len;
+
+	RL_CALL_VERBOSE(rl_hset, RL_OK, db, key, keylen, field, fieldlen, data, datalen, &added, 0);
+
+	if (added != 1) {
+		fprintf(stderr, "Expected added to be 1 on line %d\n", __LINE__);
+		retval = RL_UNEXPECTED;
+		goto cleanup;
+	}
+
+	RL_CALL_VERBOSE(rl_is_balanced, RL_OK, db);
+
+	if (_commit) {
+		RL_CALL_VERBOSE(rl_commit, RL_OK, db);
+		RL_CALL_VERBOSE(rl_is_balanced, RL_OK, db);
+	}
+
+	RL_CALL_VERBOSE(rl_hset, RL_FOUND, db, key, keylen, field, fieldlen, data2, data2len, &added, 0);
+
+	if (added != 0) {
+		fprintf(stderr, "Expected added to be 0 on line %d\n", __LINE__);
+		retval = RL_UNEXPECTED;
+		goto cleanup;
+	}
+
+	RL_CALL_VERBOSE(rl_is_balanced, RL_OK, db);
+
+	RL_CALL_VERBOSE(rl_hget, RL_FOUND, db, key, keylen, field, fieldlen, &data3, &data3len);
+
+	if (datalen != data3len) {
+		fprintf(stderr, "expected %ld == %ld on line %d\n", datalen, data3len, __LINE__);
+		retval = 1;
+		goto cleanup;
+	}
+
+	if (memcmp(data, data3, datalen)) {
+		fprintf(stderr, "expected %s == %s on line %d\n", data, data3, __LINE__);
+		retval = 1;
+		goto cleanup;
+	}
+
+	RL_CALL_VERBOSE(rl_hset, RL_OK, db, key, keylen, field, fieldlen, data2, data2len, &added, 1);
+
+	if (added != 0) {
+		fprintf(stderr, "Expected added to be 0 on line %d\n", __LINE__);
+		retval = RL_UNEXPECTED;
+		goto cleanup;
+	}
+
+	RL_CALL_VERBOSE(rl_is_balanced, RL_OK, db);
+
+	RL_CALL_VERBOSE(rl_hget, RL_FOUND, db, key, keylen, field, fieldlen, &data3, &data3len);
+
+	if (data2len != data3len) {
+		fprintf(stderr, "expected %ld == %ld on line %d\n", data2len, data3len, __LINE__);
+		retval = 1;
+		goto cleanup;
+	}
+
+	if (memcmp(data2, data3, data2len)) {
+		fprintf(stderr, "expected %s == %s on line %d\n", data2, data3, __LINE__);
+		retval = 1;
+		goto cleanup;
+	}
+
+	fprintf(stderr, "End basic_test_hsetnx\n");
+	retval = 0;
+cleanup:
+	if (db) {
+		rl_close(db);
+	}
+	return retval;
+}
+
 RL_TEST_MAIN_START(type_hash_test)
 {
 	int i;
@@ -322,6 +409,7 @@ RL_TEST_MAIN_START(type_hash_test)
 		RL_TEST(basic_test_hset_hdel, i);
 		RL_TEST(basic_test_hset_hgetall, i);
 		RL_TEST(basic_test_hset_hlen, i);
+		RL_TEST(basic_test_hsetnx, i);
 	}
 }
 RL_TEST_MAIN_END
