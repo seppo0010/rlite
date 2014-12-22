@@ -57,11 +57,51 @@ cleanup:
 	return retval;
 }
 
+static int basic_test_hset_hexists(int _commit)
+{
+	int retval = 0;
+	long added;
+	fprintf(stderr, "Start basic_test_hset_hexists %d\n", _commit);
+
+	rlite *db = NULL;
+	RL_CALL_VERBOSE(setup_db, RL_OK, &db, _commit, 1);
+	unsigned char *key = UNSIGN("my key");
+	long keylen = strlen((char *)key);
+	unsigned char *field = UNSIGN("my field");
+	long fieldlen = strlen((char *)field);
+	unsigned char *field2 = UNSIGN("my field2");
+	long field2len = strlen((char *)field2);
+	unsigned char *data = UNSIGN("my data");
+	long datalen = strlen((char *)data);
+
+	RL_CALL_VERBOSE(rl_hset, RL_OK, db, key, keylen, field, fieldlen, data, datalen, &added);
+
+	RL_CALL_VERBOSE(rl_is_balanced, RL_OK, db);
+
+	if (_commit) {
+		RL_CALL_VERBOSE(rl_commit, RL_OK, db);
+		RL_CALL_VERBOSE(rl_is_balanced, RL_OK, db);
+	}
+
+	RL_CALL_VERBOSE(rl_hexists, RL_FOUND, db, key, keylen, field, fieldlen);
+	RL_CALL_VERBOSE(rl_hexists, RL_NOT_FOUND, db, key, keylen, field2, field2len);
+
+
+	fprintf(stderr, "End basic_test_hset_hexists\n");
+	retval = 0;
+cleanup:
+	if (db) {
+		rl_close(db);
+	}
+	return retval;
+}
+
 RL_TEST_MAIN_START(type_hash_test)
 {
 	int i;
 	for (i = 0; i < 2; i++) {
 		RL_TEST(basic_test_hset_hget, i);
+		RL_TEST(basic_test_hset_hexists, i);
 	}
 }
 RL_TEST_MAIN_END

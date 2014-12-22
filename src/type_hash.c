@@ -133,6 +133,24 @@ cleanup:
 	return retval;
 }
 
+int rl_hexists(struct rlite *db, const unsigned char *key, long keylen, unsigned char *field, long fieldlen)
+{
+	int retval;
+	long hash_page_number;
+	rl_btree *hash;
+	void *tmp;
+	unsigned char *digest = NULL;
+	RL_CALL(rl_hash_get_objects, RL_OK, db, key, keylen, &hash_page_number, &hash, 1);
+
+	RL_MALLOC(digest, sizeof(unsigned char) * 20);
+	RL_CALL(sha1, RL_OK, field, fieldlen, digest);
+
+	retval = rl_btree_find_score(db, hash, digest, &tmp, NULL, NULL);
+cleanup:
+	rl_free(digest);
+	return retval;
+}
+
 int rl_hash_pages(struct rlite *db, long page, short *pages)
 {
 	rl_btree *btree;
