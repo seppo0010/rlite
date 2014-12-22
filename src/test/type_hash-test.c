@@ -96,12 +96,77 @@ cleanup:
 	return retval;
 }
 
+static int basic_test_hset_hdel(int _commit)
+{
+	int retval = 0;
+	long added;
+	fprintf(stderr, "Start basic_test_hset_hdel %d\n", _commit);
+
+	rlite *db = NULL;
+	RL_CALL_VERBOSE(setup_db, RL_OK, &db, _commit, 1);
+	unsigned char *key = UNSIGN("my key");
+	long keylen = strlen((char *)key);
+	if (_commit) {
+		RL_CALL_VERBOSE(rl_commit, RL_OK, db);
+		RL_CALL_VERBOSE(rl_is_balanced, RL_OK, db);
+	}
+
+	unsigned char *field = UNSIGN("my field");
+	long fieldlen = strlen((char *)field);
+	unsigned char *field2 = UNSIGN("my field2");
+	long field2len = strlen((char *)field2);
+	unsigned char *data = UNSIGN("my data");
+	long datalen = strlen((char *)data);
+
+	RL_CALL_VERBOSE(rl_hset, RL_OK, db, key, keylen, field, fieldlen, data, datalen, &added);
+	RL_CALL_VERBOSE(rl_is_balanced, RL_OK, db);
+
+	if (_commit) {
+		RL_CALL_VERBOSE(rl_commit, RL_OK, db);
+		RL_CALL_VERBOSE(rl_is_balanced, RL_OK, db);
+	}
+
+	RL_CALL_VERBOSE(rl_hset, RL_OK, db, key, keylen, field2, field2len, data, datalen, &added);
+	RL_CALL_VERBOSE(rl_is_balanced, RL_OK, db);
+
+	if (_commit) {
+		RL_CALL_VERBOSE(rl_commit, RL_OK, db);
+		RL_CALL_VERBOSE(rl_is_balanced, RL_OK, db);
+	}
+
+	long deleted;
+	unsigned char *fields[3] = {field, field2, data};
+	long fieldslen[3] = {fieldlen, field2len, datalen};
+	RL_CALL_VERBOSE(rl_hdel, RL_OK, db, key, keylen, 3, fields, fieldslen, &deleted);
+
+	if (deleted != 2) {
+		fprintf(stderr, "Expected to delete 2 fields, got %ld instead on line %d\n", deleted, __LINE__);
+		return 1;
+	}
+
+	if (_commit) {
+		RL_CALL_VERBOSE(rl_commit, RL_OK, db);
+		RL_CALL_VERBOSE(rl_is_balanced, RL_OK, db);
+	}
+
+	RL_CALL_VERBOSE(rl_key_get, RL_NOT_FOUND, db, key, keylen, NULL, NULL, NULL, NULL);
+
+	fprintf(stderr, "End basic_test_hset_hdel\n");
+	retval = 0;
+cleanup:
+	if (db) {
+		rl_close(db);
+	}
+	return retval;
+}
+
 RL_TEST_MAIN_START(type_hash_test)
 {
 	int i;
 	for (i = 0; i < 2; i++) {
 		RL_TEST(basic_test_hset_hget, i);
 		RL_TEST(basic_test_hset_hexists, i);
+		RL_TEST(basic_test_hset_hdel, i);
 	}
 }
 RL_TEST_MAIN_END

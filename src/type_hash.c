@@ -68,7 +68,7 @@ cleanup:
 	return retval;
 }
 
-int rl_hset(struct rlite *db, const unsigned char *key, long keylen, unsigned char *field, long fieldlen, unsigned char *data, long datalen, long     *added)
+int rl_hset(struct rlite *db, const unsigned char *key, long keylen, unsigned char *field, long fieldlen, unsigned char *data, long datalen, long	 *added)
 {
 	int retval;
 	long hash_page_number;
@@ -138,14 +138,55 @@ int rl_hexists(struct rlite *db, const unsigned char *key, long keylen, unsigned
 	int retval;
 	long hash_page_number;
 	rl_btree *hash;
-	void *tmp;
 	unsigned char *digest = NULL;
 	RL_CALL(rl_hash_get_objects, RL_OK, db, key, keylen, &hash_page_number, &hash, 1);
 
 	RL_MALLOC(digest, sizeof(unsigned char) * 20);
 	RL_CALL(sha1, RL_OK, field, fieldlen, digest);
 
-	retval = rl_btree_find_score(db, hash, digest, &tmp, NULL, NULL);
+	retval = rl_btree_find_score(db, hash, digest, NULL, NULL, NULL);
+cleanup:
+	rl_free(digest);
+	return retval;
+}
+
+int rl_hdel(struct rlite *db, const unsigned char *key, long keylen, long fieldsc, unsigned char **fields, long *fieldslen, long *delcount)
+{
+	int retval;
+	long hash_page_number;
+	rl_btree *hash;
+	rl_hashkey *hashkey;
+	void *tmp;
+	long i;
+	long deleted = 0;
+	unsigned char *digest = NULL;
+	RL_CALL(rl_hash_get_objects, RL_OK, db, key, keylen, &hash_page_number, &hash, 1);
+	RL_MALLOC(digest, sizeof(unsigned char) * 20);
+
+	for (i = 0; i < fieldsc; i++) {
+		RL_CALL(sha1, RL_OK, fields[i], fieldslen[i], digest);
+		retval = rl_btree_find_score(db, hash, digest, &tmp, NULL, NULL);
+		if (retval == RL_FOUND) {
+			deleted++;
+			hashkey = tmp;
+			rl_multi_string_delete(db, hashkey->string_page);
+			rl_multi_string_delete(db, hashkey->value_page);
+			retval = rl_btree_remove_element(db, hash, hash_page_number, digest);
+			if (retval != RL_OK && retval != RL_DELETED) {
+				goto cleanup;
+			}
+			if (retval == RL_DELETED) {
+				break;
+			}
+		}
+	}
+	if (delcount) {
+		*delcount = deleted;
+	}
+	if (hash->number_of_elements == 0) {
+		RL_CALL(rl_key_delete, RL_OK, db, key, keylen);
+	}
+	retval = RL_OK;
 cleanup:
 	rl_free(digest);
 	return retval;
