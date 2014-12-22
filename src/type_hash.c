@@ -159,6 +159,7 @@ int rl_hdel(struct rlite *db, const unsigned char *key, long keylen, long fields
 	void *tmp;
 	long i;
 	long deleted = 0;
+	int keydeleted = 0;
 	unsigned char *digest = NULL;
 	RL_CALL(rl_hash_get_objects, RL_OK, db, key, keylen, &hash_page_number, &hash, 1);
 	RL_MALLOC(digest, sizeof(unsigned char) * 20);
@@ -176,6 +177,7 @@ int rl_hdel(struct rlite *db, const unsigned char *key, long keylen, long fields
 				goto cleanup;
 			}
 			if (retval == RL_DELETED) {
+				keydeleted = 1;
 				break;
 			}
 		}
@@ -183,7 +185,7 @@ int rl_hdel(struct rlite *db, const unsigned char *key, long keylen, long fields
 	if (delcount) {
 		*delcount = deleted;
 	}
-	if (hash->number_of_elements == 0) {
+	if (keydeleted) {
 		RL_CALL(rl_key_delete, RL_OK, db, key, keylen);
 	}
 	retval = RL_OK;
@@ -195,11 +197,7 @@ cleanup:
 int rl_hgetall(struct rlite *db, rl_hash_iterator **iterator, const unsigned char *key, long keylen)
 {
 	int retval;
-	long hash_page_number;
 	rl_btree *hash;
-	void *tmp;
-	unsigned char *digest = NULL;
-	rl_hashkey *hashkey;
 	RL_CALL(rl_hash_get_objects, RL_OK, db, key, keylen, NULL, &hash, 1);
 	RL_CALL(rl_btree_iterator_create, RL_OK, db, hash, iterator);
 cleanup:
@@ -207,6 +205,9 @@ cleanup:
 }
 int rl_hash_iterator_next(rl_hash_iterator *iterator, unsigned char **field, long *fieldlen, unsigned char **member, long *memberlen)
 {
+	void *tmp;
+	rl_hashkey *hashkey = NULL;
+	int retval;
 	if ((!member && memberlen) || (member && !memberlen)) {
 		fprintf(stderr, "Expected to receive either member and memberlen or neither\n");
 		return RL_UNEXPECTED;
@@ -217,9 +218,6 @@ int rl_hash_iterator_next(rl_hash_iterator *iterator, unsigned char **field, lon
 		return RL_UNEXPECTED;
 	}
 
-	void *tmp;
-	rl_hashkey *hashkey;
-	int retval;
 	RL_CALL(rl_btree_iterator_next, RL_OK, iterator, NULL, &tmp);
 	hashkey = tmp;
 
@@ -239,6 +237,7 @@ int rl_hash_iterator_next(rl_hash_iterator *iterator, unsigned char **field, lon
 		}
 	}
 cleanup:
+	rl_free(hashkey);
 	return retval;
 }
 
@@ -267,6 +266,7 @@ int rl_hash_pages(struct rlite *db, long page, short *pages)
 		RL_CALL(rl_multi_string_pages, RL_OK, db, hashkey->value_page, pages);
 		pages[hashkey->string_page] = 1;
 		RL_CALL(rl_multi_string_pages, RL_OK, db, hashkey->string_page, pages);
+		rl_free(hashkey);
 	}
 	iterator = NULL;
 

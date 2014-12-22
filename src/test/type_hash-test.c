@@ -22,7 +22,7 @@ static int basic_test_hset_hget(int _commit)
 	long fieldlen = strlen((char *)field);
 	unsigned char *data = UNSIGN("my data");
 	long datalen = strlen((char *)data);
-	unsigned char *data2;
+	unsigned char *data2 = NULL;
 	long data2len;
 
 	RL_CALL_VERBOSE(rl_hset, RL_OK, db, key, keylen, field, fieldlen, data, datalen, &added);
@@ -51,6 +51,7 @@ static int basic_test_hset_hget(int _commit)
 	fprintf(stderr, "End basic_test_hset_hget\n");
 	retval = 0;
 cleanup:
+	rl_free(data2);
 	if (db) {
 		rl_close(db);
 	}
