@@ -9,6 +9,7 @@
 #include "page_skiplist.h"
 #include "page_multi_string.h"
 #include "type_zset.h"
+#include "type_hash.h"
 #include "rlite.h"
 #include "util.h"
 #ifdef DEBUG
@@ -46,6 +47,18 @@ rl_data_type rl_data_type_btree_node_hash_sha1_key = {
 	"rl_data_type_btree_node_hash_sha1_key",
 	rl_btree_node_serialize_hash_sha1_key,
 	rl_btree_node_deserialize_hash_sha1_key,
+	rl_btree_node_destroy,
+};
+rl_data_type rl_data_type_btree_hash_sha1_hashkey = {
+	"rl_data_type_btree_hash_sha1_hashkey",
+	rl_btree_serialize,
+	rl_btree_deserialize,
+	rl_btree_destroy,
+};
+rl_data_type rl_data_type_btree_node_hash_sha1_hashkey = {
+	"rl_data_type_btree_node_hash_sha1_hashkey",
+	rl_btree_node_serialize_hash_sha1_hashkey,
+	rl_btree_node_deserialize_hash_sha1_hashkey,
 	rl_btree_node_destroy,
 };
 rl_data_type rl_data_type_header = {
@@ -907,6 +920,9 @@ int rl_database_is_balanced(rlite *db, short *pages)
 		RL_CALL(rl_multi_string_pages, RL_OK, db, key->string_page, pages);
 		if (key->type == RL_TYPE_ZSET) {
 			rl_zset_pages(db, key->value_page, pages);
+		}
+		else if (key->type == RL_TYPE_HASH) {
+			rl_hash_pages(db, key->value_page, pages);
 		}
 		else {
 			fprintf(stderr, "Unknown type %d\n", key->type);

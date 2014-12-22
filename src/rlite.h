@@ -76,8 +76,10 @@ int rl_dbsize(struct rlite *db, long *size);
 int rl_keys(struct rlite *db, unsigned char *pattern, long patternlen, long *size, unsigned char ***result, long **resultlen);
 
 extern rl_data_type rl_data_type_header;
+extern rl_data_type rl_data_type_btree_hash_sha1_hashkey;
 extern rl_data_type rl_data_type_btree_hash_sha1_key;
 extern rl_data_type rl_data_type_btree_node_hash_sha1_key;
+extern rl_data_type rl_data_type_btree_node_hash_sha1_hashkey;
 extern rl_data_type rl_data_type_btree_set_long;
 extern rl_data_type rl_data_type_btree_node_set_long;
 extern rl_data_type rl_data_type_btree_hash_long_long;

@@ -1,5 +1,6 @@
 #ifndef _RL_TEST_UTIL_H
 #define _RL_TEST_UTIL_H
+
 #include "../util.h"
 struct rlite;
 

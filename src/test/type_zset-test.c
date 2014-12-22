@@ -214,7 +214,7 @@ int basic_test_invalidlex()
 	RL_CALL_VERBOSE(rl_zadd, RL_OK, db, key, keylen, score, data, datalen);
 	RL_CALL_VERBOSE(rl_zrangebylex, RL_UNEXPECTED, db, key, keylen, UNSIGN("foo"), 3, UNSIGN("bar"), 3, 0, -1, NULL);
 	fprintf(stderr, "End basic_test_invalidlex\n");
-    retval = 0;
+	retval = 0;
 cleanup:
 	if (db) {
 		rl_close(db);

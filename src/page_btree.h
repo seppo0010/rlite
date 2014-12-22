@@ -26,6 +26,11 @@ int sha1_cmp(void *v1, void *v2);
 int sha1_formatter(void *v, char **str, int *size);
 #endif
 
+typedef struct rl_hashkey {
+	long string_page;
+	long value_page;
+} rl_hashkey;
+
 typedef struct rl_key {
 	unsigned char type;
 	long string_page;
@@ -36,6 +41,7 @@ typedef struct rl_key {
 extern rl_btree_type rl_btree_type_set_long;
 extern rl_btree_type rl_btree_type_hash_long_long;
 extern rl_btree_type rl_btree_type_hash_sha1_key;
+extern rl_btree_type rl_btree_type_hash_sha1_hashkey;
 extern rl_btree_type rl_btree_type_hash_sha1_double;
 
 typedef struct rl_btree_node {
@@ -88,6 +94,9 @@ int rl_btree_deserialize(struct rlite *db, void **obj, void *context, unsigned c
 
 int rl_btree_node_serialize_hash_sha1_key(struct rlite *db, void *obj, unsigned char *data);
 int rl_btree_node_deserialize_hash_sha1_key(struct rlite *db, void **obj, void *context, unsigned char *data);
+
+int rl_btree_node_serialize_hash_sha1_hashkey(struct rlite *db, void *obj, unsigned char *data);
+int rl_btree_node_deserialize_hash_sha1_hashkey(struct rlite *db, void **obj, void *context, unsigned char *data);
 
 int rl_btree_node_serialize_set_long(struct rlite *db, void *obj, unsigned char *data);
 int rl_btree_node_deserialize_set_long(struct rlite *db, void **obj, void *context, unsigned char *data);
