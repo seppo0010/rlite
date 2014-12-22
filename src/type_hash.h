@@ -17,6 +17,7 @@ int rl_hget(struct rlite *db, const unsigned char *key, long keylen, unsigned ch
 int rl_hexists(struct rlite *db, const unsigned char *key, long keylen, unsigned char *field, long fieldlen);
 int rl_hdel(struct rlite *db, const unsigned char *key, long keylen, long fieldsc, unsigned char **fields, long *fieldslen, long *delcount);
 int rl_hgetall(struct rlite *db, rl_hash_iterator **iterator, const unsigned char *key, long keylen);
+int rl_hlen(struct rlite *db, const unsigned char *key, long keylen, long *len);
 
 int rl_hash_pages(struct rlite *db, long page, short *pages);
 int rl_hash_delete(struct rlite *db, const unsigned char *key, long keylen);

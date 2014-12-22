@@ -203,6 +203,18 @@ int rl_hgetall(struct rlite *db, rl_hash_iterator **iterator, const unsigned cha
 cleanup:
 	return retval;
 }
+
+int rl_hlen(struct rlite *db, const unsigned char *key, long keylen, long *len)
+{
+	int retval;
+	rl_btree *hash;
+	RL_CALL(rl_hash_get_objects, RL_OK, db, key, keylen, NULL, &hash, 1);
+	*len = hash->number_of_elements;
+	retval = RL_OK;
+cleanup:
+	return retval;
+}
+
 int rl_hash_iterator_next(rl_hash_iterator *iterator, unsigned char **field, long *fieldlen, unsigned char **member, long *memberlen)
 {
 	void *tmp;

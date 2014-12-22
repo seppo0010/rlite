@@ -256,6 +256,63 @@ cleanup:
 	return retval;
 }
 
+static int basic_test_hset_hlen(int _commit)
+{
+	int retval = 0;
+	long len;
+	fprintf(stderr, "Start basic_test_hset_hlen %d\n", _commit);
+
+	rlite *db = NULL;
+	RL_CALL_VERBOSE(setup_db, RL_OK, &db, _commit, 1);
+	unsigned char *key = UNSIGN("my key");
+	long keylen = strlen((char *)key);
+	if (_commit) {
+		RL_CALL_VERBOSE(rl_commit, RL_OK, db);
+		RL_CALL_VERBOSE(rl_is_balanced, RL_OK, db);
+	}
+
+	unsigned char *field = UNSIGN("my field");
+	long fieldlen = strlen((char *)field);
+	unsigned char *field2 = UNSIGN("my field2");
+	long field2len = strlen((char *)field2);
+	unsigned char *data = UNSIGN("my data");
+	long datalen = strlen((char *)data);
+	unsigned char *data2 = UNSIGN("my data2");
+	long data2len = strlen((char *)data2);
+
+	RL_CALL_VERBOSE(rl_hset, RL_OK, db, key, keylen, field, fieldlen, data, datalen, NULL);
+	RL_CALL_VERBOSE(rl_is_balanced, RL_OK, db);
+
+	if (_commit) {
+		RL_CALL_VERBOSE(rl_commit, RL_OK, db);
+		RL_CALL_VERBOSE(rl_is_balanced, RL_OK, db);
+	}
+
+	RL_CALL_VERBOSE(rl_hset, RL_OK, db, key, keylen, field2, field2len, data2, data2len, NULL);
+	RL_CALL_VERBOSE(rl_is_balanced, RL_OK, db);
+
+	if (_commit) {
+		RL_CALL_VERBOSE(rl_commit, RL_OK, db);
+		RL_CALL_VERBOSE(rl_is_balanced, RL_OK, db);
+	}
+
+	RL_CALL_VERBOSE(rl_hlen, RL_OK, db, key, keylen, &len);
+
+	if (len != 2) {
+		fprintf(stderr, "Expected len to be %ld on line %d\n", len, __LINE__);
+		retval = RL_UNEXPECTED;
+		goto cleanup;
+	}
+
+	fprintf(stderr, "End basic_test_hset_hlen\n");
+	retval = 0;
+cleanup:
+	if (db) {
+		rl_close(db);
+	}
+	return retval;
+}
+
 RL_TEST_MAIN_START(type_hash_test)
 {
 	int i;
@@ -264,6 +321,7 @@ RL_TEST_MAIN_START(type_hash_test)
 		RL_TEST(basic_test_hset_hexists, i);
 		RL_TEST(basic_test_hset_hdel, i);
 		RL_TEST(basic_test_hset_hgetall, i);
+		RL_TEST(basic_test_hset_hlen, i);
 	}
 }
 RL_TEST_MAIN_END
