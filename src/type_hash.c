@@ -192,6 +192,61 @@ cleanup:
 	return retval;
 }
 
+int rl_hgetall(struct rlite *db, rl_hash_iterator **iterator, const unsigned char *key, long keylen)
+{
+	int retval;
+	long hash_page_number;
+	rl_btree *hash;
+	void *tmp;
+	unsigned char *digest = NULL;
+	rl_hashkey *hashkey;
+	RL_CALL(rl_hash_get_objects, RL_OK, db, key, keylen, NULL, &hash, 1);
+	RL_CALL(rl_btree_iterator_create, RL_OK, db, hash, iterator);
+cleanup:
+	return retval;
+}
+int rl_hash_iterator_next(rl_hash_iterator *iterator, unsigned char **field, long *fieldlen, unsigned char **member, long *memberlen)
+{
+	if ((!member && memberlen) || (member && !memberlen)) {
+		fprintf(stderr, "Expected to receive either member and memberlen or neither\n");
+		return RL_UNEXPECTED;
+	}
+
+	if ((!field && fieldlen) || (field && !fieldlen)) {
+		fprintf(stderr, "Expected to receive either field and fieldlen or neither\n");
+		return RL_UNEXPECTED;
+	}
+
+	void *tmp;
+	rl_hashkey *hashkey;
+	int retval;
+	RL_CALL(rl_btree_iterator_next, RL_OK, iterator, NULL, &tmp);
+	hashkey = tmp;
+
+	if (field) {
+		retval = rl_multi_string_get(iterator->db, hashkey->string_page, field, fieldlen);
+		if (retval != RL_OK) {
+			rl_btree_iterator_destroy(iterator);
+			goto cleanup;
+		}
+	}
+
+	if (member) {
+		retval = rl_multi_string_get(iterator->db, hashkey->value_page, member, memberlen);
+		if (retval != RL_OK) {
+			rl_btree_iterator_destroy(iterator);
+			goto cleanup;
+		}
+	}
+cleanup:
+	return retval;
+}
+
+int rl_hash_iterator_destroy(rl_hash_iterator *iterator)
+{
+	return rl_btree_iterator_destroy(iterator);
+}
+
 int rl_hash_pages(struct rlite *db, long page, short *pages)
 {
 	rl_btree *btree;
