@@ -400,6 +400,95 @@ cleanup:
 	return retval;
 }
 
+static int basic_test_hset_hmget(int _commit)
+{
+	int retval = 0;
+	long added;
+	fprintf(stderr, "Start basic_test_hset_hmget %d\n", _commit);
+
+	rlite *db = NULL;
+	RL_CALL_VERBOSE(setup_db, RL_OK, &db, _commit, 1);
+	unsigned char *key = UNSIGN("my key");
+	long keylen = strlen((char *)key);
+	unsigned char *field = UNSIGN("my field");
+	long fieldlen = strlen((char *)field);
+	unsigned char *field2 = UNSIGN("my field2");
+	long field2len = strlen((char *)field2);
+	unsigned char *data = UNSIGN("my data");
+	long datalen = strlen((char *)data);
+	unsigned char *data2 = UNSIGN("my data2");
+	long data2len = strlen((char *)data2);
+	unsigned char *fields[3] = {field, (unsigned char *)"nonexistent", field2};
+	long fieldslen[3] = {fieldlen, strlen((char *)fields[1]), field2len};
+	unsigned char **datas = NULL;
+	long *dataslen = NULL;
+
+	RL_CALL_VERBOSE(rl_hset, RL_OK, db, key, keylen, field, fieldlen, data, datalen, &added, 0);
+
+	if (added != 1) {
+		fprintf(stderr, "Expected added to be 1 on line %d\n", __LINE__);
+		retval = RL_UNEXPECTED;
+		goto cleanup;
+	}
+
+	RL_CALL_VERBOSE(rl_is_balanced, RL_OK, db);
+
+	if (_commit) {
+		RL_CALL_VERBOSE(rl_commit, RL_OK, db);
+		RL_CALL_VERBOSE(rl_is_balanced, RL_OK, db);
+	}
+
+	RL_CALL_VERBOSE(rl_hset, RL_OK, db, key, keylen, field2, field2len, data2, data2len, &added, 0);
+
+	if (added != 1) {
+		fprintf(stderr, "Expected added to be 1 on line %d\n", __LINE__);
+		retval = RL_UNEXPECTED;
+		goto cleanup;
+	}
+
+	RL_CALL_VERBOSE(rl_is_balanced, RL_OK, db);
+
+	if (_commit) {
+		RL_CALL_VERBOSE(rl_commit, RL_OK, db);
+		RL_CALL_VERBOSE(rl_is_balanced, RL_OK, db);
+	}
+
+	RL_CALL_VERBOSE(rl_hmget, RL_FOUND, db, key, keylen, 3, fields, fieldslen, &datas, &dataslen);
+
+	if (dataslen[0] != datalen || memcmp(datas[0], data, datalen)) {
+		fprintf(stderr, "Expected datas[0] \"%s\" to match data \"%s\" on line %d", datas[0], data, __LINE__);
+		retval = RL_UNEXPECTED;
+		goto cleanup;
+	}
+
+	if (dataslen[1] != -1 || datas[1] != NULL) {
+		fprintf(stderr, "Expected datas[1] \"%s\" to be null on line %d", datas[1], __LINE__);
+		retval = RL_UNEXPECTED;
+		goto cleanup;
+	}
+
+	if (dataslen[2] != data2len || memcmp(datas[2], data2, data2len)) {
+		fprintf(stderr, "Expected datas[2] \"%s\" to match data2 \"%s\" on line %d", datas[2], data2, __LINE__);
+		retval = RL_UNEXPECTED;
+		goto cleanup;
+	}
+
+	fprintf(stderr, "End basic_test_hset_hmget\n");
+	retval = 0;
+cleanup:
+	if (datas) {
+		for (added = 0; added < 3; added++) {
+			rl_free(datas[added]);
+		}
+		rl_free(datas);
+	}
+	rl_free(dataslen);
+	if (db) {
+		rl_close(db);
+	}
+	return retval;
+}
+
 RL_TEST_MAIN_START(type_hash_test)
 {
 	int i;
@@ -410,6 +499,7 @@ RL_TEST_MAIN_START(type_hash_test)
 		RL_TEST(basic_test_hset_hgetall, i);
 		RL_TEST(basic_test_hset_hlen, i);
 		RL_TEST(basic_test_hsetnx, i);
+		RL_TEST(basic_test_hset_hmget, i);
 	}
 }
 RL_TEST_MAIN_END

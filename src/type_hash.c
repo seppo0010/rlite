@@ -153,6 +153,42 @@ cleanup:
 	return retval;
 }
 
+int rl_hmget(struct rlite *db, const unsigned char *key, long keylen, int fieldc, unsigned char **fields, long *fieldslen, unsigned char ***_data, long **_datalen)
+{
+	int retval;
+	long hash_page_number;
+	rl_btree *hash;
+	void *tmp;
+	unsigned char *digest = NULL;
+	rl_hashkey *hashkey;
+	RL_CALL(rl_hash_get_objects, RL_OK, db, key, keylen, &hash_page_number, &hash, 1);
+
+	unsigned char **data = malloc(sizeof(unsigned char *) * fieldc);
+	long *datalen = malloc(sizeof(long) * fieldc);
+
+	RL_MALLOC(digest, sizeof(unsigned char) * 20);
+	int i;
+	for (i = 0; i < fieldc; i++) {
+		RL_CALL(sha1, RL_OK, fields[i], fieldslen[i], digest);
+
+		retval = rl_btree_find_score(db, hash, digest, &tmp, NULL, NULL);
+		if (retval == RL_FOUND) {
+			hashkey = tmp;
+			rl_multi_string_get(db, hashkey->value_page, &data[i], &datalen[i]);
+		} else if (retval == RL_NOT_FOUND) {
+			data[i] = NULL;
+			datalen[i] = -1;
+		} else {
+			goto cleanup;
+		}
+	}
+	*_data = data;
+	*_datalen = datalen;
+cleanup:
+	rl_free(digest);
+	return retval;
+}
+
 int rl_hexists(struct rlite *db, const unsigned char *key, long keylen, unsigned char *field, long fieldlen)
 {
 	int retval;
