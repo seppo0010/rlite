@@ -366,6 +366,7 @@ static int basic_test_hsetnx(int _commit)
 		retval = 1;
 		goto cleanup;
 	}
+	rl_free(data3);
 
 	RL_CALL_VERBOSE(rl_hset, RL_OK, db, key, keylen, field, fieldlen, data2, data2len, &added, 1);
 
@@ -390,6 +391,7 @@ static int basic_test_hsetnx(int _commit)
 		retval = 1;
 		goto cleanup;
 	}
+	rl_free(data3);
 
 	fprintf(stderr, "End basic_test_hsetnx\n");
 	retval = 0;
