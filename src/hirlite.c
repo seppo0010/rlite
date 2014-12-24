@@ -1210,12 +1210,12 @@ static void hsetGenericCommand(rliteClient *c, int update) {
 	size_t keylen = c->argvlen[1];
 	unsigned char *field = UNSIGN(c->argv[2]);
 	size_t fieldlen = c->argvlen[2];
-	unsigned char *data = UNSIGN(c->argv[3]);
-	size_t datalen = c->argvlen[3];
+	unsigned char *value = UNSIGN(c->argv[3]);
+	size_t valuelen = c->argvlen[3];
 	long added;
 
 	int retval;
-	retval = rl_hset(c->context->db, key, keylen, field, fieldlen, data, datalen, &added, update);
+	retval = rl_hset(c->context->db, key, keylen, field, fieldlen, value, valuelen, &added, update);
 	RLITE_SERVER_ERR(c, retval);
 	c->reply = createLongLongObject(added);
 
@@ -1236,19 +1236,19 @@ static void hgetCommand(rliteClient *c) {
 	size_t keylen = c->argvlen[1];
 	unsigned char *field = UNSIGN(c->argv[2]);
 	size_t fieldlen = c->argvlen[2];
-	unsigned char *data = NULL;
-	long datalen;
+	unsigned char *value = NULL;
+	long valuelen;
 
 	int retval;
-	retval = rl_hget(c->context->db, key, keylen, field, fieldlen, &data, &datalen);
+	retval = rl_hget(c->context->db, key, keylen, field, fieldlen, &value, &valuelen);
 	RLITE_SERVER_ERR(c, retval);
 	if (retval == RL_NOT_FOUND) {
 		c->reply = createReplyObject(RLITE_REPLY_NIL);
 	} else {
-		c->reply = createStringObject((char *)data, datalen);
+		c->reply = createStringObject((char *)value, valuelen);
 	}
 
-	rl_free(data);
+	rl_free(value);
 cleanup:
 	return;
 }
@@ -1280,8 +1280,8 @@ static void hmsetCommand(rliteClient *c) {
 	int fieldc = (c->argc - 2) / 2;
 	unsigned char **fields = NULL;
 	long *fieldslen = NULL;
-	unsigned char **datas = NULL;
-	long *dataslen = NULL;
+	unsigned char **values = NULL;
+	long *valueslen = NULL;
 
 	fields = malloc(sizeof(unsigned char *) * fieldc);
 	if (!fields) {
@@ -1293,30 +1293,30 @@ static void hmsetCommand(rliteClient *c) {
 		__rliteSetError(c->context, RLITE_ERR_OOM, "Out of memory");
 		goto cleanup;
 	}
-	datas = malloc(sizeof(unsigned char *) * fieldc);
-	if (!datas) {
+	values = malloc(sizeof(unsigned char *) * fieldc);
+	if (!values) {
 		__rliteSetError(c->context, RLITE_ERR_OOM, "Out of memory");
 		goto cleanup;
 	}
-	dataslen = malloc(sizeof(long) * fieldc);
-	if (!dataslen) {
+	valueslen = malloc(sizeof(long) * fieldc);
+	if (!valueslen) {
 		__rliteSetError(c->context, RLITE_ERR_OOM, "Out of memory");
 		goto cleanup;
 	}
 	for (i = 0, j = 2; i < fieldc; i++) {
 		fields[i] = UNSIGN(c->argv[j]);
 		fieldslen[i] = c->argvlen[j++];
-		datas[i] = UNSIGN(c->argv[j]);
-		dataslen[i] = c->argvlen[j++];
+		values[i] = UNSIGN(c->argv[j]);
+		valueslen[i] = c->argvlen[j++];
 	}
-	retval = rl_hmset(c->context->db, key, keylen, fieldc, fields, fieldslen, datas, dataslen);
+	retval = rl_hmset(c->context->db, key, keylen, fieldc, fields, fieldslen, values, valueslen);
 	RLITE_SERVER_ERR(c, retval);
 	c->reply = createStatusObject(RLITE_STR_OK);
 cleanup:
 	free(fields);
 	free(fieldslen);
-	free(datas);
-	free(dataslen);
+	free(values);
+	free(valueslen);
 	return;
 }
 
