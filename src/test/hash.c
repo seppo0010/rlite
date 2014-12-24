@@ -16,7 +16,7 @@ int test_hset() {
 	char* argv[100] = {"hset", "mykey", "myfield", "mydata", NULL};
 	size_t argvlen[100];
 
-	reply = rliteCommandArgv(context, populateArgvlen(argv, argvlen), (const char **)argv, (const size_t*)argvlen);
+	reply = rliteCommandArgv(context, populateArgvlen(argv, argvlen), argv, argvlen);
 	if (reply->type == RLITE_REPLY_ERROR) {
 		fprintf(stderr, "Expected reply not to be ERROR, got \"%s\" instead on line %d\n", reply->str, __LINE__);
 		return 1;
@@ -31,7 +31,7 @@ int test_hset() {
 	}
 	rliteFreeReplyObject(reply);
 
-	reply = rliteCommandArgv(context, populateArgvlen(argv, argvlen), (const char **)argv, (const size_t*)argvlen);
+	reply = rliteCommandArgv(context, populateArgvlen(argv, argvlen), argv, argvlen);
 	if (reply->type == RLITE_REPLY_ERROR) {
 		fprintf(stderr, "Expected reply not to be ERROR, got \"%s\" instead on line %d\n", reply->str, __LINE__);
 		return 1;
@@ -57,7 +57,7 @@ int test_hget() {
 	char* argv[100] = {"hset", "mykey", "myfield", "mydata", NULL};
 	size_t argvlen[100];
 
-	reply = rliteCommandArgv(context, populateArgvlen(argv, argvlen), (const char **)argv, (const size_t*)argvlen);
+	reply = rliteCommandArgv(context, populateArgvlen(argv, argvlen), argv, argvlen);
 	if (reply->type == RLITE_REPLY_ERROR) {
 		fprintf(stderr, "Expected reply not to be ERROR, got \"%s\" instead on line %d\n", reply->str, __LINE__);
 		return 1;
@@ -73,7 +73,7 @@ int test_hget() {
 	rliteFreeReplyObject(reply);
 
 	char *argv2[100] = {"hget", "mykey", "myfield", NULL};
-	reply = rliteCommandArgv(context, populateArgvlen(argv2, argvlen), (const char **)argv2, (const size_t*)argvlen);
+	reply = rliteCommandArgv(context, populateArgvlen(argv2, argvlen), argv2, argvlen);
 	if (reply->type == RLITE_REPLY_ERROR) {
 		fprintf(stderr, "Expected reply not to be ERROR, got \"%s\" instead on line %d\n", reply->str, __LINE__);
 		return 1;

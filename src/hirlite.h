@@ -83,7 +83,7 @@ void rliteFreeReplyObject(void *reply);
 /* Functions to format a command according to the protocol. */
 int rlitevFormatCommand(struct rliteClient *client, const char *format, va_list ap);
 int rliteFormatCommand(struct rliteClient *client, const char *format, ...);
-int rliteFormatCommandArgv(struct rliteClient *client, int argc, const char **argv, const size_t *argvlen);
+int rliteFormatCommandArgv(struct rliteClient *client, int argc, char **argv, size_t *argvlen);
 
 /* Context for a connection to Redis */
 typedef struct rliteContext {
@@ -127,7 +127,7 @@ int rliteAppendFormattedCommand(rliteContext *c, const char *cmd, size_t len);
  * to get a pipeline of commands. */
 int rlitevAppendCommand(rliteContext *c, const char *format, va_list ap);
 int rliteAppendCommand(rliteContext *c, const char *format, ...);
-int rliteAppendCommandArgv(rliteContext *c, int argc, const char **argv, const size_t *argvlen);
+int rliteAppendCommandArgv(rliteContext *c, int argc, char **argv, size_t *argvlen);
 
 /* Issue a command to Redis. In a blocking context, it is identical to calling
  * rliteAppendCommand, followed by rliteGetReply. The function will return
@@ -136,12 +136,12 @@ int rliteAppendCommandArgv(rliteContext *c, int argc, const char **argv, const s
  * only rliteAppendCommand and will always return NULL. */
 void *rlitevCommand(rliteContext *c, const char *format, va_list ap);
 void *rliteCommand(rliteContext *c, const char *format, ...);
-void *rliteCommandArgv(rliteContext *c, int argc, const char **argv, const size_t *argvlen);
+void *rliteCommandArgv(rliteContext *c, int argc, char **argv, size_t *argvlen);
 
 typedef struct rliteClient {
 	int argc;
-	const char **argv;
-	const size_t *argvlen;
+	char **argv;
+	size_t *argvlen;
 	rliteReply *reply;
 	rliteContext *context;
 } rliteClient;

@@ -8,7 +8,7 @@ int test_ping() {
 	argvlen[0] = 4;
 	argv[0] = "PING";
 	rliteContext *context = rliteConnect(":memory:", 0);
-	reply = rliteCommandArgv(context, 1, (const char **)argv, (const size_t*)argvlen);
+	reply = rliteCommandArgv(context, 1, argv, argvlen);
 	if (reply->type != RLITE_REPLY_STRING) {
 		fprintf(stderr, "Expected reply to be STRING, got %d instead on line %d\n", reply->type, __LINE__);
 		return 1;
@@ -32,7 +32,7 @@ int test_echo() {
 	argvlen[1] = 11;
 	argv[1] = "hello world";
 	rliteContext *context = rliteConnect(":memory:", 0);
-	reply = rliteCommandArgv(context, 2, (const char **)argv, (const size_t*)argvlen);
+	reply = rliteCommandArgv(context, 2, argv, argvlen);
 	if (reply->type != RLITE_REPLY_STRING) {
 		fprintf(stderr, "Expected reply to be STRING, got %d instead on line %d\n", reply->type, __LINE__);
 		return 1;
@@ -54,7 +54,7 @@ int test_echo_wrong_arity() {
 	argvlen[0] = 4;
 	argv[0] = "echo";
 	rliteContext *context = rliteConnect(":memory:", 0);
-	reply = rliteCommandArgv(context, 1, (const char **)argv, (const size_t*)argvlen);
+	reply = rliteCommandArgv(context, 1, argv, argvlen);
 	if (reply->type != RLITE_REPLY_ERROR) {
 		fprintf(stderr, "Expected reply to be ERROR, got %d instead on line %d\n", reply->type, __LINE__);
 		return 1;

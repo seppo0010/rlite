@@ -17,7 +17,7 @@ static int _zadd(rliteContext *context) {
 	argv[4] = "2";
 	argvlen[5] = 3;
 	argv[5] = "two";
-	reply = rliteCommandArgv(context, 6, (const char **)argv, (const size_t*)argvlen);
+	reply = rliteCommandArgv(context, 6, argv, argvlen);
 	if (reply->type == RLITE_REPLY_ERROR) {
 		fprintf(stderr, "Expected reply not to be ERROR, got \"%s\" instead on line %d\n", reply->str, __LINE__);
 		return 1;
@@ -62,7 +62,7 @@ int test_zrange() {
 	argv[3] = "-1";
 	argvlen[4] = 10;
 	argv[4] = "WITHSCORES";
-	reply = rliteCommandArgv(context, 5, (const char **)argv, (const size_t*)argvlen);
+	reply = rliteCommandArgv(context, 5, argv, argvlen);
 	if (reply->type == RLITE_REPLY_ERROR) {
 		fprintf(stderr, "Expected reply not to be ERROR, got \"%s\" instead on line %d\n", reply->str, __LINE__);
 		return 1;
@@ -120,7 +120,7 @@ int test_zrevrange() {
 	argv[3] = "-1";
 	argvlen[4] = 10;
 	argv[4] = "WITHSCORES";
-	reply = rliteCommandArgv(context, 5, (const char **)argv, (const size_t*)argvlen);
+	reply = rliteCommandArgv(context, 5, argv, argvlen);
 	if (reply->type == RLITE_REPLY_ERROR) {
 		fprintf(stderr, "Expected reply not to be ERROR, got \"%s\" instead on line %d\n", reply->str, __LINE__);
 		return 1;
@@ -176,7 +176,7 @@ int test_zrem() {
 	argv[2] = "two";
 	argvlen[3] = 3;
 	argv[3] = "three";
-	reply = rliteCommandArgv(context, 4, (const char **)argv, (const size_t*)argvlen);
+	reply = rliteCommandArgv(context, 4, argv, argvlen);
 	if (reply->type == RLITE_REPLY_ERROR) {
 		fprintf(stderr, "Expected reply not to be ERROR, got \"%s\" instead on line %d\n", reply->str, __LINE__);
 		return 1;
@@ -197,7 +197,7 @@ int test_zrem() {
 	argv[2] = "0";
 	argvlen[3] = 2;
 	argv[3] = "-1";
-	reply = rliteCommandArgv(context, 4, (const char **)argv, (const size_t*)argvlen);
+	reply = rliteCommandArgv(context, 4, argv, argvlen);
 	if (reply->type != RLITE_REPLY_ARRAY) {
 		fprintf(stderr, "Expected reply to be ARRAY, got %d instead on line %d\n", reply->type, __LINE__);
 		return 1;
@@ -242,7 +242,7 @@ int test_zremrangebyrank() {
 	argv[2] = "0";
 	argvlen[3] = 1;
 	argv[3] = "3";
-	reply = rliteCommandArgv(context, 4, (const char **)argv, (const size_t*)argvlen);
+	reply = rliteCommandArgv(context, 4, argv, argvlen);
 	if (reply->type == RLITE_REPLY_ERROR) {
 		fprintf(stderr, "Expected reply not to be ERROR, got \"%s\" instead on line %d\n", reply->str, __LINE__);
 		return 1;
@@ -263,7 +263,7 @@ int test_zremrangebyrank() {
 	argv[2] = "0";
 	argvlen[3] = 2;
 	argv[3] = "-1";
-	reply = rliteCommandArgv(context, 4, (const char **)argv, (const size_t*)argvlen);
+	reply = rliteCommandArgv(context, 4, argv, argvlen);
 	if (reply->type != RLITE_REPLY_ARRAY) {
 		fprintf(stderr, "Expected reply to be ARRAY, got %d instead on line %d\n", reply->type, __LINE__);
 		return 1;
@@ -295,7 +295,7 @@ int test_zremrangebyscore() {
 	argv[2] = "0";
 	argvlen[3] = 1;
 	argv[3] = "3";
-	reply = rliteCommandArgv(context, 4, (const char **)argv, (const size_t*)argvlen);
+	reply = rliteCommandArgv(context, 4, argv, argvlen);
 	if (reply->type == RLITE_REPLY_ERROR) {
 		fprintf(stderr, "Expected reply not to be ERROR, got \"%s\" instead on line %d\n", reply->str, __LINE__);
 		return 1;
@@ -316,7 +316,7 @@ int test_zremrangebyscore() {
 	argv[2] = "0";
 	argvlen[3] = 2;
 	argv[3] = "-1";
-	reply = rliteCommandArgv(context, 4, (const char **)argv, (const size_t*)argvlen);
+	reply = rliteCommandArgv(context, 4, argv, argvlen);
 	if (reply->type != RLITE_REPLY_ARRAY) {
 		fprintf(stderr, "Expected reply to be ARRAY, got %d instead on line %d\n", reply->type, __LINE__);
 		return 1;
@@ -348,7 +348,7 @@ int test_zcard() {
 	char* argv[100] = {"ZCARD", "mykey", NULL};
 	size_t argvlen[100];
 	rliteReply* reply;
-	reply = rliteCommandArgv(context, populateArgvlen(argv, argvlen), (const char **)argv, (const size_t*)argvlen);
+	reply = rliteCommandArgv(context, populateArgvlen(argv, argvlen), argv, argvlen);
 	if (reply->type != RLITE_REPLY_INTEGER) {
 		fprintf(stderr, "Expected reply to be INTEGER, got %d instead on line %d\n", reply->type, __LINE__);
 		return 1;
@@ -370,15 +370,15 @@ int test_zinterstore() {
 	char* argv[100] = {"ZADD", "key1", "1", "one", "2", "two", "3", "three", NULL};
 	size_t argvlen[100];
 
-	reply = rliteCommandArgv(context, populateArgvlen(argv, argvlen), (const char **)argv, (const size_t*)argvlen);
+	reply = rliteCommandArgv(context, populateArgvlen(argv, argvlen), argv, argvlen);
 	rliteFreeReplyObject(reply);
 
 	char *argv2[100] = {"ZADD", "key2", "1", "one", "2", "two", NULL};
-	reply = rliteCommandArgv(context, populateArgvlen(argv2, argvlen), (const char **)argv2, (const size_t*)argvlen);
+	reply = rliteCommandArgv(context, populateArgvlen(argv2, argvlen), argv2, argvlen);
 	rliteFreeReplyObject(reply);
 
 	char *argv3[100] = {"ZINTERSTORE", "out", "2", "key1", "key2", NULL};
-	reply = rliteCommandArgv(context, populateArgvlen(argv3, argvlen), (const char **)argv3, (const size_t*)argvlen);
+	reply = rliteCommandArgv(context, populateArgvlen(argv3, argvlen), argv3, argvlen);
 	if (reply->type == RLITE_REPLY_ERROR) {
 		fprintf(stderr, "Expected reply not to be ERROR, got \"%s\" instead on line %d\n", reply->str, __LINE__);
 		return 1;
@@ -404,15 +404,15 @@ int test_zunionstore() {
 	char* argv[100] = {"ZADD", "key1", "1", "one", "2", "two", "3", "three", NULL};
 	size_t argvlen[100];
 
-	reply = rliteCommandArgv(context, populateArgvlen(argv, argvlen), (const char **)argv, (const size_t*)argvlen);
+	reply = rliteCommandArgv(context, populateArgvlen(argv, argvlen), argv, argvlen);
 	rliteFreeReplyObject(reply);
 
 	char *argv2[100] = {"ZADD", "key2", "1", "one", "2", "two", NULL};
-	reply = rliteCommandArgv(context, populateArgvlen(argv2, argvlen), (const char **)argv2, (const size_t*)argvlen);
+	reply = rliteCommandArgv(context, populateArgvlen(argv2, argvlen), argv2, argvlen);
 	rliteFreeReplyObject(reply);
 
 	char *argv3[100] = {"ZUNIONSTORE", "out", "2", "key1", "key2", NULL};
-	reply = rliteCommandArgv(context, populateArgvlen(argv3, argvlen), (const char **)argv3, (const size_t*)argvlen);
+	reply = rliteCommandArgv(context, populateArgvlen(argv3, argvlen), argv3, argvlen);
 	if (reply->type == RLITE_REPLY_ERROR) {
 		fprintf(stderr, "Expected reply not to be ERROR, got \"%s\" instead on line %d\n", reply->str, __LINE__);
 		return 1;
@@ -438,11 +438,11 @@ int test_zrangebyscore() {
 	char* argv[100] = {"ZADD", "mykey", "1", "one", "2", "two", "3", "three", NULL};
 	size_t argvlen[100];
 
-	reply = rliteCommandArgv(context, populateArgvlen(argv, argvlen), (const char **)argv, (const size_t*)argvlen);
+	reply = rliteCommandArgv(context, populateArgvlen(argv, argvlen), argv, argvlen);
 	rliteFreeReplyObject(reply);
 
 	char *argv2[100] = {"ZRANGEBYSCORE", "mykey", "0", "2", NULL};
-	reply = rliteCommandArgv(context, populateArgvlen(argv2, argvlen), (const char **)argv2, (const size_t*)argvlen);
+	reply = rliteCommandArgv(context, populateArgvlen(argv2, argvlen), argv2, argvlen);
 	if (reply->type == RLITE_REPLY_ERROR) {
 		fprintf(stderr, "Expected reply not to be ERROR, got \"%s\" instead on line %d\n", reply->str, __LINE__);
 		return 1;
@@ -476,11 +476,11 @@ int test_zrevrangebyscore() {
 	char* argv[100] = {"ZADD", "mykey", "1", "one", "2", "two", "3", "three", NULL};
 	size_t argvlen[100];
 
-	reply = rliteCommandArgv(context, populateArgvlen(argv, argvlen), (const char **)argv, (const size_t*)argvlen);
+	reply = rliteCommandArgv(context, populateArgvlen(argv, argvlen), argv, argvlen);
 	rliteFreeReplyObject(reply);
 
 	char *argv2[100] = {"ZREVRANGEBYSCORE", "mykey", "2", "0", NULL};
-	reply = rliteCommandArgv(context, populateArgvlen(argv2, argvlen), (const char **)argv2, (const size_t*)argvlen);
+	reply = rliteCommandArgv(context, populateArgvlen(argv2, argvlen), argv2, argvlen);
 	if (reply->type == RLITE_REPLY_ERROR) {
 		fprintf(stderr, "Expected reply not to be ERROR, got \"%s\" instead on line %d\n", reply->str, __LINE__);
 		return 1;
@@ -514,11 +514,11 @@ int test_zrangebylex() {
 	char* argv[100] = {"ZADD", "mykey", "0", "a", "0", "b", "0", "c", NULL};
 	size_t argvlen[100];
 
-	reply = rliteCommandArgv(context, populateArgvlen(argv, argvlen), (const char **)argv, (const size_t*)argvlen);
+	reply = rliteCommandArgv(context, populateArgvlen(argv, argvlen), argv, argvlen);
 	rliteFreeReplyObject(reply);
 
 	char *argv2[100] = {"ZRANGEBYLEX", "mykey", "-", "[b", NULL};
-	reply = rliteCommandArgv(context, populateArgvlen(argv2, argvlen), (const char **)argv2, (const size_t*)argvlen);
+	reply = rliteCommandArgv(context, populateArgvlen(argv2, argvlen), argv2, argvlen);
 	if (reply->type == RLITE_REPLY_ERROR) {
 		fprintf(stderr, "Expected reply not to be ERROR, got \"%s\" instead on line %d\n", reply->str, __LINE__);
 		return 1;
@@ -552,11 +552,11 @@ int test_zrevrangebylex() {
 	char* argv[100] = {"ZADD", "mykey", "0", "a", "0", "b", "0", "c", NULL};
 	size_t argvlen[100];
 
-	reply = rliteCommandArgv(context, populateArgvlen(argv, argvlen), (const char **)argv, (const size_t*)argvlen);
+	reply = rliteCommandArgv(context, populateArgvlen(argv, argvlen), argv, argvlen);
 	rliteFreeReplyObject(reply);
 
 	char *argv2[100] = {"ZREVRANGEBYLEX", "mykey", "[b", "-", NULL};
-	reply = rliteCommandArgv(context, populateArgvlen(argv2, argvlen), (const char **)argv2, (const size_t*)argvlen);
+	reply = rliteCommandArgv(context, populateArgvlen(argv2, argvlen), argv2, argvlen);
 	if (reply->type == RLITE_REPLY_ERROR) {
 		fprintf(stderr, "Expected reply not to be ERROR, got \"%s\" instead on line %d\n", reply->str, __LINE__);
 		return 1;
@@ -590,11 +590,11 @@ int test_zlexcount() {
 	char* argv[100] = {"ZADD", "mykey", "0", "a", "0", "b", "0", "c", NULL};
 	size_t argvlen[100];
 
-	reply = rliteCommandArgv(context, populateArgvlen(argv, argvlen), (const char **)argv, (const size_t*)argvlen);
+	reply = rliteCommandArgv(context, populateArgvlen(argv, argvlen), argv, argvlen);
 	rliteFreeReplyObject(reply);
 
 	char *argv2[100] = {"ZLEXCOUNT", "mykey", "-", "[b", NULL};
-	reply = rliteCommandArgv(context, populateArgvlen(argv2, argvlen), (const char **)argv2, (const size_t*)argvlen);
+	reply = rliteCommandArgv(context, populateArgvlen(argv2, argvlen), argv2, argvlen);
 	if (reply->type == RLITE_REPLY_ERROR) {
 		fprintf(stderr, "Expected reply not to be ERROR, got \"%s\" instead on line %d\n", reply->str, __LINE__);
 		return 1;
@@ -624,7 +624,7 @@ int test_zscore() {
 	char* argv[100] = {"ZSCORE", "mykey", "one", NULL};
 	size_t argvlen[100];
 
-	reply = rliteCommandArgv(context, populateArgvlen(argv, argvlen), (const char **)argv, (const size_t*)argvlen);
+	reply = rliteCommandArgv(context, populateArgvlen(argv, argvlen), argv, argvlen);
 	if (reply->type == RLITE_REPLY_ERROR) {
 		fprintf(stderr, "Expected reply not to be ERROR, got \"%s\" instead on line %d\n", reply->str, __LINE__);
 		return 1;
@@ -654,7 +654,7 @@ int test_zrank() {
 	char* argv[100] = {"ZRANK", "mykey", "one", NULL};
 	size_t argvlen[100];
 
-	reply = rliteCommandArgv(context, populateArgvlen(argv, argvlen), (const char **)argv, (const size_t*)argvlen);
+	reply = rliteCommandArgv(context, populateArgvlen(argv, argvlen), argv, argvlen);
 	if (reply->type == RLITE_REPLY_ERROR) {
 		fprintf(stderr, "Expected reply not to be ERROR, got \"%s\" instead on line %d\n", reply->str, __LINE__);
 		return 1;
@@ -684,7 +684,7 @@ int test_zrevrank() {
 	char* argv[100] = {"ZREVRANK", "mykey", "one", NULL};
 	size_t argvlen[100];
 
-	reply = rliteCommandArgv(context, populateArgvlen(argv, argvlen), (const char **)argv, (const size_t*)argvlen);
+	reply = rliteCommandArgv(context, populateArgvlen(argv, argvlen), argv, argvlen);
 	if (reply->type == RLITE_REPLY_ERROR) {
 		fprintf(stderr, "Expected reply not to be ERROR, got \"%s\" instead on line %d\n", reply->str, __LINE__);
 		return 1;
@@ -714,7 +714,7 @@ int test_zcount() {
 	char* argv[100] = {"Zcount", "mykey", "-inf", "inf", NULL};
 	size_t argvlen[100];
 
-	reply = rliteCommandArgv(context, populateArgvlen(argv, argvlen), (const char **)argv, (const size_t*)argvlen);
+	reply = rliteCommandArgv(context, populateArgvlen(argv, argvlen), argv, argvlen);
 	if (reply->type == RLITE_REPLY_ERROR) {
 		fprintf(stderr, "Expected reply not to be ERROR, got \"%s\" instead on line %d\n", reply->str, __LINE__);
 		return 1;
@@ -744,7 +744,7 @@ int test_exists() {
 	char* argv[100] = {"exists", "mykey", NULL};
 	size_t argvlen[100];
 
-	reply = rliteCommandArgv(context, populateArgvlen(argv, argvlen), (const char **)argv, (const size_t*)argvlen);
+	reply = rliteCommandArgv(context, populateArgvlen(argv, argvlen), argv, argvlen);
 	if (reply->type == RLITE_REPLY_ERROR) {
 		fprintf(stderr, "Expected reply not to be ERROR, got \"%s\" instead on line %d\n", reply->str, __LINE__);
 		return 1;
@@ -774,7 +774,7 @@ int test_del() {
 	char* argv[100] = {"del", "mykey", NULL};
 	size_t argvlen[100];
 
-	reply = rliteCommandArgv(context, populateArgvlen(argv, argvlen), (const char **)argv, (const size_t*)argvlen);
+	reply = rliteCommandArgv(context, populateArgvlen(argv, argvlen), argv, argvlen);
 	if (reply->type == RLITE_REPLY_ERROR) {
 		fprintf(stderr, "Expected reply not to be ERROR, got \"%s\" instead on line %d\n", reply->str, __LINE__);
 		return 1;
@@ -791,7 +791,7 @@ int test_del() {
 
 	char* argv2[100] = {"exists", "mykey", NULL};
 
-	reply = rliteCommandArgv(context, populateArgvlen(argv2, argvlen), (const char **)argv2, (const size_t*)argvlen);
+	reply = rliteCommandArgv(context, populateArgvlen(argv2, argvlen), argv2, argvlen);
 	if (reply->type == RLITE_REPLY_ERROR) {
 		fprintf(stderr, "Expected reply not to be ERROR, got \"%s\" instead on line %d\n", reply->str, __LINE__);
 		return 1;
@@ -821,7 +821,7 @@ int test_debug() {
 	char* argv[100] = {"debug", "object", "mykey", NULL};
 	size_t argvlen[100];
 
-	reply = rliteCommandArgv(context, populateArgvlen(argv, argvlen), (const char **)argv, (const size_t*)argvlen);
+	reply = rliteCommandArgv(context, populateArgvlen(argv, argvlen), argv, argvlen);
 	if (reply->type == RLITE_REPLY_ERROR) {
 		fprintf(stderr, "Expected reply not to be ERROR, got \"%s\" instead on line %d\n", reply->str, __LINE__);
 		return 1;

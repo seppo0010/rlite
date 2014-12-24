@@ -1,4 +1,5 @@
 #include <string.h>
+#include <stdlib.h>
 #include "hirlite.h"
 
 int test_format_noparam() {
@@ -26,6 +27,12 @@ int test_format_noparam() {
 		fprintf(stderr, "Expected argv[1] to be \"helloworld\", got \"%s\" instead on line %d\n", client.argv[1], __LINE__);
 		return 1;
 	}
+	int i;
+	for (i = 0; i < client.argc; i++) {
+		free(client.argv[i]);
+	}
+	free(client.argvlen);
+	free(client.argv);
 	return 0;
 }
 
@@ -54,6 +61,12 @@ int test_format_sparam() {
 		fprintf(stderr, "Expected argv[1] to be \"helloworld\", got \"%s\" instead on line %d\n", client.argv[1], __LINE__);
 		return 1;
 	}
+	int i;
+	for (i = 0; i < client.argc; i++) {
+		free(client.argv[i]);
+	}
+	free(client.argvlen);
+	free(client.argv);
 	return 0;
 }
 
@@ -83,6 +96,12 @@ int test_format_bparam() {
 		fprintf(stderr, "Expected argv[1] to be \"helloworld\", got \"%s\" instead on line %d\n", client.argv[1], __LINE__);
 		return 1;
 	}
+	int i;
+	for (i = 0; i < client.argc; i++) {
+		free(client.argv[i]);
+	}
+	free(client.argvlen);
+	free(client.argv);
 	return 0;
 }
 
@@ -111,6 +130,12 @@ int test_format_dparam() {
 		fprintf(stderr, "Expected argv[1] to be \"10\", got \"%s\" instead on line %d\n", client.argv[1], __LINE__);
 		return 1;
 	}
+	int i;
+	for (i = 0; i < client.argc; i++) {
+		free(client.argv[i]);
+	}
+	free(client.argvlen);
+	free(client.argv);
 	return 0;
 }
 

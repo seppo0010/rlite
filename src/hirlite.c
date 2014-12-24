@@ -517,7 +517,10 @@ int rlitevFormatCommand(rliteClient *client, const char *format, va_list ap) {
 	if (touched) {
 		newargv = realloc(curargv,sizeof(char*)*(argc+1));
 		if (newargv == NULL) goto err;
+		newargvlen = realloc(curargvlen,sizeof(char*)*(argc+1));
+		if (newargvlen == NULL) goto err;
 		curargv = newargv;
+		curargvlen = newargvlen;
 		curargv[argc] = curarg;
 		curargvlen[argc++] = curarglen;
 	} else {
@@ -528,8 +531,8 @@ int rlitevFormatCommand(rliteClient *client, const char *format, va_list ap) {
 	curarg = NULL;
 
 	client->argc = argc;
-	client->argv = (const char **)curargv;
-	client->argvlen = (const size_t *) curargvlen;
+	client->argv = curargv;
+	client->argvlen = curargvlen;
 	return RLITE_OK;
 err:
 	while(argc--)
@@ -551,7 +554,7 @@ int rliteFormatCommand(rliteClient *client, const char *format, ...) {
 	return retval;
 }
 
-int rliteFormatCommandArgv(rliteClient *client, int argc, const char **argv, const size_t *argvlen) {
+int rliteFormatCommandArgv(rliteClient *client, int argc, char **argv, size_t *argvlen) {
 	client->argc = argc;
 	client->argv = argv;
 	client->argvlen = argvlen;
@@ -698,7 +701,15 @@ int rlitevAppendCommand(rliteContext *c, const char *format, va_list ap) {
 		return RLITE_ERR;
 	}
 
-	return __rliteAppendCommandClient(&client);
+	int retval = __rliteAppendCommandClient(&client);
+	int i;
+	for (i = 0; i < client.argc; i++) {
+		free(client.argv[i]);
+	}
+	free(client.argv);
+	free(client.argvlen);
+
+	return retval;
 }
 
 int rliteAppendCommand(rliteContext *c, const char *format, ...) {
@@ -710,7 +721,7 @@ int rliteAppendCommand(rliteContext *c, const char *format, ...) {
 	return retval;
 }
 
-int rliteAppendCommandArgv(rliteContext *c, int argc, const char **argv, const size_t *argvlen) {
+int rliteAppendCommandArgv(rliteContext *c, int argc, char **argv, size_t *argvlen) {
 	rliteClient client;
 	client.context = c;
 	client.argc = argc;
@@ -735,7 +746,7 @@ void *rliteCommand(rliteContext *c, const char *format, ...) {
 	return reply;
 }
 
-void *rliteCommandArgv(rliteContext *c, int argc, const char **argv, const size_t *argvlen) {
+void *rliteCommandArgv(rliteContext *c, int argc, char **argv, size_t *argvlen) {
 	if (rliteAppendCommandArgv(c,argc,argv,argvlen) != RLITE_OK)
 		return NULL;
 	return _popReply(c);
@@ -1229,6 +1240,7 @@ static void hgetCommand(rliteClient *c) {
 		c->reply = createStringObject((char *)data, datalen);
 	}
 
+	rl_free(data);
 cleanup:
 	return;
 }
