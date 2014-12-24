@@ -517,7 +517,7 @@ int test_zrangebylex() {
 	reply = rliteCommandArgv(context, populateArgvlen(argv, argvlen), (const char **)argv, (const size_t*)argvlen);
 	rliteFreeReplyObject(reply);
 
-	char *argv2[100] = {"ZRANGEBYLEX", "mykey", "-inf", "[b", NULL};
+	char *argv2[100] = {"ZRANGEBYLEX", "mykey", "-", "[b", NULL};
 	reply = rliteCommandArgv(context, populateArgvlen(argv2, argvlen), (const char **)argv2, (const size_t*)argvlen);
 	if (reply->type == RLITE_REPLY_ERROR) {
 		fprintf(stderr, "Expected reply not to be ERROR, got \"%s\" instead on line %d\n", reply->str, __LINE__);
@@ -555,7 +555,7 @@ int test_zrevrangebylex() {
 	reply = rliteCommandArgv(context, populateArgvlen(argv, argvlen), (const char **)argv, (const size_t*)argvlen);
 	rliteFreeReplyObject(reply);
 
-	char *argv2[100] = {"ZREVRANGEBYLEX", "mykey", "[b", "-inf", NULL};
+	char *argv2[100] = {"ZREVRANGEBYLEX", "mykey", "[b", "-", NULL};
 	reply = rliteCommandArgv(context, populateArgvlen(argv2, argvlen), (const char **)argv2, (const size_t*)argvlen);
 	if (reply->type == RLITE_REPLY_ERROR) {
 		fprintf(stderr, "Expected reply not to be ERROR, got \"%s\" instead on line %d\n", reply->str, __LINE__);
@@ -593,7 +593,7 @@ int test_zlexcount() {
 	reply = rliteCommandArgv(context, populateArgvlen(argv, argvlen), (const char **)argv, (const size_t*)argvlen);
 	rliteFreeReplyObject(reply);
 
-	char *argv2[100] = {"ZLEXCOUNT", "mykey", "-inf", "[b", NULL};
+	char *argv2[100] = {"ZLEXCOUNT", "mykey", "-", "[b", NULL};
 	reply = rliteCommandArgv(context, populateArgvlen(argv2, argvlen), (const char **)argv2, (const size_t*)argvlen);
 	if (reply->type == RLITE_REPLY_ERROR) {
 		fprintf(stderr, "Expected reply not to be ERROR, got \"%s\" instead on line %d\n", reply->str, __LINE__);
