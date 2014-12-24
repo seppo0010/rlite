@@ -404,6 +404,67 @@ int test_hmset() {
 	return 0;
 }
 
+int test_hincrby() {
+	rliteContext *context = rliteConnect(":memory:", 0);
+
+	rliteReply* reply;
+	size_t argvlen[100];
+
+	char* argv[100] = {"hincrby", "mykey", "myfield", "123", NULL};
+
+	reply = rliteCommandArgv(context, populateArgvlen(argv, argvlen), argv, argvlen);
+	if (reply->type != RLITE_REPLY_INTEGER) {
+		fprintf(stderr, "Expected reply to be INTEGER, got %d instead on line %d\n", reply->type, __LINE__);
+		return 1;
+	}
+	if (reply->integer != 123) {
+		fprintf(stderr, "Expected reply to be 123, got %lld instead on line %d\n", reply->integer, __LINE__);
+		return 1;
+	}
+	rliteFreeReplyObject(reply);
+
+	char *argv2[100] = {"hincrby", "mykey", "myfield", "345", NULL};
+	reply = rliteCommandArgv(context, populateArgvlen(argv2, argvlen), argv2, argvlen);
+	if (reply->type != RLITE_REPLY_INTEGER) {
+		fprintf(stderr, "Expected reply to be INTEGER, got %d instead on line %d\n", reply->type, __LINE__);
+		return 1;
+	}
+	if (reply->integer != 468) {
+		fprintf(stderr, "Expected reply to be 468, got %lld instead on line %d\n", reply->integer, __LINE__);
+		return 1;
+	}
+	rliteFreeReplyObject(reply);
+
+	char* argv3[100] = {"hincrby", "mykey", "myfield", "not a number", NULL};
+
+	reply = rliteCommandArgv(context, populateArgvlen(argv3, argvlen), argv3, argvlen);
+	if (reply->type != RLITE_REPLY_ERROR) {
+		fprintf(stderr, "Expected reply to be ERROR, got %d instead on line %d\n", reply->type, __LINE__);
+		return 1;
+	}
+	rliteFreeReplyObject(reply);
+
+	char *argv4[100] = {"hset", "mykey", "myfield", "not a number", NULL};
+	reply = rliteCommandArgv(context, populateArgvlen(argv4, argvlen), argv4, argvlen);
+	if (reply->type == RLITE_REPLY_ERROR) {
+		fprintf(stderr, "Expected reply not to be ERROR, got \"%s\" instead on line %d\n", reply->str, __LINE__);
+		return 1;
+	}
+	rliteFreeReplyObject(reply);
+
+	char* argv5[100] = {"hincrby", "mykey", "myfield", "1", NULL};
+
+	reply = rliteCommandArgv(context, populateArgvlen(argv5, argvlen), argv5, argvlen);
+	if (reply->type != RLITE_REPLY_ERROR) {
+		fprintf(stderr, "Expected reply to be ERROR, got %d instead on line %d\n", reply->type, __LINE__);
+		return 1;
+	}
+	rliteFreeReplyObject(reply);
+
+	rliteFree(context);
+	return 0;
+}
+
 int run_hash() {
 	if (test_hset() != 0) {
 		return 1;
@@ -421,6 +482,9 @@ int run_hash() {
 		return 1;
 	}
 	if (test_hmset() != 0) {
+		return 1;
+	}
+	if (test_hincrby() != 0) {
 		return 1;
 	}
 	return 0;

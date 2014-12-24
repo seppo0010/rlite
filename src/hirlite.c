@@ -1357,6 +1357,25 @@ cleanup:
 	return;
 }
 
+static void hincrbyCommand(rliteClient *c) {
+	unsigned char *key = UNSIGN(c->argv[1]);
+	size_t keylen = c->argvlen[1];
+	int retval;
+	long increment, newvalue;
+
+	if ((getLongFromObjectOrReply(c, c->argv[3], &increment, NULL) != RLITE_OK)) return;
+
+	retval = rl_hincrby(c->context->db, key, keylen, UNSIGN(c->argv[2]), c->argvlen[2], increment, &newvalue);
+	if (retval == RL_NAN) {
+		c->reply = createErrorObject("hash value is not an integer");
+		goto cleanup;
+	}
+	RLITE_SERVER_ERR(c, retval);
+	c->reply = createLongLongObject(newvalue);
+cleanup:
+	return;
+}
+
 static void delCommand(rliteClient *c) {
 	int deleted = 0, j, retval;
 
@@ -1505,7 +1524,7 @@ struct rliteCommand rliteCommandTable[] = {
 	{"hget",hgetCommand,3,"rF",0,1,1,1,0,0},
 	{"hmset",hmsetCommand,-4,"wm",0,1,1,1,0,0},
 	// {"hmget",hmgetCommand,-3,"r",0,NULL,1,1,1,0,0},
-	// {"hincrby",hincrbyCommand,4,"wmF",0,NULL,1,1,1,0,0},
+	{"hincrby",hincrbyCommand,4,"wmF",0,1,1,1,0,0},
 	// {"hincrbyfloat",hincrbyfloatCommand,4,"wmF",0,NULL,1,1,1,0,0},
 	{"hdel",hdelCommand,-3,"wF",0,1,1,1,0,0},
 	{"hlen",hlenCommand,2,"rF",0,1,1,1,0,0},
