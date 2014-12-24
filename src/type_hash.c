@@ -143,7 +143,7 @@ int rl_hget(struct rlite *db, const unsigned char *key, long keylen, unsigned ch
 	void *tmp;
 	unsigned char *digest = NULL;
 	rl_hashkey *hashkey;
-	RL_CALL(rl_hash_get_objects, RL_OK, db, key, keylen, &hash_page_number, &hash, 1);
+	RL_CALL(rl_hash_get_objects, RL_OK, db, key, keylen, &hash_page_number, &hash, 0);
 
 	RL_MALLOC(digest, sizeof(unsigned char) * 20);
 	RL_CALL(sha1, RL_OK, field, fieldlen, digest);
@@ -168,7 +168,7 @@ int rl_hmget(struct rlite *db, const unsigned char *key, long keylen, int fieldc
 	void *tmp;
 	unsigned char *digest = NULL;
 	rl_hashkey *hashkey;
-	RL_CALL(rl_hash_get_objects, RL_OK, db, key, keylen, &hash_page_number, &hash, 1);
+	RL_CALL(rl_hash_get_objects, RL_OK, db, key, keylen, &hash_page_number, &hash, 0);
 
 	unsigned char **data = malloc(sizeof(unsigned char *) * fieldc);
 	long *datalen = malloc(sizeof(long) * fieldc);
@@ -250,7 +250,7 @@ int rl_hexists(struct rlite *db, const unsigned char *key, long keylen, unsigned
 	long hash_page_number;
 	rl_btree *hash;
 	unsigned char *digest = NULL;
-	RL_CALL(rl_hash_get_objects, RL_OK, db, key, keylen, &hash_page_number, &hash, 1);
+	RL_CALL(rl_hash_get_objects, RL_OK, db, key, keylen, &hash_page_number, &hash, 0);
 
 	RL_MALLOC(digest, sizeof(unsigned char) * 20);
 	RL_CALL(sha1, RL_OK, field, fieldlen, digest);
@@ -272,7 +272,7 @@ int rl_hdel(struct rlite *db, const unsigned char *key, long keylen, long fields
 	long deleted = 0;
 	int keydeleted = 0;
 	unsigned char *digest = NULL;
-	RL_CALL(rl_hash_get_objects, RL_OK, db, key, keylen, &hash_page_number, &hash, 1);
+	RL_CALL(rl_hash_get_objects, RL_OK, db, key, keylen, &hash_page_number, &hash, 0);
 	RL_MALLOC(digest, sizeof(unsigned char) * 20);
 
 	for (i = 0; i < fieldsc; i++) {
@@ -309,7 +309,7 @@ int rl_hgetall(struct rlite *db, rl_hash_iterator **iterator, const unsigned cha
 {
 	int retval;
 	rl_btree *hash;
-	RL_CALL(rl_hash_get_objects, RL_OK, db, key, keylen, NULL, &hash, 1);
+	RL_CALL(rl_hash_get_objects, RL_OK, db, key, keylen, NULL, &hash, 0);
 	RL_CALL(rl_btree_iterator_create, RL_OK, db, hash, iterator);
 cleanup:
 	return retval;
@@ -319,7 +319,7 @@ int rl_hlen(struct rlite *db, const unsigned char *key, long keylen, long *len)
 {
 	int retval;
 	rl_btree *hash;
-	RL_CALL(rl_hash_get_objects, RL_OK, db, key, keylen, NULL, &hash, 1);
+	RL_CALL(rl_hash_get_objects, RL_OK, db, key, keylen, NULL, &hash, 0);
 	*len = hash->number_of_elements;
 	retval = RL_OK;
 cleanup:
