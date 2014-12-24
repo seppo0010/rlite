@@ -675,7 +675,7 @@ int rl_btree_remove_element(struct rlite *db, rl_btree *btree, long btree_page, 
 					if (parent_node->values) {
 						memmove(&parent_node->values[positions[i - 1] - 1], &parent_node->values[positions[i - 1]], sizeof(void *) * (parent_node->size - positions[i - 1]));
 					}
-					memmove(&parent_node->children[positions[i - 1]], &parent_node->children[positions[i - 1] + 1], sizeof(void *) * (parent_node->size - positions[i - 1] + 1));
+					memmove(&parent_node->children[positions[i - 1]], &parent_node->children[positions[i - 1] + 1], sizeof(void *) * (parent_node->size - positions[i - 1]));
 				}
 				parent_node->size--;
 				sibling_node->size += 1 + node->size;
@@ -709,7 +709,7 @@ int rl_btree_remove_element(struct rlite *db, rl_btree *btree, long btree_page, 
 				if (parent_node->values) {
 					memmove(&parent_node->values[positions[i - 1]], &parent_node->values[positions[i - 1] + 1], sizeof(void *) * (parent_node->size - positions[i - 1] - 1));
 				}
-				memmove(&parent_node->children[positions[i - 1] + 1], &parent_node->children[positions[i - 1] + 2], sizeof(void *) * (parent_node->size - positions[i - 1]));
+				memmove(&parent_node->children[positions[i - 1] + 1], &parent_node->children[positions[i - 1] + 2], sizeof(void *) * (parent_node->size - positions[i - 1] - 1));
 
 				parent_node->size--;
 				node->size += 1 + sibling_node->size;
