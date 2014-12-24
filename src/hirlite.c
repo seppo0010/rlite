@@ -858,7 +858,7 @@ static void zremCommand(rliteClient *c) {
 	for (j = 2; j < c->argc; j++) {
 		memberslen[j - 2] = c->argvlen[j];
 	}
-	int retval = rl_zrem(c->context->db, key, keylen, c->argc - 2, (unsigned char **)&c->argv[2], (long *)&c->argvlen[2], &deleted);
+	int retval = rl_zrem(c->context->db, key, keylen, c->argc - 2, (unsigned char **)&c->argv[2], memberslen, &deleted);
 	free(memberslen);
 	RLITE_SERVER_ERR(c, retval);
 
