@@ -1395,6 +1395,59 @@ cleanup:
 	return;
 }
 
+static void addHashIteratorReply(rliteClient *c, int retval, rl_hash_iterator *iterator, int fields, int values)
+{
+	unsigned char *field, *value;
+	long fieldlen, valuelen;
+	long i = 0;
+
+	c->reply = createReplyObject(RLITE_REPLY_ARRAY);
+	if (retval == RL_NOT_FOUND) {
+		c->reply->elements = 0;
+		return;
+	}
+	// TODO: iterator->size should be number_of_elements? we shouldn't check out the btree directly...
+	c->reply->elements = iterator->btree->number_of_elements * (fields + values);
+	c->reply->element = malloc(sizeof(rliteReply*) * c->reply->elements);
+	while ((retval = rl_hash_iterator_next(iterator,
+					fields ? &field : NULL, fields ? &fieldlen : NULL,
+					values ? &value : NULL, values ? &valuelen : NULL
+					)) == RL_OK) {
+		if (fields) {
+			c->reply->element[i] = createStringObject((char *)field, fieldlen);
+			rl_free(field);
+			i++;
+		}
+		if (values) {
+			c->reply->element[i] = createStringObject((char *)value, valuelen);
+			rl_free(value);
+			i++;
+		}
+	}
+
+	if (retval != RL_END) {
+		__rliteSetError(c->context, RLITE_ERR, "Unexpected early end");
+		goto cleanup;
+	}
+	iterator = NULL;
+cleanup:
+	if (iterator) {
+		rl_hash_iterator_destroy(iterator);
+	}
+}
+
+
+static void hgetallCommand(rliteClient *c) {
+	unsigned char *key = UNSIGN(c->argv[1]);
+	size_t keylen = c->argvlen[1];
+	rl_hash_iterator *iterator;
+	int retval = rl_hgetall(c->context->db, &iterator, key, keylen);
+	RLITE_SERVER_ERR(c, retval);
+	addHashIteratorReply(c, retval, iterator, 1, 1);
+cleanup:
+	return;
+}
+
 static void delCommand(rliteClient *c) {
 	int deleted = 0, j, retval;
 
@@ -1549,7 +1602,7 @@ struct rliteCommand rliteCommandTable[] = {
 	{"hlen",hlenCommand,2,"rF",0,1,1,1,0,0},
 	// {"hkeys",hkeysCommand,2,"rS",0,NULL,1,1,1,0,0},
 	// {"hvals",hvalsCommand,2,"rS",0,NULL,1,1,1,0,0},
-	// {"hgetall",hgetallCommand,2,"r",0,NULL,1,1,1,0,0},
+	{"hgetall",hgetallCommand,2,"r",0,1,1,1,0,0},
 	{"hexists",hexistsCommand,3,"rF",0,1,1,1,0,0},
 	// {"hscan",hscanCommand,-3,"rR",0,NULL,1,1,1,0,0},
 	// {"incrby",incrbyCommand,3,"wmF",0,NULL,1,1,1,0,0},
