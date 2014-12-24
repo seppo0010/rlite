@@ -546,6 +546,8 @@ int basic_test_zadd_zrangebylex_with_empty(int _commit)
 	}
 	rl_free(data2);
 
+	RL_CALL_VERBOSE(rl_zset_iterator_next, RL_END, iterator, NULL, NULL, NULL);
+
 	if (retval != RL_END) {
 		fprintf(stderr, "Iterator finished without RL_END, got %d\n", retval);
 		goto cleanup;
@@ -568,6 +570,8 @@ int basic_test_zadd_zrangebylex_with_empty(int _commit)
 		goto cleanup;
 	}
 	rl_free(data2);
+
+	RL_CALL_VERBOSE(rl_zset_iterator_next, RL_END, iterator, NULL, NULL, NULL);
 
 	if (retval != RL_END) {
 		fprintf(stderr, "Iterator finished without RL_END, got %d\n", retval);
