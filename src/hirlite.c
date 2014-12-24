@@ -1205,7 +1205,7 @@ cleanup:
 	return;
 }
 
-static void hsetCommand(rliteClient *c) {
+static void hsetGenericCommand(rliteClient *c, int update) {
 	unsigned char *key = UNSIGN(c->argv[1]);
 	size_t keylen = c->argvlen[1];
 	unsigned char *field = UNSIGN(c->argv[2]);
@@ -1215,12 +1215,20 @@ static void hsetCommand(rliteClient *c) {
 	long added;
 
 	int retval;
-	retval = rl_hset(c->context->db, key, keylen, field, fieldlen, data, datalen, &added, 1);
+	retval = rl_hset(c->context->db, key, keylen, field, fieldlen, data, datalen, &added, update);
 	RLITE_SERVER_ERR(c, retval);
 	c->reply = createLongLongObject(added);
 
 cleanup:
 	return;
+}
+
+static void hsetCommand(rliteClient *c) {
+	hsetGenericCommand(c, 1);
+}
+
+static void hsetnxCommand(rliteClient *c) {
+	hsetGenericCommand(c, 0);
 }
 
 static void hgetCommand(rliteClient *c) {
@@ -1440,7 +1448,7 @@ struct rliteCommand rliteCommandTable[] = {
 	{"zrevrank",zrevrankCommand,3,"rF",0,1,1,1,0,0},
 	// {"zscan",zscanCommand,-3,"rR",0,NULL,1,1,1,0,0},
 	{"hset",hsetCommand,4,"wmF",0,1,1,1,0,0},
-	// {"hsetnx",hsetnxCommand,4,"wmF",0,NULL,1,1,1,0,0},
+	{"hsetnx",hsetnxCommand,4,"wmF",0,1,1,1,0,0},
 	{"hget",hgetCommand,3,"rF",0,1,1,1,0,0},
 	// {"hmset",hmsetCommand,-4,"wm",0,NULL,1,1,1,0,0},
 	// {"hmget",hmgetCommand,-3,"r",0,NULL,1,1,1,0,0},
