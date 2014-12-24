@@ -1245,6 +1245,20 @@ cleanup:
 	return;
 }
 
+static void hexistsCommand(rliteClient *c) {
+	unsigned char *key = UNSIGN(c->argv[1]);
+	size_t keylen = c->argvlen[1];
+	unsigned char *field = UNSIGN(c->argv[2]);
+	size_t fieldlen = c->argvlen[2];
+
+	int retval;
+	retval = rl_hget(c->context->db, key, keylen, field, fieldlen, NULL, NULL);
+	RLITE_SERVER_ERR(c, retval);
+	c->reply = createLongLongObject(retval == RL_NOT_FOUND ? 0 : 1);
+cleanup:
+	return;
+}
+
 static void delCommand(rliteClient *c) {
 	int deleted = 0, j, retval;
 
@@ -1400,7 +1414,7 @@ struct rliteCommand rliteCommandTable[] = {
 	// {"hkeys",hkeysCommand,2,"rS",0,NULL,1,1,1,0,0},
 	// {"hvals",hvalsCommand,2,"rS",0,NULL,1,1,1,0,0},
 	// {"hgetall",hgetallCommand,2,"r",0,NULL,1,1,1,0,0},
-	// {"hexists",hexistsCommand,3,"rF",0,NULL,1,1,1,0,0},
+	{"hexists",hexistsCommand,3,"rF",0,1,1,1,0,0},
 	// {"hscan",hscanCommand,-3,"rR",0,NULL,1,1,1,0,0},
 	// {"incrby",incrbyCommand,3,"wmF",0,NULL,1,1,1,0,0},
 	// {"decrby",decrbyCommand,3,"wmF",0,NULL,1,1,1,0,0},
