@@ -1194,6 +1194,24 @@ cleanup:
 	return;
 }
 
+static void hsetCommand(rliteClient *c) {
+	unsigned char *key = UNSIGN(c->argv[1]);
+	size_t keylen = c->argvlen[1];
+	unsigned char *field = UNSIGN(c->argv[2]);
+	size_t fieldlen = c->argvlen[2];
+	unsigned char *data = UNSIGN(c->argv[3]);
+	size_t datalen = c->argvlen[3];
+	long added;
+
+	int retval;
+	retval = rl_hset(c->context->db, key, keylen, field, fieldlen, data, datalen, &added, 1);
+	RLITE_SERVER_ERR(c, retval);
+	c->reply = createLongLongObject(added);
+
+cleanup:
+	return;
+}
+
 static void delCommand(rliteClient *c) {
 	int deleted = 0, j, retval;
 
@@ -1337,7 +1355,7 @@ struct rliteCommand rliteCommandTable[] = {
 	{"zrank",zrankCommand,3,"rF",0,1,1,1,0,0},
 	{"zrevrank",zrevrankCommand,3,"rF",0,1,1,1,0,0},
 	// {"zscan",zscanCommand,-3,"rR",0,NULL,1,1,1,0,0},
-	// {"hset",hsetCommand,4,"wmF",0,NULL,1,1,1,0,0},
+	{"hset",hsetCommand,4,"wmF",0,1,1,1,0,0},
 	// {"hsetnx",hsetnxCommand,4,"wmF",0,NULL,1,1,1,0,0},
 	// {"hget",hgetCommand,3,"rF",0,NULL,1,1,1,0,0},
 	// {"hmset",hmsetCommand,-4,"wm",0,NULL,1,1,1,0,0},
