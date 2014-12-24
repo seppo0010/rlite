@@ -1267,6 +1267,59 @@ cleanup:
 	return;
 }
 
+static void hmsetCommand(rliteClient *c) {
+	unsigned char *key = UNSIGN(c->argv[1]);
+	size_t keylen = c->argvlen[1];
+
+	int i, j, retval;
+	if (c->argc % 2) {
+		c->reply = createErrorObject(RLITE_SYNTAXERR);
+		return;
+	}
+
+	int fieldc = (c->argc - 2) / 2;
+	unsigned char **fields = NULL;
+	long *fieldslen = NULL;
+	unsigned char **datas = NULL;
+	long *dataslen = NULL;
+
+	fields = malloc(sizeof(unsigned char *) * fieldc);
+	if (!fields) {
+		__rliteSetError(c->context, RLITE_ERR_OOM, "Out of memory");
+		goto cleanup;
+	}
+	fieldslen = malloc(sizeof(long) * fieldc);
+	if (!fieldslen) {
+		__rliteSetError(c->context, RLITE_ERR_OOM, "Out of memory");
+		goto cleanup;
+	}
+	datas = malloc(sizeof(unsigned char *) * fieldc);
+	if (!datas) {
+		__rliteSetError(c->context, RLITE_ERR_OOM, "Out of memory");
+		goto cleanup;
+	}
+	dataslen = malloc(sizeof(long) * fieldc);
+	if (!dataslen) {
+		__rliteSetError(c->context, RLITE_ERR_OOM, "Out of memory");
+		goto cleanup;
+	}
+	for (i = 0, j = 2; i < fieldc; i++) {
+		fields[i] = UNSIGN(c->argv[j]);
+		fieldslen[i] = c->argvlen[j++];
+		datas[i] = UNSIGN(c->argv[j]);
+		dataslen[i] = c->argvlen[j++];
+	}
+	retval = rl_hmset(c->context->db, key, keylen, fieldc, fields, fieldslen, datas, dataslen);
+	RLITE_SERVER_ERR(c, retval);
+	c->reply = createStatusObject(RLITE_STR_OK);
+cleanup:
+	free(fields);
+	free(fieldslen);
+	free(datas);
+	free(dataslen);
+	return;
+}
+
 static void hdelCommand(rliteClient *c) {
 	unsigned char *key = UNSIGN(c->argv[1]);
 	size_t keylen = c->argvlen[1];
@@ -1450,7 +1503,7 @@ struct rliteCommand rliteCommandTable[] = {
 	{"hset",hsetCommand,4,"wmF",0,1,1,1,0,0},
 	{"hsetnx",hsetnxCommand,4,"wmF",0,1,1,1,0,0},
 	{"hget",hgetCommand,3,"rF",0,1,1,1,0,0},
-	// {"hmset",hmsetCommand,-4,"wm",0,NULL,1,1,1,0,0},
+	{"hmset",hmsetCommand,-4,"wm",0,1,1,1,0,0},
 	// {"hmget",hmgetCommand,-3,"r",0,NULL,1,1,1,0,0},
 	// {"hincrby",hincrbyCommand,4,"wmF",0,NULL,1,1,1,0,0},
 	// {"hincrbyfloat",hincrbyfloatCommand,4,"wmF",0,NULL,1,1,1,0,0},
