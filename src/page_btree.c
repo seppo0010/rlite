@@ -456,8 +456,10 @@ int rl_btree_update_element(rlite *db, rl_btree *btree, void *score, void *value
 		else {
 			node_page = nodes[i - 1]->children[positions[i - 1]];
 		}
-		rl_free(node->values[positions[i]]);
-		node->values[positions[i]] = value;
+		if (node->values[positions[i]] != value) {
+			rl_free(node->values[positions[i]]);
+			node->values[positions[i]] = value;
+		}
 		RL_CALL(rl_write, RL_OK, db, btree->type->btree_node_type, node_page, node);
 		break;
 	}

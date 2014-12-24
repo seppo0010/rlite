@@ -189,6 +189,54 @@ cleanup:
 	return retval;
 }
 
+int rl_hmset(struct rlite *db, const unsigned char *key, long keylen, int fieldc, unsigned char **fields, long *fieldslen, unsigned char **datas, long *dataslen)
+{
+	int i, retval;
+	long hash_page_number;
+	rl_btree *hash;
+	unsigned char *digest = NULL;
+	rl_hashkey *hashkey = NULL;
+	void *tmp;
+	RL_CALL(rl_hash_get_objects, RL_OK, db, key, keylen, &hash_page_number, &hash, 1);
+
+	for (i = 0; i < fieldc; i++) {
+		RL_MALLOC(digest, sizeof(unsigned char) * 20);
+		RL_CALL(sha1, RL_OK, fields[i], fieldslen[i], digest);
+
+		retval = rl_btree_find_score(db, hash, digest, &tmp, NULL, NULL);
+		if (retval == RL_FOUND) {
+			hashkey = tmp;
+			rl_multi_string_delete(db, hashkey->value_page);
+			RL_CALL(rl_multi_string_set, RL_OK, db, &hashkey->value_page, datas[i], dataslen[i]);
+			retval = rl_btree_update_element(db, hash, digest, hashkey);
+			if (retval == RL_OK) {
+				rl_free(digest);
+				digest = NULL;
+			}
+			else {
+				goto cleanup;
+			}
+		}
+		else if (retval == RL_NOT_FOUND) {
+			RL_MALLOC(hashkey, sizeof(*hashkey));
+			RL_CALL(rl_multi_string_set, RL_OK, db, &hashkey->string_page, fields[i], fieldslen[i]);
+			RL_CALL(rl_multi_string_set, RL_OK, db, &hashkey->value_page, datas[i], dataslen[i]);
+
+			retval = rl_btree_add_element(db, hash, hash_page_number, digest, hashkey);
+			if (retval != RL_FOUND && retval != RL_OK) {
+				goto cleanup;
+			}
+		}
+	}
+	retval = RL_OK;
+cleanup:
+	if (retval != RL_OK) {
+		rl_free(digest);
+		rl_free(hashkey);
+	}
+	return retval;
+}
+
 int rl_hexists(struct rlite *db, const unsigned char *key, long keylen, unsigned char *field, long fieldlen)
 {
 	int retval;

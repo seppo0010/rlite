@@ -178,7 +178,9 @@ int sha1_formatter(void *v2, char **formatted, int *size)
 		return RL_OUT_OF_MEMORY;
 	}
 	_sha1_formatter(data, *formatted);
-	*size = 40;
+	if (size) {
+		*size = 40;
+	}
 	return RL_OK;
 }
 
