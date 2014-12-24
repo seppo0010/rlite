@@ -1228,7 +1228,7 @@ static void hgetCommand(rliteClient *c) {
 	size_t keylen = c->argvlen[1];
 	unsigned char *field = UNSIGN(c->argv[2]);
 	size_t fieldlen = c->argvlen[2];
-	unsigned char *data;
+	unsigned char *data = NULL;
 	long datalen;
 
 	int retval;
