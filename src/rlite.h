@@ -5,6 +5,7 @@
 #include "status.h"
 #include "page_btree.h"
 #include "page_key.h"
+#include "type_hash.h"
 #include "type_zset.h"
 
 #define RL_MEMORY_DRIVER 0

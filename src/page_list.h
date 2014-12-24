@@ -36,7 +36,7 @@ typedef struct rl_list {
 } rl_list;
 
 typedef struct rl_list_iterator {
-	rlite *db;
+	struct rlite *db;
 	rl_list *list;
 	rl_list_node *node;
 	int direction; // 1 for right, -1 for left
@@ -50,9 +50,9 @@ int rl_list_node_destroy(struct rlite *db, void *node);
 int rl_list_get_element(struct rlite *db, rl_list *list, void **element, long position);
 int rl_list_add_element(struct rlite *db, rl_list *list, void *element, long position);
 int rl_list_remove_element(struct rlite *db, rl_list *list, long position);
-int rl_list_find_element(rlite *db, rl_list *list, void *element, void **found_element, long *position, rl_list_node **found_node, long *found_node_page);
-int rl_list_iterator_create(rlite *db, rl_list_iterator **iterator, rl_list *list, int direction);
-int rl_list_iterator_destroy(rlite *db, rl_list_iterator *iterator);
+int rl_list_find_element(struct rlite *db, rl_list *list, void *element, void **found_element, long *position, rl_list_node **found_node, long *found_node_page);
+int rl_list_iterator_create(struct rlite *db, rl_list_iterator **iterator, rl_list *list, int direction);
+int rl_list_iterator_destroy(struct rlite *db, rl_list_iterator *iterator);
 int rl_list_iterator_next(rl_list_iterator *iterator, void **element);
 int rl_print_list(struct rlite *db, rl_list *list);
 int rl_list_is_balanced(struct rlite *db, rl_list *list);

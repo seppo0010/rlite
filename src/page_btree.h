@@ -1,14 +1,13 @@
 #ifndef _RL_PAGE_BTREE_H
 #define _RL_PAGE_BTREE_H
 
-#include "rlite.h"
-
 #define rl_btree_nocache_destroy(db, btree) (db->driver_type != RL_MEMORY_DRIVER ? rl_btree_destroy(db, btree) : RL_OK)
 #define rl_btree_node_nocache_destroy(db, node) (db->driver_type != RL_MEMORY_DRIVER ? rl_btree_node_destroy(db, node) : RL_OK);
 
 struct rl_data_type;
 struct rl_btree;
 struct rl_btree_node;
+struct rlite;
 
 typedef struct {
 	struct rl_data_type *btree_type;
