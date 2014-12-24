@@ -685,7 +685,20 @@ static int basic_test_hincrby_invalid(int _commit)
 	long datalen = strlen((char *)data);
 
 	RL_CALL_VERBOSE(rl_hset, RL_OK, db, key, keylen, field, fieldlen, data, datalen, NULL, 0);
+	RL_CALL_VERBOSE(rl_is_balanced, RL_OK, db);
+
+	if (_commit) {
+		RL_CALL_VERBOSE(rl_commit, RL_OK, db);
+		RL_CALL_VERBOSE(rl_is_balanced, RL_OK, db);
+	}
+
 	RL_CALL_VERBOSE(rl_hincrby, RL_NAN, db, key, keylen, field, fieldlen, 100, NULL);
+	RL_CALL_VERBOSE(rl_is_balanced, RL_OK, db);
+
+	if (_commit) {
+		RL_CALL_VERBOSE(rl_commit, RL_OK, db);
+		RL_CALL_VERBOSE(rl_is_balanced, RL_OK, db);
+	}
 
 	fprintf(stderr, "End basic_test_hincrby_invalid %d\n", _commit);
 	retval = RL_OK;
@@ -795,7 +808,20 @@ static int basic_test_hincrbyfloat_invalid(int _commit)
 	long datalen = strlen((char *)data);
 
 	RL_CALL_VERBOSE(rl_hset, RL_OK, db, key, keylen, field, fieldlen, data, datalen, NULL, 0);
+	RL_CALL_VERBOSE(rl_is_balanced, RL_OK, db);
+
+	if (_commit) {
+		RL_CALL_VERBOSE(rl_commit, RL_OK, db);
+		RL_CALL_VERBOSE(rl_is_balanced, RL_OK, db);
+	}
+
 	RL_CALL_VERBOSE(rl_hincrbyfloat, RL_NAN, db, key, keylen, field, fieldlen, 100, NULL);
+	RL_CALL_VERBOSE(rl_is_balanced, RL_OK, db);
+
+	if (_commit) {
+		RL_CALL_VERBOSE(rl_commit, RL_OK, db);
+		RL_CALL_VERBOSE(rl_is_balanced, RL_OK, db);
+	}
 
 	fprintf(stderr, "End basic_test_hincrbyfloat_invalid %d\n", _commit);
 	retval = RL_OK;
