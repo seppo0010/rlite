@@ -88,6 +88,14 @@ int test_hget() {
 	}
 	rliteFreeReplyObject(reply);
 
+	char *argv3[100] = {"hget", "mykey", "non existing field", NULL};
+	reply = rliteCommandArgv(context, populateArgvlen(argv3, argvlen), argv3, argvlen);
+	if (reply->type != RLITE_REPLY_NIL) {
+		fprintf(stderr, "Expected reply to be NIL, got %d instead on line %d\n", reply->type, __LINE__);
+		return 1;
+	}
+	rliteFreeReplyObject(reply);
+
 	rliteFree(context);
 	return 0;
 }
