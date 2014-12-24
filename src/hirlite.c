@@ -1283,6 +1283,19 @@ cleanup:
 	return;
 }
 
+static void hlenCommand(rliteClient *c) {
+	unsigned char *key = UNSIGN(c->argv[1]);
+	size_t keylen = c->argvlen[1];
+	long len;
+	int retval;
+
+	retval = rl_hlen(c->context->db, key, keylen, &len);
+	RLITE_SERVER_ERR(c, retval);
+	c->reply = createLongLongObject(len);
+cleanup:
+	return;
+}
+
 static void delCommand(rliteClient *c) {
 	int deleted = 0, j, retval;
 
@@ -1434,7 +1447,7 @@ struct rliteCommand rliteCommandTable[] = {
 	// {"hincrby",hincrbyCommand,4,"wmF",0,NULL,1,1,1,0,0},
 	// {"hincrbyfloat",hincrbyfloatCommand,4,"wmF",0,NULL,1,1,1,0,0},
 	{"hdel",hdelCommand,-3,"wF",0,1,1,1,0,0},
-	// {"hlen",hlenCommand,2,"rF",0,NULL,1,1,1,0,0},
+	{"hlen",hlenCommand,2,"rF",0,1,1,1,0,0},
 	// {"hkeys",hkeysCommand,2,"rS",0,NULL,1,1,1,0,0},
 	// {"hvals",hvalsCommand,2,"rS",0,NULL,1,1,1,0,0},
 	// {"hgetall",hgetallCommand,2,"r",0,NULL,1,1,1,0,0},
