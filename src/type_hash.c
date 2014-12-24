@@ -440,7 +440,7 @@ int rl_hincrbyfloat(struct rlite *db, const unsigned char *key, long keylen, uns
 		value += increment;
 		rl_multi_string_delete(db, hashkey->value_page);
 
-		RL_MALLOC(data, sizeof(unsigned char *) * MAX_DOUBLE_DIGITS);
+		RL_MALLOC(data, sizeof(unsigned char) * MAX_DOUBLE_DIGITS);
 		datalen = snprintf((char *)data, MAX_DOUBLE_DIGITS, "%lf", value);
 		RL_CALL(rl_multi_string_set, RL_OK, db, &hashkey->value_page, data, datalen);
 
@@ -456,7 +456,7 @@ int rl_hincrbyfloat(struct rlite *db, const unsigned char *key, long keylen, uns
 			goto cleanup;
 		}
 	} else if (retval == RL_NOT_FOUND) {
-		RL_MALLOC(data, sizeof(unsigned char *) * MAX_DOUBLE_DIGITS);
+		RL_MALLOC(data, sizeof(unsigned char) * MAX_DOUBLE_DIGITS);
 		datalen = snprintf((char *)data, MAX_DOUBLE_DIGITS, "%lf", increment);
 
 		RL_MALLOC(hashkey, sizeof(*hashkey));
