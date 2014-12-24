@@ -596,6 +596,106 @@ cleanup:
 	}
 	return retval;
 }
+
+static int basic_test_hincrby_hget(int _commit)
+{
+	int retval = 0;
+	long value;
+	fprintf(stderr, "Start basic_test_hincrby_hget %d\n", _commit);
+
+	rlite *db = NULL;
+	RL_CALL_VERBOSE(setup_db, RL_OK, &db, _commit, 1);
+	unsigned char *key = UNSIGN("my key");
+	long keylen = strlen((char *)key);
+	unsigned char *field = UNSIGN("my field");
+	long fieldlen = strlen((char *)field);
+	unsigned char *data = NULL;
+	long datalen;
+
+	RL_CALL_VERBOSE(rl_hincrby, RL_OK, db, key, keylen, field, fieldlen, 10, &value);
+	RL_CALL_VERBOSE(rl_is_balanced, RL_OK, db);
+
+	if (_commit) {
+		RL_CALL_VERBOSE(rl_commit, RL_OK, db);
+		RL_CALL_VERBOSE(rl_is_balanced, RL_OK, db);
+	}
+
+	if (value != 10) {
+		fprintf(stderr, "Expected %ld to be 10 on line %d\n", value, __LINE__);
+		retval = RL_UNEXPECTED;
+		goto cleanup;
+	}
+
+	RL_CALL_VERBOSE(rl_hget, RL_FOUND, db, key, keylen, field, fieldlen, &data, &datalen);
+
+	if (datalen != 2 || data[0] != '1' || data[1] != '0') {
+		fprintf(stderr, "expected data not to be \"%s\" (%ld) on line %d\n", data, datalen, __LINE__);
+		retval = 1;
+		goto cleanup;
+	}
+	rl_free(data);
+	data = NULL;
+
+	RL_CALL_VERBOSE(rl_hincrby, RL_OK, db, key, keylen, field, fieldlen, 100, &value);
+	RL_CALL_VERBOSE(rl_is_balanced, RL_OK, db);
+
+	if (_commit) {
+		RL_CALL_VERBOSE(rl_commit, RL_OK, db);
+		RL_CALL_VERBOSE(rl_is_balanced, RL_OK, db);
+	}
+
+	if (value != 110) {
+		fprintf(stderr, "Expected %ld to be 110 on line %d\n", value, __LINE__);
+		retval = RL_UNEXPECTED;
+		goto cleanup;
+	}
+
+	RL_CALL_VERBOSE(rl_hget, RL_FOUND, db, key, keylen, field, fieldlen, &data, &datalen);
+
+	if (datalen != 3 || data[0] != '1' || data[1] != '1' || data[2] != '0') {
+		fprintf(stderr, "expected data not to be \"%s\" (%ld) on line %d\n", data, datalen, __LINE__);
+		retval = 1;
+		goto cleanup;
+	}
+	rl_free(data);
+	data = NULL;
+
+	fprintf(stderr, "End basic_test_hincrby_hget\n");
+	retval = 0;
+cleanup:
+	rl_free(data);
+	if (db) {
+		rl_close(db);
+	}
+	return retval;
+}
+
+static int basic_test_hincrby_invalid(int _commit)
+{
+	int retval = 0;
+	fprintf(stderr, "Start basic_test_hincrby_invalid %d\n", _commit);
+
+	rlite *db = NULL;
+	RL_CALL_VERBOSE(setup_db, RL_OK, &db, _commit, 1);
+	unsigned char *key = UNSIGN("my key");
+	long keylen = strlen((char *)key);
+	unsigned char *field = UNSIGN("my field");
+	long fieldlen = strlen((char *)field);
+	unsigned char *data = UNSIGN("my data");
+	long datalen = strlen((char *)data);
+
+	RL_CALL_VERBOSE(rl_hset, RL_OK, db, key, keylen, field, fieldlen, data, datalen, NULL, 0);
+	RL_CALL_VERBOSE(rl_hincrby, RL_NAN, db, key, keylen, field, fieldlen, 100, NULL);
+
+	fprintf(stderr, "End basic_test_hincrby_invalid %d\n", _commit);
+	retval = RL_OK;
+cleanup:
+	if (db) {
+		rl_close(db);
+	}
+	return retval;
+}
+
 RL_TEST_MAIN_START(type_hash_test)
 {
 	int i;
@@ -608,6 +708,8 @@ RL_TEST_MAIN_START(type_hash_test)
 		RL_TEST(basic_test_hsetnx, i);
 		RL_TEST(basic_test_hset_hmget, i);
 		RL_TEST(basic_test_hmset_hmget, i);
+		RL_TEST(basic_test_hincrby_hget, i);
+		RL_TEST(basic_test_hincrby_invalid, i);
 	}
 }
 RL_TEST_MAIN_END

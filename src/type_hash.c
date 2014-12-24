@@ -1,3 +1,5 @@
+#include <ctype.h>
+#include <errno.h>
 #include <math.h>
 #include <stdlib.h>
 #include "rlite.h"
@@ -316,6 +318,80 @@ int rl_hlen(struct rlite *db, const unsigned char *key, long keylen, long *len)
 	*len = hash->number_of_elements;
 	retval = RL_OK;
 cleanup:
+	return retval;
+}
+
+int rl_hincrby(struct rlite *db, const unsigned char *key, long keylen, unsigned char *field, long fieldlen, long increment, long *newvalue)
+{
+	int retval;
+	rl_btree *hash;
+	void *tmp;
+	unsigned char *digest = NULL, *data = NULL;
+	char *end;
+	long datalen, hash_page_number;
+	long long value;
+	rl_hashkey *hashkey;
+
+	RL_CALL(rl_hash_get_objects, RL_OK, db, key, keylen, &hash_page_number, &hash, 1);
+
+	RL_MALLOC(digest, sizeof(unsigned char) * 20);
+	RL_CALL(sha1, RL_OK, field, fieldlen, digest);
+
+	retval = rl_btree_find_score(db, hash, digest, &tmp, NULL, NULL);
+	if (retval == RL_FOUND) {
+		hashkey = tmp;
+		rl_multi_string_get(db, hashkey->value_page, &data, &datalen);
+		tmp = realloc(data, sizeof(unsigned char) * (datalen + 1));
+		if (!tmp) {
+			retval = RL_OUT_OF_MEMORY;
+			goto cleanup;
+		}
+		data = tmp;
+		data[datalen] = '\0';
+		value = strtoll((char *)data, &end, 10);
+		if (isspace(((char *)data)[0]) || end[0] != '\0' || errno == ERANGE) {
+			rl_free(digest);
+			retval = RL_NAN;
+			goto cleanup;
+		}
+		rl_free(data);
+		data = NULL;
+		value += increment;
+		rl_multi_string_delete(db, hashkey->value_page);
+
+		RL_MALLOC(data, sizeof(unsigned char *) * 20);
+		datalen = snprintf((char *)data, 20, "%lld", value);
+		RL_CALL(rl_multi_string_set, RL_OK, db, &hashkey->value_page, data, datalen);
+
+		retval = rl_btree_update_element(db, hash, digest, hashkey);
+		if (retval == RL_OK) {
+			rl_free(digest);
+			digest = NULL;
+			if (newvalue) {
+				*newvalue = value;
+			}
+		}
+		else if (retval != RL_NOT_FOUND){
+			goto cleanup;
+		}
+	} else if (retval == RL_NOT_FOUND) {
+		RL_MALLOC(data, sizeof(unsigned char *) * 20);
+		datalen = snprintf((char *)data, 20, "%ld", increment);
+
+		RL_MALLOC(hashkey, sizeof(*hashkey));
+		RL_CALL(rl_multi_string_set, RL_OK, db, &hashkey->string_page, field, fieldlen);
+		RL_CALL(rl_multi_string_set, RL_OK, db, &hashkey->value_page, data, datalen);
+		RL_CALL(rl_btree_add_element, RL_OK, db, hash, hash_page_number, digest, hashkey);
+		if (newvalue) {
+			*newvalue = increment;
+		}
+	} else {
+		goto cleanup;
+	}
+
+	retval = RL_OK;
+cleanup:
+	rl_free(data);
 	return retval;
 }
 
