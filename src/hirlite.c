@@ -1259,6 +1259,30 @@ cleanup:
 	return;
 }
 
+static void hdelCommand(rliteClient *c) {
+	unsigned char *key = UNSIGN(c->argv[1]);
+	size_t keylen = c->argvlen[1];
+	long delcount;
+
+	int j, retval;
+	// memberslen needs long, we have size_t (unsigned long)
+	// it would be great not to need this
+	long *memberslen = malloc(sizeof(long) * (c->argc - 2));
+	if (!memberslen) {
+		__rliteSetError(c->context, RLITE_ERR_OOM, "Out of memory");
+		goto cleanup;
+	}
+	for (j = 2; j < c->argc; j++) {
+		memberslen[j - 2] = c->argvlen[j];
+	}
+	retval = rl_hdel(c->context->db, key, keylen, c->argc - 2, (unsigned char **)&c->argv[2], memberslen, &delcount);
+	free(memberslen);
+	RLITE_SERVER_ERR(c, retval);
+	c->reply = createLongLongObject(delcount);
+cleanup:
+	return;
+}
+
 static void delCommand(rliteClient *c) {
 	int deleted = 0, j, retval;
 
@@ -1409,7 +1433,7 @@ struct rliteCommand rliteCommandTable[] = {
 	// {"hmget",hmgetCommand,-3,"r",0,NULL,1,1,1,0,0},
 	// {"hincrby",hincrbyCommand,4,"wmF",0,NULL,1,1,1,0,0},
 	// {"hincrbyfloat",hincrbyfloatCommand,4,"wmF",0,NULL,1,1,1,0,0},
-	// {"hdel",hdelCommand,-3,"wF",0,NULL,1,1,1,0,0},
+	{"hdel",hdelCommand,-3,"wF",0,1,1,1,0,0},
 	// {"hlen",hlenCommand,2,"rF",0,NULL,1,1,1,0,0},
 	// {"hkeys",hkeysCommand,2,"rS",0,NULL,1,1,1,0,0},
 	// {"hvals",hvalsCommand,2,"rS",0,NULL,1,1,1,0,0},
