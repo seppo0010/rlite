@@ -1274,7 +1274,7 @@ static void hmsetCommand(rliteClient *c) {
 
 	int i, j, retval;
 	if (c->argc % 2) {
-		c->reply = createErrorObject(RLITE_SYNTAXERR);
+		addReplyErrorFormat(c->context, RLITE_WRONGNUMBEROFARGUMENTS, c->argv[0]);
 		return;
 	}
 

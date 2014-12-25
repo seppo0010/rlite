@@ -6,6 +6,7 @@
 #define RLITE_PONG "PONG"
 #define RLITE_QUEUED "QUEUED"
 #define RLITE_WRONGTYPEERR "WRONGTYPE Operation against a key holding the wrong kind of value"
+#define RLITE_WRONGNUMBEROFARGUMENTS "wrong number of arguments for %s"
 #define RLITE_NOKEYERR "No such key"
 #define RLITE_SYNTAXERR "syntax error"
 #define RLITE_SAMEOBJECTERR "source and destination objects are the same"
