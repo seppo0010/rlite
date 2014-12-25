@@ -1436,7 +1436,6 @@ cleanup:
 	}
 }
 
-
 static void hgetallCommand(rliteClient *c) {
 	unsigned char *key = UNSIGN(c->argv[1]);
 	size_t keylen = c->argvlen[1];
@@ -1444,6 +1443,28 @@ static void hgetallCommand(rliteClient *c) {
 	int retval = rl_hgetall(c->context->db, &iterator, key, keylen);
 	RLITE_SERVER_ERR(c, retval);
 	addHashIteratorReply(c, retval, iterator, 1, 1);
+cleanup:
+	return;
+}
+
+static void hkeysCommand(rliteClient *c) {
+	unsigned char *key = UNSIGN(c->argv[1]);
+	size_t keylen = c->argvlen[1];
+	rl_hash_iterator *iterator;
+	int retval = rl_hgetall(c->context->db, &iterator, key, keylen);
+	RLITE_SERVER_ERR(c, retval);
+	addHashIteratorReply(c, retval, iterator, 1, 0);
+cleanup:
+	return;
+}
+
+static void hvalsCommand(rliteClient *c) {
+	unsigned char *key = UNSIGN(c->argv[1]);
+	size_t keylen = c->argvlen[1];
+	rl_hash_iterator *iterator;
+	int retval = rl_hgetall(c->context->db, &iterator, key, keylen);
+	RLITE_SERVER_ERR(c, retval);
+	addHashIteratorReply(c, retval, iterator, 0, 1);
 cleanup:
 	return;
 }
@@ -1600,8 +1621,8 @@ struct rliteCommand rliteCommandTable[] = {
 	{"hincrbyfloat",hincrbyfloatCommand,4,"wmF",0,1,1,1,0,0},
 	{"hdel",hdelCommand,-3,"wF",0,1,1,1,0,0},
 	{"hlen",hlenCommand,2,"rF",0,1,1,1,0,0},
-	// {"hkeys",hkeysCommand,2,"rS",0,NULL,1,1,1,0,0},
-	// {"hvals",hvalsCommand,2,"rS",0,NULL,1,1,1,0,0},
+	{"hkeys",hkeysCommand,2,"rS",0,1,1,1,0,0},
+	{"hvals",hvalsCommand,2,"rS",0,1,1,1,0,0},
 	{"hgetall",hgetallCommand,2,"r",0,1,1,1,0,0},
 	{"hexists",hexistsCommand,3,"rF",0,1,1,1,0,0},
 	// {"hscan",hscanCommand,-3,"rR",0,NULL,1,1,1,0,0},
