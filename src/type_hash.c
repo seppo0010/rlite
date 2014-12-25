@@ -361,6 +361,13 @@ int rl_hincrby(struct rlite *db, const unsigned char *key, long keylen, unsigned
 		}
 		rl_free(data);
 		data = NULL;
+
+		if ((increment < 0 && value < 0 && increment < (LLONG_MIN - value)) ||
+			(increment > 0 && value > 0 && increment > (LLONG_MAX - value))) {
+			retval = RL_OVERFLOW;
+			goto cleanup;
+		}
+
 		value += increment;
 		rl_multi_string_delete(db, hashkey->value_page);
 

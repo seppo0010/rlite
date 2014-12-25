@@ -13,6 +13,7 @@
 #define RL_END 9
 #define RL_DELETED 10
 #define RL_NAN 11
+#define RL_OVERFLOW 12
 
 
 #endif
