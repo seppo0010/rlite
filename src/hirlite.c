@@ -1373,6 +1373,10 @@ static void hincrbyCommand(rliteClient *c) {
 		c->reply = createErrorObject("hash value is not an integer");
 		goto cleanup;
 	}
+	else if (retval == RL_OVERFLOW) {
+		c->reply = createErrorObject("increment or decrement would overflow");
+		goto cleanup;
+	}
 	RLITE_SERVER_ERR(c, retval);
 	c->reply = createLongLongObject(newvalue);
 cleanup:
