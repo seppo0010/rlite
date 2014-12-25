@@ -11,7 +11,7 @@
 
 // http://stackoverflow.com/questions/1701055/what-is-the-maximum-length-in-chars-needed-to-represent-any-double-value
 #define MAX_DOUBLE_DIGITS (3 + DBL_MANT_DIG - DBL_MIN_EXP)
-#define MAX_LLONG_DIGITS 20
+#define MAX_LLONG_DIGITS 22
 
 static int rl_hash_create(rlite *db, long btree_page, rl_btree **btree)
 {

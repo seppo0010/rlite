@@ -722,6 +722,8 @@ static int basic_test_hincrby_overflow(int _commit)
 	long fieldlen = strlen((char *)field);
 	unsigned char *data = UNSIGN("-9223372036854775484");
 	long datalen = strlen((char *)data);
+	unsigned char *data2;
+	long data2len;
 
 	RL_CALL_VERBOSE(rl_hset, RL_OK, db, key, keylen, field, fieldlen, data, datalen, NULL, 0);
 	RL_CALL_VERBOSE(rl_is_balanced, RL_OK, db);
@@ -729,6 +731,22 @@ static int basic_test_hincrby_overflow(int _commit)
 	if (_commit) {
 		RL_CALL_VERBOSE(rl_commit, RL_OK, db);
 		RL_CALL_VERBOSE(rl_is_balanced, RL_OK, db);
+	}
+
+	RL_CALL_VERBOSE(rl_hincrby, RL_OK, db, key, keylen, field, fieldlen, -1, NULL);
+	RL_CALL_VERBOSE(rl_is_balanced, RL_OK, db);
+
+	if (_commit) {
+		RL_CALL_VERBOSE(rl_commit, RL_OK, db);
+		RL_CALL_VERBOSE(rl_is_balanced, RL_OK, db);
+	}
+
+	RL_CALL_VERBOSE(rl_hget, RL_FOUND, db, key, keylen, field, fieldlen, &data2, &data2len);
+
+	if (data2len != datalen || memcmp(data2, "-9223372036854775485", datalen) != 0) {
+		fprintf(stderr, "Expected hget to be \"%s\", got \"%s\"  (%ld) instead on line %d\n", "-9223372036854775485", data2, data2len, __LINE__);
+		retval = RL_UNEXPECTED;
+		goto cleanup;
 	}
 
 	RL_CALL_VERBOSE(rl_hincrby, RL_OVERFLOW, db, key, keylen, field, fieldlen, -10000, NULL);
