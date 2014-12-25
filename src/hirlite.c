@@ -1406,8 +1406,7 @@ static void addHashIteratorReply(rliteClient *c, int retval, rl_hash_iterator *i
 		c->reply->elements = 0;
 		return;
 	}
-	// TODO: iterator->size should be number_of_elements? we shouldn't check out the btree directly...
-	c->reply->elements = iterator->btree->number_of_elements * (fields + values);
+	c->reply->elements = iterator->size * (fields + values);
 	c->reply->element = malloc(sizeof(rliteReply*) * c->reply->elements);
 	while ((retval = rl_hash_iterator_next(iterator,
 					fields ? &field : NULL, fields ? &fieldlen : NULL,
