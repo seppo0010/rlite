@@ -1508,13 +1508,14 @@ static void hmgetCommand(rliteClient *c) {
 	}
 
 	for (i = 0; i < fieldc; i++) {
-		if (valueslen[i] < 0) {
+		if (retval == RL_NOT_FOUND || valueslen[i] < 0) {
 			c->reply->element[i] = createReplyObject(RLITE_REPLY_NIL);
 		} else {
 			c->reply->element[i] = createStringObject((char *)values[i], valueslen[i]);
 			rl_free(values[i]);
 		}
 	}
+	retval = RL_OK;
 cleanup:
 	free(fields);
 	free(fieldslen);
