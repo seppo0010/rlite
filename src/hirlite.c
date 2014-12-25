@@ -69,12 +69,13 @@ static rliteReply *createReplyObject(int type) {
 
 static rliteReply *createStringTypeObject(int type, const char *str, const int len) {
 	rliteReply *reply = createReplyObject(type);
-	reply->str = malloc(sizeof(char) * len);
+	reply->str = malloc(sizeof(char) * (len + 1));
 	if (!reply->str) {
 		rliteFreeReplyObject(reply);
 		return NULL;
 	}
 	memcpy(reply->str, str, len);
+	reply->str[len] = 0;
 	reply->len = len;
 	return reply;
 }
