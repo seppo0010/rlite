@@ -578,7 +578,8 @@ static rliteContext *_rliteConnect(const char *path) {
 	context->replyLength = 0;
 	context->replyAlloc = DEFAULT_REPLIES_SIZE;
 	context->debugSkiplist = 0;
-	context->hashtableLimit = 0;
+	context->hashtableLimitEntries = 0;
+	context->hashtableLimitValue = 0;
 	int retval = rl_open(path, &context->db, RLITE_OPEN_READWRITE | RLITE_OPEN_CREATE);
 	if (retval != RL_OK) {
 		free(context);
@@ -1564,13 +1565,35 @@ static void debugCommand(rliteClient *c) {
 					"lru:0 lru_seconds_idle:0", c->context->debugSkiplist ? "skiplist" : "ziplist");
 			}
 			else if (type == RL_TYPE_HASH) {
-				long len;
-				int retval = rl_hlen(c->context->db, UNSIGN(c->argv[2]), c->argvlen[2], &len);
+				unsigned char *key = UNSIGN(c->argv[2]), *value = NULL;
+				long keylen = c->argvlen[2];
+				long len, valuelen;
+				rl_btree_iterator *iterator = NULL;
+				int retval = rl_hlen(c->context->db, key, keylen, &len);
+				int hashtable = c->context->hashtableLimitEntries < (size_t)len;
+				if (!hashtable) {
+					int retval = rl_hgetall(c->context->db, &iterator, key, keylen);
+					RLITE_SERVER_ERR(c, retval);
+					while ((retval = rl_hash_iterator_next(iterator, NULL, NULL, &value, &valuelen)) == RL_OK) {
+						rl_free(value);
+						if ((size_t)valuelen > c->context->hashtableLimitValue) {
+							hashtable = 1;
+							rl_hash_iterator_destroy(iterator);
+							retval = RL_END;
+							break;
+						}
+					}
+					if (retval != RL_END) {
+						goto cleanup;
+					}
+				}
 				RLITE_SERVER_ERR(c, retval);
 				addReplyStatusFormat(c->context,
 					"Value at:0xfaceadd refcount:1 "
 					"encoding:%s serializedlength:0 "
-					"lru:0 lru_seconds_idle:0", c->context->hashtableLimit >= len ? "ziplist" : "hashtable");
+					"lru:0 lru_seconds_idle:0",
+					hashtable ? "hashtable" : "ziplist"
+					);
 			}
 			return;
 		}
