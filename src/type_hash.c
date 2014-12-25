@@ -533,7 +533,7 @@ int rl_hash_pages(struct rlite *db, long page, short *pages)
 	RL_CALL(rl_btree_pages, RL_OK, db, btree, pages);
 
 	RL_CALL(rl_btree_iterator_create, RL_OK, db, btree, &iterator);
-	while ((rl_btree_iterator_next(iterator, NULL, &tmp)) == RL_OK) {
+	while ((retval = rl_btree_iterator_next(iterator, NULL, &tmp)) == RL_OK) {
 		hashkey = tmp;
 		pages[hashkey->value_page] = 1;
 		RL_CALL(rl_multi_string_pages, RL_OK, db, hashkey->value_page, pages);
@@ -553,5 +553,35 @@ cleanup:
 			rl_btree_iterator_destroy(iterator);
 		}
 	}
+	return retval;
+}
+
+int rl_hash_delete(rlite *db, const unsigned char *key, long keylen)
+{
+	long hash_page_number;
+	rl_btree *hash;
+	rl_btree_iterator *iterator;
+	rl_hashkey *hashkey = NULL;
+	int retval;
+	void *tmp;
+	RL_CALL(rl_hash_get_objects, RL_OK, db, key, keylen, &hash_page_number, &hash, 0);
+	RL_CALL(rl_btree_iterator_create, RL_OK, db, hash, &iterator);
+	while ((retval = rl_btree_iterator_next(iterator, NULL, &tmp)) == RL_OK) {
+		hashkey = tmp;
+		rl_multi_string_delete(db, hashkey->string_page);
+		rl_multi_string_delete(db, hashkey->value_page);
+		rl_free(hashkey);
+	}
+	iterator = NULL;
+
+	if (retval != RL_END) {
+		goto cleanup;
+	}
+
+	RL_CALL(rl_btree_delete, RL_OK, db, hash);
+	RL_CALL(rl_delete, RL_OK, db, hash_page_number);
+	RL_CALL(rl_key_delete, RL_OK, db, key, keylen);
+	retval = RL_OK;
+cleanup:
 	return retval;
 }

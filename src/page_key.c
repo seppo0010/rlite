@@ -6,6 +6,7 @@
 #include "page_key.h"
 #include "page_multi_string.h"
 #include "type_zset.h"
+#include "type_hash.h"
 
 rl_type types[] = {
 	{
@@ -13,12 +14,17 @@ rl_type types[] = {
 		"zset",
 		rl_zset_delete
 	},
+	{
+		RL_TYPE_HASH,
+		"hash",
+		rl_hash_delete
+	},
 };
 
 static int get_type(char identifier, rl_type **type)
 {
 	long i;
-	for (i = 0; i < 1; i++) {
+	for (i = 0; i < 2; i++) {
 		if (types[i].identifier == identifier) {
 			*type = &types[i];
 			return RL_OK;

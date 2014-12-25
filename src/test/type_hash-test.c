@@ -832,6 +832,46 @@ cleanup:
 	return retval;
 }
 
+static int basic_test_hset_del(int _commit)
+{
+	int retval = 0;
+	fprintf(stderr, "Start basic_test_hset_del %d\n", _commit);
+
+	rlite *db = NULL;
+	RL_CALL_VERBOSE(setup_db, RL_OK, &db, _commit, 1);
+	unsigned char *key = UNSIGN("my key");
+	long keylen = strlen((char *)key);
+	unsigned char *field = UNSIGN("my field");
+	long fieldlen = strlen((char *)field);
+	unsigned char *data = UNSIGN("my data");
+	long datalen = strlen((char *)data);
+
+	RL_CALL_VERBOSE(rl_hset, RL_OK, db, key, keylen, field, fieldlen, data, datalen, NULL, 0);
+
+	RL_CALL_VERBOSE(rl_is_balanced, RL_OK, db);
+
+	if (_commit) {
+		RL_CALL_VERBOSE(rl_commit, RL_OK, db);
+		RL_CALL_VERBOSE(rl_is_balanced, RL_OK, db);
+	}
+
+	RL_CALL_VERBOSE(rl_key_delete_with_value, RL_OK, db, key, keylen);
+
+	if (_commit) {
+		RL_CALL_VERBOSE(rl_commit, RL_OK, db);
+		RL_CALL_VERBOSE(rl_is_balanced, RL_OK, db);
+	}
+
+	RL_CALL_VERBOSE(rl_hget, RL_NOT_FOUND, db, key, keylen, field, fieldlen, NULL, NULL);
+
+	fprintf(stderr, "End basic_test_hset_del\n");
+	retval = 0;
+cleanup:
+	if (db) {
+		rl_close(db);
+	}
+	return retval;
+}
 RL_TEST_MAIN_START(type_hash_test)
 {
 	int i;
@@ -848,6 +888,7 @@ RL_TEST_MAIN_START(type_hash_test)
 		RL_TEST(basic_test_hincrby_invalid, i);
 		RL_TEST(basic_test_hincrbyfloat_hget, i);
 		RL_TEST(basic_test_hincrbyfloat_invalid, i);
+		RL_TEST(basic_test_hset_del, i);
 	}
 }
 RL_TEST_MAIN_END
