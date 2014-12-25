@@ -708,6 +708,55 @@ int test_hvals() {
 	return 0;
 }
 
+int test_hmget() {
+	rliteContext *context = rliteConnect(":memory:", 0);
+
+	rliteReply* reply;
+	size_t argvlen[100];
+
+	char* argv2[100] = {"hmset", "mykey", "myfield", "mydata", "myfield2", "mydata2", NULL};
+	reply = rliteCommandArgv(context, populateArgvlen(argv2, argvlen), argv2, argvlen);
+	if (reply->type != RLITE_REPLY_STATUS) {
+		fprintf(stderr, "Expected reply to be STATUS, got %d instead on line %d\n", reply->type, __LINE__);
+		return 1;
+	}
+	rliteFreeReplyObject(reply);
+
+	char *argv3[100] = {"hmget", "mykey", "myfield", "nofield", "myfield2", NULL};
+	reply = rliteCommandArgv(context, populateArgvlen(argv3, argvlen), argv3, argvlen);
+	if (reply->type != RLITE_REPLY_ARRAY) {
+		fprintf(stderr, "Expected reply to be ARRAY, got %d instead on line %d\n", reply->type, __LINE__);
+		return 1;
+	}
+	if (reply->elements != 3) {
+		fprintf(stderr, "Expected reply size to be 3, got %lu instead on line %d\n", reply->elements, __LINE__);
+		return 1;
+	}
+	if (reply->element[0]->type != RLITE_REPLY_STRING || reply->element[2]->type != RLITE_REPLY_STRING) {
+		fprintf(stderr, "Expected reply->element[i] to be STRING, got %d,%d instead on line %d\n",
+				reply->element[0]->type,
+				reply->element[2]->type,
+				__LINE__);
+		return 1;
+	}
+	if (reply->element[1]->type != RLITE_REPLY_NIL) {
+		fprintf(stderr, "Expected reply->element[1] to be NIL, got %d instead on line %d\n", reply->element[1]->type, __LINE__);
+		return 1;
+	}
+	if (reply->element[0]->len != 6 || memcmp(reply->element[0]->str, "mydata", 6) != 0) {
+		fprintf(stderr, "Expected reply->element[1] to be \"mydata\", got \"%s\" (%d) instead on line %d\n", reply->element[0]->str, reply->element[0]->len, __LINE__);
+		return 1;
+	}
+	if (reply->element[2]->len != 7 || memcmp(reply->element[2]->str, "mydata2", 7) != 0) {
+		fprintf(stderr, "Expected reply->element[0] to be \"mydata2\", got \"%s\" (%d) instead on line %d\n", reply->element[2]->str, reply->element[2]->len, __LINE__);
+		return 1;
+	}
+	rliteFreeReplyObject(reply);
+
+	rliteFree(context);
+	return 0;
+}
+
 int run_hash() {
 	if (test_hset() != 0) {
 		return 1;
@@ -740,6 +789,9 @@ int run_hash() {
 		return 1;
 	}
 	if (test_hvals() != 0) {
+		return 1;
+	}
+	if (test_hmget() != 0) {
 		return 1;
 	}
 	return 0;

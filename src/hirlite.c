@@ -1469,6 +1469,58 @@ cleanup:
 	return;
 }
 
+static void hmgetCommand(rliteClient *c) {
+	unsigned char *key = UNSIGN(c->argv[1]);
+	size_t keylen = c->argvlen[1];
+
+	int i, fieldc = c->argc - 2;
+	unsigned char **fields = NULL;
+	long *fieldslen = NULL;
+	unsigned char **values = NULL;
+	long *valueslen = NULL;
+
+	fields = malloc(sizeof(unsigned char *) * fieldc);
+	if (!fields) {
+		__rliteSetError(c->context, RLITE_ERR_OOM, "Out of memory");
+		goto cleanup;
+	}
+	fieldslen = malloc(sizeof(long) * fieldc);
+	if (!fieldslen) {
+		__rliteSetError(c->context, RLITE_ERR_OOM, "Out of memory");
+		goto cleanup;
+	}
+	for (i = 0; i < fieldc; i++) {
+		fields[i] = (unsigned char *)c->argv[2 + i];
+		fieldslen[i] = (long)c->argvlen[2 + i];
+	}
+
+	int retval = rl_hmget(c->context->db, key, keylen, fieldc, fields, fieldslen, &values, &valueslen);
+	RLITE_SERVER_ERR(c, retval);
+	c->reply = createReplyObject(RLITE_REPLY_ARRAY);
+	c->reply->elements = fieldc;
+	c->reply->element = malloc(sizeof(rliteReply*) * c->reply->elements);
+	if (!c->reply->element) {
+		free(c->reply);
+		c->reply = NULL;
+		__rliteSetError(c->context, RLITE_ERR_OOM, "Out of memory");
+		goto cleanup;
+	}
+
+	for (i = 0; i < fieldc; i++) {
+		if (valueslen[i] < 0) {
+			c->reply->element[i] = createReplyObject(RLITE_REPLY_NIL);
+		} else {
+			c->reply->element[i] = createStringObject((char *)values[i], valueslen[i]);
+			rl_free(values[i]);
+		}
+	}
+cleanup:
+	free(fields);
+	free(fieldslen);
+	rl_free(values);
+	rl_free(valueslen);
+}
+
 static void delCommand(rliteClient *c) {
 	int deleted = 0, j, retval;
 
@@ -1616,7 +1668,7 @@ struct rliteCommand rliteCommandTable[] = {
 	{"hsetnx",hsetnxCommand,4,"wmF",0,1,1,1,0,0},
 	{"hget",hgetCommand,3,"rF",0,1,1,1,0,0},
 	{"hmset",hmsetCommand,-4,"wm",0,1,1,1,0,0},
-	// {"hmget",hmgetCommand,-3,"r",0,NULL,1,1,1,0,0},
+	{"hmget",hmgetCommand,-3,"r",0,1,1,1,0,0},
 	{"hincrby",hincrbyCommand,4,"wmF",0,1,1,1,0,0},
 	{"hincrbyfloat",hincrbyfloatCommand,4,"wmF",0,1,1,1,0,0},
 	{"hdel",hdelCommand,-3,"wF",0,1,1,1,0,0},
