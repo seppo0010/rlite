@@ -578,6 +578,7 @@ static rliteContext *_rliteConnect(const char *path) {
 	context->replyLength = 0;
 	context->replyAlloc = DEFAULT_REPLIES_SIZE;
 	context->debugSkiplist = 0;
+	context->hashtableLimit = 0;
 	int retval = rl_open(path, &context->db, RLITE_OPEN_READWRITE | RLITE_OPEN_CREATE);
 	if (retval != RL_OK) {
 		free(context);
@@ -1561,6 +1562,15 @@ static void debugCommand(rliteClient *c) {
 					"encoding:%s serializedlength:0 "
 					"lru:0 lru_seconds_idle:0", c->context->debugSkiplist ? "skiplist" : "ziplist");
 			}
+			else if (type == RL_TYPE_HASH) {
+				long len;
+				int retval = rl_hlen(c->context->db, UNSIGN(c->argv[2]), c->argvlen[2], &len);
+				RLITE_SERVER_ERR(c, retval);
+				addReplyStatusFormat(c->context,
+					"Value at:0xfaceadd refcount:1 "
+					"encoding:%s serializedlength:0 "
+					"lru:0 lru_seconds_idle:0", c->context->hashtableLimit >= len ? "ziplist" : "hashtable");
+			}
 			return;
 		}
 	} else if (!strcasecmp(c->argv[1],"sdslen") && c->argc == 3) {
@@ -1591,6 +1601,8 @@ static void debugCommand(rliteClient *c) {
 		addReplyErrorFormat(c->context, "Unknown DEBUG subcommand or wrong number of arguments for '%s'",
 			(char*)c->argv[1]);
 	}
+cleanup:
+	return;
 }
 
 struct rliteCommand rliteCommandTable[] = {

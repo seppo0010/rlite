@@ -95,6 +95,7 @@ typedef struct rliteContext {
 	int replyAlloc;
 	rlite *db;
 	int debugSkiplist;
+	int hashtableLimit;
 } rliteContext;
 
 rliteContext *rliteConnect(const char *ip, int port);
