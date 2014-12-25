@@ -66,6 +66,7 @@ typedef struct {
 	struct rlite *db;
 	rl_btree *btree;
 	long size;
+	long position;
 	struct rl_btree_iterator_nodes {
 		long position;
 		rl_btree_node *node;

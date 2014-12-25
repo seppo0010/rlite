@@ -481,6 +481,12 @@ int fuzzy_hash_test_iterator(long size, long btree_node_size, int _commit)
 			goto cleanup;
 		}
 
+		if (iterator->size != i + 1) {
+			fprintf(stderr, "Expected iterator size to be %ld, got %ld instead on line %d\n", i + 1, iterator->size, __LINE__);
+			retval = RL_UNEXPECTED;
+			goto cleanup;
+		}
+
 		j = 0;
 		while (RL_OK == (retval = rl_btree_iterator_next(iterator, &tmp, NULL))) {
 			score = *(long *)tmp;
