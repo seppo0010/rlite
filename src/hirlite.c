@@ -1545,6 +1545,47 @@ static void existsCommand(rliteClient *c) {
 	c->reply = createLongLongObject(retval == RL_FOUND ? 1 : 0);
 }
 
+static void getKeyEncoding(rliteClient *c, char *encoding, unsigned char *key, long keylen)
+{
+	unsigned char type;
+	encoding[0] = 0;
+	if (rl_key_get(c->context->db, UNSIGN(key), keylen, &type, NULL, NULL, NULL)) {
+		if (type == RL_TYPE_ZSET) {
+			const char *enc = c->context->debugSkiplist ? "skiplist" : "ziplist";
+			memcpy(encoding, enc, (strlen(enc) + 1) * sizeof(char));
+		}
+		else if (type == RL_TYPE_HASH) {
+			unsigned char *key = UNSIGN(c->argv[2]), *value = NULL;
+			long keylen = c->argvlen[2];
+			long len, valuelen;
+			rl_btree_iterator *iterator = NULL;
+			int retval = rl_hlen(c->context->db, key, keylen, &len);
+			int hashtable = c->context->hashtableLimitEntries < (size_t)len;
+			if (!hashtable) {
+				int retval = rl_hgetall(c->context->db, &iterator, key, keylen);
+				RLITE_SERVER_ERR(c, retval);
+				while ((retval = rl_hash_iterator_next(iterator, NULL, NULL, &value, &valuelen)) == RL_OK) {
+					rl_free(value);
+					if ((size_t)valuelen > c->context->hashtableLimitValue) {
+						hashtable = 1;
+						rl_hash_iterator_destroy(iterator);
+						retval = RL_END;
+						break;
+					}
+				}
+				if (retval != RL_END) {
+					goto cleanup;
+				}
+			}
+			RLITE_SERVER_ERR(c, retval);
+			const char *enc = hashtable ? "hashtable" : "ziplist";
+			memcpy(encoding, enc, (strlen(enc) + 1) * sizeof(char));
+		}
+	}
+cleanup:
+	return;
+}
+
 static void debugCommand(rliteClient *c) {
 	if (!strcasecmp(c->argv[1],"segfault")) {
 		*((char*)-1) = 'x';
@@ -1561,45 +1602,23 @@ static void debugCommand(rliteClient *c) {
 		c->reply = createStatusObject(RLITE_STR_OK);
 	} else if (!strcasecmp(c->argv[1],"object") && c->argc == 3) {
 		unsigned char type;
+		char encoding[100];
 		if (rl_key_get(c->context->db, UNSIGN(c->argv[2]), c->argvlen[2], &type, NULL, NULL, NULL)) {
+			getKeyEncoding(c, encoding, UNSIGN(c->argv[2]), c->argvlen[2]);
 			if (type == RL_TYPE_ZSET) {
 				addReplyStatusFormat(c->context,
 					"Value at:0xfaceadd refcount:1 "
 					"encoding:%s serializedlength:0 "
-					"lru:0 lru_seconds_idle:0", c->context->debugSkiplist ? "skiplist" : "ziplist");
+					"lru:0 lru_seconds_idle:0", encoding);
 			}
 			else if (type == RL_TYPE_HASH) {
-				unsigned char *key = UNSIGN(c->argv[2]), *value = NULL;
-				long keylen = c->argvlen[2];
-				long len, valuelen;
-				rl_btree_iterator *iterator = NULL;
-				int retval = rl_hlen(c->context->db, key, keylen, &len);
-				int hashtable = c->context->hashtableLimitEntries < (size_t)len;
-				if (!hashtable) {
-					int retval = rl_hgetall(c->context->db, &iterator, key, keylen);
-					RLITE_SERVER_ERR(c, retval);
-					while ((retval = rl_hash_iterator_next(iterator, NULL, NULL, &value, &valuelen)) == RL_OK) {
-						rl_free(value);
-						if ((size_t)valuelen > c->context->hashtableLimitValue) {
-							hashtable = 1;
-							rl_hash_iterator_destroy(iterator);
-							retval = RL_END;
-							break;
-						}
-					}
-					if (retval != RL_END) {
-						goto cleanup;
-					}
-				}
-				RLITE_SERVER_ERR(c, retval);
 				addReplyStatusFormat(c->context,
 					"Value at:0xfaceadd refcount:1 "
 					"encoding:%s serializedlength:0 "
 					"lru:0 lru_seconds_idle:0",
-					hashtable ? "hashtable" : "ziplist"
+					encoding
 					);
 			}
-			return;
 		}
 	} else if (!strcasecmp(c->argv[1],"sdslen") && c->argc == 3) {
 		// TODO
@@ -1629,8 +1648,16 @@ static void debugCommand(rliteClient *c) {
 		addReplyErrorFormat(c->context, "Unknown DEBUG subcommand or wrong number of arguments for '%s'",
 			(char*)c->argv[1]);
 	}
-cleanup:
-	return;
+}
+
+static void objectCommand(rliteClient *c) {
+	if (!strcasecmp(c->argv[1],"encoding")) {
+		char encoding[100];
+		getKeyEncoding(c, encoding, UNSIGN(c->argv[2]), c->argvlen[2]);
+		c->reply = createCStringObject(encoding);
+	} else {
+		c->reply = createReplyObject(RLITE_REPLY_NIL);
+	}
 }
 
 struct rliteCommand rliteCommandTable[] = {
@@ -1779,7 +1806,7 @@ struct rliteCommand rliteCommandTable[] = {
 	// {"readonly",readonlyCommand,1,"rF",0,NULL,0,0,0,0,0},
 	// {"readwrite",readwriteCommand,1,"rF",0,NULL,0,0,0,0,0},
 	// {"dump",dumpCommand,2,"ar",0,NULL,1,1,1,0,0},
-	// {"object",objectCommand,3,"r",0,NULL,2,2,2,0,0},
+	{"object",objectCommand,3,"r",0,2,2,2,0,0},
 	// {"client",clientCommand,-2,"ars",0,NULL,0,0,0,0,0},
 	// {"eval",evalCommand,-3,"s",0,evalGetKeys,0,0,0,0,0},
 	// {"evalsha",evalShaCommand,-3,"s",0,evalGetKeys,0,0,0,0,0},
