@@ -748,6 +748,7 @@ static int basic_test_hincrby_overflow(int _commit)
 		retval = RL_UNEXPECTED;
 		goto cleanup;
 	}
+	rl_free(data2);
 
 	RL_CALL_VERBOSE(rl_hincrby, RL_OVERFLOW, db, key, keylen, field, fieldlen, -10000, NULL);
 	RL_CALL_VERBOSE(rl_is_balanced, RL_OK, db);
