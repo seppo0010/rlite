@@ -15,6 +15,7 @@ typedef rl_btree_iterator rl_set_iterator;
 int rl_sadd(struct rlite *db, const unsigned char *key, long keylen, int memberc, unsigned char **members, long *memberslen, long *added);
 int rl_sismember(struct rlite *db, const unsigned char *key, long keylen, unsigned char *data, long datalen);
 int rl_scard(struct rlite *db, const unsigned char *key, long keylen, long *card);
+int rl_srem(struct rlite *db, const unsigned char *key, long keylen, int membersc, unsigned char **members, long *memberslen, long *delcount);
 
 int rl_set_pages(struct rlite *db, long page, short *pages);
 int rl_set_delete(struct rlite *db, const unsigned char *key, long keylen);

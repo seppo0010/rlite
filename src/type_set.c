@@ -110,6 +110,47 @@ cleanup:
 	return retval;
 }
 
+int rl_srem(struct rlite *db, const unsigned char *key, long keylen, int membersc, unsigned char **members, long *memberslen, long *delcount)
+{
+	int retval;
+	long set_page_number;
+	rl_btree *set;
+	long member;
+	void *tmp;
+	long i;
+	long deleted = 0;
+	int keydeleted = 0;
+	unsigned char digest[20];
+	RL_CALL(rl_set_get_objects, RL_OK, db, key, keylen, &set_page_number, &set, 0);
+
+	for (i = 0; i < membersc; i++) {
+		RL_CALL(sha1, RL_OK, members[i], memberslen[i], digest);
+		retval = rl_btree_find_score(db, set, digest, &tmp, NULL, NULL);
+		if (retval == RL_FOUND) {
+			deleted++;
+			member = *(long *)tmp;
+			rl_multi_string_delete(db, member);
+			retval = rl_btree_remove_element(db, set, set_page_number, digest);
+			if (retval != RL_OK && retval != RL_DELETED) {
+				goto cleanup;
+			}
+			if (retval == RL_DELETED) {
+				keydeleted = 1;
+				break;
+			}
+		}
+	}
+	if (delcount) {
+		*delcount = deleted;
+	}
+	if (keydeleted) {
+		RL_CALL(rl_key_delete, RL_OK, db, key, keylen);
+	}
+	retval = RL_OK;
+cleanup:
+	return retval;
+}
+
 int rl_sismember(struct rlite *db, const unsigned char *key, long keylen, unsigned char *member, long memberlen)
 {
 	int retval;
