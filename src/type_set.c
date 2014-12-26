@@ -91,6 +91,11 @@ int rl_sadd(struct rlite *db, const unsigned char *key, long keylen, int memberc
 				goto cleanup;
 			}
 			count++;
+		} else if (retval == RL_FOUND) {
+			rl_free(digest);
+			digest = NULL;
+		} else {
+			goto cleanup;
 		}
 	}
 	if (added) {
@@ -116,6 +121,18 @@ int rl_sismember(struct rlite *db, const unsigned char *key, long keylen, unsign
 	RL_CALL(sha1, RL_OK, member, memberlen, digest);
 
 	retval = rl_btree_find_score(db, set, digest, NULL, NULL, NULL);
+cleanup:
+	return retval;
+}
+
+int rl_scard(struct rlite *db, const unsigned char *key, long keylen, long *card)
+{
+	int retval;
+	long set_page_number;
+	rl_btree *set;
+	RL_CALL(rl_set_get_objects, RL_OK, db, key, keylen, &set_page_number, &set, 0);
+
+	*card = set->number_of_elements;
 cleanup:
 	return retval;
 }
