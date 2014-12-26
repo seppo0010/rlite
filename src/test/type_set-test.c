@@ -172,6 +172,65 @@ cleanup:
 	return retval;
 }
 
+static int basic_test_sadd_smove(int _commit)
+{
+	int retval = 0;
+	fprintf(stderr, "Start basic_test_sadd_smove %d\n", _commit);
+
+	rlite *db = NULL;
+	RL_CALL_VERBOSE(setup_db, RL_OK, &db, _commit, 1);
+	unsigned char *key = UNSIGN("my key");
+	long keylen = strlen((char *)key);
+	unsigned char *key2 = UNSIGN("my key2");
+	long key2len = strlen((char *)key2);
+	unsigned char *data = UNSIGN("my data");
+	long datalen = strlen((char *)data);
+	unsigned char *data2 = UNSIGN("my data2");
+	long data2len = strlen((char *)data2);
+	unsigned char *datas[2] = {data, data2};
+	long dataslen[2] = {datalen, data2len};
+
+	RL_CALL_VERBOSE(rl_sadd, RL_OK, db, key, keylen, 2, datas, dataslen, NULL);
+	RL_CALL_VERBOSE(rl_is_balanced, RL_OK, db);
+
+	if (_commit) {
+		RL_CALL_VERBOSE(rl_commit, RL_OK, db);
+		RL_CALL_VERBOSE(rl_is_balanced, RL_OK, db);
+	}
+
+	RL_CALL_VERBOSE(rl_smove, RL_OK, db, key, keylen, key2, key2len, (unsigned char *)"new data", 8);
+	RL_CALL_VERBOSE(rl_smove, RL_OK, db, key, keylen, key2, key2len, data, datalen);
+
+	if (_commit) {
+		RL_CALL_VERBOSE(rl_commit, RL_OK, db);
+		RL_CALL_VERBOSE(rl_is_balanced, RL_OK, db);
+	}
+
+	RL_CALL_VERBOSE(rl_sismember, RL_NOT_FOUND, db, key, keylen, data, datalen);
+	RL_CALL_VERBOSE(rl_sismember, RL_FOUND, db, key2, key2len, data, datalen);
+
+	RL_CALL_VERBOSE(rl_smove, RL_OK, db, key, keylen, key2, key2len, data2, data2len);
+
+	if (_commit) {
+		RL_CALL_VERBOSE(rl_commit, RL_OK, db);
+		RL_CALL_VERBOSE(rl_is_balanced, RL_OK, db);
+	}
+
+	RL_CALL_VERBOSE(rl_sismember, RL_NOT_FOUND, db, key, keylen, data2, data2len);
+	RL_CALL_VERBOSE(rl_sismember, RL_FOUND, db, key2, key2len, data2, data2len);
+
+	RL_CALL_VERBOSE(rl_smove, RL_NOT_FOUND, db, key, keylen, key2, key2len, data, datalen);
+	RL_CALL_VERBOSE(rl_key_get, RL_NOT_FOUND, db, key, keylen, NULL, NULL, NULL, NULL);
+
+	fprintf(stderr, "End basic_test_sadd_smove\n");
+	retval = 0;
+cleanup:
+	if (db) {
+		rl_close(db);
+	}
+	return retval;
+}
+
 RL_TEST_MAIN_START(type_set_test)
 {
 	int i;
@@ -179,6 +238,7 @@ RL_TEST_MAIN_START(type_set_test)
 		RL_TEST(basic_test_sadd_sismember, i);
 		RL_TEST(basic_test_sadd_scard, i);
 		RL_TEST(basic_test_sadd_srem, i);
+		RL_TEST(basic_test_sadd_smove, i);
 	}
 }
 RL_TEST_MAIN_END

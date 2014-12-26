@@ -16,6 +16,7 @@ int rl_sadd(struct rlite *db, const unsigned char *key, long keylen, int memberc
 int rl_sismember(struct rlite *db, const unsigned char *key, long keylen, unsigned char *data, long datalen);
 int rl_scard(struct rlite *db, const unsigned char *key, long keylen, long *card);
 int rl_srem(struct rlite *db, const unsigned char *key, long keylen, int membersc, unsigned char **members, long *memberslen, long *delcount);
+int rl_smove(struct rlite *db, const unsigned char *source, long sourcelen, const unsigned char *destination, long destinationlen, unsigned char *member, long memberlen);
 
 int rl_set_pages(struct rlite *db, long page, short *pages);
 int rl_set_delete(struct rlite *db, const unsigned char *key, long keylen);

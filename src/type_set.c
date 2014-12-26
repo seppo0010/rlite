@@ -178,6 +178,37 @@ cleanup:
 	return retval;
 }
 
+int rl_smove(struct rlite *db, const unsigned char *source, long sourcelen, const unsigned char *destination, long destinationlen, unsigned char *member, long memberlen)
+{
+	rl_btree *source_hash, *target_hash;
+	void *tmp;
+	long target_page_number, source_page_number, *member_page_number;
+	int retval;
+	unsigned char *digest = NULL;
+	RL_MALLOC(digest, sizeof(unsigned char) * 20);
+	RL_CALL(sha1, RL_OK, member, memberlen, digest);
+	RL_CALL(rl_set_get_objects, RL_OK, db, source, sourcelen, &source_page_number, &source_hash, 0);
+	retval = rl_btree_find_score(db, source_hash, digest, &tmp, NULL, NULL);
+	if (retval == RL_FOUND) {
+		rl_multi_string_delete(db, *(long *)tmp);
+		retval = rl_btree_remove_element(db, source_hash, source_page_number, digest);
+		if (retval == RL_DELETED) {
+			RL_CALL(rl_key_delete, RL_OK, db, source, sourcelen);
+		} else if (retval != RL_OK) {
+			goto cleanup;
+		}
+	}
+	RL_CALL(rl_set_get_objects, RL_OK, db, destination, destinationlen, &target_page_number, &target_hash, 1);
+	RL_MALLOC(member_page_number, sizeof(*member_page_number))
+	RL_CALL(rl_multi_string_set, RL_OK, db, member_page_number, member, memberlen);
+	RL_CALL(rl_btree_add_element, RL_OK, db, target_hash, target_page_number, digest, member_page_number);
+cleanup:
+	if (retval != RL_OK) {
+		rl_free(digest);
+	}
+	return retval;
+}
+
 int rl_set_pages(struct rlite *db, long page, short *pages)
 {
 	rl_btree *btree;
