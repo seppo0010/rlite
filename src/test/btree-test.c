@@ -201,6 +201,68 @@ cleanup:
 	return retval;
 }
 
+int random_hash_test(long size, long btree_node_size)
+{
+	fprintf(stderr, "Start random_hash_test %ld %ld\n", size, btree_node_size);
+	long *key, *val;
+	int *results = malloc(sizeof(int) * size);
+
+	rl_btree *btree = NULL;
+	int retval;
+	rlite *db = NULL;
+	RL_CALL_VERBOSE(setup_db, RL_OK, &db, 0, 1);
+	RL_CALL_VERBOSE(rl_btree_create, RL_OK, db, &btree, &rl_btree_type_hash_long_long, btree_node_size);
+	long btree_page = db->next_empty_page;
+	RL_CALL_VERBOSE(rl_write, RL_OK, db, btree->type->btree_type, btree_page, btree);
+	long i;
+	for (i = 0; i < size; i++) {
+		results[i] = 0;
+		key = malloc(sizeof(long));
+		val = malloc(sizeof(long));
+		*key = i;
+		*val = i * 10;
+		retval = rl_btree_add_element(db, btree, btree_page, key, val);
+		if (retval != RL_OK) {
+			fprintf(stderr, "Failed to add child %ld\n", i);
+			goto cleanup;
+		}
+		retval = rl_btree_is_balanced(db, btree);
+		if (RL_OK != retval) {
+			fprintf(stderr, "Node is not balanced after adding child %ld (%d)\n", i, __LINE__);
+			goto cleanup;
+		}
+	}
+
+	// rl_print_btree(db, btree);
+
+	for (i = 0; i < size * 20; i++) {
+		RL_CALL_VERBOSE(rl_btree_random_element, RL_OK, db, btree, (void **)&key, (void **)&val);
+		if (10 * (*key) != *val) {
+			fprintf(stderr, "expected %ld == %ld on line %d\n", 10 * *key, *val, __LINE__);
+			retval = 1;
+			goto cleanup;
+		}
+		results[*key]++;
+	}
+
+	for (i = 0; i < size; i++) {
+		if (results[i] == 0) {
+			fprintf(stderr, "key %ld was not randomly returned\n", i);
+			retval = 1;
+			goto cleanup;
+		}
+	}
+
+	fprintf(stderr, "End random_hash_test\n");
+	retval = 0;
+cleanup:
+	free(results);
+	if (db) {
+		rl_close(db);
+	}
+	return retval;
+}
+
 static int contains_element(long element, long *elements, long size)
 {
 	long i;
@@ -618,6 +680,8 @@ RL_TEST_MAIN_START(btree_test)
 	int commit;
 	RL_TEST(basic_insert_set_test, 0);
 	RL_TEST(basic_insert_hash_test, 0);
+	RL_TEST(random_hash_test, 10, 2);
+	RL_TEST(random_hash_test, 100, 10);
 
 	long delete_tests[DELETE_TESTS_COUNT][2] = {
 		{8, 8},

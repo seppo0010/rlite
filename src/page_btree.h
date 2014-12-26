@@ -81,6 +81,20 @@ int rl_btree_add_element(struct rlite *db, rl_btree *btree, long btree_page, voi
 int rl_btree_update_element(struct rlite *db, rl_btree *btree, void *score, void *value);
 int rl_btree_remove_element(struct rlite *db, rl_btree *btree, long btree_page, void *score);
 int rl_btree_find_score(struct rlite *db, rl_btree *btree, void *score, void **value, rl_btree_node *** nodes, long **positions);
+/**
+ * rl_btree_random_element
+ *
+ * notice that all the elements in the tree do not have the same probability,
+ * and the order in which they were inserted is relevant. For example,
+ * inserting ascendenly will probably results in a lower probability
+ * to the elements with a higher score. The odds are approximately evenly
+ * distributed in the tree nodes, and even within the node, but not all nodes
+ * have the same number of elements.
+ *
+ * A true random element with even probabilities can be done, but it would
+ * be really expensive to generate (O(n) instead of O(log n)).
+ */
+int rl_btree_random_element(struct rlite *db, rl_btree *btree, void **score, void **value);
 int rl_print_btree(struct rlite *db, rl_btree *btree);
 int rl_btree_is_balanced(struct rlite *db, rl_btree *btree);
 int rl_flatten_btree(struct rlite *db, rl_btree *btree, void *** scores, long *size);

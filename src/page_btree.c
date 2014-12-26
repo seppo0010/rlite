@@ -259,6 +259,46 @@ cleanup:
 	return retval;
 }
 
+int rl_btree_random_element(rlite *db, rl_btree *btree, void **score, void **value)
+{
+	int retval;
+	long i, h = btree->height;
+	long *acc = NULL, random, pos;
+	void *_node;
+	rl_btree_node *node;
+
+	RL_MALLOC(acc, sizeof(long) * h);
+	acc[0] = 1;
+	for (i = 1; i < h; i++) {
+		acc[i] = acc[i - 1] + ceil(acc[i - 1] * 0.75 * btree->max_node_size);
+	}
+
+	random = 1 + (long)(((float)rand() / RAND_MAX) * acc[h - 1]);
+
+	RL_CALL(rl_read, RL_FOUND, db, btree->type->btree_node_type, btree->root, btree, &_node, 1);
+	node = _node;
+	for (i = 0; i < h; i++) {
+		if (random > acc[i]) {
+			pos = (long)(((float)rand() / RAND_MAX) * (1 + node->size));
+			RL_CALL(rl_read, RL_FOUND, db, btree->type->btree_node_type, node->children[pos], btree, &_node, 1);
+			node = _node;
+		} else {
+			pos = (long)(((float)rand() / RAND_MAX) * node->size);
+			if (score) {
+				*score = node->scores[pos];
+			}
+			if (value && node->values) {
+				*value = node->values[pos];
+			}
+			break;
+		}
+	}
+	retval = RL_OK;
+cleanup:
+	rl_free(acc);
+	return retval;
+}
+
 int rl_btree_add_element(rlite *db, rl_btree *btree, long btree_page, void *score, void *value)
 {
 	int retval;
