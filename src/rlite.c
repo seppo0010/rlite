@@ -25,6 +25,18 @@ int rl_header_serialize(struct rlite *db, void *obj, unsigned char *data);
 int rl_header_deserialize(struct rlite *db, void **obj, void *context, unsigned char *data);
 int rl_has_flag(rlite *db, int flag);
 
+rl_data_type rl_data_type_btree_hash_sha1_long = {
+	"rl_data_type_btree_hash_sha1_long",
+	rl_btree_serialize,
+	rl_btree_deserialize,
+	rl_btree_destroy,
+};
+rl_data_type rl_data_type_btree_node_hash_sha1_long = {
+	"rl_data_type_btree_node_hash_sha1_long",
+	rl_btree_node_serialize_hash_sha1_long,
+	rl_btree_node_deserialize_hash_sha1_long,
+	rl_btree_node_destroy,
+};
 rl_data_type rl_data_type_btree_hash_sha1_double = {
 	"rl_data_type_btree_hash_sha1_double",
 	rl_btree_serialize,
@@ -923,6 +935,9 @@ int rl_database_is_balanced(rlite *db, short *pages)
 		}
 		else if (key->type == RL_TYPE_HASH) {
 			rl_hash_pages(db, key->value_page, pages);
+		}
+		else if (key->type == RL_TYPE_SET) {
+			rl_set_pages(db, key->value_page, pages);
 		}
 		else {
 			fprintf(stderr, "Unknown type %d\n", key->type);

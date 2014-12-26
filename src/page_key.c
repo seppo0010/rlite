@@ -8,7 +8,13 @@
 #include "type_zset.h"
 #include "type_hash.h"
 
-rl_type types[] = {
+#define TYPES_LENGTH 3
+rl_type types[TYPES_LENGTH] = {
+	{
+		RL_TYPE_SET,
+		"set",
+		rl_set_delete
+	},
 	{
 		RL_TYPE_ZSET,
 		"zset",
@@ -24,7 +30,7 @@ rl_type types[] = {
 static int get_type(char identifier, rl_type **type)
 {
 	long i;
-	for (i = 0; i < 2; i++) {
+	for (i = 0; i < TYPES_LENGTH; i++) {
 		if (types[i].identifier == identifier) {
 			*type = &types[i];
 			return RL_OK;

@@ -7,6 +7,7 @@
 #include "page_key.h"
 #include "type_hash.h"
 #include "type_zset.h"
+#include "type_set.h"
 
 #define RL_MEMORY_DRIVER 0
 #define RL_FILE_DRIVER 1
@@ -89,6 +90,8 @@ extern rl_data_type rl_data_type_btree_hash_double_long;
 extern rl_data_type rl_data_type_btree_node_hash_double_long;
 extern rl_data_type rl_data_type_btree_hash_sha1_double;
 extern rl_data_type rl_data_type_btree_node_hash_sha1_double;
+extern rl_data_type rl_data_type_btree_hash_sha1_long;
+extern rl_data_type rl_data_type_btree_node_hash_sha1_long;
 extern rl_data_type rl_data_type_list_long;
 extern rl_data_type rl_data_type_list_node_long;
 extern rl_data_type rl_data_type_list_node_key;

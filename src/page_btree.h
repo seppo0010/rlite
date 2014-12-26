@@ -40,6 +40,7 @@ typedef struct rl_key {
 extern rl_btree_type rl_btree_type_set_long;
 extern rl_btree_type rl_btree_type_hash_long_long;
 extern rl_btree_type rl_btree_type_hash_sha1_key;
+extern rl_btree_type rl_btree_type_hash_sha1_long;
 extern rl_btree_type rl_btree_type_hash_sha1_hashkey;
 extern rl_btree_type rl_btree_type_hash_sha1_double;
 
@@ -108,6 +109,9 @@ int rl_btree_deserialize(struct rlite *db, void **obj, void *context, unsigned c
 
 int rl_btree_node_serialize_hash_sha1_key(struct rlite *db, void *obj, unsigned char *data);
 int rl_btree_node_deserialize_hash_sha1_key(struct rlite *db, void **obj, void *context, unsigned char *data);
+
+int rl_btree_node_serialize_hash_sha1_long(struct rlite *db, void *obj, unsigned char *data);
+int rl_btree_node_deserialize_hash_sha1_long(struct rlite *db, void **obj, void *context, unsigned char *data);
 
 int rl_btree_node_serialize_hash_sha1_hashkey(struct rlite *db, void *obj, unsigned char *data);
 int rl_btree_node_deserialize_hash_sha1_hashkey(struct rlite *db, void **obj, void *context, unsigned char *data);
