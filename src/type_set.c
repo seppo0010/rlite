@@ -238,6 +238,59 @@ cleanup:
 	return retval;
 }
 
+static int contains(long size, long *elements, long element)
+{
+	long i;
+	for (i = 0; i < size; i++) {
+		if (element == elements[i]) {
+			return 1;
+		}
+	}
+	return 0;
+}
+
+int rl_srandmembers(struct rlite *db, const unsigned char *key, long keylen, int repeat, long *memberc, unsigned char ***_members, long **_memberslen) {
+	long i;
+	int retval;
+	long *member;
+	long *used_members = NULL;
+	rl_btree *set;
+	unsigned char **members = NULL;
+	long *memberslen = NULL;
+	RL_CALL(rl_set_get_objects, RL_OK, db, key, keylen, NULL, &set, 0);
+	if (!repeat) {
+		if (*memberc > set->number_of_elements) {
+			*memberc = set->number_of_elements;
+		}
+		RL_MALLOC(used_members, sizeof(long) * *memberc);
+	}
+
+	RL_MALLOC(members, sizeof(unsigned char *) * *memberc);
+	RL_MALLOC(memberslen, sizeof(long) * *memberc);
+
+	for (i = 0; i < *memberc; i++) {
+		RL_CALL(rl_btree_random_element, RL_OK, db, set, NULL, (void **)&member);
+		if (!repeat) {
+			if (contains(i, used_members, *member)) {
+				i--;
+				continue;
+			} else {
+				used_members[i] = *member;
+			}
+		}
+		RL_CALL(rl_multi_string_get, RL_OK, db, *member, &members[i], &memberslen[i]);
+	}
+	*_members = members;
+	*_memberslen = memberslen;
+cleanup:
+	if (retval != RL_OK) {
+		rl_free(members);
+		rl_free(memberslen);
+	}
+	rl_free(used_members);
+	return retval;
+}
+
 int rl_set_pages(struct rlite *db, long page, short *pages)
 {
 	rl_btree *btree;

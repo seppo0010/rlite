@@ -293,6 +293,148 @@ cleanup:
 	return retval;
 }
 
+static long indexOf(long size, unsigned char **elements, long *elementslen, unsigned char *element, long elementlen)
+{
+	long i;
+	for (i = 0; i < size; i++) {
+		if (elementslen[i] == elementlen && memcmp(elements[i], element, elementlen) == 0) {
+			return i;
+		}
+	}
+	return -1;
+}
+
+static int fuzzy_test_srandmembers_unique(long size, int _commit)
+{
+	int retval = 0;
+	fprintf(stderr, "Start fuzzy_test_srandmembers_unique %ld %d\n", size, _commit);
+
+	unsigned char **elements = malloc(sizeof(unsigned char *) * size);
+	long *elementslen = malloc(sizeof(long) * size);
+	int *results = malloc(sizeof(int) * size);
+
+	long i, j;
+	for (i = 0; i < size; i++) {
+		elementslen[i] = ((float)rand() / RAND_MAX) * 10 + 5;
+		elements[i] = malloc(sizeof(unsigned char) * elementslen[i]);
+		for (j = 0; j < elementslen[i]; j++) {
+			elements[i][j] = rand() % CHAR_MAX;
+		}
+		j++;
+	}
+
+	rlite *db = NULL;
+	RL_CALL_VERBOSE(setup_db, RL_OK, &db, _commit, 1);
+	unsigned char *key = UNSIGN("my key");
+	long keylen = strlen((char *)key);
+
+	long added;
+	RL_CALL_VERBOSE(rl_sadd, RL_OK, db, key, keylen, size, elements, elementslen, &added);
+	if (added != size) {
+		fprintf(stderr, "Expected to add %ld elements, but added %ld instead\n", size, added);
+		retval = RL_UNEXPECTED;
+		goto cleanup;
+	}
+
+	long memberc = 1;
+	unsigned char **members = NULL;
+	long *memberslen = NULL;
+	retval = rl_srandmembers(db, key, keylen, 0, &memberc, &members, &memberslen);
+	for (i = 0; i < memberc; i++) {
+		if (indexOf(size, elements, elementslen, members[i], memberslen[i]) == -1) {
+			fprintf(stderr, "randmembers result not found in elements, got 0x");
+			for (j = 0; j < memberslen[i]; j++) {
+				fprintf(stderr, "%2x", members[i][j]);
+			}
+			fprintf(stderr, " on line %d\n", __LINE__);
+			retval = RL_UNEXPECTED;
+			goto cleanup;
+		}
+		rl_free(members[i]);
+	}
+	rl_free(memberslen);
+	rl_free(members);
+
+	memberc = size * 2;
+	members = NULL;
+	memberslen = NULL;
+	retval = rl_srandmembers(db, key, keylen, 0, &memberc, &members, &memberslen);
+	if (size != memberc) {
+		fprintf(stderr, "Expected memberc %ld to be %ld on line %d\n", memberc, size, __LINE__);
+		retval = RL_UNEXPECTED;
+		goto cleanup;
+	}
+	for (i = 0; i < size; i++) {
+		results[i] = 0;
+	}
+
+	for (i = 0; i < memberc; i++) {
+		j = indexOf(size, elements, elementslen, members[i], memberslen[i]);
+		if (j == -1) {
+			fprintf(stderr, "randmembers result not found in elements, got 0x");
+			for (j = 0; j < memberslen[i]; j++) {
+				fprintf(stderr, "%2x", members[i][j]);
+			}
+			fprintf(stderr, " on line %d\n", __LINE__);
+			retval = RL_UNEXPECTED;
+			goto cleanup;
+		}
+		if (results[j] > 0) {
+			fprintf(stderr, "got repeated result on line %d\n", __LINE__);
+			retval = RL_UNEXPECTED;
+			goto cleanup;
+		}
+		results[j]++;
+		rl_free(members[i]);
+	}
+	rl_free(memberslen);
+	rl_free(members);
+
+	memberc = size * 2;
+	members = NULL;
+	memberslen = NULL;
+	retval = rl_srandmembers(db, key, keylen, 1, &memberc, &members, &memberslen);
+	if (memberc != size * 2) {
+		fprintf(stderr, "Expected memberc %ld to be %ld on line %d\n", memberc, size * 2, __LINE__);
+		retval = RL_UNEXPECTED;
+		goto cleanup;
+	}
+	for (i = 0; i < size; i++) {
+		results[i] = 0;
+	}
+
+	for (i = 0; i < memberc; i++) {
+		j = indexOf(size, elements, elementslen, members[i], memberslen[i]);
+		if (j == -1) {
+			fprintf(stderr, "randmembers result not found in elements, got 0x");
+			for (j = 0; j < memberslen[i]; j++) {
+				fprintf(stderr, "%2x", members[i][j]);
+			}
+			fprintf(stderr, " on line %d\n", __LINE__);
+			retval = RL_UNEXPECTED;
+			goto cleanup;
+		}
+		results[j]++;
+		rl_free(members[i]);
+	}
+	rl_free(memberslen);
+	rl_free(members);
+
+	fprintf(stderr, "End fuzzy_test_srandmembers_unique\n");
+	retval = 0;
+cleanup:
+	for (i = 0; i < size; i++) {
+		free(elements[i]);
+	}
+	free(elements);
+	free(results);
+	free(elementslen);
+	if (db) {
+		rl_close(db);
+	}
+	return retval;
+}
+
 RL_TEST_MAIN_START(type_set_test)
 {
 	int i;
@@ -302,6 +444,8 @@ RL_TEST_MAIN_START(type_set_test)
 		RL_TEST(basic_test_sadd_srem, i);
 		RL_TEST(basic_test_sadd_smove, i);
 		RL_TEST(basic_test_sadd_smembers, i);
+		RL_TEST(fuzzy_test_srandmembers_unique, 10, i);
+		RL_TEST(fuzzy_test_srandmembers_unique, 1000, i);
 	}
 }
 RL_TEST_MAIN_END
