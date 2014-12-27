@@ -22,6 +22,8 @@ int rl_srandmembers(struct rlite *db, const unsigned char *key, long keylen, int
 int rl_spop(struct rlite *db, const unsigned char *key, long keylen, unsigned char **member, long *memberlen);
 int rl_sdiff(struct rlite *db, int keyc, unsigned char **keys, long *keyslen, long *_membersc, unsigned char ***_members, long **_memberslen);
 int rl_sdiffstore(struct rlite *db, unsigned char *target, long targetlen, int keyc, unsigned char **keys, long *keyslen, long *added);
+int rl_sinter(struct rlite *db, int keyc, unsigned char **keys, long *keyslen, long *_membersc, unsigned char ***_members, long **_memberslen);
+int rl_sinterstore(struct rlite *db, unsigned char *target, long targetlen, int keyc, unsigned char **keys, long *keyslen, long *added);
 
 int rl_set_pages(struct rlite *db, long page, short *pages);
 int rl_set_delete(struct rlite *db, const unsigned char *key, long keylen);

@@ -366,6 +366,10 @@ static int basic_test_sadd_sdiffstore(int _commit)
 	}
 
 	RL_CALL_VERBOSE(rl_sdiffstore, RL_OK, db, target, targetlen, 2, keys, keyslen, &size);
+	if (_commit) {
+		RL_CALL_VERBOSE(rl_commit, RL_OK, db);
+		RL_CALL_VERBOSE(rl_is_balanced, RL_OK, db);
+	}
 
 	if (size != 1) {
 		fprintf(stderr, "Expected size %ld to be %d on line %d\n", size, 1, __LINE__);
@@ -391,6 +395,125 @@ cleanup:
 	return retval;
 }
 
+static int basic_test_sadd_sinter(int _commit)
+{
+	int retval = 0;
+	fprintf(stderr, "Start basic_test_sadd_sinter %d\n", _commit);
+
+	rlite *db = NULL;
+	RL_CALL_VERBOSE(setup_db, RL_OK, &db, _commit, 1);
+	unsigned char *key = UNSIGN("my key");
+	long keylen = strlen((char *)key);
+	unsigned char *key2 = UNSIGN("my key2");
+	long key2len = strlen((char *)key2);
+	unsigned char *data = UNSIGN("my data");
+	long datalen = strlen((char *)data);
+	unsigned char *data2 = UNSIGN("other data2");
+	long data2len = strlen((char *)data2);
+	unsigned char *keys[2] = {key, key2};
+	long keyslen[2] = {keylen, key2len};
+	unsigned char *datas[2] = {data, data2};
+	long dataslen[2] = {datalen, data2len};
+	unsigned char **datasdiff;
+	long *datasdifflen, datasc, i;
+
+	RL_CALL_VERBOSE(rl_sadd, RL_OK, db, key, keylen, 2, datas, dataslen, NULL);
+	RL_CALL_VERBOSE(rl_sadd, RL_OK, db, key2, key2len, 1, datas, dataslen, NULL);
+	if (_commit) {
+		RL_CALL_VERBOSE(rl_commit, RL_OK, db);
+		RL_CALL_VERBOSE(rl_is_balanced, RL_OK, db);
+	}
+
+	RL_CALL_VERBOSE(rl_sinter, RL_OK, db, 2, keys, keyslen, &datasc, &datasdiff, &datasdifflen);
+
+	if (datasc != 1) {
+		fprintf(stderr, "Expected datasc %ld to be %d on line %d\n", datasc, 1, __LINE__);
+		retval = RL_UNEXPECTED;
+		goto cleanup;
+	}
+
+	if (datasdifflen[0] != datalen || memcmp(datasdiff[0], data, datalen) != 0) {
+		fprintf(stderr, "Expected diff to be \"%s\" but got \"%s\" (%ld) instead on line %d\n", data, datasdiff[0], datasdifflen[0], __LINE__);
+		retval = RL_UNEXPECTED;
+		goto cleanup;
+	}
+
+	for (i = 0; i < datasc; i++) {
+		rl_free(datasdiff[i]);
+	}
+	rl_free(datasdiff);
+	rl_free(datasdifflen);
+
+
+	fprintf(stderr, "End basic_test_sadd_sinter\n");
+	retval = 0;
+cleanup:
+	if (db) {
+		rl_close(db);
+	}
+	return retval;
+}
+
+static int basic_test_sadd_sinterstore(int _commit)
+{
+	int retval = 0;
+	fprintf(stderr, "Start basic_test_sadd_sinterstore %d\n", _commit);
+
+	rlite *db = NULL;
+	RL_CALL_VERBOSE(setup_db, RL_OK, &db, _commit, 1);
+	unsigned char *target = UNSIGN("my target");
+	long targetlen = strlen((char *)target);
+	unsigned char *key = UNSIGN("my key");
+	long keylen = strlen((char *)key);
+	unsigned char *key2 = UNSIGN("my key2");
+	long key2len = strlen((char *)key2);
+	unsigned char *data = UNSIGN("my data");
+	long datalen = strlen((char *)data);
+	unsigned char *data2 = UNSIGN("other data2");
+	long data2len = strlen((char *)data2);
+	unsigned char *keys[2] = {key, key2};
+	long keyslen[2] = {keylen, key2len};
+	unsigned char *datas[2] = {data, data2};
+	long dataslen[2] = {datalen, data2len};
+	unsigned char *datapop;
+	long datapoplen, size;
+
+	RL_CALL_VERBOSE(rl_sadd, RL_OK, db, key, keylen, 2, datas, dataslen, NULL);
+	RL_CALL_VERBOSE(rl_sadd, RL_OK, db, key2, key2len, 1, datas, dataslen, NULL);
+	if (_commit) {
+		RL_CALL_VERBOSE(rl_commit, RL_OK, db);
+		RL_CALL_VERBOSE(rl_is_balanced, RL_OK, db);
+	}
+
+	RL_CALL_VERBOSE(rl_sinterstore, RL_OK, db, target, targetlen, 2, keys, keyslen, &size);
+	if (_commit) {
+		RL_CALL_VERBOSE(rl_commit, RL_OK, db);
+		RL_CALL_VERBOSE(rl_is_balanced, RL_OK, db);
+	}
+
+	if (size != 1) {
+		fprintf(stderr, "Expected size %ld to be %d on line %d\n", size, 1, __LINE__);
+		retval = RL_UNEXPECTED;
+		goto cleanup;
+	}
+
+	RL_CALL_VERBOSE(rl_spop, RL_OK, db, target, targetlen, &datapop, &datapoplen);
+
+	if (datapoplen != datalen || memcmp(datapop, data, datalen) != 0) {
+		fprintf(stderr, "Expected inter to be \"%s\" but got \"%s\" (%ld) instead on line %d\n", data, datapop, datapoplen, __LINE__);
+		retval = RL_UNEXPECTED;
+		goto cleanup;
+	}
+	rl_free(datapop);
+
+	fprintf(stderr, "End basic_test_sadd_sinterstore\n");
+	retval = 0;
+cleanup:
+	if (db) {
+		rl_close(db);
+	}
+	return retval;
+}
 
 static int basic_test_sadd_smove(int _commit)
 {
@@ -668,6 +791,8 @@ RL_TEST_MAIN_START(type_set_test)
 		RL_TEST(basic_test_sadd_sdiff, i);
 		RL_TEST(basic_test_sadd_sdiffstore, i);
 		RL_TEST(basic_test_sadd_sdiff_nonexistent, i);
+		RL_TEST(basic_test_sadd_sinter, i);
+		RL_TEST(basic_test_sadd_sinterstore, i);
 		RL_TEST(fuzzy_test_srandmembers_unique, 10, i);
 		RL_TEST(fuzzy_test_srandmembers_unique, 1000, i);
 	}
