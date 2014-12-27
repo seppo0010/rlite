@@ -318,6 +318,88 @@ cleanup:
 	return retval;
 }
 
+int rl_sdiff(struct rlite *db, int keyc, unsigned char **keys, long *keyslen, long *_membersc, unsigned char ***_members, long **_memberslen)
+{
+	int retval, found;
+	rl_btree *source = NULL;
+	rl_btree **sets = NULL;
+	rl_btree_iterator *iterator;
+	unsigned char **members = NULL, *digest;
+	long *memberslen = NULL, i, member_page, setsc = 0;
+	long membersc = 0;
+	void *tmp;
+
+	if (keyc == 0) {
+		retval = RL_NOT_FOUND;
+		goto cleanup;
+	}
+
+	RL_CALL(rl_set_get_objects, RL_OK, db, keys[0], keyslen[0], NULL, &source, 0);
+	RL_MALLOC(members, sizeof(unsigned char *) * source->number_of_elements);
+	RL_MALLOC(memberslen, sizeof(long) * source->number_of_elements);
+	RL_MALLOC(sets, sizeof(rl_btree *) * (keyc - 1));
+	for (i = 1; i < keyc; i++) {
+		retval = rl_set_get_objects(db, keys[i], keyslen[i], NULL, &sets[setsc], 0);
+		if (retval == RL_OK) {
+			setsc++;
+		}
+		else if (retval != RL_NOT_FOUND) {
+			goto cleanup;
+		}
+	}
+
+	RL_CALL(rl_btree_iterator_create, RL_OK, db, source, &iterator);
+	while ((retval = rl_btree_iterator_next(iterator, (void **)&digest, &tmp)) == RL_OK) {
+		found = 0;
+		for (i = 0; i < setsc; i++) {
+			retval = rl_btree_find_score(db, sets[i], digest, NULL, NULL, NULL);
+			if (retval == RL_FOUND) {
+				found = 1;
+				break;
+			}
+		}
+		if (!found) {
+			member_page = *(long *)tmp;
+			RL_CALL(rl_multi_string_get, RL_OK, db, member_page, &members[membersc], &memberslen[membersc]);
+			membersc++;
+		}
+		rl_free(digest);
+		rl_free(tmp);
+	}
+	iterator = NULL;
+
+	if (retval != RL_END) {
+		goto cleanup;
+	}
+
+	*_membersc = membersc;
+	if (membersc == source->number_of_elements) {
+		*_members = members;
+		*_memberslen = memberslen;
+	}
+	else {
+		*_members = realloc(members, sizeof(unsigned char *) * membersc);
+		if (*_members == NULL) {
+			retval = RL_OUT_OF_MEMORY;
+			goto cleanup;
+		}
+		*_memberslen = realloc(memberslen, sizeof(long) * membersc);
+		if (*_memberslen == NULL) {
+			retval = RL_OUT_OF_MEMORY;
+			goto cleanup;
+		}
+	}
+
+	retval = RL_OK;
+cleanup:
+	if (retval != RL_OK) {
+		rl_free(members);
+		rl_free(memberslen);
+	}
+	rl_free(sets);
+	return retval;
+}
+
 int rl_set_pages(struct rlite *db, long page, short *pages)
 {
 	rl_btree *btree;

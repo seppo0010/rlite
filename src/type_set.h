@@ -20,6 +20,7 @@ int rl_smove(struct rlite *db, const unsigned char *source, long sourcelen, cons
 int rl_smembers(struct rlite *db, rl_set_iterator **iterator, const unsigned char *key, long keylen);
 int rl_srandmembers(struct rlite *db, const unsigned char *key, long keylen, int repeat, long *memberc, unsigned char ***members, long **memberslen);
 int rl_spop(struct rlite *db, const unsigned char *key, long keylen, unsigned char **member, long *memberlen);
+int rl_sdiff(struct rlite *db, int keyc, unsigned char **keys, long *keyslen, long *_membersc, unsigned char ***_members, long **_memberslen);
 
 int rl_set_pages(struct rlite *db, long page, short *pages);
 int rl_set_delete(struct rlite *db, const unsigned char *key, long keylen);

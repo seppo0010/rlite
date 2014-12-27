@@ -223,6 +223,64 @@ cleanup:
 	}
 	return retval;
 }
+static int basic_test_sadd_sdiff(int _commit)
+{
+	int retval = 0;
+	fprintf(stderr, "Start basic_test_sadd_sdiff %d\n", _commit);
+
+	rlite *db = NULL;
+	RL_CALL_VERBOSE(setup_db, RL_OK, &db, _commit, 1);
+	unsigned char *key = UNSIGN("my key");
+	long keylen = strlen((char *)key);
+	unsigned char *key2 = UNSIGN("my key2");
+	long key2len = strlen((char *)key2);
+	unsigned char *data = UNSIGN("my data");
+	long datalen = strlen((char *)data);
+	unsigned char *data2 = UNSIGN("my data2");
+	long data2len = strlen((char *)data2);
+	unsigned char *keys[2] = {key, key2};
+	long keyslen[2] = {keylen, key2len};
+	unsigned char *datas[2] = {data, data2};
+	long dataslen[2] = {datalen, data2len};
+	unsigned char **datasdiff;
+	long *datasdifflen, datasc, i;
+
+	RL_CALL_VERBOSE(rl_sadd, RL_OK, db, key, keylen, 2, datas, dataslen, NULL);
+	RL_CALL_VERBOSE(rl_sadd, RL_OK, db, key2, key2len, 1, datas, dataslen, NULL);
+	if (_commit) {
+		RL_CALL_VERBOSE(rl_commit, RL_OK, db);
+		RL_CALL_VERBOSE(rl_is_balanced, RL_OK, db);
+	}
+
+	RL_CALL_VERBOSE(rl_sdiff, RL_OK, db, 2, keys, keyslen, &datasc, &datasdiff, &datasdifflen);
+
+	if (datasc != 1) {
+		fprintf(stderr, "Expected datasc %ld to be %d on line %d\n", datasc, 1, __LINE__);
+		retval = RL_UNEXPECTED;
+		goto cleanup;
+	}
+
+	if (datasdifflen[0] != data2len || memcmp(datasdiff[0], data2, data2len) != 0) {
+		fprintf(stderr, "Expected diff to be \"%s\" but got \"%s\" (%ld) instead on line %d\n", data2, datasdiff[0], datasdifflen[0], __LINE__);
+		retval = RL_UNEXPECTED;
+		goto cleanup;
+	}
+
+	for (i = 0; i < datasc; i++) {
+		rl_free(datasdiff[i]);
+	}
+	rl_free(datasdiff);
+	rl_free(datasdifflen);
+
+
+	fprintf(stderr, "End basic_test_sadd_sdiff\n");
+	retval = 0;
+cleanup:
+	if (db) {
+		rl_close(db);
+	}
+	return retval;
+}
 
 static int basic_test_sadd_smove(int _commit)
 {
@@ -497,6 +555,7 @@ RL_TEST_MAIN_START(type_set_test)
 		RL_TEST(basic_test_sadd_smove, i);
 		RL_TEST(basic_test_sadd_smembers, i);
 		RL_TEST(basic_test_sadd_spop, i);
+		RL_TEST(basic_test_sadd_sdiff, i);
 		RL_TEST(fuzzy_test_srandmembers_unique, 10, i);
 		RL_TEST(fuzzy_test_srandmembers_unique, 1000, i);
 	}
