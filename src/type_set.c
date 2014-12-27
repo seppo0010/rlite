@@ -400,6 +400,27 @@ cleanup:
 	return retval;
 }
 
+int rl_sdiffstore(struct rlite *db, unsigned char *target, long targetlen, int keyc, unsigned char **keys, long *keyslen, long *added)
+{
+	int retval;
+	unsigned char **members = NULL;
+	long *memberslen = NULL, membersc, i;
+
+	// this might be done more efficiently since we don't really need to have all members in memory
+	// at the same time, but this is so easy to do...
+	RL_CALL(rl_sdiff, RL_OK, db, keyc, keys, keyslen, &membersc, &members, &memberslen);
+	if (membersc > 0) {
+		RL_CALL(rl_sadd, RL_OK, db, target, targetlen, membersc, members, memberslen, added);
+	}
+cleanup:
+	for (i = 0; i < membersc; i++) {
+		rl_free(members[i]);
+	}
+	rl_free(members);
+	rl_free(memberslen);
+	return retval;
+}
+
 int rl_set_pages(struct rlite *db, long page, short *pages)
 {
 	rl_btree *btree;
