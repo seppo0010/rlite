@@ -630,6 +630,75 @@ cleanup:
 	return retval;
 }
 
+int rl_sunionstore(struct rlite *db, unsigned char *target, long targetlen, int keyc, unsigned char **keys, long *keyslen, long *added)
+{
+	int retval;
+	rl_btree *target_set = NULL;
+	rl_btree *set = NULL;
+	rl_btree_iterator *iterator;
+	unsigned char *digest = NULL;
+	unsigned char *member;
+	long memberlen, i, member_page;
+	long target_page_number;
+	void *tmp;
+	long *member_object = NULL;
+	long count = 0;
+
+	if (keyc == 0) {
+		retval = RL_NOT_FOUND;
+		goto cleanup;
+	}
+
+	RL_CALL(rl_set_get_objects, RL_OK, db, target, targetlen, &target_page_number, &target_set, 1);
+
+	for (i = 0; i < keyc; i++) {
+		retval = rl_set_get_objects(db, keys[i], keyslen[i], NULL, &set, 0);
+		if (retval == RL_NOT_FOUND) {
+			continue;
+		}
+		else if (retval != RL_OK) {
+			goto cleanup;
+		}
+
+		RL_CALL(rl_btree_iterator_create, RL_OK, db, set, &iterator);
+		while ((retval = rl_btree_iterator_next(iterator, (void **)&digest, &tmp)) == RL_OK) {
+			member_page = *(long *)tmp;
+			rl_free(tmp);
+
+			retval = rl_btree_find_score(db, target_set, digest, &tmp, NULL, NULL);
+			if (retval == RL_NOT_FOUND) {
+				RL_CALL(rl_multi_string_get, RL_OK, db, member_page, &member, &memberlen);
+				RL_MALLOC(member_object, sizeof(*member_object));
+				RL_CALL(rl_multi_string_set, RL_OK, db, member_object, member, memberlen);
+
+				retval = rl_btree_add_element(db, target_set, target_page_number, digest, member_object);
+				if (retval != RL_OK) {
+					goto cleanup;
+				}
+				count++;
+				rl_free(member);
+			}
+			else if (retval == RL_FOUND) {
+				rl_free(digest);
+				digest = NULL;
+			}
+			else {
+				goto cleanup;
+			}
+		}
+		iterator = NULL;
+
+		if (retval != RL_END) {
+			goto cleanup;
+		}
+	}
+
+	*added = count;
+	retval = RL_OK;
+cleanup:
+	return retval;
+}
+
 int rl_set_pages(struct rlite *db, long page, short *pages)
 {
 	rl_btree *btree;

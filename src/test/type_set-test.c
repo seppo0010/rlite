@@ -8,6 +8,17 @@
 
 #define UNSIGN(str) ((unsigned char *)(str))
 
+#define IS_EQUAL(s1, l1, s2, l2)\
+	(l1 == l2 && memcmp(s1, s2, l1) == 0)
+
+#define ASSERT_EQUAL(s1, l1, s2, l2)\
+	if (!IS_EQUAL(s1, l1, s2, l2)) {\
+		fprintf(stderr, "Expected \"%s\" (%ld) to equal \"%s\" (%ld) on line %d\n", s1, l1, s2, l2, __LINE__);\
+		retval = RL_UNEXPECTED;\
+		goto cleanup;\
+	}
+
+
 static int basic_test_sadd_sismember(int _commit)
 {
 	int retval = 0;
@@ -260,11 +271,7 @@ static int basic_test_sadd_sdiff(int _commit)
 		goto cleanup;
 	}
 
-	if (datasdifflen[0] != data2len || memcmp(datasdiff[0], data2, data2len) != 0) {
-		fprintf(stderr, "Expected diff to be \"%s\" but got \"%s\" (%ld) instead on line %d\n", data2, datasdiff[0], datasdifflen[0], __LINE__);
-		retval = RL_UNEXPECTED;
-		goto cleanup;
-	}
+	ASSERT_EQUAL(data2, data2len, datasdiff[0], datasdifflen[0]);
 
 	for (i = 0; i < datasc; i++) {
 		rl_free(datasdiff[i]);
@@ -379,11 +386,7 @@ static int basic_test_sadd_sdiffstore(int _commit)
 
 	RL_CALL_VERBOSE(rl_spop, RL_OK, db, target, targetlen, &datapop, &datapoplen);
 
-	if (datapoplen != data2len || memcmp(datapop, data2, data2len) != 0) {
-		fprintf(stderr, "Expected diff to be \"%s\" but got \"%s\" (%ld) instead on line %d\n", data2, datapop, datapoplen, __LINE__);
-		retval = RL_UNEXPECTED;
-		goto cleanup;
-	}
+	ASSERT_EQUAL(datapop, datapoplen, data2, data2len);
 	rl_free(datapop);
 
 	fprintf(stderr, "End basic_test_sadd_sdiffstore\n");
@@ -432,11 +435,7 @@ static int basic_test_sadd_sinter(int _commit)
 		goto cleanup;
 	}
 
-	if (datasdifflen[0] != datalen || memcmp(datasdiff[0], data, datalen) != 0) {
-		fprintf(stderr, "Expected diff to be \"%s\" but got \"%s\" (%ld) instead on line %d\n", data, datasdiff[0], datasdifflen[0], __LINE__);
-		retval = RL_UNEXPECTED;
-		goto cleanup;
-	}
+	ASSERT_EQUAL(data, datalen, datasdiff[0], datasdifflen[0]);
 
 	for (i = 0; i < datasc; i++) {
 		rl_free(datasdiff[i]);
@@ -499,11 +498,7 @@ static int basic_test_sadd_sinterstore(int _commit)
 
 	RL_CALL_VERBOSE(rl_spop, RL_OK, db, target, targetlen, &datapop, &datapoplen);
 
-	if (datapoplen != datalen || memcmp(datapop, data, datalen) != 0) {
-		fprintf(stderr, "Expected inter to be \"%s\" but got \"%s\" (%ld) instead on line %d\n", data, datapop, datapoplen, __LINE__);
-		retval = RL_UNEXPECTED;
-		goto cleanup;
-	}
+	ASSERT_EQUAL(data, datalen, datapop, datapoplen);
 	rl_free(datapop);
 
 	fprintf(stderr, "End basic_test_sadd_sinterstore\n");
@@ -550,29 +545,10 @@ static int basic_test_sadd_sunion(int _commit)
 		goto cleanup;
 	}
 
-	if (datasunionlen[0] != dataslen[1] || memcmp(datasunion[0], datas[1], dataslen[1]) != 0) {
-		fprintf(stderr, "Expected datasunion[0] to be \"%s\" but got \"%s\" (%ld) instead on line %d\n", datas[1], datasunion[0], datasunionlen[0], __LINE__);
-		retval = RL_UNEXPECTED;
-		goto cleanup;
-	}
-
-	if (datasunionlen[1] != dataslen[0] || memcmp(datasunion[1], datas[0], dataslen[0]) != 0) {
-		fprintf(stderr, "Expected datasunion[1] to be \"%s\" but got \"%s\" (%ld) instead on line %d\n", datas[0], datasunion[0], datasunionlen[0], __LINE__);
-		retval = RL_UNEXPECTED;
-		goto cleanup;
-	}
-
-	if (datasunionlen[2] != datas2len[1] || memcmp(datasunion[2], datas2[1], datas2len[1]) != 0) {
-		fprintf(stderr, "Expected datasunion[2] to be \"%s\" but got \"%s\" (%ld) instead on line %d\n", datas2[1], datasunion[2], datasunionlen[2], __LINE__);
-		retval = RL_UNEXPECTED;
-		goto cleanup;
-	}
-
-	if (datasunionlen[3] != datas2len[0] || memcmp(datasunion[3], datas2[0], datas2len[0]) != 0) {
-		fprintf(stderr, "Expected datasunion[3] to be \"%s\" but got \"%s\" (%ld) instead on line %d\n", datas2[0], datasunion[3], datasunionlen[3], __LINE__);
-		retval = RL_UNEXPECTED;
-		goto cleanup;
-	}
+	ASSERT_EQUAL(datas[1], dataslen[1], datasunion[0], datasunionlen[0]);
+	ASSERT_EQUAL(datas[0], dataslen[0], datasunion[1], datasunionlen[1]);
+	ASSERT_EQUAL(datas2[1], datas2len[1], datasunion[2], datasunionlen[2]);
+	ASSERT_EQUAL(datas2[0], datas2len[0], datasunion[3], datasunionlen[3]);
 
 	for (i = 0; i < datasc; i++) {
 		rl_free(datasunion[i]);
@@ -582,6 +558,79 @@ static int basic_test_sadd_sunion(int _commit)
 
 
 	fprintf(stderr, "End basic_test_sadd_sunion\n");
+	retval = 0;
+cleanup:
+	if (db) {
+		rl_close(db);
+	}
+	return retval;
+}
+
+static int basic_test_sadd_sunionstore(int _commit)
+{
+	int retval = 0;
+	fprintf(stderr, "Start basic_test_sadd_sunionstore %d\n", _commit);
+
+	rlite *db = NULL;
+	RL_CALL_VERBOSE(setup_db, RL_OK, &db, _commit, 1);
+	unsigned char *key = UNSIGN("my key");
+	long keylen = strlen((char *)key);
+	unsigned char *key2 = UNSIGN("my key2");
+	long key2len = strlen((char *)key2);
+	unsigned char *target = UNSIGN("my target");
+	long targetlen = strlen((char *)target);
+	unsigned char *datas[2] = {UNSIGN("my data"), UNSIGN("my data2")};
+	long dataslen[2] = {strlen((char *)datas[0]), strlen((char *)datas[1]) };
+	unsigned char *datas2[3] = {UNSIGN("other data2"), UNSIGN("yet another data"), UNSIGN("my data")};
+	long datas2len[3] = {strlen((char *)datas2[0]), strlen((char *)datas2[1]), strlen((char *)datas2[2])};
+	unsigned char *keys[2] = {key, key2};
+	long keyslen[2] = {keylen, key2len};
+	unsigned char **datasunion;
+	long *datasunionlen, datasc, i;
+	long added;
+
+	RL_CALL_VERBOSE(rl_sadd, RL_OK, db, key, keylen, 2, datas, dataslen, NULL);
+	RL_CALL_VERBOSE(rl_sadd, RL_OK, db, key2, key2len, 3, datas2, datas2len, NULL);
+	if (_commit) {
+		RL_CALL_VERBOSE(rl_commit, RL_OK, db);
+		RL_CALL_VERBOSE(rl_is_balanced, RL_OK, db);
+	}
+
+	RL_CALL_VERBOSE(rl_sunionstore, RL_OK, db, target, targetlen, 2, keys, keyslen, &added);
+
+	if (added != 4) {
+		fprintf(stderr, "Expected added %ld to be %d on line %d\n", added, 2, __LINE__);
+		retval = RL_UNEXPECTED;
+		goto cleanup;
+	}
+
+	datasc = added;
+	RL_CALL_VERBOSE(rl_srandmembers, RL_OK, db, target, targetlen, 0, &datasc, &datasunion, &datasunionlen);
+
+#define ASSERT_IN_4(s, l)\
+	if (!IS_EQUAL(s, l, datasunion[0], datasunionlen[0]) &&\
+			!IS_EQUAL(s, l, datasunion[1], datasunionlen[1]) &&\
+			!IS_EQUAL(s, l, datasunion[2], datasunionlen[2]) &&\
+			!IS_EQUAL(s, l, datasunion[3], datasunionlen[3])\
+			) {\
+		fprintf(stderr, "Expected union to contains \"%s\" (%ld) on line %d\n", datas[0], dataslen[0], __LINE__);\
+		retval = RL_UNEXPECTED;\
+		goto cleanup;\
+	}
+
+	ASSERT_IN_4(datas[0], dataslen[0]);
+	ASSERT_IN_4(datas[1], dataslen[1]);
+	ASSERT_IN_4(datas2[0], datas2len[0]);
+	ASSERT_IN_4(datas2[1], datas2len[1]);
+
+	for (i = 0; i < datasc; i++) {
+		rl_free(datasunion[i]);
+	}
+	rl_free(datasunion);
+	rl_free(datasunionlen);
+
+
+	fprintf(stderr, "End basic_test_sadd_sunionstore\n");
 	retval = 0;
 cleanup:
 	if (db) {
@@ -869,6 +918,7 @@ RL_TEST_MAIN_START(type_set_test)
 		RL_TEST(basic_test_sadd_sinter, i);
 		RL_TEST(basic_test_sadd_sinterstore, i);
 		RL_TEST(basic_test_sadd_sunion, i);
+		RL_TEST(basic_test_sadd_sunionstore, i);
 		RL_TEST(fuzzy_test_srandmembers_unique, 10, i);
 		RL_TEST(fuzzy_test_srandmembers_unique, 1000, i);
 	}
