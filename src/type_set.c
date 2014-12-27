@@ -296,6 +296,28 @@ cleanup:
 	return retval;
 }
 
+int rl_spop(struct rlite *db, const unsigned char *key, long keylen, unsigned char **member, long *memberlen)
+{
+	int retval;
+	long set_page_number, *member_page;
+	unsigned char *digest;
+	rl_btree *set;
+	RL_CALL(rl_set_get_objects, RL_OK, db, key, keylen, &set_page_number, &set, 0);
+	RL_CALL(rl_btree_random_element, RL_OK, db, set, (void **)&digest, (void **)&member_page);
+	RL_CALL(rl_multi_string_get, RL_OK, db, *member_page, member, memberlen);
+	rl_multi_string_delete(db, *member_page);
+	retval = rl_btree_remove_element(db, set, set_page_number, digest);
+	if (retval == RL_DELETED) {
+		RL_CALL(rl_key_delete, RL_OK, db, key, keylen);
+	}
+	else if (retval != RL_OK) {
+		goto cleanup;
+	}
+	retval = RL_OK;
+cleanup:
+	return retval;
+}
+
 int rl_set_pages(struct rlite *db, long page, short *pages)
 {
 	rl_btree *btree;
