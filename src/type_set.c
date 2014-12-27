@@ -209,6 +209,35 @@ cleanup:
 	return retval;
 }
 
+int rl_set_iterator_next(rl_set_iterator *iterator, unsigned char **member, long *memberlen)
+{
+	void *tmp;
+	long page;
+	int retval = rl_btree_iterator_next(iterator, NULL, &tmp);
+	if (retval == RL_OK) {
+		page = *(long *)tmp;
+		rl_free(tmp);
+		RL_CALL(rl_multi_string_get, RL_OK, iterator->db, page, member, memberlen);
+	}
+cleanup:
+	return retval;
+}
+
+int rl_set_iterator_destroy(rl_set_iterator *iterator)
+{
+	return rl_btree_iterator_destroy(iterator);
+}
+
+int rl_smembers(struct rlite *db, rl_set_iterator **iterator, const unsigned char *key, long keylen)
+{
+	int retval;
+	rl_btree *set;
+	RL_CALL(rl_set_get_objects, RL_OK, db, key, keylen, NULL, &set, 0);
+	RL_CALL(rl_btree_iterator_create, RL_OK, db, set, iterator);
+cleanup:
+	return retval;
+}
+
 int rl_set_pages(struct rlite *db, long page, short *pages)
 {
 	rl_btree *btree;
