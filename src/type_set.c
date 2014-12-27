@@ -534,6 +534,102 @@ cleanup:
 	return retval;
 }
 
+int rl_sunion(struct rlite *db, int keyc, unsigned char **keys, long *keyslen, long *_membersc, unsigned char ***_members, long **_memberslen)
+{
+	int retval, found;
+	rl_btree **sets = NULL;
+	rl_btree_iterator *iterator;
+	unsigned char **members = NULL;
+	long *memberslen = NULL, i, j, member_page;
+	long membersc = 0, maxmemberc = 0;
+	void *tmp;
+
+	if (keyc == 0) {
+		retval = RL_NOT_FOUND;
+		goto cleanup;
+	}
+
+	RL_MALLOC(sets, sizeof(rl_btree *) * keyc);
+	for (i = 0; i < keyc; i++) {
+		retval = rl_set_get_objects(db, keys[i], keyslen[i], NULL, &sets[i], 0);
+		if (retval == RL_NOT_FOUND) {
+			sets[i] = NULL;
+		}
+		else if (retval != RL_OK) {
+			goto cleanup;
+		}
+		else {
+			maxmemberc += sets[i]->number_of_elements;
+		}
+	}
+
+	if (maxmemberc == 0) {
+		*_membersc = 0;
+		retval = RL_NOT_FOUND;
+		goto cleanup;
+	}
+	RL_MALLOC(members, sizeof(unsigned char *) * maxmemberc);
+	RL_MALLOC(memberslen, sizeof(long) * maxmemberc);
+
+	for (i = 0; i < keyc; i++) {
+		if (!sets[i]) {
+			continue;
+		}
+		RL_CALL(rl_btree_iterator_create, RL_OK, db, sets[i], &iterator);
+
+		while ((retval = rl_btree_iterator_next(iterator, NULL, &tmp)) == RL_OK) {
+			member_page = *(long *)tmp;
+			rl_free(tmp);
+			RL_CALL(rl_multi_string_get, RL_OK, db, member_page, &members[membersc], &memberslen[membersc]);
+			found = 0;
+			for (j = 0; j < membersc; j++) {
+				if (memberslen[membersc] == memberslen[j] && memcmp(members[membersc], members[j], memberslen[membersc]) == 0) {
+					found = 1;
+					break;
+				}
+			}
+			if (found) {
+				rl_free(members[membersc]);
+			}
+			else {
+				membersc++;
+			}
+		}
+		iterator = NULL;
+
+		if (retval != RL_END) {
+			goto cleanup;
+		}
+	}
+
+	*_membersc = membersc;
+	if (membersc == maxmemberc) {
+		*_members = members;
+		*_memberslen = memberslen;
+	}
+	else {
+		*_members = realloc(members, sizeof(unsigned char *) * membersc);
+		if (*_members == NULL) {
+			retval = RL_OUT_OF_MEMORY;
+			goto cleanup;
+		}
+		*_memberslen = realloc(memberslen, sizeof(long) * membersc);
+		if (*_memberslen == NULL) {
+			retval = RL_OUT_OF_MEMORY;
+			goto cleanup;
+		}
+	}
+
+	retval = RL_OK;
+cleanup:
+	if (retval != RL_OK) {
+		rl_free(members);
+		rl_free(memberslen);
+	}
+	rl_free(sets);
+	return retval;
+}
+
 int rl_set_pages(struct rlite *db, long page, short *pages)
 {
 	rl_btree *btree;

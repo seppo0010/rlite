@@ -515,6 +515,81 @@ cleanup:
 	return retval;
 }
 
+static int basic_test_sadd_sunion(int _commit)
+{
+	int retval = 0;
+	fprintf(stderr, "Start basic_test_sadd_sunion %d\n", _commit);
+
+	rlite *db = NULL;
+	RL_CALL_VERBOSE(setup_db, RL_OK, &db, _commit, 1);
+	unsigned char *key = UNSIGN("my key");
+	long keylen = strlen((char *)key);
+	unsigned char *key2 = UNSIGN("my key2");
+	long key2len = strlen((char *)key2);
+	unsigned char *datas[2] = {UNSIGN("my data"), UNSIGN("my data2")};
+	long dataslen[2] = {strlen((char *)datas[0]), strlen((char *)datas[1]) };
+	unsigned char *datas2[3] = {UNSIGN("other data2"), UNSIGN("yet another data"), UNSIGN("my data")};
+	long datas2len[3] = {strlen((char *)datas2[0]), strlen((char *)datas2[1]), strlen((char *)datas2[2])};
+	unsigned char *keys[2] = {key, key2};
+	long keyslen[2] = {keylen, key2len};
+	unsigned char **datasunion;
+	long *datasunionlen, datasc, i;
+
+	RL_CALL_VERBOSE(rl_sadd, RL_OK, db, key, keylen, 2, datas, dataslen, NULL);
+	RL_CALL_VERBOSE(rl_sadd, RL_OK, db, key2, key2len, 3, datas2, datas2len, NULL);
+	if (_commit) {
+		RL_CALL_VERBOSE(rl_commit, RL_OK, db);
+		RL_CALL_VERBOSE(rl_is_balanced, RL_OK, db);
+	}
+
+	RL_CALL_VERBOSE(rl_sunion, RL_OK, db, 2, keys, keyslen, &datasc, &datasunion, &datasunionlen);
+
+	if (datasc != 4) {
+		fprintf(stderr, "Expected datasc %ld to be %d on line %d\n", datasc, 2, __LINE__);
+		retval = RL_UNEXPECTED;
+		goto cleanup;
+	}
+
+	if (datasunionlen[0] != dataslen[1] || memcmp(datasunion[0], datas[1], dataslen[1]) != 0) {
+		fprintf(stderr, "Expected datasunion[0] to be \"%s\" but got \"%s\" (%ld) instead on line %d\n", datas[1], datasunion[0], datasunionlen[0], __LINE__);
+		retval = RL_UNEXPECTED;
+		goto cleanup;
+	}
+
+	if (datasunionlen[1] != dataslen[0] || memcmp(datasunion[1], datas[0], dataslen[0]) != 0) {
+		fprintf(stderr, "Expected datasunion[1] to be \"%s\" but got \"%s\" (%ld) instead on line %d\n", datas[0], datasunion[0], datasunionlen[0], __LINE__);
+		retval = RL_UNEXPECTED;
+		goto cleanup;
+	}
+
+	if (datasunionlen[2] != datas2len[1] || memcmp(datasunion[2], datas2[1], datas2len[1]) != 0) {
+		fprintf(stderr, "Expected datasunion[2] to be \"%s\" but got \"%s\" (%ld) instead on line %d\n", datas2[1], datasunion[2], datasunionlen[2], __LINE__);
+		retval = RL_UNEXPECTED;
+		goto cleanup;
+	}
+
+	if (datasunionlen[3] != datas2len[0] || memcmp(datasunion[3], datas2[0], datas2len[0]) != 0) {
+		fprintf(stderr, "Expected datasunion[3] to be \"%s\" but got \"%s\" (%ld) instead on line %d\n", datas2[0], datasunion[3], datasunionlen[3], __LINE__);
+		retval = RL_UNEXPECTED;
+		goto cleanup;
+	}
+
+	for (i = 0; i < datasc; i++) {
+		rl_free(datasunion[i]);
+	}
+	rl_free(datasunion);
+	rl_free(datasunionlen);
+
+
+	fprintf(stderr, "End basic_test_sadd_sunion\n");
+	retval = 0;
+cleanup:
+	if (db) {
+		rl_close(db);
+	}
+	return retval;
+}
+
 static int basic_test_sadd_smove(int _commit)
 {
 	int retval = 0;
@@ -793,6 +868,7 @@ RL_TEST_MAIN_START(type_set_test)
 		RL_TEST(basic_test_sadd_sdiff_nonexistent, i);
 		RL_TEST(basic_test_sadd_sinter, i);
 		RL_TEST(basic_test_sadd_sinterstore, i);
+		RL_TEST(basic_test_sadd_sunion, i);
 		RL_TEST(fuzzy_test_srandmembers_unique, 10, i);
 		RL_TEST(fuzzy_test_srandmembers_unique, 1000, i);
 	}
