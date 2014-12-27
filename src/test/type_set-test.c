@@ -19,7 +19,7 @@ static int basic_test_sadd_sismember(int _commit)
 	long keylen = strlen((char *)key);
 	unsigned char *data = UNSIGN("my data");
 	long datalen = strlen((char *)data);
-	unsigned char *data2 = UNSIGN("my data2");
+	unsigned char *data2 = UNSIGN("other data2");
 	long data2len = strlen((char *)data2);
 	unsigned char *datas[2] = {data, data2};
 	long dataslen[2] = {datalen, data2len};
@@ -63,7 +63,7 @@ static int basic_test_sadd_scard(int _commit)
 	long keylen = strlen((char *)key);
 	unsigned char *data = UNSIGN("my data");
 	long datalen = strlen((char *)data);
-	unsigned char *data2 = UNSIGN("my data2");
+	unsigned char *data2 = UNSIGN("other data2");
 	long data2len = strlen((char *)data2);
 	unsigned char *datas[2] = {data, data2};
 	long dataslen[2] = {datalen, data2len};
@@ -121,7 +121,7 @@ static int basic_test_sadd_srem(int _commit)
 	long keylen = strlen((char *)key);
 	unsigned char *data = UNSIGN("my data");
 	long datalen = strlen((char *)data);
-	unsigned char *data2 = UNSIGN("my data2");
+	unsigned char *data2 = UNSIGN("other data2");
 	long data2len = strlen((char *)data2);
 	unsigned char *datas[2] = {data, data2};
 	long dataslen[2] = {datalen, data2len};
@@ -183,7 +183,7 @@ static int basic_test_sadd_spop(int _commit)
 	long keylen = strlen((char *)key);
 	unsigned char *data = UNSIGN("my data");
 	long datalen = strlen((char *)data);
-	unsigned char *data2 = UNSIGN("my data2");
+	unsigned char *data2 = UNSIGN("other data2");
 	long data2len = strlen((char *)data2);
 	unsigned char *datas[2] = {data, data2};
 	long dataslen[2] = {datalen, data2len};
@@ -236,7 +236,7 @@ static int basic_test_sadd_sdiff(int _commit)
 	long key2len = strlen((char *)key2);
 	unsigned char *data = UNSIGN("my data");
 	long datalen = strlen((char *)data);
-	unsigned char *data2 = UNSIGN("my data2");
+	unsigned char *data2 = UNSIGN("other data2");
 	long data2len = strlen((char *)data2);
 	unsigned char *keys[2] = {key, key2};
 	long keyslen[2] = {keylen, key2len};
@@ -295,7 +295,7 @@ static int basic_test_sadd_sdiff_nonexistent(int _commit)
 	long key2len = strlen((char *)key2);
 	unsigned char *data = UNSIGN("my data");
 	long datalen = strlen((char *)data);
-	unsigned char *data2 = UNSIGN("my data2");
+	unsigned char *data2 = UNSIGN("other data2");
 	long data2len = strlen((char *)data2);
 	unsigned char *keys[2] = {key, key2};
 	long keyslen[2] = {keylen, key2len};
@@ -349,7 +349,7 @@ static int basic_test_sadd_sdiffstore(int _commit)
 	long key2len = strlen((char *)key2);
 	unsigned char *data = UNSIGN("my data");
 	long datalen = strlen((char *)data);
-	unsigned char *data2 = UNSIGN("my data2");
+	unsigned char *data2 = UNSIGN("other data2");
 	long data2len = strlen((char *)data2);
 	unsigned char *keys[2] = {key, key2};
 	long keyslen[2] = {keylen, key2len};
@@ -405,7 +405,7 @@ static int basic_test_sadd_smove(int _commit)
 	long key2len = strlen((char *)key2);
 	unsigned char *data = UNSIGN("my data");
 	long datalen = strlen((char *)data);
-	unsigned char *data2 = UNSIGN("my data2");
+	unsigned char *data2 = UNSIGN("other data2");
 	long data2len = strlen((char *)data2);
 	unsigned char *datas[2] = {data, data2};
 	long dataslen[2] = {datalen, data2len};
@@ -462,7 +462,7 @@ static int basic_test_sadd_smembers(int _commit)
 	long keylen = strlen((char *)key);
 	unsigned char *data = UNSIGN("my data");
 	long datalen = strlen((char *)data);
-	unsigned char *data2 = UNSIGN("my data2");
+	unsigned char *data2 = UNSIGN("other data2");
 	long data2len = strlen((char *)data2);
 	unsigned char *datas[2] = {data, data2};
 	long dataslen[2] = {datalen, data2len};
