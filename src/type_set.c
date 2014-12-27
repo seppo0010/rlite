@@ -91,10 +91,12 @@ int rl_sadd(struct rlite *db, const unsigned char *key, long keylen, int memberc
 				goto cleanup;
 			}
 			count++;
-		} else if (retval == RL_FOUND) {
+		}
+		else if (retval == RL_FOUND) {
 			rl_free(digest);
 			digest = NULL;
-		} else {
+		}
+		else {
 			goto cleanup;
 		}
 	}
@@ -194,7 +196,8 @@ int rl_smove(struct rlite *db, const unsigned char *source, long sourcelen, cons
 		retval = rl_btree_remove_element(db, source_hash, source_page_number, digest);
 		if (retval == RL_DELETED) {
 			RL_CALL(rl_key_delete, RL_OK, db, source, sourcelen);
-		} else if (retval != RL_OK) {
+		}
+		else if (retval != RL_OK) {
 			goto cleanup;
 		}
 	}
@@ -249,7 +252,8 @@ static int contains(long size, long *elements, long element)
 	return 0;
 }
 
-int rl_srandmembers(struct rlite *db, const unsigned char *key, long keylen, int repeat, long *memberc, unsigned char ***_members, long **_memberslen) {
+int rl_srandmembers(struct rlite *db, const unsigned char *key, long keylen, int repeat, long *memberc, unsigned char ***_members, long **_memberslen)
+{
 	long i;
 	int retval;
 	long *member;
@@ -274,7 +278,8 @@ int rl_srandmembers(struct rlite *db, const unsigned char *key, long keylen, int
 			if (contains(i, used_members, *member)) {
 				i--;
 				continue;
-			} else {
+			}
+			else {
 				used_members[i] = *member;
 			}
 		}

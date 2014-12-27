@@ -296,7 +296,8 @@ int rl_btree_random_element(rlite *db, rl_btree *btree, void **score, void **val
 			pos = (long)(((float)rand() / RAND_MAX) * (1 + node->size));
 			RL_CALL(rl_read, RL_FOUND, db, btree->type->btree_node_type, node->children[pos], btree, &_node, 1);
 			node = _node;
-		} else {
+		}
+		else {
 			pos = (long)(((float)rand() / RAND_MAX) * node->size);
 			if (score) {
 				*score = node->scores[pos];

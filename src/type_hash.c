@@ -75,7 +75,7 @@ cleanup:
 	return retval;
 }
 
-int rl_hset(struct rlite *db, const unsigned char *key, long keylen, unsigned char *field, long fieldlen, unsigned char *data, long datalen, long* added, int update)
+int rl_hset(struct rlite *db, const unsigned char *key, long keylen, unsigned char *field, long fieldlen, unsigned char *data, long datalen, long *added, int update)
 {
 	int retval;
 	long hash_page_number;
@@ -110,7 +110,7 @@ int rl_hset(struct rlite *db, const unsigned char *key, long keylen, unsigned ch
 			rl_free(digest);
 			digest = NULL;
 		}
-		else if (retval != RL_NOT_FOUND){
+		else if (retval != RL_NOT_FOUND) {
 			goto cleanup;
 		}
 	}
@@ -182,10 +182,12 @@ int rl_hmget(struct rlite *db, const unsigned char *key, long keylen, int fieldc
 		if (retval == RL_FOUND) {
 			hashkey = tmp;
 			rl_multi_string_get(db, hashkey->value_page, &data[i], &datalen[i]);
-		} else if (retval == RL_NOT_FOUND) {
+		}
+		else if (retval == RL_NOT_FOUND) {
 			data[i] = NULL;
 			datalen[i] = -1;
-		} else {
+		}
+		else {
 			goto cleanup;
 		}
 	}
@@ -363,7 +365,7 @@ int rl_hincrby(struct rlite *db, const unsigned char *key, long keylen, unsigned
 		data = NULL;
 
 		if ((increment < 0 && value < 0 && increment < (LLONG_MIN - value)) ||
-			(increment > 0 && value > 0 && increment > (LLONG_MAX - value))) {
+		        (increment > 0 && value > 0 && increment > (LLONG_MAX - value))) {
 			rl_free(digest);
 			retval = RL_OVERFLOW;
 			goto cleanup;
@@ -384,10 +386,11 @@ int rl_hincrby(struct rlite *db, const unsigned char *key, long keylen, unsigned
 				*newvalue = value;
 			}
 		}
-		else if (retval != RL_NOT_FOUND){
+		else if (retval != RL_NOT_FOUND) {
 			goto cleanup;
 		}
-	} else if (retval == RL_NOT_FOUND) {
+	}
+	else if (retval == RL_NOT_FOUND) {
 		RL_MALLOC(data, sizeof(unsigned char *) * MAX_LLONG_DIGITS);
 		datalen = snprintf((char *)data, MAX_LLONG_DIGITS, "%ld", increment);
 
@@ -398,7 +401,8 @@ int rl_hincrby(struct rlite *db, const unsigned char *key, long keylen, unsigned
 		if (newvalue) {
 			*newvalue = increment;
 		}
-	} else {
+	}
+	else {
 		goto cleanup;
 	}
 
@@ -437,8 +441,8 @@ int rl_hincrbyfloat(struct rlite *db, const unsigned char *key, long keylen, uns
 		data[datalen] = '\0';
 		value = strtod((char *)data, &end);
 		if (isspace(((char *)data)[0]) || end[0] != '\0' ||
-				(errno == ERANGE && (value == HUGE_VAL || value == -HUGE_VAL || value == 0)) ||
-				errno == EINVAL || isnan(value)) {
+		        (errno == ERANGE && (value == HUGE_VAL || value == -HUGE_VAL || value == 0)) ||
+		        errno == EINVAL || isnan(value)) {
 			rl_free(digest);
 			retval = RL_NAN;
 			goto cleanup;
@@ -460,10 +464,11 @@ int rl_hincrbyfloat(struct rlite *db, const unsigned char *key, long keylen, uns
 				*newvalue = value;
 			}
 		}
-		else if (retval != RL_NOT_FOUND){
+		else if (retval != RL_NOT_FOUND) {
 			goto cleanup;
 		}
-	} else if (retval == RL_NOT_FOUND) {
+	}
+	else if (retval == RL_NOT_FOUND) {
 		RL_MALLOC(data, sizeof(unsigned char) * MAX_DOUBLE_DIGITS);
 		datalen = snprintf((char *)data, MAX_DOUBLE_DIGITS, "%lf", increment);
 
@@ -474,7 +479,8 @@ int rl_hincrbyfloat(struct rlite *db, const unsigned char *key, long keylen, uns
 		if (newvalue) {
 			*newvalue = increment;
 		}
-	} else {
+	}
+	else {
 		goto cleanup;
 	}
 
