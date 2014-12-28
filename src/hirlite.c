@@ -1585,6 +1585,21 @@ cleanup:
 	return;
 }
 
+static void spopCommand(rliteClient *c) {
+	unsigned char *member;
+	long memberlen;
+	int retval = rl_spop(c->context->db, UNSIGN(c->argv[1]), c->argvlen[1], &member, &memberlen);
+	RLITE_SERVER_ERR(c, retval);
+	if (retval == RL_NOT_FOUND) {
+		c->reply = createReplyObject(RLITE_REPLY_NIL);
+	} else if (retval == RL_OK) {
+		c->reply = createStringObject((char *)member, memberlen);
+		rl_free(member);
+	}
+cleanup:
+	return;
+}
+
 static void delCommand(rliteClient *c) {
 	int deleted = 0, j, retval;
 
@@ -1757,7 +1772,7 @@ struct rliteCommand rliteCommandTable[] = {
 	{"smove",smoveCommand,4,"wF",0,1,2,1,0,0},
 	{"sismember",sismemberCommand,3,"rF",0,1,1,1,0,0},
 	{"scard",scardCommand,2,"rF",0,1,1,1,0,0},
-	// {"spop",spopCommand,2,"wRsF",0,NULL,1,1,1,0,0},
+	{"spop",spopCommand,2,"wRsF",0,1,1,1,0,0},
 	// {"srandmember",srandmemberCommand,-2,"rR",0,NULL,1,1,1,0,0},
 	// {"sinter",sinterCommand,-2,"rS",0,NULL,1,-1,1,0,0},
 	// {"sinterstore",sinterstoreCommand,-3,"wm",0,NULL,1,-1,1,0,0},

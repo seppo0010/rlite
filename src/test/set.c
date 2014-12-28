@@ -253,6 +253,64 @@ static int test_smove() {
 	return 0;
 }
 
+static int test_spop() {
+	rliteContext *context = rliteConnect(":memory:", 0);
+	size_t argvlen[100];
+
+	char *m1 = "mymember", *m2 = "member2";
+	sadd(context, "myset", m1);
+	sadd(context, "myset", m2);
+
+	rliteReply* reply;
+	{
+		char* argv[100] = {"spop", "myset", NULL};
+
+		reply = rliteCommandArgv(context, populateArgvlen(argv, argvlen), argv, argvlen);
+		if (reply->type != RLITE_REPLY_STRING) {
+			fprintf(stderr, "Expected reply to be STRING, got %d instead on line %d\n", reply->type, __LINE__);
+			return 1;
+		}
+
+		if (!(reply->len == (int)strlen(m1) && memcmp(reply->str, m1, reply->len) == 0) &&
+			!(reply->len == (int)strlen(m2) && memcmp(reply->str, m2, reply->len) == 0)) {
+			fprintf(stderr, "Expected reply to be \"%s\" or \"%s\", got \"%s\" (%d) instead on line %d\n", m1, m2, reply->str, reply->len, __LINE__);
+			return 1;
+		}
+		rliteFreeReplyObject(reply);
+	}
+
+	{
+		char* argv[100] = {"spop", "myset", NULL};
+
+		reply = rliteCommandArgv(context, populateArgvlen(argv, argvlen), argv, argvlen);
+		if (reply->type != RLITE_REPLY_STRING) {
+			fprintf(stderr, "Expected reply to be STRING, got %d instead on line %d\n", reply->type, __LINE__);
+			return 1;
+		}
+
+		if (!(reply->len == (int)strlen(m1) && memcmp(reply->str, m1, reply->len) == 0) &&
+			!(reply->len == (int)strlen(m2) && memcmp(reply->str, m2, reply->len) == 0)) {
+			fprintf(stderr, "Expected reply to be \"%s\" or \"%s\", got \"%s\" (%d) instead on line %d\n", m1, m2, reply->str, reply->len, __LINE__);
+			return 1;
+		}
+		rliteFreeReplyObject(reply);
+	}
+
+	{
+		char* argv[100] = {"spop", "myset", NULL};
+
+		reply = rliteCommandArgv(context, populateArgvlen(argv, argvlen), argv, argvlen);
+		if (reply->type != RLITE_REPLY_NIL) {
+			fprintf(stderr, "Expected reply to be NIL, got %d instead on line %d\n", reply->type, __LINE__);
+			return 1;
+		}
+		rliteFreeReplyObject(reply);
+	}
+
+	rliteFree(context);
+	return 0;
+}
+
 int run_set() {
 	if (test_sadd() != 0) {
 		return 1;
@@ -264,6 +322,9 @@ int run_set() {
 		return 1;
 	}
 	if (test_smove() != 0) {
+		return 1;
+	}
+	if (test_spop() != 0) {
 		return 1;
 	}
 	return 0;
