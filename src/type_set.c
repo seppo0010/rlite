@@ -409,6 +409,10 @@ int rl_sdiffstore(struct rlite *db, unsigned char *target, long targetlen, int k
 	unsigned char **members = NULL;
 	long *memberslen = NULL, membersc, i;
 
+	retval = rl_key_delete_with_value(db, target, targetlen);
+	if (retval != RL_NOT_FOUND && retval != RL_OK) {
+		goto cleanup;
+	}
 	// this might be done more efficiently since we don't really need to have all members in memory
 	// at the same time, but this is so easy to do...
 	RL_CALL(rl_sdiff, RL_OK, db, keyc, keys, keyslen, &membersc, &members, &memberslen);
@@ -521,6 +525,10 @@ int rl_sinterstore(struct rlite *db, unsigned char *target, long targetlen, int 
 	unsigned char **members = NULL;
 	long *memberslen = NULL, membersc, i;
 
+	retval = rl_key_delete_with_value(db, target, targetlen);
+	if (retval != RL_NOT_FOUND && retval != RL_OK) {
+		goto cleanup;
+	}
 	// this might be done more efficiently since we don't really need to have all members in memory
 	// at the same time, but this is so easy to do...
 	RL_CALL(rl_sinter, RL_OK, db, keyc, keys, keyslen, &membersc, &members, &memberslen);
@@ -646,6 +654,10 @@ int rl_sunionstore(struct rlite *db, unsigned char *target, long targetlen, int 
 	long *member_object = NULL;
 	long count = 0;
 
+	retval = rl_key_delete_with_value(db, target, targetlen);
+	if (retval != RL_NOT_FOUND && retval != RL_OK) {
+		goto cleanup;
+	}
 	if (keyc == 0) {
 		retval = RL_NOT_FOUND;
 		goto cleanup;
