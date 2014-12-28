@@ -1673,6 +1673,53 @@ cleanup:
 	free(memberslen);
 }
 
+static void sinterCommand(rliteClient *c) {
+	int keyc = c->argc - 1, i, retval;
+	unsigned char **keys = NULL, **members = NULL;
+	long *keyslen = NULL, j, membersc, *memberslen = NULL;
+
+	keys = malloc(sizeof(unsigned char *) * keyc);
+	if (!keys) {
+		__rliteSetError(c->context, RLITE_ERR_OOM, "Out of memory");
+		goto cleanup;
+	}
+	keyslen = malloc(sizeof(long) * keyc);
+	if (!keyslen) {
+		__rliteSetError(c->context, RLITE_ERR_OOM, "Out of memory");
+		goto cleanup;
+	}
+	for (i = 0; i < keyc; i++) {
+		keys[i] = UNSIGN(c->argv[1 + i]);
+		keyslen[i] = c->argvlen[1 + i];
+	}
+	retval = rl_sinter(c->context->db, keyc, keys, keyslen, &membersc, &members, &memberslen);
+	RLITE_SERVER_ERR(c, retval);
+	c->reply = createReplyObject(RLITE_REPLY_ARRAY);
+	c->reply->elements = membersc;
+	if (membersc > 0) {
+		c->reply->element = malloc(sizeof(rliteReply*) * membersc);
+		if (!c->reply->element) {
+			free(c->reply);
+			__rliteSetError(c->context, RLITE_ERR_OOM, "Out of memory");
+			goto cleanup;
+		}
+		for (j = 0; j < membersc; j++) {
+			c->reply->element[j] = createStringObject((char *)members[j], memberslen[j]);
+		}
+	}
+cleanup:
+	if (members) {
+		for (j = 0; j < membersc; j++) {
+			rl_free(members[j]);
+		}
+		rl_free(members);
+		rl_free(memberslen);
+	}
+	free(keys);
+	free(keyslen);
+	return;
+}
+
 static void delCommand(rliteClient *c) {
 	int deleted = 0, j, retval;
 
@@ -1847,13 +1894,13 @@ struct rliteCommand rliteCommandTable[] = {
 	{"scard",scardCommand,2,"rF",0,1,1,1,0,0},
 	{"spop",spopCommand,2,"wRsF",0,1,1,1,0,0},
 	{"srandmember",srandmemberCommand,-2,"rR",0,1,1,1,0,0},
-	// {"sinter",sinterCommand,-2,"rS",0,NULL,1,-1,1,0,0},
+	{"sinter",sinterCommand,-2,"rS",0,1,-1,1,0,0},
 	// {"sinterstore",sinterstoreCommand,-3,"wm",0,NULL,1,-1,1,0,0},
 	// {"sunion",sunionCommand,-2,"rS",0,NULL,1,-1,1,0,0},
 	// {"sunionstore",sunionstoreCommand,-3,"wm",0,NULL,1,-1,1,0,0},
 	// {"sdiff",sdiffCommand,-2,"rS",0,NULL,1,-1,1,0,0},
 	// {"sdiffstore",sdiffstoreCommand,-3,"wm",0,NULL,1,-1,1,0,0},
-	// {"smembers",sinterCommand,2,"rS",0,NULL,1,1,1,0,0},
+	{"smembers",sinterCommand,2,"rS",0,1,1,1,0,0},
 	// {"sscan",sscanCommand,-3,"rR",0,NULL,1,1,1,0,0},
 	{"zadd",zaddCommand,-4,"wmF",0,1,1,1,0,0},
 	{"zincrby",zincrbyCommand,4,"wmF",0,1,1,1,0,0},
