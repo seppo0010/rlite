@@ -1934,7 +1934,7 @@ static void getKeyEncoding(rliteClient *c, char *encoding, unsigned char *key, l
 			unsigned char *key = UNSIGN(c->argv[2]), *value = NULL;
 			long keylen = c->argvlen[2];
 			long len, valuelen;
-			rl_btree_iterator *iterator = NULL;
+			rl_hash_iterator *iterator = NULL;
 			int retval = rl_hlen(c->context->db, key, keylen, &len);
 			int hashtable = c->context->hashtableLimitEntries < (size_t)len;
 			if (!hashtable) {
@@ -1957,6 +1957,42 @@ static void getKeyEncoding(rliteClient *c, char *encoding, unsigned char *key, l
 			const char *enc = hashtable ? "hashtable" : "ziplist";
 			memcpy(encoding, enc, (strlen(enc) + 1) * sizeof(char));
 		}
+		else if (type == RL_TYPE_SET) {
+			unsigned char *key = UNSIGN(c->argv[2]), *value = NULL;
+			long keylen = c->argvlen[2];
+			long len, valuelen;
+			rl_set_iterator *iterator = NULL;
+			int retval = rl_scard(c->context->db, key, keylen, &len);
+			RLITE_SERVER_ERR(c, retval);
+			int hashtable = 512 < (size_t)len;
+			if (!hashtable) {
+				char o[40];
+				int retval = rl_smembers(c->context->db, &iterator, key, keylen);
+				RLITE_SERVER_ERR(c, retval);
+				while ((retval = rl_set_iterator_next(iterator, &value, &valuelen)) == RL_OK) {
+					if (valuelen > 38) {
+						hashtable = 1;
+						rl_free(value);
+						retval = RL_END;
+						break;
+					}
+					memcpy(o, value, sizeof(char) * valuelen);
+					o[valuelen] = 0;
+					if (getLongLongFromObject(o, NULL) != RLITE_OK) {
+						hashtable = 1;
+						rl_free(value);
+						retval = RL_END;
+						break;
+					}
+					rl_free(value);
+				}
+				if (retval != RL_END) {
+					goto cleanup;
+				}
+			}
+			const char *enc = hashtable ? "hashtable" : "intset";
+			memcpy(encoding, enc, (strlen(enc) + 1) * sizeof(char));
+		}
 	}
 cleanup:
 	return;
@@ -1977,24 +2013,13 @@ static void debugCommand(rliteClient *c) {
 	} else if (!strcasecmp(c->argv[1],"loadaof")) {
 		c->reply = createStatusObject(RLITE_STR_OK);
 	} else if (!strcasecmp(c->argv[1],"object") && c->argc == 3) {
-		unsigned char type;
 		char encoding[100];
-		if (rl_key_get(c->context->db, UNSIGN(c->argv[2]), c->argvlen[2], &type, NULL, NULL, NULL)) {
+		if (rl_key_get(c->context->db, UNSIGN(c->argv[2]), c->argvlen[2], NULL, NULL, NULL, NULL)) {
 			getKeyEncoding(c, encoding, UNSIGN(c->argv[2]), c->argvlen[2]);
-			if (type == RL_TYPE_ZSET) {
-				addReplyStatusFormat(c->context,
-					"Value at:0xfaceadd refcount:1 "
-					"encoding:%s serializedlength:0 "
-					"lru:0 lru_seconds_idle:0", encoding);
-			}
-			else if (type == RL_TYPE_HASH) {
-				addReplyStatusFormat(c->context,
-					"Value at:0xfaceadd refcount:1 "
-					"encoding:%s serializedlength:0 "
-					"lru:0 lru_seconds_idle:0",
-					encoding
-					);
-			}
+			addReplyStatusFormat(c->context,
+				"Value at:0xfaceadd refcount:1 "
+				"encoding:%s serializedlength:0 "
+				"lru:0 lru_seconds_idle:0", encoding);
 		}
 	} else if (!strcasecmp(c->argv[1],"sdslen") && c->argc == 3) {
 		// TODO
