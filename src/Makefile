@@ -22,7 +22,7 @@ DEBUG += ${DEBUG.gcc}
 CFLAGS += ${CFLAGS.gcc}
 endif
 
-LIBS=-lm -lssl -lcrypto
+LIBS=-lm
 
 all: libhirlite.a
 
