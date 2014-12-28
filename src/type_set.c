@@ -201,6 +201,9 @@ int rl_smove(struct rlite *db, const unsigned char *source, long sourcelen, cons
 			goto cleanup;
 		}
 	}
+	else {
+		goto cleanup;
+	}
 	RL_CALL(rl_set_get_objects, RL_OK, db, destination, destinationlen, &target_page_number, &target_hash, 1);
 	RL_MALLOC(member_page_number, sizeof(*member_page_number))
 	RL_CALL(rl_multi_string_set, RL_OK, db, member_page_number, member, memberlen);
