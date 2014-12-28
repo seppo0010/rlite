@@ -34,7 +34,7 @@ static int randomSadd(rliteContext* context, char *key, int elements) {
 		for (j = 0; j < len - 1; j++) {
 			argv[2 + i][j] = 'a' + (int)floor(((float)rand() / RAND_MAX) * 25);
 		}
-		argv[2 + i][len] = 0;
+		argv[2 + i][len - 1] = 0;
 	}
 	size_t argvlen[100];
 
@@ -49,6 +49,9 @@ static int randomSadd(rliteContext* context, char *key, int elements) {
 		return 1;
 	}
 	rliteFreeReplyObject(reply);
+	for (i = 0; i < elements; i++) {
+		free(argv[2 + i]);
+	}
 	return 0;
 }
 
