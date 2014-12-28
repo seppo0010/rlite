@@ -1600,6 +1600,47 @@ cleanup:
 	return;
 }
 
+static void srandmemberCommand(rliteClient *c) {
+	unsigned char **members = NULL;
+	long *memberslen = NULL;
+	long count, i;
+	int repeat;
+
+	if (c->argc == 2) {
+		count = 1;
+		repeat = 0;
+	} else {
+		if ((getLongFromObjectOrReply(c, c->argv[2], &count, NULL) != RLITE_OK)) return;
+		repeat = count < 0 ? 1 : 0;
+		count = count >= 0 ? count : -count;
+	}
+
+	int retval = rl_srandmembers(c->context->db, UNSIGN(c->argv[1]), c->argvlen[1], repeat, &count, &members, &memberslen);
+	RLITE_SERVER_ERR(c, retval);
+	if (retval == RL_OK && count > 0) {
+		if (c->argc == 2) {
+			c->reply = createStringObject((char *)members[0], memberslen[0]);
+		} else {
+			c->reply = createReplyObject(RLITE_REPLY_ARRAY);
+			c->reply->elements = count;
+			c->reply->element = malloc(sizeof(rliteReply*) * count);
+			for (i = 0; i < count; i++) {
+				c->reply->element[i] = createStringObject((char *)members[i], memberslen[i]);
+			}
+		}
+		for (i = 0; i < count; i++) {
+			rl_free(members[i]);
+		}
+		rl_free(members);
+		rl_free(memberslen);
+	} else {
+		c->reply = createReplyObject(RLITE_REPLY_ARRAY);
+		c->reply->elements = 0;
+	}
+cleanup:
+	return;
+}
+
 static void delCommand(rliteClient *c) {
 	int deleted = 0, j, retval;
 
@@ -1773,7 +1814,7 @@ struct rliteCommand rliteCommandTable[] = {
 	{"sismember",sismemberCommand,3,"rF",0,1,1,1,0,0},
 	{"scard",scardCommand,2,"rF",0,1,1,1,0,0},
 	{"spop",spopCommand,2,"wRsF",0,1,1,1,0,0},
-	// {"srandmember",srandmemberCommand,-2,"rR",0,NULL,1,1,1,0,0},
+	{"srandmember",srandmemberCommand,-2,"rR",0,1,1,1,0,0},
 	// {"sinter",sinterCommand,-2,"rS",0,NULL,1,-1,1,0,0},
 	// {"sinterstore",sinterstoreCommand,-3,"wm",0,NULL,1,-1,1,0,0},
 	// {"sunion",sunionCommand,-2,"rS",0,NULL,1,-1,1,0,0},
