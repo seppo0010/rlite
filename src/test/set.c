@@ -455,6 +455,51 @@ static int test_srandmember_10_non_unique() {
 	return 0;
 }
 
+static int test_srem() {
+	rliteContext *context = rliteConnect(":memory:", 0);
+	size_t argvlen[100];
+
+	char *m1 = "mymember", *m2 = "member2";
+	sadd(context, "myset", m1);
+	sadd(context, "myset", m2);
+
+	rliteReply* reply;
+	{
+		char* argv[100] = {"srem", "myset", m1, "other", m2, NULL};
+
+		reply = rliteCommandArgv(context, populateArgvlen(argv, argvlen), argv, argvlen);
+		if (reply->type != RLITE_REPLY_INTEGER) {
+			fprintf(stderr, "Expected reply to be INTEGER, got %d instead on line %d\n", reply->type, __LINE__);
+			return 1;
+		}
+
+		if (reply->integer != 2) {
+			fprintf(stderr, "Expected reply to be %d, got %lld instead on line %d\n", 2, reply->integer, __LINE__);
+			return 1;
+		}
+
+		rliteFreeReplyObject(reply);
+	}
+
+	{
+		char* argv[100] = {"exists", "mykey", NULL};
+
+		reply = rliteCommandArgv(context, populateArgvlen(argv, argvlen), argv, argvlen);
+		if (reply->type != RLITE_REPLY_INTEGER) {
+			fprintf(stderr, "Expected reply to be INTEGER, got %d instead on line %d\n", reply->type, __LINE__);
+			return 1;
+		}
+		if (reply->integer != 0) {
+			fprintf(stderr, "Expected reply to be %d, got %lld instead on line %d\n", 1, reply->integer, __LINE__);
+			return 1;
+		}
+		rliteFreeReplyObject(reply);
+	}
+
+	rliteFree(context);
+	return 0;
+}
+
 int run_set() {
 	if (test_sadd() != 0) {
 		return 1;
@@ -481,6 +526,9 @@ int run_set() {
 		return 1;
 	}
 	if (test_srandmember_10_non_unique() != 0) {
+		return 1;
+	}
+	if (test_srem() != 0) {
 		return 1;
 	}
 	return 0;
