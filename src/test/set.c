@@ -566,6 +566,59 @@ static int test_sinter() {
 	return 0;
 }
 
+static int test_sinterstore() {
+	rliteContext *context = rliteConnect(":memory:", 0);
+	size_t argvlen[100];
+
+	char *m1 = "mymember", *m2 = "member2", *s1 = "myset", *s2 = "myset2", *t = "target";
+	sadd(context, s1, m1);
+	sadd(context, s1, m2);
+	sadd(context, s2, m1);
+	sadd(context, s2, "meh");
+
+	rliteReply* reply;
+	{
+		char* argv[100] = {"sinterstore", t, s1, s2, NULL};
+
+		reply = rliteCommandArgv(context, populateArgvlen(argv, argvlen), argv, argvlen);
+		if (reply->type != RLITE_REPLY_INTEGER) {
+			fprintf(stderr, "Expected reply to be INTEGER, got %d instead on line %d\n", reply->type, __LINE__);
+			return 1;
+		}
+
+		if (reply->integer != 1) {
+			fprintf(stderr, "Expected reply size to be %d, got %lld instead on line %d\n", 1, reply->integer, __LINE__);
+			return 1;
+		}
+
+		rliteFreeReplyObject(reply);
+	}
+
+	{
+		char* argv[100] = {"smembers", t, NULL};
+
+		reply = rliteCommandArgv(context, populateArgvlen(argv, argvlen), argv, argvlen);
+		if (reply->type != RLITE_REPLY_ARRAY) {
+			fprintf(stderr, "Expected reply to be ARRAY, got %d instead on line %d\n", reply->type, __LINE__);
+			return 1;
+		}
+
+		if (reply->elements != 1) {
+			fprintf(stderr, "Expected reply size to be %d, got %lu instead on line %d\n", 1, reply->elements, __LINE__);
+			return 1;
+		}
+		if (reply->element[0]->len != (int)strlen(m1) || memcmp(reply->element[0]->str, m1, reply->element[0]->len) != 0) {
+			fprintf(stderr, "Expected reply->element[0] to be \"%s\", got \"%s\" (%d) instead on line %d\n", m1, reply->element[0]->str, reply->element[0]->len, __LINE__);
+			return 1;
+		}
+
+		rliteFreeReplyObject(reply);
+	}
+
+	rliteFree(context);
+	return 0;
+}
+
 int run_set() {
 	if (test_sadd() != 0) {
 		return 1;
@@ -601,6 +654,9 @@ int run_set() {
 		return 1;
 	}
 	if (test_sinter() != 0) {
+		return 1;
+	}
+	if (test_sinterstore() != 0) {
 		return 1;
 	}
 	return 0;

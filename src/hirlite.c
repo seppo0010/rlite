@@ -1720,6 +1720,36 @@ cleanup:
 	return;
 }
 
+static void sinterstoreCommand(rliteClient *c) {
+	int keyc = c->argc - 2, i, retval;
+	unsigned char **keys = NULL;
+	long *keyslen = NULL, membersc;
+	unsigned char *target = UNSIGN(c->argv[1]);
+	long targetlen = c->argvlen[1];
+
+	keys = malloc(sizeof(unsigned char *) * keyc);
+	if (!keys) {
+		__rliteSetError(c->context, RLITE_ERR_OOM, "Out of memory");
+		goto cleanup;
+	}
+	keyslen = malloc(sizeof(long) * keyc);
+	if (!keyslen) {
+		__rliteSetError(c->context, RLITE_ERR_OOM, "Out of memory");
+		goto cleanup;
+	}
+	for (i = 0; i < keyc; i++) {
+		keys[i] = UNSIGN(c->argv[2 + i]);
+		keyslen[i] = c->argvlen[2 + i];
+	}
+	retval = rl_sinterstore(c->context->db, target, targetlen, keyc, keys, keyslen, &membersc);
+	RLITE_SERVER_ERR(c, retval);
+	c->reply = createLongLongObject(membersc);
+cleanup:
+	free(keys);
+	free(keyslen);
+	return;
+}
+
 static void delCommand(rliteClient *c) {
 	int deleted = 0, j, retval;
 
@@ -1895,7 +1925,7 @@ struct rliteCommand rliteCommandTable[] = {
 	{"spop",spopCommand,2,"wRsF",0,1,1,1,0,0},
 	{"srandmember",srandmemberCommand,-2,"rR",0,1,1,1,0,0},
 	{"sinter",sinterCommand,-2,"rS",0,1,-1,1,0,0},
-	// {"sinterstore",sinterstoreCommand,-3,"wm",0,NULL,1,-1,1,0,0},
+	{"sinterstore",sinterstoreCommand,-3,"wm",0,1,-1,1,0,0},
 	// {"sunion",sunionCommand,-2,"rS",0,NULL,1,-1,1,0,0},
 	// {"sunionstore",sunionstoreCommand,-3,"wm",0,NULL,1,-1,1,0,0},
 	// {"sdiff",sdiffCommand,-2,"rS",0,NULL,1,-1,1,0,0},
