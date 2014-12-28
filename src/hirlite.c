@@ -1528,6 +1528,38 @@ cleanup:
 	rl_free(valueslen);
 }
 
+static void saddCommand(rliteClient *c) {
+	unsigned char *key = UNSIGN(c->argv[1]);
+	size_t keylen = c->argvlen[1];
+
+	int i, memberc = c->argc - 2;
+	unsigned char **members = NULL;
+	long *memberslen = NULL;
+	long count;
+
+	members = malloc(sizeof(unsigned char *) * memberc);
+	if (!members) {
+		__rliteSetError(c->context, RLITE_ERR_OOM, "Out of memory");
+		goto cleanup;
+	}
+	memberslen = malloc(sizeof(long) * memberc);
+	if (!memberslen) {
+		__rliteSetError(c->context, RLITE_ERR_OOM, "Out of memory");
+		goto cleanup;
+	}
+	for (i = 0; i < memberc; i++) {
+		members[i] = (unsigned char *)c->argv[2 + i];
+		memberslen[i] = (long)c->argvlen[2 + i];
+	}
+
+	int retval = rl_sadd(c->context->db, key, keylen, memberc, members, memberslen, &count);
+	RLITE_SERVER_ERR(c, retval);
+	c->reply = createLongLongObject(count);
+cleanup:
+	free(members);
+	free(memberslen);
+}
+
 static void delCommand(rliteClient *c) {
 	int deleted = 0, j, retval;
 
@@ -1695,7 +1727,7 @@ struct rliteCommand rliteCommandTable[] = {
 	// {"ltrim",ltrimCommand,4,"w",0,NULL,1,1,1,0,0},
 	// {"lrem",lremCommand,4,"w",0,NULL,1,1,1,0,0},
 	// {"rpoplpush",rpoplpushCommand,3,"wm",0,NULL,1,2,1,0,0},
-	// {"sadd",saddCommand,-3,"wmF",0,NULL,1,1,1,0,0},
+	{"sadd",saddCommand,-3,"wmF",0,1,1,1,0,0},
 	// {"srem",sremCommand,-3,"wF",0,NULL,1,1,1,0,0},
 	// {"smove",smoveCommand,4,"wF",0,NULL,1,2,1,0,0},
 	// {"sismember",sismemberCommand,3,"rF",0,NULL,1,1,1,0,0},
