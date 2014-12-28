@@ -1577,6 +1577,14 @@ cleanup:
 	return;
 }
 
+static void smoveCommand(rliteClient *c) {
+	int retval = rl_smove(c->context->db, UNSIGN(c->argv[1]), c->argvlen[1], UNSIGN(c->argv[2]), c->argvlen[2], UNSIGN(c->argv[3]), c->argvlen[3]);
+	RLITE_SERVER_ERR(c, retval);
+	c->reply = createLongLongObject(retval == RL_OK ? 1 : 0);
+cleanup:
+	return;
+}
+
 static void delCommand(rliteClient *c) {
 	int deleted = 0, j, retval;
 
@@ -1746,7 +1754,7 @@ struct rliteCommand rliteCommandTable[] = {
 	// {"rpoplpush",rpoplpushCommand,3,"wm",0,NULL,1,2,1,0,0},
 	{"sadd",saddCommand,-3,"wmF",0,1,1,1,0,0},
 	// {"srem",sremCommand,-3,"wF",0,NULL,1,1,1,0,0},
-	// {"smove",smoveCommand,4,"wF",0,NULL,1,2,1,0,0},
+	{"smove",smoveCommand,4,"wF",0,1,2,1,0,0},
 	{"sismember",sismemberCommand,3,"rF",0,1,1,1,0,0},
 	{"scard",scardCommand,2,"rF",0,1,1,1,0,0},
 	// {"spop",spopCommand,2,"wRsF",0,NULL,1,1,1,0,0},
