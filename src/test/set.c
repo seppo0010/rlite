@@ -12,7 +12,16 @@ static int populateArgvlen(char *argv[], size_t argvlen[]) {
 	return i;
 }
 
-static int sadd(rliteContext* context, char *key, int elements) {
+static void sadd(rliteContext* context, char *key, char *element) {
+	rliteReply* reply;
+	size_t argvlen[100];
+	char* argv[100] = {"sadd", key, element, NULL};
+
+	reply = rliteCommandArgv(context, populateArgvlen(argv, argvlen), argv, argvlen);
+	rliteFreeReplyObject(reply);
+}
+
+static int randomSadd(rliteContext* context, char *key, int elements) {
 	rliteReply* reply;
 	if (elements == 0) {
 		elements = 3;
@@ -70,7 +79,7 @@ static int test_scard() {
 	rliteContext *context = rliteConnect(":memory:", 0);
 	size_t argvlen[100];
 
-	if (sadd(context, "myset", 5) != 0) {
+	if (randomSadd(context, "myset", 5) != 0) {
 		return 1;
 	}
 
@@ -89,7 +98,7 @@ static int test_scard() {
 	}
 	rliteFreeReplyObject(reply);
 
-	if (sadd(context, "myset", 3) != 0) {
+	if (randomSadd(context, "myset", 3) != 0) {
 		return 1;
 	}
 
@@ -111,11 +120,53 @@ static int test_scard() {
 	return 0;
 }
 
+static int test_sismember() {
+	rliteContext *context = rliteConnect(":memory:", 0);
+	size_t argvlen[100];
+
+	sadd(context, "myset", "mymember");
+
+	rliteReply* reply;
+	char* argv[100] = {"sismember", "myset", "mymember", NULL};
+
+	reply = rliteCommandArgv(context, populateArgvlen(argv, argvlen), argv, argvlen);
+	if (reply->type != RLITE_REPLY_INTEGER) {
+		fprintf(stderr, "Expected reply to be INTEGER, got %d instead on line %d\n", reply->type, __LINE__);
+		return 1;
+	}
+
+	if (reply->integer != 1) {
+		fprintf(stderr, "Expected reply to be %d, got %lld instead on line %d\n", 1, reply->integer, __LINE__);
+		return 1;
+	}
+	rliteFreeReplyObject(reply);
+
+	char* argv2[100] = {"sismember", "myset", "not a member", NULL};
+
+	reply = rliteCommandArgv(context, populateArgvlen(argv2, argvlen), argv2, argvlen);
+	if (reply->type != RLITE_REPLY_INTEGER) {
+		fprintf(stderr, "Expected reply to be INTEGER, got %d instead on line %d\n", reply->type, __LINE__);
+		return 1;
+	}
+
+	if (reply->integer != 0) {
+		fprintf(stderr, "Expected reply to be %d, got %lld instead on line %d\n", 0, reply->integer, __LINE__);
+		return 1;
+	}
+	rliteFreeReplyObject(reply);
+
+	rliteFree(context);
+	return 0;
+}
+
 int run_set() {
 	if (test_sadd() != 0) {
 		return 1;
 	}
 	if (test_scard() != 0) {
+		return 1;
+	}
+	if (test_sismember() != 0) {
 		return 1;
 	}
 	return 0;
