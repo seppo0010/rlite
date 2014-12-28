@@ -443,7 +443,6 @@ int rl_sinter(struct rlite *db, int keyc, unsigned char **keys, long *keyslen, l
 	for (i = 0; i < keyc; i++) {
 		retval = rl_set_get_objects(db, keys[i], keyslen[i], NULL, &sets[i], 0);
 		if (retval != RL_OK) {
-			*_membersc = 0;
 			goto cleanup;
 		}
 		if (i == 0 || sets[i]->number_of_elements < maxmemberc) {
@@ -457,7 +456,6 @@ int rl_sinter(struct rlite *db, int keyc, unsigned char **keys, long *keyslen, l
 	}
 
 	if (maxmemberc == 0) {
-		*_membersc = 0;
 		retval = RL_NOT_FOUND;
 		goto cleanup;
 	}
@@ -509,6 +507,7 @@ int rl_sinter(struct rlite *db, int keyc, unsigned char **keys, long *keyslen, l
 	retval = RL_OK;
 cleanup:
 	if (retval != RL_OK) {
+		*_membersc = 0;
 		rl_free(members);
 		rl_free(memberslen);
 	}
