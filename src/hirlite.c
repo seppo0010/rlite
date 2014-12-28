@@ -1560,6 +1560,15 @@ cleanup:
 	free(memberslen);
 }
 
+static void scardCommand(rliteClient *c) {
+	long card = 0;
+	int retval = rl_scard(c->context->db, UNSIGN(c->argv[1]), c->argvlen[1], &card);
+	RLITE_SERVER_ERR(c, retval);
+	c->reply = createLongLongObject(card);
+cleanup:
+	return;
+}
+
 static void delCommand(rliteClient *c) {
 	int deleted = 0, j, retval;
 
@@ -1731,7 +1740,7 @@ struct rliteCommand rliteCommandTable[] = {
 	// {"srem",sremCommand,-3,"wF",0,NULL,1,1,1,0,0},
 	// {"smove",smoveCommand,4,"wF",0,NULL,1,2,1,0,0},
 	// {"sismember",sismemberCommand,3,"rF",0,NULL,1,1,1,0,0},
-	// {"scard",scardCommand,2,"rF",0,NULL,1,1,1,0,0},
+	{"scard",scardCommand,2,"rF",0,1,1,1,0,0},
 	// {"spop",spopCommand,2,"wRsF",0,NULL,1,1,1,0,0},
 	// {"srandmember",srandmemberCommand,-2,"rR",0,NULL,1,1,1,0,0},
 	// {"sinter",sinterCommand,-2,"rS",0,NULL,1,-1,1,0,0},
