@@ -375,8 +375,11 @@ int rl_sdiff(struct rlite *db, int keyc, unsigned char **keys, long *keyslen, lo
 		goto cleanup;
 	}
 
-	*_membersc = membersc;
-	if (membersc == source->number_of_elements) {
+	if (membersc == 0) {
+		retval = RL_NOT_FOUND;
+		goto cleanup;
+	}
+	else if (membersc == source->number_of_elements) {
 		*_members = members;
 		*_memberslen = memberslen;
 	}
@@ -395,6 +398,7 @@ int rl_sdiff(struct rlite *db, int keyc, unsigned char **keys, long *keyslen, lo
 
 	retval = RL_OK;
 cleanup:
+	*_membersc = membersc;
 	if (retval != RL_OK) {
 		rl_free(members);
 		rl_free(memberslen);
@@ -413,6 +417,7 @@ int rl_sdiffstore(struct rlite *db, unsigned char *target, long targetlen, int k
 	if (retval != RL_NOT_FOUND && retval != RL_OK) {
 		goto cleanup;
 	}
+	*added = 0;
 	// this might be done more efficiently since we don't really need to have all members in memory
 	// at the same time, but this is so easy to do...
 	RL_CALL(rl_sdiff, RL_OK, db, keyc, keys, keyslen, &membersc, &members, &memberslen);
@@ -529,6 +534,7 @@ int rl_sinterstore(struct rlite *db, unsigned char *target, long targetlen, int 
 	if (retval != RL_NOT_FOUND && retval != RL_OK) {
 		goto cleanup;
 	}
+	*added = 0;
 	// this might be done more efficiently since we don't really need to have all members in memory
 	// at the same time, but this is so easy to do...
 	RL_CALL(rl_sinter, RL_OK, db, keyc, keys, keyslen, &membersc, &members, &memberslen);
@@ -654,6 +660,7 @@ int rl_sunionstore(struct rlite *db, unsigned char *target, long targetlen, int 
 	long *member_object = NULL;
 	long count = 0;
 
+	*added = 0;
 	retval = rl_key_delete_with_value(db, target, targetlen);
 	if (retval != RL_NOT_FOUND && retval != RL_OK) {
 		goto cleanup;
