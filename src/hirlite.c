@@ -1631,13 +1631,13 @@ static void srandmemberCommand(rliteClient *c) {
 		for (i = 0; i < count; i++) {
 			rl_free(members[i]);
 		}
-		rl_free(members);
-		rl_free(memberslen);
 	} else {
 		c->reply = createReplyObject(RLITE_REPLY_ARRAY);
 		c->reply->elements = 0;
 	}
 cleanup:
+	rl_free(members);
+	rl_free(memberslen);
 	return;
 }
 
@@ -1973,6 +1973,7 @@ static void getKeyEncoding(rliteClient *c, char *encoding, unsigned char *key, l
 					if (valuelen > 38) {
 						hashtable = 1;
 						rl_free(value);
+						rl_set_iterator_destroy(iterator);
 						retval = RL_END;
 						break;
 					}
@@ -1981,6 +1982,7 @@ static void getKeyEncoding(rliteClient *c, char *encoding, unsigned char *key, l
 					if (getLongLongFromObject(o, NULL) != RLITE_OK) {
 						hashtable = 1;
 						rl_free(value);
+						rl_set_iterator_destroy(iterator);
 						retval = RL_END;
 						break;
 					}
