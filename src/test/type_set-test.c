@@ -665,7 +665,7 @@ static int basic_test_sadd_smove(int _commit)
 		RL_CALL_VERBOSE(rl_is_balanced, RL_OK, db);
 	}
 
-	RL_CALL_VERBOSE(rl_smove, RL_OK, db, key, keylen, key2, key2len, (unsigned char *)"new data", 8);
+	RL_CALL_VERBOSE(rl_smove, RL_NOT_FOUND, db, key, keylen, key2, key2len, (unsigned char *)"new data", 8);
 	RL_CALL_VERBOSE(rl_smove, RL_OK, db, key, keylen, key2, key2len, data, datalen);
 
 	if (_commit) {
