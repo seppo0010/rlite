@@ -82,9 +82,6 @@ int basic_insert_list_test(int options)
 	retval = 0;
 cleanup:
 	free(vals);
-	if (list) {
-		rl_list_destroy(db, list);
-	}
 	rl_close(db);
 	return retval;
 }
@@ -122,6 +119,7 @@ int basic_iterator_list_test(int _commit)
 			fprintf(stderr, "Failed to commit\n");
 			goto cleanup;
 		}
+		RL_CALL_VERBOSE(rl_read, RL_FOUND, db, &rl_data_type_list_long, list_page, &rl_list_type_long, (void **)&list, 1);
 	}
 
 	rl_list_iterator *iterator;
@@ -157,9 +155,6 @@ int basic_iterator_list_test(int _commit)
 	fprintf(stderr, "End basic_iterator_list_test %d\n", _commit);
 	retval = 0;
 cleanup:
-	if (list) {
-		rl_list_destroy(db, list);
-	}
 	rl_close(db);
 	return retval;
 }
@@ -240,6 +235,7 @@ int fuzzy_list_test(long size, long list_node_size, int _commit)
 			if (RL_OK != retval) {
 				goto cleanup;
 			}
+			RL_CALL_VERBOSE(rl_read, RL_FOUND, db, &rl_data_type_list_long, list_page, &rl_list_type_long, (void **)&list, 1);
 		}
 	}
 
@@ -274,9 +270,6 @@ cleanup:
 	free(elements);
 	free(nonelements);
 	free(flatten_elements);
-	if (list) {
-		rl_list_destroy(db, list);
-	}
 	rl_close(db);
 	return retval;
 }
@@ -353,9 +346,6 @@ int basic_delete_list_test(long elements, long element_to_remove, char *name)
 	retval = 0;
 cleanup:
 	free(vals);
-	if (list) {
-		rl_list_destroy(db, list);
-	}
 	rl_close(db);
 	return retval;
 }
@@ -375,7 +365,7 @@ int fuzzy_list_delete_test(long size, long list_node_size, int _commit)
 	if (RL_OK != retval) {
 		goto cleanup;
 	}
-	long list_page;
+	long list_page = db->next_empty_page;
 	RL_CALL_VERBOSE(rl_write, RL_OK, db, list->type->list_type, list_page, list);
 
 	long i, element, *element_copy;
@@ -405,6 +395,7 @@ int fuzzy_list_delete_test(long size, long list_node_size, int _commit)
 		if (RL_OK != retval) {
 			goto cleanup;
 		}
+		RL_CALL_VERBOSE(rl_read, RL_FOUND, db, &rl_data_type_list_long, list_page, &rl_list_type_long, (void **)&list, 1);
 	}
 
 	// rl_print_list(list);
@@ -432,9 +423,6 @@ int fuzzy_list_delete_test(long size, long list_node_size, int _commit)
 	retval = 0;
 cleanup:
 	rl_free(elements);
-	if (list) {
-		rl_list_destroy(db, list);
-	}
 	rl_close(db);
 	return retval;
 }
