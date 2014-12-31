@@ -25,18 +25,18 @@ static int rl_zset_create(rlite *db, long levels_page_number, rl_btree **btree, 
 	RL_CALL(rl_skiplist_create, RL_OK, db, &skiplist);
 	skiplist_page_number = db->next_empty_page;
 	RL_CALL(rl_write, RL_OK, db, &rl_data_type_skiplist, skiplist_page_number, skiplist);
-	RL_CALL(rl_list_create, RL_OK, db, &levels, &list_long);
+	RL_CALL(rl_list_create, RL_OK, db, &levels, &rl_list_type_long);
 	RL_CALL(rl_write, RL_OK, db, &rl_data_type_list_long, levels_page_number, levels);
 
 	long *scores_element;
 	RL_MALLOC(scores_element, sizeof(long));
 	*scores_element = scores_page_number;
-	RL_CALL(rl_list_add_element, RL_OK, db, levels, scores_element, 0);
+	RL_CALL(rl_list_add_element, RL_OK, db, levels, levels_page_number, scores_element, 0);
 
 	long *skiplist_element;
 	RL_MALLOC(skiplist_element, sizeof(long))
 	*skiplist_element = skiplist_page_number;
-	RL_CALL(rl_list_add_element, RL_OK, db, levels, skiplist_element, 1);
+	RL_CALL(rl_list_add_element, RL_OK, db, levels, levels_page_number, skiplist_element, 1);
 
 	if (btree) {
 		*btree = scores;
@@ -60,7 +60,7 @@ static int rl_zset_read(rlite *db, long levels_page_number, rl_btree **btree, lo
 	long scores_page_number, skiplist_page_number;
 	rl_list *levels;
 	int retval;
-	RL_CALL(rl_read, RL_FOUND, db, &rl_data_type_list_long, levels_page_number, &list_long, &tmp, 1);
+	RL_CALL(rl_read, RL_FOUND, db, &rl_data_type_list_long, levels_page_number, &rl_list_type_long, &tmp, 1);
 	levels = tmp;
 	if (btree || btree_page) {
 		RL_CALL(rl_list_get_element, RL_FOUND, db, levels, &tmp, 0);
@@ -140,7 +140,7 @@ static int remove_member_score_sha1(rlite *db, const unsigned char *key, long ke
 		goto cleanup;
 	}
 	if (retval == RL_DELETED) {
-		RL_CALL(rl_read, RL_FOUND, db, &rl_data_type_list_long, levels_page_number, &list_long, &tmp, 1);
+		RL_CALL(rl_read, RL_FOUND, db, &rl_data_type_list_long, levels_page_number, &rl_list_type_long, &tmp, 1);
 		RL_CALL(rl_list_delete, RL_OK, db, tmp);
 		RL_CALL(rl_delete, RL_OK, db, levels_page_number);
 		RL_CALL(rl_key_delete, RL_OK, db, key, keylen);
@@ -1058,7 +1058,7 @@ int rl_zset_pages(struct rlite *db, long page, short *pages)
 	void *tmp;
 	rl_list *levels;
 
-	RL_CALL(rl_read, RL_FOUND, db, &rl_data_type_list_long, page, &list_long, &tmp, 1);
+	RL_CALL(rl_read, RL_FOUND, db, &rl_data_type_list_long, page, &rl_list_type_long, &tmp, 1);
 	levels = tmp;
 	rl_list_pages(db, levels, pages);
 
@@ -1103,7 +1103,7 @@ int rl_zset_delete(rlite *db, const unsigned char *key, long keylen)
 	RL_CALL(rl_delete, RL_OK, db, skiplist_page);
 	RL_CALL(rl_btree_delete, RL_OK, db, scores);
 	RL_CALL(rl_delete, RL_OK, db, scores_page);
-	RL_CALL(rl_read, RL_FOUND, db, &rl_data_type_list_long, levels_page_number, &list_long, &tmp, 1);
+	RL_CALL(rl_read, RL_FOUND, db, &rl_data_type_list_long, levels_page_number, &rl_list_type_long, &tmp, 1);
 	RL_CALL(rl_list_delete, RL_OK, db, tmp);
 	RL_CALL(rl_delete, RL_OK, db, levels_page_number);
 	RL_CALL(rl_key_delete, RL_OK, db, key, keylen);

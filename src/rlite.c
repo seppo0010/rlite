@@ -939,6 +939,9 @@ int rl_database_is_balanced(rlite *db, short *pages)
 		else if (key->type == RL_TYPE_SET) {
 			rl_set_pages(db, key->value_page, pages);
 		}
+		else if (key->type == RL_TYPE_LIST) {
+			rl_llist_pages(db, key->value_page, pages);
+		}
 		else {
 			fprintf(stderr, "Unknown type %d\n", key->type);
 			goto cleanup;

@@ -15,9 +15,9 @@ int rl_multi_string_cmp(struct rlite *db, long p1, long p2, int *cmp)
 	unsigned char *str1, *str2;
 
 	int retval;
-	RL_CALL(rl_read, RL_FOUND, db, &rl_data_type_list_long, p1, &list_long, &_list, 0);
+	RL_CALL(rl_read, RL_FOUND, db, &rl_data_type_list_long, p1, &rl_list_type_long, &_list, 0);
 	list1 = _list;
-	RL_CALL(rl_read, RL_FOUND, db, &rl_data_type_list_long, p2, &list_long, &_list, 0);
+	RL_CALL(rl_read, RL_FOUND, db, &rl_data_type_list_long, p2, &rl_list_type_long, &_list, 0);
 	list2 = _list;
 
 	long node_number1 = list1->left, node_number2 = list2->left, i;
@@ -93,7 +93,7 @@ int rl_multi_string_cmp_str(struct rlite *db, long p1, unsigned char *str, long 
 	unsigned char *str1;
 
 	int retval;
-	RL_CALL(rl_read, RL_FOUND, db, &rl_data_type_list_long, p1, &list_long, &_list, 0);
+	RL_CALL(rl_read, RL_FOUND, db, &rl_data_type_list_long, p1, &rl_list_type_long, &_list, 0);
 	list1 = _list;
 
 	long node_number1 = list1->left, i, pos = 0;
@@ -159,7 +159,7 @@ int rl_multi_string_get(struct rlite *db, long number, unsigned char **_data, lo
 	void *_list, *_node;
 	unsigned char *data = NULL;
 	int retval;
-	RL_CALL(rl_read, RL_FOUND, db, &rl_data_type_list_long, number, &list_long, &_list, 0);
+	RL_CALL(rl_read, RL_FOUND, db, &rl_data_type_list_long, number, &rl_list_type_long, &_list, 0);
 	list = _list;
 	unsigned char *tmp_data;
 	long node_number = list->left, i, pos = 0, to_copy;
@@ -206,13 +206,13 @@ int rl_multi_string_set(struct rlite *db, long *number, const unsigned char *dat
 	long *page = NULL, to_copy;
 	unsigned char *string = NULL;
 	rl_list *list = NULL;
-	RL_CALL(rl_list_create, RL_OK, db, &list, &list_long);
+	RL_CALL(rl_list_create, RL_OK, db, &list, &rl_list_type_long);
 	*number = db->next_empty_page;
 	RL_CALL(rl_write, RL_OK, db, &rl_data_type_list_long, *number, list);
 	long pos = 0;
 	RL_MALLOC(page, sizeof(*page));
 	*page = size;
-	RL_CALL(rl_list_add_element, RL_OK, db, list, page, -1);
+	RL_CALL(rl_list_add_element, RL_OK, db, list, *number, page, -1);
 	page = NULL;
 	while (pos < size) {
 		RL_MALLOC(page, sizeof(*page));
@@ -226,7 +226,7 @@ int rl_multi_string_set(struct rlite *db, long *number, const unsigned char *dat
 		}
 		memcpy(string, &data[pos], sizeof(unsigned char) * to_copy);
 		string = NULL;
-		RL_CALL(rl_list_add_element, RL_OK, db, list, page, -1);
+		RL_CALL(rl_list_add_element, RL_OK, db, list, *number, page, -1);
 		page = NULL;
 		pos += to_copy;
 	}
@@ -249,7 +249,7 @@ int rl_multi_string_sha1(struct rlite *db, unsigned char digest[20], long number
 	rl_list *list;
 	rl_list_iterator *iterator = NULL;
 	int retval;
-	RL_CALL(rl_read, RL_FOUND, db, &rl_data_type_list_long, number, &list_long, &tmp, 0);
+	RL_CALL(rl_read, RL_FOUND, db, &rl_data_type_list_long, number, &rl_list_type_long, &tmp, 0);
 	list = tmp;
 
 	RL_CALL(rl_list_iterator_create, RL_OK, db, &iterator, list, 1);
@@ -290,7 +290,7 @@ int rl_multi_string_pages(struct rlite *db, long page, short *pages)
 	rl_list *list;
 	rl_list_iterator *iterator = NULL;
 	int retval;
-	RL_CALL(rl_read, RL_FOUND, db, &rl_data_type_list_long, page, &list_long, &tmp, 0);
+	RL_CALL(rl_read, RL_FOUND, db, &rl_data_type_list_long, page, &rl_list_type_long, &tmp, 0);
 	list = tmp;
 
 	RL_CALL(rl_list_pages, RL_OK, db, list, pages);
@@ -328,7 +328,7 @@ int rl_multi_string_delete(struct rlite *db, long page)
 	rl_list *list;
 	rl_list_iterator *iterator = NULL;
 	int retval;
-	RL_CALL(rl_read, RL_FOUND, db, &rl_data_type_list_long, page, &list_long, &tmp, 1);
+	RL_CALL(rl_read, RL_FOUND, db, &rl_data_type_list_long, page, &rl_list_type_long, &tmp, 1);
 	list = tmp;
 
 	RL_CALL(rl_list_iterator_create, RL_OK, db, &iterator, list, 1);

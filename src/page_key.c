@@ -8,8 +8,13 @@
 #include "type_zset.h"
 #include "type_hash.h"
 
-#define TYPES_LENGTH 3
+#define TYPES_LENGTH 4
 rl_type types[TYPES_LENGTH] = {
+	{
+		RL_TYPE_LIST,
+		"list",
+		rl_llist_delete
+	},
 	{
 		RL_TYPE_SET,
 		"set",

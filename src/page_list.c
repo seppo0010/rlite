@@ -13,7 +13,7 @@ int rl_print_list_node(rl_list *list, rl_list_node *node);
 #endif
 int rl_list_node_create(rlite *db, rl_list *list, rl_list_node **node);
 
-rl_list_type list_long = {
+rl_list_type rl_list_type_long = {
 	0,
 	0,
 	sizeof(long),
@@ -90,8 +90,8 @@ cleanup:
 
 void rl_list_init()
 {
-	list_long.list_type = &rl_data_type_list_long;
-	list_long.list_node_type = &rl_data_type_list_node_long;
+	rl_list_type_long.list_type = &rl_data_type_list_long;
+	rl_list_type_long.list_node_type = &rl_data_type_list_node_long;
 }
 
 int rl_list_node_create(rlite *UNUSED(db), rl_list *list, rl_list_node **_node)
@@ -255,7 +255,7 @@ cleanup:
 	return retval;
 }
 
-int rl_list_add_element(rlite *db, rl_list *list, void *element, long position)
+int rl_list_add_element(rlite *db, rl_list *list, long list_page, void *element, long position)
 {
 	rl_list_node *node, *sibling_node, *new_node, *old_node;
 	long pos;
@@ -345,6 +345,7 @@ int rl_list_add_element(rlite *db, rl_list *list, void *element, long position)
 
 succeeded:
 	list->size++;
+	RL_CALL(rl_write, RL_OK, db, list->type->list_type, list_page, list);
 cleanup:
 	if (retval != RL_OK) {
 		rl_free(element);
@@ -352,7 +353,7 @@ cleanup:
 	return retval;
 }
 
-int rl_list_remove_element(rlite *db, rl_list *list, long position)
+int rl_list_remove_element(rlite *db, rl_list *list, long list_page, long position)
 {
 	rl_list_node *node, *sibling_node;
 	long pos, number;
@@ -449,6 +450,7 @@ int rl_list_remove_element(rlite *db, rl_list *list, long position)
 succeeded:
 	retval = RL_OK;
 	list->size--;
+	RL_CALL(rl_write, RL_OK, db, list->type->list_type, list_page, list);
 cleanup:
 	return retval;
 }

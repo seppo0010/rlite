@@ -47,11 +47,11 @@ clang-analyzer:
 .c.o:
 	$(CC) $(ARCH) $(DEBUG) $(CFLAGS) -c $<
 
-librlite.a: rlite.o page_skiplist.o page_string.o page_list.o page_btree.o page_key.o page_multi_string.o page_long.o type_set.o type_zset.o type_hash.o util.o ../deps/utilfromredis.o ../deps/sha1.o
-	ar -cq librlite.a rlite.o page_skiplist.o page_string.o page_list.o page_btree.o page_key.o type_set.o type_zset.o type_hash.o page_long.o page_multi_string.o util.o utilfromredis.o sha1.o
+librlite.a: rlite.o page_skiplist.o page_string.o page_list.o page_btree.o page_key.o page_multi_string.o page_long.o type_list.o type_set.o type_zset.o type_hash.o util.o ../deps/utilfromredis.o ../deps/sha1.o
+	ar -cq librlite.a rlite.o page_skiplist.o page_string.o page_list.o page_btree.o page_key.o type_list.o type_set.o type_zset.o type_hash.o page_long.o page_multi_string.o util.o utilfromredis.o sha1.o
 
-buildtest: librlite.a test/rlite-test.o test/btree-test.o test/list-test.o test/string-test.o test/multi_string-test.o test/key-test.o test/type_set-test.o test/type_zset-test.o test/type_hash-test.o test/skiplist-test.o test/long-test.o test/test_util.o test/test.o
-	$(CC) $(DEBUG) $(CFLAGS) -o rlite-test test.o rlite-test.o btree-test.o list-test.o string-test.o multi_string-test.o key-test.o type_set-test.o type_zset-test.o type_hash-test.o skiplist-test.o long-test.o test_util.o librlite.a $(LIBS)
+buildtest: librlite.a test/rlite-test.o test/btree-test.o test/list-test.o test/string-test.o test/multi_string-test.o test/key-test.o test/type_list-test.o test/type_set-test.o test/type_zset-test.o test/type_hash-test.o test/skiplist-test.o test/long-test.o test/test_util.o test/test.o
+	$(CC) $(DEBUG) $(CFLAGS) -o rlite-test test.o rlite-test.o btree-test.o list-test.o string-test.o multi_string-test.o key-test.o type_list-test.o type_set-test.o type_zset-test.o type_hash-test.o skiplist-test.o long-test.o test_util.o librlite.a $(LIBS)
 
 test: buildtest
 	./rlite-test

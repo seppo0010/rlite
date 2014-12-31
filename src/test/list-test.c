@@ -18,10 +18,12 @@ int basic_insert_list_test(int options)
 	RL_CALL_VERBOSE(setup_db, RL_OK, &db, 0, 1);
 	db->number_of_databases = 1;
 	db->page_size = sizeof(long) * 2 + 12;
-	retval = rl_list_create(db, &list, &list_long);
+	retval = rl_list_create(db, &list, &rl_list_type_long);
 	if (RL_OK != retval) {
 		goto cleanup;
 	}
+	long list_page = db->next_empty_page;
+	RL_CALL_VERBOSE(rl_write, RL_OK, db, list->type->list_type, list_page, list);
 
 	long i, position;
 	for (i = 0; i < 7; i++) {
@@ -44,7 +46,7 @@ int basic_insert_list_test(int options)
 				retval = RL_UNEXPECTED;
 				goto cleanup;
 		}
-		retval = rl_list_add_element(db, list, vals[i], position);
+		retval = rl_list_add_element(db, list, list_page, vals[i], position);
 		if (0 != retval) {
 			fprintf(stderr, "Failed to add child %ld (%d)\n", i, retval);
 			goto cleanup;
@@ -96,16 +98,18 @@ int basic_iterator_list_test(int _commit)
 	rl_list *list = NULL;
 	int retval;
 	RL_CALL_VERBOSE(setup_db, RL_OK, &db, _commit, 1);
-	retval = rl_list_create(db, &list, &list_long);
+	retval = rl_list_create(db, &list, &rl_list_type_long);
 	if (RL_OK != retval) {
 		goto cleanup;
 	}
+	long list_page = db->next_empty_page;
+	RL_CALL_VERBOSE(rl_write, RL_OK, db, list->type->list_type, list_page, list);
 
 	long i, *element;
 	for (i = 0; i < ITERATOR_SIZE; i++) {
 		element = malloc(sizeof(long));
 		*element = i;
-		retval = rl_list_add_element(db, list, element, -1);
+		retval = rl_list_add_element(db, list, list_page, element, -1);
 		if (0 != retval) {
 			fprintf(stderr, "Failed to add element %ld\n", i);
 			goto cleanup;
@@ -183,10 +187,12 @@ int fuzzy_list_test(long size, long list_node_size, int _commit)
 	RL_CALL_VERBOSE(setup_db, RL_OK, &db, _commit, 1);
 	db->number_of_databases = 1;
 	db->page_size = sizeof(long) * list_node_size + 12;
-	retval = rl_list_create(db, &list, &list_long);
+	retval = rl_list_create(db, &list, &rl_list_type_long);
 	if (RL_OK != retval) {
 		goto cleanup;
 	}
+	long list_page = db->next_empty_page;
+	RL_CALL_VERBOSE(rl_write, RL_OK, db, list->type->list_type, list_page, list);
 
 	long i, element, *element_copy;
 
@@ -212,7 +218,7 @@ int fuzzy_list_test(long size, long list_node_size, int _commit)
 		element_copy = malloc(sizeof(long));
 		*element_copy = element;
 		positive = rand() % 2;
-		retval = rl_list_add_element(db, list, element_copy, positive ? position : (- i + position - 1));
+		retval = rl_list_add_element(db, list, list_page, element_copy, positive ? position : (- i + position - 1));
 		if (0 != retval) {
 			fprintf(stderr, "Failed to add child %ld\n", i);
 			goto cleanup;
@@ -286,16 +292,18 @@ int basic_delete_list_test(long elements, long element_to_remove, char *name)
 	RL_CALL_VERBOSE(setup_db, RL_OK, &db, 0, 1);
 	db->number_of_databases = 1;
 	db->page_size = sizeof(long) * 2 + 12;
-	retval = rl_list_create(db, &list, &list_long);
+	retval = rl_list_create(db, &list, &rl_list_type_long);
 	if (RL_OK != retval) {
 		goto cleanup;
 	}
+	long list_page = db->next_empty_page;
+	RL_CALL_VERBOSE(rl_write, RL_OK, db, list->type->list_type, list_page, list);
 	long pos_element_to_remove = element_to_remove >= 0 ? (element_to_remove) : (elements + element_to_remove);
 	long i, j;
 	for (i = 0; i < elements; i++) {
 		vals[i] = malloc(sizeof(long));
 		*vals[i] = i;
-		retval = rl_list_add_element(db, list, vals[i], i);
+		retval = rl_list_add_element(db, list, list_page, vals[i], i);
 		if (0 != retval) {
 			fprintf(stderr, "Failed to add child %ld\n", i);
 			goto cleanup;
@@ -309,7 +317,7 @@ int basic_delete_list_test(long elements, long element_to_remove, char *name)
 
 	// rl_print_list(list);
 
-	retval = rl_list_remove_element(db, list, element_to_remove);
+	retval = rl_list_remove_element(db, list, list_page, element_to_remove);
 	if (0 != retval) {
 		fprintf(stderr, "Failed to remove child %ld\n", element_to_remove - 1);
 		goto cleanup;
@@ -363,10 +371,12 @@ int fuzzy_list_delete_test(long size, long list_node_size, int _commit)
 	RL_CALL_VERBOSE(setup_db, RL_OK, &db, _commit, 1);
 	db->number_of_databases = 1;
 	db->page_size = sizeof(long) * list_node_size + 12;
-	retval = rl_list_create(db, &list, &list_long);
+	retval = rl_list_create(db, &list, &rl_list_type_long);
 	if (RL_OK != retval) {
 		goto cleanup;
 	}
+	long list_page;
+	RL_CALL_VERBOSE(rl_write, RL_OK, db, list->type->list_type, list_page, list);
 
 	long i, element, *element_copy;
 
@@ -380,7 +390,7 @@ int fuzzy_list_delete_test(long size, long list_node_size, int _commit)
 			elements[i] = element;
 			element_copy = malloc(sizeof(long));
 			*element_copy = element;
-			retval = rl_list_add_element(db, list, element_copy, -1);
+			retval = rl_list_add_element(db, list, list_page, element_copy, -1);
 			if (0 != retval) {
 				fprintf(stderr, "Failed to add child %ld\n", i);
 				goto cleanup;
@@ -401,7 +411,7 @@ int fuzzy_list_delete_test(long size, long list_node_size, int _commit)
 
 	while (size > 0) {
 		i = (long)(((float)rand() / RAND_MAX) * size);
-		retval = rl_list_remove_element(db, list, i);
+		retval = rl_list_remove_element(db, list, list_page, i);
 		if (0 != retval) {
 			fprintf(stderr, "Failed to delete child %ld\n", elements[i]);
 			goto cleanup;
