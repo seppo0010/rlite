@@ -101,6 +101,8 @@ int rl_list_node_create(rlite *UNUSED(db), rl_list *list, rl_list_node **_node)
 	RL_MALLOC(node, sizeof(rl_list_node));
 	RL_MALLOC(node->elements, sizeof(void *) * list->max_node_size);
 	node->size = 0;
+	node->left = 0;
+	node->right = 0;
 	*_node = node;
 	retval = RL_OK;
 cleanup:
@@ -450,7 +452,13 @@ int rl_list_remove_element(rlite *db, rl_list *list, long list_page, long positi
 succeeded:
 	retval = RL_OK;
 	list->size--;
-	RL_CALL(rl_write, RL_OK, db, list->type->list_type, list_page, list);
+	if (list->size == 0) {
+		RL_CALL(rl_delete, RL_OK, db, list_page);
+		retval = RL_DELETED;
+	}
+	else {
+		RL_CALL(rl_write, RL_OK, db, list->type->list_type, list_page, list);
+	}
 cleanup:
 	return retval;
 }

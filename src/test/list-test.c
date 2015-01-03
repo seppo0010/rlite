@@ -311,9 +311,21 @@ int basic_delete_list_test(long elements, long element_to_remove, char *name)
 	// rl_print_list(list);
 
 	retval = rl_list_remove_element(db, list, list_page, element_to_remove);
-	if (0 != retval) {
+	if (RL_OK != retval && retval != RL_DELETED) {
 		fprintf(stderr, "Failed to remove child %ld\n", element_to_remove - 1);
 		goto cleanup;
+	}
+
+	if (retval == RL_DELETED) {
+		if (elements == 1) {
+			fprintf(stderr, "End basic_delete_list_test (%ld, %ld)\n", elements, element_to_remove);
+			retval = RL_OK;
+			goto cleanup;
+		} else {
+			fprintf(stderr, "Deleted list that was not supposed to be deleted on line %d\n", __LINE__);
+			retval = RL_UNEXPECTED;
+			goto cleanup;
+		}
 	}
 
 	// rl_print_list(list);
@@ -403,6 +415,9 @@ int fuzzy_list_delete_test(long size, long list_node_size, int _commit)
 	while (size > 0) {
 		i = (long)(((float)rand() / RAND_MAX) * size);
 		retval = rl_list_remove_element(db, list, list_page, i);
+		if (retval == RL_DELETED && size == 1) {
+			break;
+		}
 		if (0 != retval) {
 			fprintf(stderr, "Failed to delete child %ld\n", elements[i]);
 			goto cleanup;
