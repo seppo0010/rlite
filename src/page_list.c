@@ -596,6 +596,9 @@ cleanup:
 
 int rl_list_iterator_destroy(rlite *UNUSED(db), rl_list_iterator *iterator)
 {
+	if (iterator->node) {
+		rl_list_node_nocache_destroy(iterator->db, iterator->node);
+	}
 	rl_free(iterator);
 	return RL_OK;
 }

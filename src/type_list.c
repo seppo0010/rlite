@@ -78,7 +78,9 @@ int rl_lpush(struct rlite *db, const unsigned char *key, long keylen, int valuec
 		RL_CALL(rl_multi_string_set, RL_OK, db, value, values[i], valueslen[i]);
 		RL_CALL(rl_list_add_element, RL_OK, db, list, list_page_number, value, 0);
 	}
-	*size = list->size;
+	if (size) {
+		*size = list->size;
+	}
 	retval = RL_OK;
 cleanup:
 	return retval;
@@ -129,6 +131,47 @@ int rl_lindex(struct rlite *db, const unsigned char *key, long keylen, long inde
 	page = *(long *)tmp;
 	RL_CALL(rl_multi_string_get, RL_OK, db, page, value, valuelen);
 	retval = RL_OK;
+cleanup:
+	return retval;
+}
+
+int rl_linsert(struct rlite *db, const unsigned char *key, long keylen, int after, unsigned char *pivot, long pivotlen, unsigned char *value, long valuelen, long *size)
+{
+	rl_list *list;
+	rl_list_iterator *iterator;
+	int retval, cmp;
+	void *tmp;
+	long list_page, *value_page;
+	long member;
+	long pos = 0;
+	RL_CALL(rl_llist_get_objects, RL_OK, db, key, keylen, &list_page, &list, 0);
+	RL_CALL(rl_list_iterator_create, RL_OK, db, &iterator, list, 1);
+	while ((retval = rl_list_iterator_next(iterator, &tmp)) == RL_OK) {
+		member = *(long *)tmp;
+		rl_free(tmp);
+		RL_CALL(rl_multi_string_cmp_str, RL_OK, db, member, pivot, pivotlen, &cmp);
+		if (cmp == 0) {
+			retval = RL_FOUND;
+			break;
+		}
+		pos++;
+	}
+
+	if (retval == RL_END) {
+		retval = RL_NOT_FOUND;
+	}
+	else {
+		rl_list_iterator_destroy(db, iterator);
+	}
+	if (retval == RL_FOUND) {
+		RL_MALLOC(value_page, sizeof(*value_page));
+		RL_CALL(rl_multi_string_set, RL_OK, db, value_page, value, valuelen);
+		RL_CALL(rl_list_add_element, RL_OK, db, list, list_page, value_page, pos + (after ? 1 : 0));
+		retval = RL_OK;
+	}
+	if (size) {
+		*size = list->size;
+	}
 cleanup:
 	return retval;
 }
