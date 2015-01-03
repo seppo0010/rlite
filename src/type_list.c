@@ -66,13 +66,13 @@ cleanup:
 	return retval;
 }
 
-int rl_lpush(struct rlite *db, const unsigned char *key, long keylen, int valuec, unsigned char **values, long *valueslen, long *size)
+int rl_lpush(struct rlite *db, const unsigned char *key, long keylen, int create, int valuec, unsigned char **values, long *valueslen, long *size)
 {
 	rl_list *list;
 	long list_page_number;
 	int retval, i;
 	long *value = NULL;
-	RL_CALL(rl_llist_get_objects, RL_OK, db, key, keylen, &list_page_number, &list, 1);
+	RL_CALL(rl_llist_get_objects, RL_OK, db, key, keylen, &list_page_number, &list, create ? 1 : 0);
 	for (i = 0; i < valuec; i++) {
 		RL_MALLOC(value, sizeof(*value));
 		RL_CALL(rl_multi_string_set, RL_OK, db, value, values[i], valueslen[i]);

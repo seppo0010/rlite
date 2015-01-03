@@ -17,7 +17,7 @@ static int create(rlite *db, unsigned char *key, long keylen, int maxsize, int _
 	value[1] = 0;
 	for (i = 0; i < maxsize; i++) {
 		value[0] = i % CHAR_MAX;
-		RL_CALL_VERBOSE(rl_lpush, RL_OK, db, key, keylen, 1, &value, &valuelen, &size);
+		RL_CALL_VERBOSE(rl_lpush, RL_OK, db, key, keylen, 1, 1, &value, &valuelen, &size);
 		RL_CALL_VERBOSE(rl_is_balanced, RL_OK, db);
 		if (size != i + 1) {
 			fprintf(stderr, "Expected size %ld to be %d on line %d\n", size, i + 1, __LINE__);
@@ -35,7 +35,7 @@ static int create(rlite *db, unsigned char *key, long keylen, int maxsize, int _
 		retval = RL_UNEXPECTED;
 		goto cleanup;
 	}
-	retval = 0;
+	retval = RL_OK;
 cleanup:
 	free(value);
 	return retval;
@@ -53,7 +53,7 @@ static int basic_test_lpush_llen(int maxsize, int _commit)
 	long keylen = strlen((char *)key);
 	value[1] = 0;
 	long size;
-	RL_CALL_VERBOSE(create, 0, db, key, keylen, maxsize, _commit);
+	RL_CALL_VERBOSE(create, RL_OK, db, key, keylen, maxsize, _commit);
 
 	RL_CALL_VERBOSE(rl_llen, RL_OK, db, key, keylen, &size);
 	if (size != maxsize) {
@@ -87,7 +87,7 @@ static int basic_test_lpush_lpop(int maxsize, int _commit)
 	value[1] = 0;
 	int i;
 
-	RL_CALL_VERBOSE(create, 0, db, key, keylen, maxsize, _commit);
+	RL_CALL_VERBOSE(create, RL_OK, db, key, keylen, maxsize, _commit);
 
 	for (i = maxsize - 1; i >= 0; i--) {
 		value[0] = i % CHAR_MAX;
@@ -130,7 +130,7 @@ static int basic_test_lpush_lindex(int maxsize, int _commit)
 	value[1] = 0;
 	int i;
 
-	RL_CALL_VERBOSE(create, 0, db, key, keylen, maxsize, _commit);
+	RL_CALL_VERBOSE(create, RL_OK, db, key, keylen, maxsize, _commit);
 
 	for (i = 0; i < maxsize; i++) {
 		value[0] = i % CHAR_MAX;
@@ -174,7 +174,7 @@ static int basic_test_lpush_linsert(int _commit)
 	unsigned char *testvalue;
 	long testvaluelen;
 
-	RL_CALL_VERBOSE(rl_lpush, RL_OK, db, key, keylen, 3, values, valueslen, NULL);
+	RL_CALL_VERBOSE(rl_lpush, RL_OK, db, key, keylen, 1, 3, values, valueslen, NULL);
 	if (_commit) {
 		RL_CALL_VERBOSE(rl_commit, RL_OK, db);
 		RL_CALL_VERBOSE(rl_is_balanced, RL_OK, db);
@@ -224,6 +224,42 @@ cleanup:
 	return retval;
 }
 
+static int basic_test_lpushx(int _commit)
+{
+	int retval = 0;
+	fprintf(stderr, "Start basic_test_lpushx %d\n", _commit);
+
+	rlite *db = NULL;
+	unsigned char *value = malloc(sizeof(unsigned char) * 2);
+	RL_CALL_VERBOSE(setup_db, RL_OK, &db, _commit, 1);
+	unsigned char *key = UNSIGN("my key");
+	long keylen = strlen((char *)key);
+	value[1] = 0;
+	long size;
+
+	RL_CALL_VERBOSE(rl_lpush, RL_NOT_FOUND, db, key, keylen, 0, 1, &key, &keylen, NULL);
+	RL_CALL_VERBOSE(rl_llen, RL_NOT_FOUND, db, key, keylen, &size);
+
+	RL_CALL_VERBOSE(create, RL_OK, db, key, keylen, 1, _commit);
+	RL_CALL_VERBOSE(rl_lpush, RL_OK, db, key, keylen, 0, 1, &key, &keylen, NULL);
+
+	RL_CALL_VERBOSE(rl_llen, RL_OK, db, key, keylen, &size);
+	if (size != 2) {
+		fprintf(stderr, "Expected size %ld to be %d on line %d\n", size, 2, __LINE__);
+		retval = RL_UNEXPECTED;
+		goto cleanup;
+	}
+
+	fprintf(stderr, "End basic_test_lpushx\n");
+	retval = 0;
+cleanup:
+	free(value);
+	if (db) {
+		rl_close(db);
+	}
+	return retval;
+}
+
 RL_TEST_MAIN_START(type_list_test)
 {
 	int i;
@@ -232,6 +268,7 @@ RL_TEST_MAIN_START(type_list_test)
 		RL_TEST(basic_test_lpush_lpop, 100, i);
 		RL_TEST(basic_test_lpush_lindex, 100, i);
 		RL_TEST(basic_test_lpush_linsert, i);
+		RL_TEST(basic_test_lpushx, i);
 	}
 }
 RL_TEST_MAIN_END
