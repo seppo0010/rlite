@@ -931,19 +931,22 @@ int rl_database_is_balanced(rlite *db, short *pages)
 		pages[key->value_page] = 1;
 		RL_CALL(rl_multi_string_pages, RL_OK, db, key->string_page, pages);
 		if (key->type == RL_TYPE_ZSET) {
-			rl_zset_pages(db, key->value_page, pages);
+			retval = rl_zset_pages(db, key->value_page, pages);
 		}
 		else if (key->type == RL_TYPE_HASH) {
-			rl_hash_pages(db, key->value_page, pages);
+			retval = rl_hash_pages(db, key->value_page, pages);
 		}
 		else if (key->type == RL_TYPE_SET) {
-			rl_set_pages(db, key->value_page, pages);
+			retval = rl_set_pages(db, key->value_page, pages);
 		}
 		else if (key->type == RL_TYPE_LIST) {
-			rl_llist_pages(db, key->value_page, pages);
+			retval = rl_llist_pages(db, key->value_page, pages);
 		}
 		else {
 			fprintf(stderr, "Unknown type %d\n", key->type);
+			goto cleanup;
+		}
+		if (retval != RL_OK) {
 			goto cleanup;
 		}
 		rl_free(tmp);
