@@ -14,6 +14,7 @@ int rl_llen(struct rlite *db, const unsigned char *key, long keylen, long *len);
 int rl_lpop(struct rlite *db, const unsigned char *key, long keylen, unsigned char **value, long *valuelen);
 int rl_lindex(struct rlite *db, const unsigned char *key, long keylen, long index, unsigned char **value, long *valuelen);
 int rl_linsert(struct rlite *db, const unsigned char *key, long keylen, int after, unsigned char *pivot, long pivotlen, unsigned char *value, long valuelen, long *size);
+int rl_lrange(struct rlite *db, const unsigned char *key, long keylen, long start, long stop, long *size, unsigned char ***values, long **valueslen);
 
 int rl_llist_pages(struct rlite *db, long page, short *pages);
 int rl_llist_delete(struct rlite *db, const unsigned char *key, long keylen);

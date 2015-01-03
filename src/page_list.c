@@ -610,8 +610,10 @@ int rl_list_iterator_next(rl_list_iterator *iterator, void **element)
 		retval = RL_END;
 		goto cleanup;
 	}
-	RL_MALLOC(*element, iterator->list->type->element_size);
-	memcpy(*element, iterator->node->elements[iterator->node_position], iterator->list->type->element_size);
+	if (element) {
+		RL_MALLOC(*element, iterator->list->type->element_size);
+		memcpy(*element, iterator->node->elements[iterator->node_position], iterator->list->type->element_size);
+	}
 	iterator->node_position += iterator->direction;
 	if (iterator->node_position == 0 || iterator->node_position == iterator->node->size) {
 		long next_node_page = iterator->direction == 1 ? iterator->node->right : iterator->node->left;

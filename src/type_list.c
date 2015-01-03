@@ -135,6 +135,73 @@ cleanup:
 	return retval;
 }
 
+int rl_lrange(struct rlite *db, const unsigned char *key, long keylen, long start, long stop, long *size, unsigned char ***_values, long **_valueslen)
+{
+	rl_list *list;
+	rl_list_iterator *iterator;
+	int retval;
+	long len;
+	long i;
+	void *tmp = NULL;
+	unsigned char **values = NULL;
+	long *valueslen = NULL;
+	RL_CALL(rl_llist_get_objects, RL_OK, db, key, keylen, NULL, &list, 0);
+	len = list->size;
+
+	if (start < 0) {
+		start += len;
+		if (start < 0) {
+			start = 0;
+		}
+	}
+
+	if (stop < 0) {
+		stop += len;
+		if (stop < 0) {
+			stop = 0;
+		}
+	}
+	if (stop >= len) {
+		stop = len - 1;
+	}
+	if (start > stop) {
+		*size = 0;
+		retval = RL_OK;
+		goto cleanup;
+	}
+
+	*size = stop - start + 1;
+
+	RL_MALLOC(values, sizeof(unsigned char *) * (*size));
+	RL_MALLOC(valueslen, sizeof(unsigned char *) * (*size));
+	RL_CALL(rl_list_iterator_create, RL_OK, db, &iterator, list, 1);
+	i = 0;
+	while (i <= stop && (retval = rl_list_iterator_next(iterator, i >= start ? &tmp : NULL)) == RL_OK) {
+		if (tmp) {
+			RL_CALL(rl_multi_string_get, RL_OK, db, *(long *)tmp, &values[i - start], &valueslen[i - start]);
+			rl_free(tmp);
+		}
+		i++;
+	}
+
+	if (retval != RL_END) {
+		rl_list_iterator_destroy(db, iterator);
+		if (retval != RL_OK) {
+			goto cleanup;
+		}
+	}
+
+	*_values = values;
+	*_valueslen = valueslen;
+	retval = RL_OK;
+cleanup:
+	if (retval != RL_OK) {
+		rl_free(values);
+		rl_free(valueslen);
+	}
+	return retval;
+}
+
 int rl_linsert(struct rlite *db, const unsigned char *key, long keylen, int after, unsigned char *pivot, long pivotlen, unsigned char *value, long valuelen, long *size)
 {
 	rl_list *list;
