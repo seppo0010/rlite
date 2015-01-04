@@ -520,7 +520,7 @@ int rl_read_from_cache(rlite *db, rl_data_type *type, long page_number, void **o
 
 int rl_read(rlite *db, rl_data_type *type, long page, void *context, void **obj, int cache)
 {
-	// printf("r %ld %s\n", page, type->name);
+	// fprintf(stderr, "r %ld %s\n", page, type->name);
 #ifdef DEBUG
 	int keep = 0;
 	long initial_page_size = db->page_size;
@@ -678,7 +678,7 @@ cleanup:
 
 int rl_write(struct rlite *db, rl_data_type *type, long page_number, void *obj)
 {
-	// printf("w %ld %s\n", page_number, type->name);
+	// fprintf(stderr, "w %ld %s\n", page_number, type->name);
 	rl_page *page = NULL;
 	long pos;
 	int retval;

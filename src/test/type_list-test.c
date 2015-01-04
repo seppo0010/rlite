@@ -328,6 +328,108 @@ cleanup:
 	return retval;
 }
 
+static int basic_test_lrem(int _commit)
+{
+	int retval;
+	unsigned char *key = UNSIGN("my key");
+	long keylen = strlen((char *)key);
+	unsigned char *value1 = UNSIGN("AA"), *value2 = UNSIGN("BB");
+	long valuelen = 2, deleted;
+	long size;
+	unsigned char **values;
+	long *valueslen;
+	fprintf(stderr, "Start basic_test_lrem %d\n", _commit);
+
+	rlite *db = NULL;
+	RL_CALL_VERBOSE(setup_db, RL_OK, &db, _commit, 1);
+
+	long i, times = 100;
+
+	for (i = 0; i < times; i++) {
+		RL_CALL_VERBOSE(rl_lpush, RL_OK, db, key, keylen, 1, 1, &value2, &valuelen, NULL);
+		RL_CALL_VERBOSE(rl_lpush, RL_OK, db, key, keylen, 1, 1, &value1, &valuelen, NULL);
+	}
+
+	RL_CALL_VERBOSE(rl_is_balanced, RL_OK, db);
+	if (_commit) {
+		RL_CALL_VERBOSE(rl_commit, RL_OK, db);
+		RL_CALL_VERBOSE(rl_is_balanced, RL_OK, db);
+	}
+
+	RL_CALL_VERBOSE(rl_lrem, RL_OK, db, key, keylen, 1, 2, value2, valuelen, &deleted);
+
+	if (_commit) {
+		RL_CALL_VERBOSE(rl_commit, RL_OK, db);
+		RL_CALL_VERBOSE(rl_is_balanced, RL_OK, db);
+	}
+
+	if (deleted != 2) {
+		fprintf(stderr, "Expected deleted to be 2, got %ld instead on line %d\n", deleted, __LINE__);
+		retval = RL_UNEXPECTED;
+		goto cleanup;
+	}
+
+#define TEST_VALUE(index, value)\
+	{\
+		unsigned char *testvalue;\
+		long testvaluelen;\
+		RL_CALL_VERBOSE(rl_lindex, RL_OK, db, key, keylen, index, &testvalue, &testvaluelen);\
+		if (testvaluelen != (long)strlen((char *)value) || memcmp(testvalue, value, testvaluelen) != 0) {\
+			fprintf(stderr, "Expected value to be \"%s\" (%ld); got \"%s\" (%ld) instead on line %d\n", value, (long)strlen((char *)value), testvalue, testvaluelen, __LINE__);\
+			retval = RL_UNEXPECTED;\
+			goto cleanup;\
+		}\
+		rl_free(testvalue);\
+	}
+
+	TEST_VALUE(0, value1);
+	TEST_VALUE(1, value1);
+	TEST_VALUE(2, value1);
+	TEST_VALUE(3, value2);
+	TEST_VALUE(4, value1);
+
+	RL_CALL_VERBOSE(rl_lrem, RL_OK, db, key, keylen, -1, 200, value1, valuelen, &deleted);
+
+	if (_commit) {
+		RL_CALL_VERBOSE(rl_commit, RL_OK, db);
+		RL_CALL_VERBOSE(rl_is_balanced, RL_OK, db);
+	}
+
+	if (deleted != 100) {
+		fprintf(stderr, "Expected deleted to be 100, got %ld instead on line %d\n", deleted, __LINE__);
+		retval = RL_UNEXPECTED;
+		goto cleanup;
+	}
+
+	RL_CALL_VERBOSE(rl_lrange, RL_OK, db, key, keylen, 0, -1, &size, &values, &valueslen);
+	for (i = 0; i < size; i++) {
+		if (valueslen[i] != 2 || values[i][0] != 'B' || values[i][1] != 'B') {
+			fprintf(stderr, "Expected all elements to be \"BB\", got \"%s\" (%ld) in position %ld on line %d", values[i], valueslen[i], i, __LINE__);
+			retval = RL_UNEXPECTED;
+			goto cleanup;
+		}
+		rl_free(values[i]);
+	}
+	rl_free(values);
+	rl_free(valueslen);
+
+	RL_CALL_VERBOSE(rl_lrem, RL_DELETED, db, key, keylen, 1, 0, value2, valuelen, &deleted);
+	if (deleted != 98) {
+		fprintf(stderr, "Expected deleted to be 98, got %ld instead on line %d\n", deleted, __LINE__);
+		retval = RL_UNEXPECTED;
+		goto cleanup;
+	}
+	RL_CALL_VERBOSE(rl_lrange, RL_NOT_FOUND, db, key, keylen, 0, -1, &size, &values, &valueslen);
+
+	fprintf(stderr, "End basic_test_lrem\n");
+	retval = RL_OK;
+cleanup:
+	if (db) {
+		rl_close(db);
+	}
+	return retval;
+}
+
 RL_TEST_MAIN_START(type_list_test)
 {
 	int i;
@@ -338,6 +440,7 @@ RL_TEST_MAIN_START(type_list_test)
 		RL_TEST(basic_test_lpush_linsert, i);
 		RL_TEST(basic_test_lpushx, i);
 		RL_TEST(basic_test_lrange, i);
+		RL_TEST(basic_test_lrem, i);
 	}
 }
 RL_TEST_MAIN_END

@@ -209,18 +209,20 @@ int rl_find_element_by_position(rlite *db, rl_list *list, long *position, long *
 	int retval = RL_OK;
 	if (*position >= 0) {
 		number = list->left;
-		do {
+		while (1) {
 			RL_CALL(rl_read, RL_FOUND, db, list->type->list_node_type, number, list, &tmp_node, 1);
 			node = tmp_node;
-			if (pos + node->size >= *position) {
+			if (pos + node->size > *position) {
 				break;
 			}
-			number = node->right;
-			if (number != 0) {
+			if (node->right != 0) {
+				number = node->right;
 				pos += node->size;
 			}
+			else {
+				break;
+			}
 		}
-		while (number != 0 && pos < *position);
 	}
 	else {
 		*position = list->size + *position + 1;
@@ -465,6 +467,7 @@ cleanup:
 
 int rl_list_is_balanced(rlite *db, rl_list *list)
 {
+	rl_list_iterator *iterator;
 	long i = 0, number = list->left, size = 0;
 	long prev_size;
 	long max_node = (list->size / list->max_node_size + 1) * 2;
@@ -508,6 +511,35 @@ int rl_list_is_balanced(rlite *db, rl_list *list)
 		retval = RL_UNEXPECTED;
 		goto cleanup;
 	}
+
+	i = 0;
+	retval = rl_list_iterator_create(db, &iterator, list, 1);
+	while ((retval = rl_list_iterator_next(iterator, NULL)) == RL_OK) {
+		i++;
+	}
+	if (retval != RL_END) {
+		goto cleanup;
+	}
+	if (i != size) {
+		fprintf(stderr, "Expected to iterate %ld times but only did %ld\n", size, i);
+		retval = RL_UNEXPECTED;
+		goto cleanup;
+	}
+
+	i = 0;
+	retval = rl_list_iterator_create(db, &iterator, list, -1);
+	while ((retval = rl_list_iterator_next(iterator, NULL)) == RL_OK) {
+		i++;
+	}
+	if (retval != RL_END) {
+		goto cleanup;
+	}
+	if (i != size) {
+		fprintf(stderr, "Expected to iterate %ld times but only did %ld\n", size, i);
+		retval = RL_UNEXPECTED;
+		goto cleanup;
+	}
+
 	retval = RL_OK;
 cleanup:
 	rl_free(right);
@@ -615,7 +647,7 @@ int rl_list_iterator_next(rl_list_iterator *iterator, void **element)
 		memcpy(*element, iterator->node->elements[iterator->node_position], iterator->list->type->element_size);
 	}
 	iterator->node_position += iterator->direction;
-	if (iterator->node_position == 0 || iterator->node_position == iterator->node->size) {
+	if (iterator->node_position < 0 || iterator->node_position == iterator->node->size) {
 		long next_node_page = iterator->direction == 1 ? iterator->node->right : iterator->node->left;
 		RL_CALL(rl_list_node_nocache_destroy, RL_OK, iterator->db, iterator->node);
 		iterator->node = NULL;
@@ -625,6 +657,10 @@ int rl_list_iterator_next(rl_list_iterator *iterator, void **element)
 			iterator->node = _node;
 			iterator->node_position = iterator->direction == 1 ? 0 : (iterator->node->size - 1);
 		}
+	}
+	if (iterator->node && iterator->node_position < -1) {
+		retval = RL_UNEXPECTED;
+		goto cleanup;
 	}
 	retval = RL_OK;
 cleanup:

@@ -243,6 +243,94 @@ cleanup:
 	return retval;
 }
 
+static int search(struct rlite *db, rl_list *list, unsigned char *value, long valuelen, long start, int direction, long *page, long *position)
+{
+	rl_list_iterator *iterator;
+	int retval, cmp;
+	long member;
+	long pos = direction > 0 ? 0 : list->size - 1;
+	void *tmp = NULL;
+	RL_CALL(rl_list_iterator_create, RL_OK, db, &iterator, list, direction);
+	while ((retval = rl_list_iterator_next(iterator, ((direction > 0 && pos >= start) || (direction < 0 && pos <= start)) ? &tmp : NULL)) == RL_OK) {
+		if (tmp == NULL) {
+			pos += direction;
+			continue;
+		}
+		member = *(long *)tmp;
+		rl_free(tmp);
+		RL_CALL(rl_multi_string_cmp_str, RL_OK, db, member, value, valuelen, &cmp);
+		if (cmp == 0) {
+			if (page) {
+				*page = member;
+			}
+			*position = pos;
+			retval = RL_FOUND;
+			break;
+		}
+		else {
+			pos += direction;
+		}
+	}
+
+	if (retval != RL_END) {
+		rl_list_iterator_destroy(db, iterator);
+	}
+	else {
+		retval = RL_NOT_FOUND;
+	}
+cleanup:
+	return retval;
+}
+
+int rl_lrem(struct rlite *db, const unsigned char *key, long keylen, int direction, long maxcount, unsigned char *value, long valuelen, long *_count)
+{
+	rl_list *list;
+	int retval;
+	long list_page, count = 0, pos, page = 0;
+
+	RL_CALL(rl_llist_get_objects, RL_OK, db, key, keylen, &list_page, &list, 0);
+	pos = direction > 0 ? 0 : list->size - 1;
+	if (maxcount == 0) {
+		maxcount = list->size;
+	}
+
+	while (1) {
+		retval = search(db, list, value, valuelen, pos, direction, &page, &pos);
+		if (retval == RL_NOT_FOUND) {
+			break;
+		}
+		else if (retval == RL_FOUND) {
+			count++;
+			RL_CALL(rl_multi_string_delete, RL_OK, db, page);
+			retval = rl_list_remove_element(db, list, list_page, pos);
+			if (retval == RL_DELETED) {
+				RL_CALL(rl_key_delete, RL_OK, db, key, keylen);
+				retval = RL_DELETED;
+				break;
+			}
+			else if (retval != RL_OK) {
+				goto cleanup;
+			}
+			if (direction < 0) {
+				// this element was already skipped
+				pos += direction;
+			}
+			if (count == maxcount) {
+				break;
+			}
+		}
+		else {
+			goto cleanup;
+		}
+	}
+	*_count = count;
+	if (retval != RL_DELETED) {
+		retval = RL_OK;
+	}
+cleanup:
+	return retval;
+}
+
 int rl_llist_pages(struct rlite *db, long page, short *pages)
 {
 	rl_list *list;
