@@ -331,6 +331,43 @@ cleanup:
 	return retval;
 }
 
+int rl_lset(struct rlite *db, const unsigned char *key, long keylen, long index, unsigned char *value, long valuelen)
+{
+	rl_list *list;
+	int retval;
+	long list_page, *value_page;
+	void *tmp;
+
+	RL_CALL(rl_llist_get_objects, RL_OK, db, key, keylen, &list_page, &list, 0);
+
+	// first add the new one and then delete the old one
+	// we could instead add an update to page_list
+	// but don't delete first since we might delete the only element
+
+	if (index < 0) {
+		index += list->size;
+		if (index < 0) {
+			retval = RL_NOT_FOUND;
+			goto cleanup;
+		}
+	}
+	if (index >= list->size) {
+		retval = RL_NOT_FOUND;
+		goto cleanup;
+	}
+
+	RL_MALLOC(value_page, sizeof(*value_page));
+	RL_CALL(rl_multi_string_set, RL_OK, db, value_page, value, valuelen);
+	RL_CALL(rl_list_add_element, RL_OK, db, list, list_page, value_page, index + 1);
+
+	RL_CALL(rl_list_get_element, RL_FOUND, db, list, (void **)&tmp, index);
+	RL_CALL(rl_multi_string_delete, RL_OK, db, *(long *)tmp);
+	RL_CALL(rl_list_remove_element, RL_OK, db, list, list_page, index);
+	retval = RL_OK;
+cleanup:
+	return retval;
+}
+
 int rl_llist_pages(struct rlite *db, long page, short *pages)
 {
 	rl_list *list;

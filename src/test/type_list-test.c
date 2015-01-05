@@ -430,6 +430,40 @@ cleanup:
 	return retval;
 }
 
+static int basic_test_lset(int maxsize, int _commit)
+{
+	int retval = 0;
+	fprintf(stderr, "Start basic_test_lset %d %d\n", maxsize, _commit);
+
+	rlite *db = NULL;
+	RL_CALL_VERBOSE(setup_db, RL_OK, &db, _commit, 1);
+	unsigned char *key = UNSIGN("my key");
+	long keylen = strlen((char *)key);
+	unsigned char *value = UNSIGN("my value"), *testvalue;
+	long valuelen = strlen((char *)value), testvaluelen;
+	long size;
+	RL_CALL_VERBOSE(create, RL_OK, db, key, keylen, maxsize, _commit);
+
+	RL_CALL_VERBOSE(rl_lset, RL_NOT_FOUND, db, key, keylen, maxsize, value, valuelen);
+	RL_CALL_VERBOSE(rl_lset, RL_OK, db, key, keylen, -1, value, valuelen);
+	RL_CALL_VERBOSE(rl_lindex, RL_OK, db, key, keylen, -1, &testvalue, &testvaluelen);
+
+	if (testvaluelen != valuelen || memcmp(value, testvalue, valuelen) != 0) {
+		fprintf(stderr, "Expected testvalue to be \"%s\", instead got \"%s\" (%ld) on line %d\n", value, testvalue, testvaluelen, __LINE__);
+		retval = RL_UNEXPECTED;
+		goto cleanup;
+	}
+	rl_free(testvalue);
+
+	fprintf(stderr, "End basic_test_lset\n");
+	retval = 0;
+cleanup:
+	if (db) {
+		rl_close(db);
+	}
+	return retval;
+}
+
 RL_TEST_MAIN_START(type_list_test)
 {
 	int i;
@@ -441,6 +475,7 @@ RL_TEST_MAIN_START(type_list_test)
 		RL_TEST(basic_test_lpushx, i);
 		RL_TEST(basic_test_lrange, i);
 		RL_TEST(basic_test_lrem, i);
+		RL_TEST(basic_test_lset, 100, i);
 	}
 }
 RL_TEST_MAIN_END
