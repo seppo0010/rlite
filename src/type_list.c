@@ -368,6 +368,48 @@ cleanup:
 	return retval;
 }
 
+int rl_ltrim(struct rlite *db, const unsigned char *key, long keylen, long start, long stop)
+{
+	rl_list *list;
+	int retval;
+	long i, list_page;
+	void *tmp;
+
+	RL_CALL(rl_llist_get_objects, RL_OK, db, key, keylen, &list_page, &list, 0);
+	if (start < 0) {
+		start += list->size;
+		if (start < 0) {
+			start = 0;
+		}
+	}
+
+	if (stop < 0) {
+		stop += list->size;
+	}
+	if (stop >= list->size) {
+		stop = list->size - 1;
+	}
+
+	if (start > stop || (start == 0 && stop == list->size - 1)) {
+		RL_CALL(rl_key_delete_with_value, RL_OK, db, key, keylen);
+		retval = RL_DELETED;
+		goto cleanup;
+	}
+	for (i = 0; i < start; i++) {
+		RL_CALL(rl_list_get_element, RL_FOUND, db, list, (void **)&tmp, 0);
+		RL_CALL(rl_multi_string_delete, RL_OK, db, *(long *)tmp);
+		RL_CALL(rl_list_remove_element, RL_OK, db, list, list_page, 0);
+	}
+	while (list->size > stop - start + 1) {
+		RL_CALL(rl_list_get_element, RL_FOUND, db, list, (void **)&tmp, -1);
+		RL_CALL(rl_multi_string_delete, RL_OK, db, *(long *)tmp);
+		RL_CALL(rl_list_remove_element, RL_OK, db, list, list_page, -1);
+	}
+	retval = RL_OK;
+cleanup:
+	return retval;
+}
+
 int rl_llist_pages(struct rlite *db, long page, short *pages)
 {
 	rl_list *list;

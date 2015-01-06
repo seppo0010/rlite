@@ -228,16 +228,20 @@ static int rl_find_element_by_position(rlite *db, rl_list *list, long *position,
 		*position = list->size + *position + add;
 		pos = list->size;
 		number = list->right;
-		do {
+		while (1) {
 			RL_CALL(rl_read, RL_FOUND, db, list->type->list_node_type, number, list, &tmp_node, 1);
 			node = tmp_node;
 			pos -= node->size;
 			if (pos <= *position) {
 				break;
 			}
-			number = node->left;
+			if (node->left != 0) {
+				number = node->left;
+			}
+			else {
+				break;
+			}
 		}
-		while (number != 0);
 	}
 	*_pos = pos;
 	*_node = node;
