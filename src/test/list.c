@@ -484,6 +484,95 @@ static int test_linsert() {
 	return 0;
 }
 
+static int test_lrange() {
+	rliteContext *context = rliteConnect(":memory:", 0);
+
+	long i;
+	char *values[3] = {"value1", "value2", "othervalue"};
+	char *key = "mylist";
+
+	rliteReply* reply;
+	size_t argvlen[100];
+
+	lpush(context, key, values[2]);
+	lpush(context, key, values[1]);
+	lpush(context, key, values[0]);
+
+	{
+		char* argv[100] = {"lrange", key, "0", "-1", NULL};
+
+		reply = rliteCommandArgv(context, populateArgvlen(argv, argvlen), argv, argvlen);
+		if (reply->type != RLITE_REPLY_ARRAY) {
+			fprintf(stderr, "Expected reply to be ARRAY, got %d instead on line %d\n", reply->type, __LINE__);
+			return 1;
+		}
+
+		if (reply->elements != 3) {
+			fprintf(stderr, "Expected reply to be %d, got %lu instead on line %d\n", 3, reply->elements, __LINE__);
+			return 1;
+		}
+
+		for (i = 0; i < 3; i++) {
+			if (reply->element[i]->type != RLITE_REPLY_STRING) {
+				fprintf(stderr, "Expected element %ld to be a string, got %d instead on line %d\n", i, reply->element[i]->type, __LINE__);
+				return 1;
+			}
+			if (reply->element[i]->len != (long)strlen(values[i]) || memcmp(reply->element[i]->str, values[i], reply->element[i]->len) != 0) {
+				fprintf(stderr, "Expected element %ld to be \"%s\", got \"%s\" (%d) instead on line %d\n", i, values[i], reply->element[i]->str, reply->element[i]->len, __LINE__);
+				return 1;
+			}
+		}
+
+		rliteFreeReplyObject(reply);
+	}
+
+	{
+		char* argv[100] = {"lrange", key, "1", "1", NULL};
+
+		reply = rliteCommandArgv(context, populateArgvlen(argv, argvlen), argv, argvlen);
+		if (reply->type != RLITE_REPLY_ARRAY) {
+			fprintf(stderr, "Expected reply to be ARRAY, got %d instead on line %d\n", reply->type, __LINE__);
+			return 1;
+		}
+
+		if (reply->elements != 1) {
+			fprintf(stderr, "Expected reply to be %d, got %lu instead on line %d\n", 1, reply->elements, __LINE__);
+			return 1;
+		}
+
+		if (reply->element[0]->type != RLITE_REPLY_STRING) {
+			fprintf(stderr, "Expected element %ld to be a string, got %d instead on line %d\n", i, reply->element[0]->type, __LINE__);
+			return 1;
+		}
+		if (reply->element[0]->len != (long)strlen(values[0]) || memcmp(reply->element[0]->str, values[1], reply->element[0]->len) != 0) {
+			fprintf(stderr, "Expected element %ld to be \"%s\", got \"%s\" (%d) instead on line %d\n", i, values[1], reply->element[0]->str, reply->element[i]->len, __LINE__);
+			return 1;
+		}
+
+		rliteFreeReplyObject(reply);
+	}
+
+	{
+		char* argv[100] = {"lrange", key, "1", "0", NULL};
+
+		reply = rliteCommandArgv(context, populateArgvlen(argv, argvlen), argv, argvlen);
+		if (reply->type != RLITE_REPLY_ARRAY) {
+			fprintf(stderr, "Expected reply to be ARRAY, got %d instead on line %d\n", reply->type, __LINE__);
+			return 1;
+		}
+
+		if (reply->elements != 0) {
+			fprintf(stderr, "Expected reply to be %d, got %lu instead on line %d\n", 1, reply->elements, __LINE__);
+			return 1;
+		}
+
+		rliteFreeReplyObject(reply);
+	}
+
+	rliteFree(context);
+	return 0;
+}
+
 int run_list() {
 	if (test_lpush() != 0) {
 		return 1;
@@ -504,6 +593,9 @@ int run_list() {
 		return 1;
 	}
 	if (test_linsert() != 0) {
+		return 1;
+	}
+	if (test_lrange() != 0) {
 		return 1;
 	}
 	return 0;

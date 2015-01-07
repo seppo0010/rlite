@@ -2026,6 +2026,40 @@ cleanup:
 	return;
 }
 
+static void lrangeCommand(rliteClient *c) {
+	unsigned char *key = UNSIGN(c->argv[1]);
+	size_t keylen = c->argvlen[1];
+
+	unsigned char **values = NULL;
+	long size = 0, *valueslen = NULL;
+
+	long start, stop, i;
+
+	if ((getLongFromObjectOrReply(c, c->argv[2], &start, NULL) != RLITE_OK) ||
+		(getLongFromObjectOrReply(c, c->argv[3], &stop, NULL) != RLITE_OK)) return;
+
+	int retval = rl_lrange(c->context->db, key, keylen, start, stop, &size, &values, &valueslen);
+	RLITE_SERVER_ERR(c, retval);
+	c->reply = createReplyObject(RLITE_REPLY_ARRAY);
+	if (retval == RL_NOT_FOUND) {
+		c->reply->elements = 0;
+		return;
+	}
+	c->reply->elements = size;
+	c->reply->element = malloc(sizeof(rliteReply*) * c->reply->elements);
+	for (i = 0; i < size; i++) {
+		c->reply->element[i] = createStringObject((char *)values[i], valueslen[i]);
+	}
+cleanup:
+	if (values) {
+		for (i = 0; i < size; i++) {
+			rl_free(values[i]);
+		}
+		rl_free(values);
+		rl_free(valueslen);
+	}
+}
+
 static void delCommand(rliteClient *c) {
 	int deleted = 0, j, retval;
 
@@ -2216,7 +2250,7 @@ struct rliteCommand rliteCommandTable[] = {
 	{"llen",llenCommand,2,"rF",0,1,1,1,0,0},
 	{"lindex",lindexCommand,3,"r",0,1,1,1,0,0},
 	// {"lset",lsetCommand,4,"wm",0,NULL,1,1,1,0,0},
-	// {"lrange",lrangeCommand,4,"r",0,NULL,1,1,1,0,0},
+	{"lrange",lrangeCommand,4,"r",0,1,1,1,0,0},
 	// {"ltrim",ltrimCommand,4,"w",0,NULL,1,1,1,0,0},
 	// {"lrem",lremCommand,4,"w",0,NULL,1,1,1,0,0},
 	// {"rpoplpush",rpoplpushCommand,3,"wm",0,NULL,1,2,1,0,0},
