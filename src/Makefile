@@ -33,8 +33,8 @@ libhirlite.a: hirlite.o
 	cd ../deps/rlite && make librlite.a
 	ar -cq libhirlite.a hirlite.o
 
-buildtest: libhirlite.a test/echo.o test/parser.o test/set.o test/zset.o test/hash.o test/test.o
-	 $(CC) $(DEBUG) $(CFLAGS) -o hirlite-test echo.o parser.o set.o zset.o hash.o test.o libhirlite.a ../deps/rlite/src/librlite.a $(LIBS)
+buildtest: libhirlite.a test/echo.o test/parser.o test/list.o test/set.o test/zset.o test/hash.o test/test.o
+	 $(CC) $(DEBUG) $(CFLAGS) -o hirlite-test echo.o parser.o list.o set.o zset.o hash.o test.o libhirlite.a ../deps/rlite/src/librlite.a $(LIBS)
 
 test: buildtest
 	./hirlite-test

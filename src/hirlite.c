@@ -1904,6 +1904,42 @@ cleanup:
 	return;
 }
 
+static void lpushGenericCommand(rliteClient *c, int create, int left) {
+	unsigned char *key = UNSIGN(c->argv[1]);
+	size_t keylen = c->argvlen[1];
+
+	int i, valuec = c->argc - 2;
+	unsigned char **values = NULL;
+	long *valueslen = NULL;
+	long count;
+
+	values = malloc(sizeof(unsigned char *) * valuec);
+	if (!values) {
+		__rliteSetError(c->context, RLITE_ERR_OOM, "Out of memory");
+		goto cleanup;
+	}
+	valueslen = malloc(sizeof(long) * valuec);
+	if (!valueslen) {
+		__rliteSetError(c->context, RLITE_ERR_OOM, "Out of memory");
+		goto cleanup;
+	}
+	for (i = 0; i < valuec; i++) {
+		values[i] = (unsigned char *)c->argv[2 + i];
+		valueslen[i] = (long)c->argvlen[2 + i];
+	}
+
+	int retval = rl_push(c->context->db, key, keylen, create, left, valuec, values, valueslen, &count);
+	RLITE_SERVER_ERR(c, retval);
+	c->reply = createLongLongObject(count);
+cleanup:
+	free(values);
+	free(valueslen);
+}
+
+static void lpushCommand(rliteClient *c) {
+	lpushGenericCommand(c, 1, 1);
+}
+
 static void delCommand(rliteClient *c) {
 	int deleted = 0, j, retval;
 
@@ -2082,7 +2118,7 @@ struct rliteCommand rliteCommandTable[] = {
 	// {"decr",decrCommand,2,"wmF",0,NULL,1,1,1,0,0},
 	// {"mget",mgetCommand,-2,"r",0,NULL,1,-1,1,0,0},
 	// {"rpush",rpushCommand,-3,"wmF",0,NULL,1,1,1,0,0},
-	// {"lpush",lpushCommand,-3,"wmF",0,NULL,1,1,1,0,0},
+	{"lpush",lpushCommand,-3,"wmF",0,1,1,1,0,0},
 	// {"rpushx",rpushxCommand,3,"wmF",0,NULL,1,1,1,0,0},
 	// {"lpushx",lpushxCommand,3,"wmF",0,NULL,1,1,1,0,0},
 	// {"linsert",linsertCommand,5,"wm",0,NULL,1,1,1,0,0},
