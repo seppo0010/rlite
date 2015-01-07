@@ -21,6 +21,40 @@ static void lpush(rliteContext* context, char *key, char *element) {
 	rliteFreeReplyObject(reply);
 }
 
+static int randomLpush(rliteContext* context, char *key, int elements) {
+	rliteReply* reply;
+	if (elements == 0) {
+		elements = 3;
+	}
+	char* argv[100] = {"lpush", key, NULL};
+	int i, j, len;
+	for (i = 0; i < elements; i++) {
+		len = 5 + floor(((float)rand() / RAND_MAX) * 10);
+		argv[2 + i] = malloc(sizeof(char) * len);
+		for (j = 0; j < len - 1; j++) {
+			argv[2 + i][j] = 'a' + (int)floor(((float)rand() / RAND_MAX) * 25);
+		}
+		argv[2 + i][len - 1] = 0;
+	}
+	size_t argvlen[100];
+
+	reply = rliteCommandArgv(context, populateArgvlen(argv, argvlen), argv, argvlen);
+	if (reply->type != RLITE_REPLY_INTEGER) {
+		fprintf(stderr, "Expected reply to be INTEGER, got %d instead on line %d\n", reply->type, __LINE__);
+		return 1;
+	}
+
+	if (reply->integer != elements) {
+		fprintf(stderr, "Expected reply to be %d, got %lld instead on line %d\n", elements, reply->integer, __LINE__);
+		return 1;
+	}
+	rliteFreeReplyObject(reply);
+	for (i = 0; i < elements; i++) {
+		free(argv[2 + i]);
+	}
+	return 0;
+}
+
 static int test_lpush() {
 	rliteContext *context = rliteConnect(":memory:", 0);
 
@@ -91,11 +125,45 @@ static int test_lpushx() {
 	return 0;
 }
 
+static int test_llen() {
+	rliteContext *context = rliteConnect(":memory:", 0);
+
+	char *key = "mylist";
+
+	rliteReply* reply;
+	size_t argvlen[100];
+	int len = 50;
+	if (randomLpush(context, key, len) != 0) {
+		return 1;
+	}
+	{
+		char* argv[100] = {"llen", key, NULL};
+
+		reply = rliteCommandArgv(context, populateArgvlen(argv, argvlen), argv, argvlen);
+		if (reply->type != RLITE_REPLY_INTEGER) {
+			fprintf(stderr, "Expected reply to be INTEGER, got %d instead on line %d\n", reply->type, __LINE__);
+			return 1;
+		}
+
+		if (reply->integer != len) {
+			fprintf(stderr, "Expected reply to be %d, got %lld instead on line %d\n", len, reply->integer, __LINE__);
+			return 1;
+		}
+		rliteFreeReplyObject(reply);
+	}
+
+	rliteFree(context);
+	return 0;
+}
+
 int run_list() {
 	if (test_lpush() != 0) {
 		return 1;
 	}
 	if (test_lpushx() != 0) {
+		return 1;
+	}
+	if (test_llen() != 0) {
 		return 1;
 	}
 	return 0;

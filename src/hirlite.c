@@ -1948,6 +1948,15 @@ static void lpushxCommand(rliteClient *c) {
 	lpushGenericCommand(c, 0, 1);
 }
 
+static void llenCommand(rliteClient *c) {
+	long len = 0;
+	int retval = rl_llen(c->context->db, UNSIGN(c->argv[1]), c->argvlen[1], &len);
+	RLITE_SERVER_ERR(c, retval);
+	c->reply = createLongLongObject(len);
+cleanup:
+	return;
+}
+
 static void delCommand(rliteClient *c) {
 	int deleted = 0, j, retval;
 
@@ -2135,7 +2144,7 @@ struct rliteCommand rliteCommandTable[] = {
 	// {"brpop",brpopCommand,-3,"ws",0,NULL,1,1,1,0,0},
 	// {"brpoplpush",brpoplpushCommand,4,"wms",0,NULL,1,2,1,0,0},
 	// {"blpop",blpopCommand,-3,"ws",0,NULL,1,-2,1,0,0},
-	// {"llen",llenCommand,2,"rF",0,NULL,1,1,1,0,0},
+	{"llen",llenCommand,2,"rF",0,1,1,1,0,0},
 	// {"lindex",lindexCommand,3,"r",0,NULL,1,1,1,0,0},
 	// {"lset",lsetCommand,4,"wm",0,NULL,1,1,1,0,0},
 	// {"lrange",lrangeCommand,4,"r",0,NULL,1,1,1,0,0},
