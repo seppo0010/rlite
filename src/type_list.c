@@ -97,16 +97,17 @@ cleanup:
 	return retval;
 }
 
-int rl_lpop(struct rlite *db, const unsigned char *key, long keylen, unsigned char **value, long *valuelen)
+int rl_pop(struct rlite *db, const unsigned char *key, long keylen, unsigned char **value, long *valuelen, int left)
 {
 	rl_list *list;
 	int retval;
 	void *tmp;
 	long page, list_page;
+	long position = left ? 0 : -1;
 	RL_CALL(rl_llist_get_objects, RL_OK, db, key, keylen, &list_page, &list, 0);
-	RL_CALL(rl_list_get_element, RL_FOUND, db, list, (void **)&tmp, 0);
+	RL_CALL(rl_list_get_element, RL_FOUND, db, list, (void **)&tmp, position);
 	page = *(long *)tmp;
-	retval = rl_list_remove_element(db, list, list_page, 0);
+	retval = rl_list_remove_element(db, list, list_page, position);
 	if (retval == RL_DELETED) {
 		RL_CALL(rl_key_delete, RL_OK, db, key, keylen);
 	}
