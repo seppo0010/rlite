@@ -298,6 +298,117 @@ static int test_rpop() {
 	return 0;
 }
 
+static int test_lindex() {
+	rliteContext *context = rliteConnect(":memory:", 0);
+
+	char *key = "mylist";
+
+	rliteReply* reply;
+	size_t argvlen[100];
+
+	lpush(context, key, "member1");
+	lpush(context, key, "member0");
+
+	{
+		char* argv[100] = {"lindex", key, "0", NULL};
+
+		reply = rliteCommandArgv(context, populateArgvlen(argv, argvlen), argv, argvlen);
+		if (reply->type != RLITE_REPLY_STRING) {
+			fprintf(stderr, "Expected reply to be STRING, got %d instead on line %d\n", reply->type, __LINE__);
+			return 1;
+		}
+
+		if (reply->len != 7 || memcmp(reply->str, "member0", reply->len) != 0) {
+			fprintf(stderr, "Expected reply to be \"member0\", got \"%s\" (%d) instead on line %d\n", reply->str, reply->len, __LINE__);
+			return 1;
+		}
+		rliteFreeReplyObject(reply);
+	}
+
+	{
+		char* argv[100] = {"lindex", key, "1", NULL};
+
+		reply = rliteCommandArgv(context, populateArgvlen(argv, argvlen), argv, argvlen);
+		if (reply->type != RLITE_REPLY_STRING) {
+			fprintf(stderr, "Expected reply to be STRING, got %d instead on line %d\n", reply->type, __LINE__);
+			return 1;
+		}
+
+		if (reply->len != 7 || memcmp(reply->str, "member1", reply->len) != 0) {
+			fprintf(stderr, "Expected reply to be \"member1\", got \"%s\" (%d) instead on line %d\n", reply->str, reply->len, __LINE__);
+			return 1;
+		}
+		rliteFreeReplyObject(reply);
+	}
+
+	{
+		char* argv[100] = {"lindex", key, "2", NULL};
+
+		reply = rliteCommandArgv(context, populateArgvlen(argv, argvlen), argv, argvlen);
+		if (reply->type == RLITE_REPLY_ERROR) {
+			fprintf(stderr, "Expected reply not to be ERROR, got %s on line %d\n", reply->str, __LINE__);
+			return 1;
+		}
+		if (reply->type != RLITE_REPLY_NIL) {
+			fprintf(stderr, "Expected reply to be NIL, got %d instead on line %d\n", reply->type, __LINE__);
+			return 1;
+		}
+
+		rliteFreeReplyObject(reply);
+	}
+
+	{
+		char* argv[100] = {"lindex", key, "-2", NULL};
+
+		reply = rliteCommandArgv(context, populateArgvlen(argv, argvlen), argv, argvlen);
+		if (reply->type != RLITE_REPLY_STRING) {
+			fprintf(stderr, "Expected reply to be STRING, got %d instead on line %d\n", reply->type, __LINE__);
+			return 1;
+		}
+
+		if (reply->len != 7 || memcmp(reply->str, "member0", reply->len) != 0) {
+			fprintf(stderr, "Expected reply to be \"member0\", got \"%s\" (%d) instead on line %d\n", reply->str, reply->len, __LINE__);
+			return 1;
+		}
+		rliteFreeReplyObject(reply);
+	}
+
+	{
+		char* argv[100] = {"lindex", key, "-1", NULL};
+
+		reply = rliteCommandArgv(context, populateArgvlen(argv, argvlen), argv, argvlen);
+		if (reply->type != RLITE_REPLY_STRING) {
+			fprintf(stderr, "Expected reply to be STRING, got %d instead on line %d\n", reply->type, __LINE__);
+			return 1;
+		}
+
+		if (reply->len != 7 || memcmp(reply->str, "member1", reply->len) != 0) {
+			fprintf(stderr, "Expected reply to be \"member1\", got \"%s\" (%d) instead on line %d\n", reply->str, reply->len, __LINE__);
+			return 1;
+		}
+		rliteFreeReplyObject(reply);
+	}
+
+	{
+		char* argv[100] = {"lindex", key, "-3", NULL};
+
+		reply = rliteCommandArgv(context, populateArgvlen(argv, argvlen), argv, argvlen);
+		if (reply->type == RLITE_REPLY_ERROR) {
+			fprintf(stderr, "Expected reply not to be ERROR, got %s on line %d\n", reply->str, __LINE__);
+			return 1;
+		}
+		if (reply->type != RLITE_REPLY_NIL) {
+			fprintf(stderr, "Expected reply to be NIL, got %d instead on line %d\n", reply->type, __LINE__);
+			return 1;
+		}
+
+		rliteFreeReplyObject(reply);
+	}
+
+	rliteFree(context);
+	return 0;
+}
+
 int run_list() {
 	if (test_lpush() != 0) {
 		return 1;
@@ -312,6 +423,9 @@ int run_list() {
 		return 1;
 	}
 	if (test_rpop() != 0) {
+		return 1;
+	}
+	if (test_lindex() != 0) {
 		return 1;
 	}
 	return 0;
