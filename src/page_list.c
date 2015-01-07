@@ -203,7 +203,7 @@ static int rl_find_element_by_position(rlite *db, rl_list *list, long *position,
 	rl_list_node *node;
 	void *tmp_node;
 	long pos = 0, number;
-	if (*position > list->size + 1 || *position < - list->size - 1) {
+	if (*position >= list->size + add || *position <= - list->size - 1 - add) {
 		return RL_INVALID_PARAMETERS;
 	}
 	int retval = RL_OK;
