@@ -198,7 +198,7 @@ cleanup:
 	return retval;
 }
 
-int rl_find_element_by_position(rlite *db, rl_list *list, long *position, long *_pos, rl_list_node **_node, long *_number)
+static int rl_find_element_by_position(rlite *db, rl_list *list, long *position, long *_pos, rl_list_node **_node, long *_number, int add)
 {
 	rl_list_node *node;
 	void *tmp_node;
@@ -225,7 +225,7 @@ int rl_find_element_by_position(rlite *db, rl_list *list, long *position, long *
 		}
 	}
 	else {
-		*position = list->size + *position + 1;
+		*position = list->size + *position + add;
 		pos = list->size;
 		number = list->right;
 		do {
@@ -253,7 +253,7 @@ int rl_list_get_element(struct rlite *db, rl_list *list, void **element, long po
 	long pos;
 	rl_list_node *node;
 	int retval;
-	RL_CALL(rl_find_element_by_position, RL_FOUND, db, list, &position, &pos, &node, NULL);
+	RL_CALL(rl_find_element_by_position, RL_FOUND, db, list, &position, &pos, &node, NULL, 0);
 	*element = node->elements[position - pos];
 cleanup:
 	return retval;
@@ -266,7 +266,7 @@ int rl_list_add_element(rlite *db, rl_list *list, long list_page, void *element,
 	long number, sibling_number;
 	void *_node;
 	int retval;
-	RL_CALL(rl_find_element_by_position, RL_FOUND, db, list, &position, &pos, &node, &number);
+	RL_CALL(rl_find_element_by_position, RL_FOUND, db, list, &position, &pos, &node, &number, 1);
 
 	if (node->size != list->max_node_size) {
 		if (position - pos + 1 < list->max_node_size) {
@@ -363,7 +363,7 @@ int rl_list_remove_element(rlite *db, rl_list *list, long list_page, long positi
 	long pos, number;
 	void *_node;
 	int retval;
-	RL_CALL(rl_find_element_by_position, RL_FOUND, db, list, &position, &pos, &node, &number);
+	RL_CALL(rl_find_element_by_position, RL_FOUND, db, list, &position, &pos, &node, &number, 0);
 
 	if (node->size - (position - pos + 1) > 0) {
 		rl_free(node->elements[position - pos]);

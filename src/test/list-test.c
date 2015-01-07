@@ -15,6 +15,7 @@ int basic_insert_list_test(int options)
 	rlite *db = NULL;
 	rl_list *list = NULL;
 	long **vals = malloc(sizeof(long *) * 7);
+	long *element;
 	RL_CALL_VERBOSE(setup_db, RL_OK, &db, 0, 1);
 	db->number_of_databases = 1;
 	db->page_size = sizeof(long) * 2 + 12;
@@ -68,6 +69,21 @@ int basic_insert_list_test(int options)
 		}
 		if (position != (options % 2 == 0 ? i : (6 - i))) {
 			fprintf(stderr, "Unexpected position of item %ld, %ld\n", (options % 2 == 0 ? i : (6 - i)), position);
+			goto cleanup;
+		}
+	}
+	for (i = 0; i < 7; i++) {
+		RL_CALL_VERBOSE(rl_list_get_element, RL_FOUND, db, list, (void **)&element, i);
+		if (*element != *vals[(options % 2 == 0 ? i : (6 - i))]) {
+			fprintf(stderr, "Expected element at position %ld to be %ld, got %ld instead\n", i, *vals[i], *element);
+			retval = RL_UNEXPECTED;
+			goto cleanup;
+		}
+
+		RL_CALL_VERBOSE(rl_list_get_element, RL_FOUND, db, list, (void **)&element, - 7 + i);
+		if (*element != *vals[(options % 2 == 0 ? i : (6 - i))]) {
+			fprintf(stderr, "Expected element at position %ld to be %ld, got %ld instead\n", i, *vals[i], *element);
+			retval = RL_UNEXPECTED;
 			goto cleanup;
 		}
 	}
