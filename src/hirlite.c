@@ -2000,6 +2000,32 @@ cleanup:
 	return;
 }
 
+static void linsertCommand(rliteClient *c) {
+	int after;
+	if (strcasecmp(c->argv[2], "after") == 0) {
+		after = 1;
+	} else if (strcasecmp(c->argv[2], "before") == 0) {
+		after = 0;
+	} else {
+		c->reply = createErrorObject(RLITE_SYNTAXERR);
+		return;
+	}
+
+	unsigned char *key = UNSIGN(c->argv[1]);
+	size_t keylen = c->argvlen[1];
+
+	long size;
+	int retval = rl_linsert(c->context->db, key, keylen, after, UNSIGN(c->argv[3]), c->argvlen[3], UNSIGN(c->argv[4]), c->argvlen[4], &size);
+	RLITE_SERVER_ERR(c, retval);
+	if (retval == RL_OK) {
+		c->reply = createLongLongObject(size);
+	} else {
+		c->reply = createLongLongObject(-1);
+	}
+cleanup:
+	return;
+}
+
 static void delCommand(rliteClient *c) {
 	int deleted = 0, j, retval;
 
@@ -2181,7 +2207,7 @@ struct rliteCommand rliteCommandTable[] = {
 	{"lpush",lpushCommand,-3,"wmF",0,1,1,1,0,0},
 	// {"rpushx",rpushxCommand,3,"wmF",0,NULL,1,1,1,0,0},
 	{"lpushx",lpushxCommand,3,"wmF",0,1,1,1,0,0},
-	// {"linsert",linsertCommand,5,"wm",0,NULL,1,1,1,0,0},
+	{"linsert",linsertCommand,5,"wm",0,1,1,1,0,0},
 	{"rpop",rpopCommand,2,"wF",0,1,1,1,0,0},
 	{"lpop",lpopCommand,2,"wF",0,1,1,1,0,0},
 	// {"brpop",brpopCommand,-3,"ws",0,NULL,1,1,1,0,0},

@@ -409,6 +409,81 @@ static int test_lindex() {
 	return 0;
 }
 
+static int test_linsert() {
+	rliteContext *context = rliteConnect(":memory:", 0);
+
+	long i;
+	char *values[3] = {"value1", "value2", "othervalue"};
+	char *key = "mylist";
+
+	rliteReply* reply;
+	size_t argvlen[100];
+
+	lpush(context, key, values[1]);
+
+	{
+		char* argv[100] = {"linsert", key, "AFTER", values[1], values[2], NULL};
+
+		reply = rliteCommandArgv(context, populateArgvlen(argv, argvlen), argv, argvlen);
+		if (reply->type == RLITE_REPLY_ERROR) {
+			fprintf(stderr, "Expected reply not to be ERROR, got %s on line %d\n", reply->str, __LINE__);
+			return 1;
+		}
+		if (reply->type != RLITE_REPLY_INTEGER) {
+			fprintf(stderr, "Expected reply to be INTEGER, got %d instead on line %d\n", reply->type, __LINE__);
+			return 1;
+		}
+
+		if (reply->integer != 2) {
+			fprintf(stderr, "Expected reply to be %d, got %lld instead on line %d\n", 2, reply->integer, __LINE__);
+			return 1;
+		}
+
+		rliteFreeReplyObject(reply);
+	}
+
+	{
+		char* argv[100] = {"linsert", key, "BEFORE", values[1], values[0], NULL};
+
+		reply = rliteCommandArgv(context, populateArgvlen(argv, argvlen), argv, argvlen);
+		if (reply->type == RLITE_REPLY_ERROR) {
+			fprintf(stderr, "Expected reply not to be ERROR, got %s on line %d\n", reply->str, __LINE__);
+			return 1;
+		}
+		if (reply->type != RLITE_REPLY_INTEGER) {
+			fprintf(stderr, "Expected reply to be INTEGER, got %d instead on line %d\n", reply->type, __LINE__);
+			return 1;
+		}
+
+		if (reply->integer != 3) {
+			fprintf(stderr, "Expected reply to be %d, got %lld instead on line %d\n", 3, reply->integer, __LINE__);
+			return 1;
+		}
+
+		rliteFreeReplyObject(reply);
+	}
+
+	for (i = 0; i < 3; i++) {
+		char* argv[100] = {"lpop", key, NULL};
+
+		reply = rliteCommandArgv(context, populateArgvlen(argv, argvlen), argv, argvlen);
+		if (reply->type != RLITE_REPLY_STRING) {
+			fprintf(stderr, "Expected reply to be STRING, got %d instead on line %d\n", reply->type, __LINE__);
+			return 1;
+		}
+
+		if (reply->len != (long)strlen(values[i]) || memcmp(reply->str, values[i], reply->len) != 0) {
+			fprintf(stderr, "Expected reply %ld to be \"%s\", got \"%s\" (%d) instead on line %d\n", i, values[i], reply->str, reply->len, __LINE__);
+			return 1;
+		}
+
+		rliteFreeReplyObject(reply);
+	}
+
+	rliteFree(context);
+	return 0;
+}
+
 int run_list() {
 	if (test_lpush() != 0) {
 		return 1;
@@ -426,6 +501,9 @@ int run_list() {
 		return 1;
 	}
 	if (test_lindex() != 0) {
+		return 1;
+	}
+	if (test_linsert() != 0) {
 		return 1;
 	}
 	return 0;
