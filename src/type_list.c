@@ -66,7 +66,7 @@ cleanup:
 	return retval;
 }
 
-int rl_lpush(struct rlite *db, const unsigned char *key, long keylen, int create, int valuec, unsigned char **values, long *valueslen, long *size)
+int rl_push(struct rlite *db, const unsigned char *key, long keylen, int create, int left, int valuec, unsigned char **values, long *valueslen, long *size)
 {
 	rl_list *list;
 	long list_page_number;
@@ -76,7 +76,7 @@ int rl_lpush(struct rlite *db, const unsigned char *key, long keylen, int create
 	for (i = 0; i < valuec; i++) {
 		RL_MALLOC(value, sizeof(*value));
 		RL_CALL(rl_multi_string_set, RL_OK, db, value, values[i], valueslen[i]);
-		RL_CALL(rl_list_add_element, RL_OK, db, list, list_page_number, value, 0);
+		RL_CALL(rl_list_add_element, RL_OK, db, list, list_page_number, value, left ? 0 : -1);
 	}
 	if (size) {
 		*size = list->size;
