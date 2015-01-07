@@ -1929,8 +1929,12 @@ static void lpushGenericCommand(rliteClient *c, int create, int left) {
 	}
 
 	int retval = rl_push(c->context->db, key, keylen, create, left, valuec, values, valueslen, &count);
-	RLITE_SERVER_ERR(c, retval);
-	c->reply = createLongLongObject(count);
+	if (retval == RL_NOT_FOUND) {
+		c->reply = createLongLongObject(0);
+	} else {
+		RLITE_SERVER_ERR(c, retval);
+		c->reply = createLongLongObject(count);
+	}
 cleanup:
 	free(values);
 	free(valueslen);
@@ -1938,6 +1942,10 @@ cleanup:
 
 static void lpushCommand(rliteClient *c) {
 	lpushGenericCommand(c, 1, 1);
+}
+
+static void lpushxCommand(rliteClient *c) {
+	lpushGenericCommand(c, 0, 1);
 }
 
 static void delCommand(rliteClient *c) {
@@ -2120,7 +2128,7 @@ struct rliteCommand rliteCommandTable[] = {
 	// {"rpush",rpushCommand,-3,"wmF",0,NULL,1,1,1,0,0},
 	{"lpush",lpushCommand,-3,"wmF",0,1,1,1,0,0},
 	// {"rpushx",rpushxCommand,3,"wmF",0,NULL,1,1,1,0,0},
-	// {"lpushx",lpushxCommand,3,"wmF",0,NULL,1,1,1,0,0},
+	{"lpushx",lpushxCommand,3,"wmF",0,1,1,1,0,0},
 	// {"linsert",linsertCommand,5,"wm",0,NULL,1,1,1,0,0},
 	// {"rpop",rpopCommand,2,"wF",0,NULL,1,1,1,0,0},
 	// {"lpop",lpopCommand,2,"wF",0,NULL,1,1,1,0,0},
