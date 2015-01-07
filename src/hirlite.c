@@ -1904,7 +1904,7 @@ cleanup:
 	return;
 }
 
-static void lpushGenericCommand(rliteClient *c, int create, int left) {
+static void pushGenericCommand(rliteClient *c, int create, int left) {
 	unsigned char *key = UNSIGN(c->argv[1]);
 	size_t keylen = c->argvlen[1];
 
@@ -1941,11 +1941,11 @@ cleanup:
 }
 
 static void lpushCommand(rliteClient *c) {
-	lpushGenericCommand(c, 1, 1);
+	pushGenericCommand(c, 1, 1);
 }
 
 static void lpushxCommand(rliteClient *c) {
-	lpushGenericCommand(c, 0, 1);
+	pushGenericCommand(c, 0, 1);
 }
 
 static void llenCommand(rliteClient *c) {
@@ -1955,6 +1955,25 @@ static void llenCommand(rliteClient *c) {
 	c->reply = createLongLongObject(len);
 cleanup:
 	return;
+}
+
+static void popGenericCommand(rliteClient *c, int left) {
+	unsigned char *value;
+	long valuelen;
+	int retval = rl_pop(c->context->db, UNSIGN(c->argv[1]), c->argvlen[1], &value, &valuelen, left);
+	RLITE_SERVER_ERR(c, retval);
+	if (retval == RL_NOT_FOUND) {
+		c->reply = createReplyObject(RLITE_REPLY_NIL);
+	} else if (retval == RL_OK) {
+		c->reply = createStringObject((char *)value, valuelen);
+		rl_free(value);
+	}
+cleanup:
+	return;
+}
+
+static void lpopCommand(rliteClient *c) {
+	popGenericCommand(c, 1);
 }
 
 static void delCommand(rliteClient *c) {
@@ -2140,7 +2159,7 @@ struct rliteCommand rliteCommandTable[] = {
 	{"lpushx",lpushxCommand,3,"wmF",0,1,1,1,0,0},
 	// {"linsert",linsertCommand,5,"wm",0,NULL,1,1,1,0,0},
 	// {"rpop",rpopCommand,2,"wF",0,NULL,1,1,1,0,0},
-	// {"lpop",lpopCommand,2,"wF",0,NULL,1,1,1,0,0},
+	{"lpop",lpopCommand,2,"wF",0,1,1,1,0,0},
 	// {"brpop",brpopCommand,-3,"ws",0,NULL,1,1,1,0,0},
 	// {"brpoplpush",brpoplpushCommand,4,"wms",0,NULL,1,2,1,0,0},
 	// {"blpop",blpopCommand,-3,"ws",0,NULL,1,-2,1,0,0},
