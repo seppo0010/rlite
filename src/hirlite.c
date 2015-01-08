@@ -2100,6 +2100,21 @@ cleanup:
 	return;
 }
 
+static void ltrimCommand(rliteClient *c) {
+	unsigned char *key = UNSIGN(c->argv[1]);
+	size_t keylen = c->argvlen[1];
+	long start, stop;
+
+	if ((getLongFromObjectOrReply(c, c->argv[2], &start, NULL) != RLITE_OK) ||
+		(getLongFromObjectOrReply(c, c->argv[3], &stop, NULL) != RLITE_OK)) return;
+
+	int retval = rl_ltrim(c->context->db, key, keylen, start, stop);
+	RLITE_SERVER_ERR(c, retval);
+	c->reply = createStatusObject(RLITE_STR_OK);
+cleanup:
+	return;
+}
+
 static void delCommand(rliteClient *c) {
 	int deleted = 0, j, retval;
 
@@ -2291,7 +2306,7 @@ struct rliteCommand rliteCommandTable[] = {
 	{"lindex",lindexCommand,3,"r",0,1,1,1,0,0},
 	{"lset",lsetCommand,4,"wm",0,1,1,1,0,0},
 	{"lrange",lrangeCommand,4,"r",0,1,1,1,0,0},
-	// {"ltrim",ltrimCommand,4,"w",0,NULL,1,1,1,0,0},
+	{"ltrim",ltrimCommand,4,"w",0,1,1,1,0,0},
 	{"lrem",lremCommand,4,"w",0,1,1,1,0,0},
 	// {"rpoplpush",rpoplpushCommand,3,"wm",0,NULL,1,2,1,0,0},
 	{"sadd",saddCommand,-3,"wmF",0,1,1,1,0,0},

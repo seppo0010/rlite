@@ -705,6 +705,67 @@ static int test_lset() {
 	return 0;
 }
 
+static int test_ltrim() {
+	rliteContext *context = rliteConnect(":memory:", 0);
+
+	char *values[3] = {"value1", "value2", "othervalue"};
+	char *key = "mylist";
+
+	rliteReply* reply;
+	size_t argvlen[100];
+
+	lpush(context, key, values[2]);
+	lpush(context, key, values[1]);
+	lpush(context, key, values[0]);
+
+	{
+		char* argv[100] = {"ltrim", key, "1", "-2", NULL};
+
+		reply = rliteCommandArgv(context, populateArgvlen(argv, argvlen), argv, argvlen);
+		if (reply->type != RLITE_REPLY_STATUS) {
+			fprintf(stderr, "Expected reply to be STATUS, got %d instead on line %d\n", reply->type, __LINE__);
+			return 1;
+		}
+
+		rliteFreeReplyObject(reply);
+	}
+
+	{
+		char* argv[100] = {"llen", key, NULL};
+
+		reply = rliteCommandArgv(context, populateArgvlen(argv, argvlen), argv, argvlen);
+		if (reply->type != RLITE_REPLY_INTEGER) {
+			fprintf(stderr, "Expected reply to be INTEGER, got %d instead on line %d\n", reply->type, __LINE__);
+			return 1;
+		}
+
+		if (reply->integer != 1) {
+			fprintf(stderr, "Expected reply to be 1, got %lld instead on line %d\n", reply->integer, __LINE__);
+			return 1;
+		}
+		rliteFreeReplyObject(reply);
+	}
+
+	{
+		char* argv[100] = {"lindex", key, "0", NULL};
+
+		reply = rliteCommandArgv(context, populateArgvlen(argv, argvlen), argv, argvlen);
+		if (reply->type != RLITE_REPLY_STRING) {
+			fprintf(stderr, "Expected reply to be STRING, got %d instead on line %d\n", reply->type, __LINE__);
+			return 1;
+		}
+
+		if (reply->len != (long)strlen(values[1]) || memcmp(reply->str, values[1], reply->len) != 0) {
+			fprintf(stderr, "Expected reply to be \"%s\", got \"%s\" (%d) instead on line %d\n", values[1], reply->str, reply->len, __LINE__);
+			return 1;
+		}
+		rliteFreeReplyObject(reply);
+	}
+
+	rliteFree(context);
+	return 0;
+}
+
 int run_list() {
 	if (test_lpush() != 0) {
 		return 1;
@@ -734,6 +795,9 @@ int run_list() {
 		return 1;
 	}
 	if (test_lset() != 0) {
+		return 1;
+	}
+	if (test_ltrim() != 0) {
 		return 1;
 	}
 	return 0;
