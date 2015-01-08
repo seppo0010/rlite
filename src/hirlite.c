@@ -2060,6 +2060,28 @@ cleanup:
 	}
 }
 
+static void lremCommand(rliteClient *c) {
+	unsigned char *key = UNSIGN(c->argv[1]);
+	size_t keylen = c->argvlen[1];
+	long count, maxcount, resultcount;
+	int direction;
+
+	if ((getLongFromObjectOrReply(c, c->argv[2], &count, NULL) != RLITE_OK)) return;
+
+	if (count >= 0) {
+		direction = 1;
+		maxcount = count;
+	} else {
+		direction = -1;
+		maxcount = -count;
+	}
+	int retval = rl_lrem(c->context->db, key, keylen, direction,  maxcount, UNSIGN(c->argv[3]), c->argvlen[3], &resultcount);
+	RLITE_SERVER_ERR(c, retval);
+	c->reply = createLongLongObject(resultcount);
+cleanup:
+	return;
+}
+
 static void delCommand(rliteClient *c) {
 	int deleted = 0, j, retval;
 
@@ -2252,7 +2274,7 @@ struct rliteCommand rliteCommandTable[] = {
 	// {"lset",lsetCommand,4,"wm",0,NULL,1,1,1,0,0},
 	{"lrange",lrangeCommand,4,"r",0,1,1,1,0,0},
 	// {"ltrim",ltrimCommand,4,"w",0,NULL,1,1,1,0,0},
-	// {"lrem",lremCommand,4,"w",0,NULL,1,1,1,0,0},
+	{"lrem",lremCommand,4,"w",0,1,1,1,0,0},
 	// {"rpoplpush",rpoplpushCommand,3,"wm",0,NULL,1,2,1,0,0},
 	{"sadd",saddCommand,-3,"wmF",0,1,1,1,0,0},
 	{"srem",sremCommand,-3,"wF",0,1,1,1,0,0},

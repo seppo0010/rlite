@@ -573,6 +573,93 @@ static int test_lrange() {
 	return 0;
 }
 
+static int test_lrem() {
+	rliteContext *context = rliteConnect(":memory:", 0);
+
+	long i;
+	char *values[2] = {"value1", "othervalue"};
+	char *key = "mylist";
+
+	rliteReply* reply;
+	size_t argvlen[100];
+
+	lpush(context, key, values[1]);
+	lpush(context, key, values[0]);
+	lpush(context, key, values[1]);
+	lpush(context, key, values[0]);
+	lpush(context, key, values[1]);
+	lpush(context, key, values[0]);
+
+	{
+		char* argv[100] = {"lrem", key, "1", values[0], NULL};
+
+		reply = rliteCommandArgv(context, populateArgvlen(argv, argvlen), argv, argvlen);
+		if (reply->type != RLITE_REPLY_INTEGER) {
+			fprintf(stderr, "Expected reply to be INTEGER, got %d instead on line %d\n", reply->type, __LINE__);
+			return 1;
+		}
+
+		if (reply->integer != 1) {
+			fprintf(stderr, "Expected reply to be %d, got %lu instead on line %d\n", 1, reply->elements, __LINE__);
+			return 1;
+		}
+
+		rliteFreeReplyObject(reply);
+	}
+
+	{
+		char* argv[100] = {"lindex", key, "0", NULL};
+
+		reply = rliteCommandArgv(context, populateArgvlen(argv, argvlen), argv, argvlen);
+		if (reply->type != RLITE_REPLY_STRING) {
+			fprintf(stderr, "Expected reply to be STRING, got %d instead on line %d\n", reply->type, __LINE__);
+			return 1;
+		}
+
+		if (reply->len != (long)strlen(values[1]) || memcmp(reply->str, values[1], reply->len) != 0) {
+			fprintf(stderr, "Expected reply to be \"%s\", got \"%s\" (%d) instead on line %d\n", values[1], reply->str, reply->len, __LINE__);
+			return 1;
+		}
+		rliteFreeReplyObject(reply);
+	}
+
+	{
+		char* argv[100] = {"lrem", key, "-2", values[1], NULL};
+
+		reply = rliteCommandArgv(context, populateArgvlen(argv, argvlen), argv, argvlen);
+		if (reply->type != RLITE_REPLY_INTEGER) {
+			fprintf(stderr, "Expected reply to be INTEGER, got %d instead on line %d\n", reply->type, __LINE__);
+			return 1;
+		}
+
+		if (reply->integer != 2) {
+			fprintf(stderr, "Expected reply to be %d, got %lu instead on line %d\n", 2, reply->elements, __LINE__);
+			return 1;
+		}
+
+		rliteFreeReplyObject(reply);
+	}
+
+	{
+		char* argv[100] = {"llen", key, NULL};
+
+		reply = rliteCommandArgv(context, populateArgvlen(argv, argvlen), argv, argvlen);
+		if (reply->type != RLITE_REPLY_INTEGER) {
+			fprintf(stderr, "Expected reply to be INTEGER, got %d instead on line %d\n", reply->type, __LINE__);
+			return 1;
+		}
+
+		if (reply->integer != 3) {
+			fprintf(stderr, "Expected reply to be %d, got %lld instead on line %d\n", 3, reply->integer, __LINE__);
+			return 1;
+		}
+		rliteFreeReplyObject(reply);
+	}
+
+	rliteFree(context);
+	return 0;
+}
+
 int run_list() {
 	if (test_lpush() != 0) {
 		return 1;
@@ -596,6 +683,9 @@ int run_list() {
 		return 1;
 	}
 	if (test_lrange() != 0) {
+		return 1;
+	}
+	if (test_lrem() != 0) {
 		return 1;
 	}
 	return 0;
