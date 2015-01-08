@@ -125,6 +125,90 @@ static int test_lpushx() {
 	return 0;
 }
 
+static int test_rpush() {
+	rliteContext *context = rliteConnect(":memory:", 0);
+
+	rliteReply* reply;
+	char* argv[100] = {"rpush", "mylist", "member1", "member2", "member3", NULL};
+	size_t argvlen[100];
+
+	reply = rliteCommandArgv(context, populateArgvlen(argv, argvlen), argv, argvlen);
+	if (reply->type != RLITE_REPLY_INTEGER) {
+		fprintf(stderr, "Expected reply to be INTEGER, got %d instead on line %d\n", reply->type, __LINE__);
+		return 1;
+	}
+
+	if (reply->integer != 3) {
+		fprintf(stderr, "Expected reply to be %d, got %lld instead on line %d\n", 3, reply->integer, __LINE__);
+		return 1;
+	}
+	rliteFreeReplyObject(reply);
+
+	rliteFree(context);
+	return 0;
+}
+
+static int test_rpushx() {
+	rliteContext *context = rliteConnect(":memory:", 0);
+
+	char *key = "mylist";
+
+	rliteReply* reply;
+	size_t argvlen[100];
+	{
+		char* argv[100] = {"rpushx", key, "member1", NULL};
+
+		reply = rliteCommandArgv(context, populateArgvlen(argv, argvlen), argv, argvlen);
+		if (reply->type == RLITE_REPLY_ERROR) {
+			fprintf(stderr, "Expected reply not to be ERROR, got %s on line %d\n", reply->str, __LINE__);
+			return 1;
+		}
+		if (reply->type != RLITE_REPLY_INTEGER) {
+			fprintf(stderr, "Expected reply to be INTEGER, got %d instead on line %d\n", reply->type, __LINE__);
+			return 1;
+		}
+
+		if (reply->integer != 0) {
+			fprintf(stderr, "Expected reply to be %d, got %lld instead on line %d\n", 0, reply->integer, __LINE__);
+			return 1;
+		}
+		rliteFreeReplyObject(reply);
+	}
+	{
+		char* argv[100] = {"rpush", key, "member0", NULL};
+
+		reply = rliteCommandArgv(context, populateArgvlen(argv, argvlen), argv, argvlen);
+		if (reply->type != RLITE_REPLY_INTEGER) {
+			fprintf(stderr, "Expected reply to be INTEGER, got %d instead on line %d\n", reply->type, __LINE__);
+			return 1;
+		}
+
+		if (reply->integer != 1) {
+			fprintf(stderr, "Expected reply to be %d, got %lld instead on line %d\n", 1, reply->integer, __LINE__);
+			return 1;
+		}
+		rliteFreeReplyObject(reply);
+	}
+	{
+		char* argv[100] = {"rpushx", key, "member1", NULL};
+
+		reply = rliteCommandArgv(context, populateArgvlen(argv, argvlen), argv, argvlen);
+		if (reply->type != RLITE_REPLY_INTEGER) {
+			fprintf(stderr, "Expected reply to be INTEGER, got %d instead on line %d\n", reply->type, __LINE__);
+			return 1;
+		}
+
+		if (reply->integer != 2) {
+			fprintf(stderr, "Expected reply to be %d, got %lld instead on line %d\n", 2, reply->integer, __LINE__);
+			return 1;
+		}
+		rliteFreeReplyObject(reply);
+	}
+
+	rliteFree(context);
+	return 0;
+}
+
 static int test_llen() {
 	rliteContext *context = rliteConnect(":memory:", 0);
 
@@ -897,6 +981,12 @@ int run_list() {
 		return 1;
 	}
 	if (test_rpoplpush() != 0) {
+		return 1;
+	}
+	if (test_rpush() != 0) {
+		return 1;
+	}
+	if (test_rpushx() != 0) {
 		return 1;
 	}
 	return 0;

@@ -1948,6 +1948,14 @@ static void lpushxCommand(rliteClient *c) {
 	pushGenericCommand(c, 0, 1);
 }
 
+static void rpushCommand(rliteClient *c) {
+	pushGenericCommand(c, 1, 0);
+}
+
+static void rpushxCommand(rliteClient *c) {
+	pushGenericCommand(c, 0, 0);
+}
+
 static void llenCommand(rliteClient *c) {
 	long len = 0;
 	int retval = rl_llen(c->context->db, UNSIGN(c->argv[1]), c->argvlen[1], &len);
@@ -2313,9 +2321,9 @@ struct rliteCommand rliteCommandTable[] = {
 	// {"incr",incrCommand,2,"wmF",0,NULL,1,1,1,0,0},
 	// {"decr",decrCommand,2,"wmF",0,NULL,1,1,1,0,0},
 	// {"mget",mgetCommand,-2,"r",0,NULL,1,-1,1,0,0},
-	// {"rpush",rpushCommand,-3,"wmF",0,NULL,1,1,1,0,0},
+	{"rpush",rpushCommand,-3,"wmF",0,1,1,1,0,0},
 	{"lpush",lpushCommand,-3,"wmF",0,1,1,1,0,0},
-	// {"rpushx",rpushxCommand,3,"wmF",0,NULL,1,1,1,0,0},
+	{"rpushx",rpushxCommand,3,"wmF",0,1,1,1,0,0},
 	{"lpushx",lpushxCommand,3,"wmF",0,1,1,1,0,0},
 	{"linsert",linsertCommand,5,"wm",0,1,1,1,0,0},
 	{"rpop",rpopCommand,2,"wF",0,1,1,1,0,0},
