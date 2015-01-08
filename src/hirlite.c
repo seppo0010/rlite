@@ -2100,6 +2100,8 @@ static void lsetCommand(rliteClient *c) {
 	int retval = rl_lset(c->context->db, key, keylen, index, UNSIGN(c->argv[3]), c->argvlen[3]);
 	RLITE_SERVER_ERR(c, retval);
 	if (retval == RL_NOT_FOUND) {
+		c->reply = createErrorObject(RLITE_NOKEYERR);
+	} else if (retval == RL_INVALID_PARAMETERS) {
 		c->reply = createErrorObject(RLITE_OUTOFRANGEERR);
 	} else if (retval == RL_OK) {
 		c->reply = createStatusObject(RLITE_STR_OK);
