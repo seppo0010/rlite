@@ -388,7 +388,7 @@ int rl_ltrim(struct rlite *db, const unsigned char *key, long keylen, long start
 		stop = list->size - 1;
 	}
 
-	if (start > stop || (start == 0 && stop == list->size - 1)) {
+	if (start > stop) {
 		RL_CALL(rl_key_delete_with_value, RL_OK, db, key, keylen);
 		retval = RL_DELETED;
 		goto cleanup;
