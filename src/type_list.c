@@ -158,9 +158,6 @@ int rl_lrange(struct rlite *db, const unsigned char *key, long keylen, long star
 
 	if (stop < 0) {
 		stop += len;
-		if (stop < 0) {
-			stop = 0;
-		}
 	}
 	if (stop >= len) {
 		stop = len - 1;

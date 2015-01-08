@@ -402,6 +402,7 @@ static int basic_test_lrange(int _commit)
 	RL_CALL_VERBOSE(test_lrange, RL_OK, db, key, keylen, -1, -1, 9, 10);
 	RL_CALL_VERBOSE(test_lrange, RL_OK, db, key, keylen, -1, 100, 9, 10);
 	RL_CALL_VERBOSE(test_lrange, RL_OK, db, key, keylen, -1, 0, 0, 0);
+	RL_CALL_VERBOSE(test_lrange, RL_OK, db, key, keylen, 0, -1000, 0, 0);
 	RL_CALL_VERBOSE(test_lrange, RL_OK, db, key, keylen, -5, -4, 5, 7);
 
 	fprintf(stderr, "End basic_test_lrange\n");
@@ -623,6 +624,7 @@ RL_TEST_MAIN_START(type_list_test)
 	for (i = 0; i < 2; i++) {
 		RL_TEST(basic_test_lpush_llen, 100, i);
 		RL_TEST(basic_test_lpush_lpop, 100, i);
+		RL_TEST(basic_test_rpush_lpop, 100, i);
 		RL_TEST(basic_test_lpush_rpop, 100, i);
 		RL_TEST(basic_test_lpush_lindex, 100, i);
 		RL_TEST(basic_test_lpush_linsert, i);
