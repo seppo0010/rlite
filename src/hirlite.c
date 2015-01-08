@@ -1998,7 +1998,7 @@ static void lindexCommand(rliteClient *c) {
 
 	int retval = rl_lindex(c->context->db, UNSIGN(c->argv[1]), c->argvlen[1], index, &value, &valuelen);
 	RLITE_SERVER_ERR(c, retval);
-	if (retval == RL_INVALID_PARAMETERS) {
+	if (retval == RL_INVALID_PARAMETERS || retval == RL_NOT_FOUND) {
 		c->reply = createReplyObject(RLITE_REPLY_NIL);
 	} else if (retval == RL_OK) {
 		c->reply = createStringObject((char *)value, valuelen);
