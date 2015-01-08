@@ -536,7 +536,7 @@ static int basic_test_lset(int maxsize, int _commit)
 	long valuelen = strlen((char *)value), testvaluelen;
 	RL_CALL_VERBOSE(create, RL_OK, db, key, keylen, maxsize, _commit, 1);
 
-	RL_CALL_VERBOSE(rl_lset, RL_NOT_FOUND, db, key, keylen, maxsize, value, valuelen);
+	RL_CALL_VERBOSE(rl_lset, RL_INVALID_PARAMETERS, db, key, keylen, maxsize, value, valuelen);
 	RL_CALL_VERBOSE(rl_is_balanced, RL_OK, db);
 	if (_commit) {
 		RL_CALL_VERBOSE(rl_commit, RL_OK, db);
