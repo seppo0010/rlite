@@ -2235,6 +2235,28 @@ static void getKeyEncoding(rliteClient *c, char *encoding, unsigned char *key, l
 			const char *enc = hashtable ? "hashtable" : "intset";
 			memcpy(encoding, enc, (strlen(enc) + 1) * sizeof(char));
 		}
+		else if (type == RL_TYPE_LIST) {
+			unsigned char **values;
+			long *valueslen, size;
+			unsigned char *key = UNSIGN(c->argv[2]);
+			long keylen = c->argvlen[2];
+			long len, i;
+			int retval = rl_llen(c->context->db, key, keylen, &len);
+			RLITE_SERVER_ERR(c, retval);
+			int linkedlist = 256 < (size_t)len;
+			if (!linkedlist) {
+				int retval = rl_lrange(c->context->db, key, keylen, 0, -1, &size, &values, &valueslen);
+				RLITE_SERVER_ERR(c, retval);
+				for (i = 0; i < size; i++) {
+					linkedlist = linkedlist || (valueslen[i] > 16);
+					rl_free(values[i]);
+				}
+				rl_free(values);
+				rl_free(valueslen);
+			}
+			const char *enc = linkedlist ? "linkedlist" : "ziplist";
+			memcpy(encoding, enc, (strlen(enc) + 1) * sizeof(char));
+		}
 	}
 cleanup:
 	return;
