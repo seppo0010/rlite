@@ -345,12 +345,12 @@ int rl_lset(struct rlite *db, const unsigned char *key, long keylen, long index,
 	if (index < 0) {
 		index += list->size;
 		if (index < 0) {
-			retval = RL_NOT_FOUND;
+			retval = RL_INVALID_PARAMETERS;
 			goto cleanup;
 		}
 	}
 	if (index >= list->size) {
-		retval = RL_NOT_FOUND;
+		retval = RL_INVALID_PARAMETERS;
 		goto cleanup;
 	}
 
