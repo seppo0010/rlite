@@ -8,6 +8,7 @@
 #include "page_string.h"
 #include "page_skiplist.h"
 #include "page_multi_string.h"
+#include "type_string.h"
 #include "type_zset.h"
 #include "type_hash.h"
 #include "rlite.h"
@@ -941,6 +942,9 @@ int rl_database_is_balanced(rlite *db, short *pages)
 		}
 		else if (key->type == RL_TYPE_LIST) {
 			retval = rl_llist_pages(db, key->value_page, pages);
+		}
+		else if (key->type == RL_TYPE_STRING) {
+			retval = rl_string_pages(db, key->value_page, pages);
 		}
 		else {
 			fprintf(stderr, "Unknown type %d\n", key->type);

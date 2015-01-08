@@ -5,11 +5,17 @@
 #include "page_btree.h"
 #include "page_key.h"
 #include "page_multi_string.h"
+#include "type_string.h"
 #include "type_zset.h"
 #include "type_hash.h"
 
-#define TYPES_LENGTH 4
+#define TYPES_LENGTH 5
 rl_type types[TYPES_LENGTH] = {
+	{
+		RL_TYPE_STRING,
+		"string",
+		rl_string_delete
+	},
 	{
 		RL_TYPE_LIST,
 		"list",

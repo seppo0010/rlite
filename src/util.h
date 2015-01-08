@@ -34,6 +34,10 @@ void rl_free(void *ptr);
 	retval = func(__VA_ARGS__);\
 	if (expected != retval) goto cleanup;
 
+#define RL_CALL2(func, expected, expected2, ...)\
+	retval = func(__VA_ARGS__);\
+	if (expected != retval && expected2 != retval) goto cleanup;
+
 #ifdef __GNUC__
 #  define UNUSED(x) UNUSED_ ## x __attribute__((__unused__))
 #else

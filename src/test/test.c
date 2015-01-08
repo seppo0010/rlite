@@ -4,6 +4,7 @@
 #include "list-test.h"
 #include "rlite-test.h"
 #include "string-test.h"
+#include "type_string-test.h"
 #include "type_list-test.h"
 #include "type_set-test.h"
 #include "type_zset-test.h"
@@ -41,6 +42,7 @@ int main() {
 	RUN_TEST(key_test);
 	RUN_TEST(multi_string_test);
 	RUN_TEST(skiplist_test);
+	RUN_TEST(type_string_test);
 	RUN_TEST(type_list_test);
 	RUN_TEST(type_set_test);
 	RUN_TEST(type_zset_test);
