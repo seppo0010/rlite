@@ -576,7 +576,6 @@ static int test_lrange() {
 static int test_lrem() {
 	rliteContext *context = rliteConnect(":memory:", 0);
 
-	long i;
 	char *values[2] = {"value1", "othervalue"};
 	char *key = "mylist";
 
@@ -660,6 +659,52 @@ static int test_lrem() {
 	return 0;
 }
 
+static int test_lset() {
+	rliteContext *context = rliteConnect(":memory:", 0);
+
+	char *values[3] = {"value1", "value2", "othervalue"};
+	char *anothervalue = "yet other value";
+	char *key = "mylist";
+
+	rliteReply* reply;
+	size_t argvlen[100];
+
+	lpush(context, key, values[2]);
+	lpush(context, key, values[1]);
+	lpush(context, key, values[0]);
+
+	{
+		char* argv[100] = {"lset", key, "1", anothervalue, NULL};
+
+		reply = rliteCommandArgv(context, populateArgvlen(argv, argvlen), argv, argvlen);
+		if (reply->type != RLITE_REPLY_STATUS) {
+			fprintf(stderr, "Expected reply to be STATUS, got %d instead on line %d\n", reply->type, __LINE__);
+			return 1;
+		}
+
+		rliteFreeReplyObject(reply);
+	}
+
+	{
+		char* argv[100] = {"lindex", key, "1", NULL};
+
+		reply = rliteCommandArgv(context, populateArgvlen(argv, argvlen), argv, argvlen);
+		if (reply->type != RLITE_REPLY_STRING) {
+			fprintf(stderr, "Expected reply to be STRING, got %d instead on line %d\n", reply->type, __LINE__);
+			return 1;
+		}
+
+		if (reply->len != (long)strlen(anothervalue) || memcmp(reply->str, anothervalue, reply->len) != 0) {
+			fprintf(stderr, "Expected reply to be \"%s\", got \"%s\" (%d) instead on line %d\n", anothervalue, reply->str, reply->len, __LINE__);
+			return 1;
+		}
+		rliteFreeReplyObject(reply);
+	}
+
+	rliteFree(context);
+	return 0;
+}
+
 int run_list() {
 	if (test_lpush() != 0) {
 		return 1;
@@ -686,6 +731,9 @@ int run_list() {
 		return 1;
 	}
 	if (test_lrem() != 0) {
+		return 1;
+	}
+	if (test_lset() != 0) {
 		return 1;
 	}
 	return 0;
