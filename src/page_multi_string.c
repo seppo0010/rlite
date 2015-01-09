@@ -152,6 +152,27 @@ cleanup:
 	return retval;
 }
 
+int rl_multi_string_append(struct rlite *db, long number, const unsigned char *data, long size)
+{
+	rl_list *list = NULL;
+	rl_list_node *node = NULL;
+	void *tmp, *_node;
+	int retval;
+
+	RL_CALL(rl_read, RL_FOUND, db, &rl_data_type_list_long, number, &rl_list_type_long, &tmp, 0);
+	list = tmp;
+
+	RL_CALL(rl_list_get_element, RL_OK, db, list, &tmp, 0);
+	*(long *)tmp = *(long *)tmp + size;
+	RL_CALL(rl_list_remove_element, RL_OK, db, list, number, 0);
+	RL_CALL(rl_list_add_element, RL_OK, db, list, number, tmp, 0);
+	rl_free(tmp);
+
+	retval = RL_OK;
+cleanup:
+	return retval;
+}
+
 int rl_multi_string_get(struct rlite *db, long number, unsigned char **_data, long *size)
 {
 	rl_list *list = NULL;
