@@ -347,9 +347,15 @@ static int test_append(long size, long append_size)
 		goto cleanup;
 	}
 
-	retval = rl_multi_string_append(db, page, append_data, append_size);
+	retval = rl_multi_string_append(db, page, append_data, append_size, &testdatalen);
 	if (retval != RL_OK) {
 		fprintf(stderr, "Failed to append multi string, got %d\n", retval);
+		goto cleanup;
+	}
+
+	if (testdatalen != size + append_size) {
+		fprintf(stderr, "Expected length to be %ld after append, got %ld instead on line %d\n", size + append_size, testdatalen, __LINE__);
+		retval = RL_UNEXPECTED;
 		goto cleanup;
 	}
 

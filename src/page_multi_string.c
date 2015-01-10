@@ -180,7 +180,7 @@ cleanup:
 	return retval;
 }
 
-int rl_multi_string_append(struct rlite *db, long number, const unsigned char *data, long datasize)
+int rl_multi_string_append(struct rlite *db, long number, const unsigned char *data, long datasize, long *newlength)
 {
 	rl_list *list = NULL;
 	unsigned char *tmp_data;
@@ -198,6 +198,9 @@ int rl_multi_string_append(struct rlite *db, long number, const unsigned char *d
 	RL_MALLOC(tmp, sizeof(long));
 	*(long *)tmp = size + datasize;
 	RL_CALL(rl_list_add_element, RL_OK, db, list, number, tmp, 0);
+	if (newlength) {
+		*newlength = size + datasize;
+	}
 
 	size = size % db->page_size;
 

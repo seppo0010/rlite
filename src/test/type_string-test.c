@@ -128,6 +128,62 @@ cleanup:
 	return retval;
 }
 
+static int basic_test_append(int _commit)
+{
+	int retval = 0;
+	fprintf(stderr, "Start basic_test_append %d\n", _commit);
+
+	rlite *db = NULL;
+	RL_CALL_VERBOSE(setup_db, RL_OK, &db, _commit, 1);
+	unsigned char *key = UNSIGN("my key");
+	long keylen = strlen((char *)key);
+	unsigned char *value = UNSIGN("my value"), *testvalue;
+	long valuelen = strlen((char *)value), testvaluelen;
+	long firstchunklen = 2;
+
+	RL_CALL_VERBOSE(rl_append, RL_OK, db, key, keylen, value, firstchunklen, &testvaluelen);
+	RL_CALL_VERBOSE(rl_is_balanced, RL_OK, db);
+	if (_commit) {
+		RL_CALL_VERBOSE(rl_commit, RL_OK, db);
+		RL_CALL_VERBOSE(rl_is_balanced, RL_OK, db);
+	}
+
+	if (testvaluelen != firstchunklen) {
+		fprintf(stderr, "Expected length after append to be %ld, got %ld instead on line %d\n", firstchunklen, testvaluelen, __LINE__);
+		retval = RL_UNEXPECTED;
+		goto cleanup;
+	}
+
+	RL_CALL_VERBOSE(rl_append, RL_OK, db, key, keylen, &value[firstchunklen], valuelen - firstchunklen, &testvaluelen);
+	RL_CALL_VERBOSE(rl_is_balanced, RL_OK, db);
+	if (_commit) {
+		RL_CALL_VERBOSE(rl_commit, RL_OK, db);
+		RL_CALL_VERBOSE(rl_is_balanced, RL_OK, db);
+	}
+
+	if (testvaluelen != valuelen) {
+		fprintf(stderr, "Expected length after append to be %ld, got %ld instead on line %d\n", valuelen, testvaluelen, __LINE__);
+		retval = RL_UNEXPECTED;
+		goto cleanup;
+	}
+
+	RL_CALL_VERBOSE(rl_get, RL_OK, db, key, keylen, &testvalue, &testvaluelen);
+	if (testvaluelen != valuelen || memcmp(testvalue, value, valuelen) != 0) {
+		fprintf(stderr, "Expected value to be \"%s\", got \"%s\" (%ld) instead on line %d\n", value, testvalue, testvaluelen, __LINE__);
+		retval = RL_UNEXPECTED;
+		goto cleanup;
+	}
+	rl_free(testvalue);
+
+	fprintf(stderr, "End basic_test_append\n");
+	retval = 0;
+cleanup:
+	if (db) {
+		rl_close(db);
+	}
+	return retval;
+}
+
 RL_TEST_MAIN_START(type_string_test)
 {
 	int i;
@@ -135,6 +191,7 @@ RL_TEST_MAIN_START(type_string_test)
 		RL_TEST(basic_test_set_get, i);
 		RL_TEST(basic_test_set_delete_get, i);
 		RL_TEST(basic_test_set_set_get, i);
+		RL_TEST(basic_test_append, i);
 	}
 }
 RL_TEST_MAIN_END

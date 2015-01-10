@@ -9,6 +9,7 @@ struct rlite;
 
 int rl_set(struct rlite *db, const unsigned char *key, long keylen, unsigned char *value, long valuelen);
 int rl_get(struct rlite *db, const unsigned char *key, long keylen, unsigned char **value, long *valuelen);
+int rl_append(struct rlite *db, const unsigned char *key, long keylen, unsigned char *value, long valuelen, long *newlength);
 
 int rl_string_pages(struct rlite *db, long page, short *pages);
 int rl_string_delete(struct rlite *db, const unsigned char *key, long keylen);

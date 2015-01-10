@@ -61,6 +61,26 @@ cleanup:
 	return retval;
 }
 
+int rl_append(struct rlite *db, const unsigned char *key, long keylen, unsigned char *value, long valuelen, long *newlength)
+{
+	int retval;
+	long page_number;
+	RL_CALL2(rl_string_get_objects, RL_OK, RL_NOT_FOUND, db, key, keylen, &page_number);
+	if (retval == RL_NOT_FOUND) {
+		RL_CALL(rl_multi_string_set, RL_OK, db, &page_number, value, valuelen);
+		RL_CALL(rl_key_set, RL_OK, db, key, keylen, RL_TYPE_STRING, page_number, 0);
+		if (newlength) {
+			*newlength = valuelen;
+		}
+	}
+	else {
+		RL_CALL(rl_multi_string_append, RL_OK, db, page_number, value, valuelen, newlength);
+	}
+	retval = RL_OK;
+cleanup:
+	return retval;
+}
+
 int rl_string_pages(struct rlite *db, long page, short *pages)
 {
 	return rl_multi_string_pages(db, page, pages);
