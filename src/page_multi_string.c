@@ -152,21 +152,72 @@ cleanup:
 	return retval;
 }
 
-int rl_multi_string_append(struct rlite *db, long number, const unsigned char *data, long size)
+static int append(struct rlite *db, rl_list *list, long list_page_number, const unsigned char *data, long size)
+{
+	int retval = RL_OK;
+	long *page;
+	long pos = 0, to_copy;
+	unsigned char *string = NULL;
+	while (pos < size) {
+		RL_MALLOC(page, sizeof(*page));
+		retval = rl_string_create(db, &string, page);
+		if (retval != RL_OK) {
+			goto cleanup;
+		}
+		to_copy = db->page_size;
+		if (pos + to_copy > size) {
+			to_copy = size - pos;
+		}
+		memcpy(string, &data[pos], sizeof(unsigned char) * to_copy);
+		string = NULL;
+		RL_CALL(rl_list_add_element, RL_OK, db, list, list_page_number, page, -1);
+		page = NULL;
+		pos += to_copy;
+	}
+cleanup:
+	rl_free(string);
+	rl_free(page);
+	return retval;
+}
+
+int rl_multi_string_append(struct rlite *db, long number, const unsigned char *data, long datasize)
 {
 	rl_list *list = NULL;
-	rl_list_node *node = NULL;
-	void *tmp, *_node;
+	unsigned char *tmp_data;
+	void *tmp;
 	int retval;
+	long size, cpsize;
+	long string_page_number;
 
 	RL_CALL(rl_read, RL_FOUND, db, &rl_data_type_list_long, number, &rl_list_type_long, &tmp, 0);
 	list = tmp;
 
-	RL_CALL(rl_list_get_element, RL_OK, db, list, &tmp, 0);
-	*(long *)tmp = *(long *)tmp + size;
+	RL_CALL(rl_list_get_element, RL_FOUND, db, list, &tmp, 0);
+	size = *(long *)tmp;
 	RL_CALL(rl_list_remove_element, RL_OK, db, list, number, 0);
+	RL_MALLOC(tmp, sizeof(long));
+	*(long *)tmp = size + datasize;
 	RL_CALL(rl_list_add_element, RL_OK, db, list, number, tmp, 0);
-	rl_free(tmp);
+
+	size = size % db->page_size;
+
+	if (size > 0) {
+		RL_CALL(rl_list_get_element, RL_FOUND, db, list, &tmp, -1);
+		string_page_number = *(long *)tmp;
+		RL_CALL(rl_string_get, RL_OK, db, &tmp_data, string_page_number);
+		cpsize = db->page_size - size;
+		if (cpsize > datasize) {
+			cpsize = datasize;
+		}
+		memcpy(&tmp_data[size], data, cpsize * sizeof(unsigned char));
+		RL_CALL(rl_write, RL_OK, db, &rl_data_type_string, string_page_number, tmp_data);
+		data = &data[cpsize];
+		datasize -= cpsize;
+	}
+
+	if (datasize > 0) {
+		RL_CALL(append, RL_OK, db, list, number, data, datasize);
+	}
 
 	retval = RL_OK;
 cleanup:
@@ -224,38 +275,17 @@ cleanup:
 int rl_multi_string_set(struct rlite *db, long *number, const unsigned char *data, long size)
 {
 	int retval;
-	long *page = NULL, to_copy;
-	unsigned char *string = NULL;
+	long *page = NULL;
 	rl_list *list = NULL;
 	RL_CALL(rl_list_create, RL_OK, db, &list, &rl_list_type_long);
 	*number = db->next_empty_page;
 	RL_CALL(rl_write, RL_OK, db, &rl_data_type_list_long, *number, list);
-	long pos = 0;
 	RL_MALLOC(page, sizeof(*page));
 	*page = size;
 	RL_CALL(rl_list_add_element, RL_OK, db, list, *number, page, -1);
 	page = NULL;
-	while (pos < size) {
-		RL_MALLOC(page, sizeof(*page));
-		retval = rl_string_create(db, &string, page);
-		if (retval != RL_OK) {
-			goto cleanup;
-		}
-		to_copy = db->page_size;
-		if (pos + to_copy > size) {
-			to_copy = size - pos;
-		}
-		memcpy(string, &data[pos], sizeof(unsigned char) * to_copy);
-		string = NULL;
-		RL_CALL(rl_list_add_element, RL_OK, db, list, *number, page, -1);
-		page = NULL;
-		pos += to_copy;
-	}
+	RL_CALL(append, RL_OK, db, list, *number, data, size);
 cleanup:
-	if (retval != RL_OK) {
-		rl_free(page);
-		rl_free(string);
-	}
 	return retval;
 }
 

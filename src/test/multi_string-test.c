@@ -319,6 +319,74 @@ cleanup:
 	return retval;
 }
 
+static int test_append(long size, long append_size)
+{
+	fprintf(stderr, "Start test_append %ld %ld\n", size, append_size);
+	unsigned char *data = malloc(sizeof(unsigned char) * size);
+	unsigned char *append_data = malloc(sizeof(unsigned char) * append_size);
+	unsigned char *testdata;
+	long testdatalen;
+	rlite *db = NULL;
+	int retval = rl_open(":memory:", &db, RLITE_OPEN_READWRITE | RLITE_OPEN_CREATE);
+	if (retval != RL_OK) {
+		fprintf(stderr, "Unable to open rlite\n");
+		goto cleanup;
+	}
+
+	long page, i;
+	for (i = 0; i < size; i++) {
+		data[i] = i % 123;
+	}
+	for (i = 0; i < append_size; i++) {
+		append_data[i] = i % 123;
+	}
+
+	retval = rl_multi_string_set(db, &page, data, size);
+	if (retval != RL_OK) {
+		fprintf(stderr, "Failed to set multi string, got %d\n", retval);
+		goto cleanup;
+	}
+
+	retval = rl_multi_string_append(db, page, append_data, append_size);
+	if (retval != RL_OK) {
+		fprintf(stderr, "Failed to append multi string, got %d\n", retval);
+		goto cleanup;
+	}
+
+	retval = rl_multi_string_get(db, page, &testdata, &testdatalen);
+	if (retval != RL_OK) {
+		fprintf(stderr, "Failed to get multi string, got %d\n", retval);
+		goto cleanup;
+	}
+
+	if (testdatalen != size + append_size) {
+		fprintf(stderr, "Expected size to be %ld, got %ld instead on line %d\n", size + append_size, testdatalen, __LINE__);
+		retval = RL_UNEXPECTED;
+		goto cleanup;
+	}
+
+	if (memcmp(testdata, data, size) != 0) {
+		fprintf(stderr, "Existing value corrupted after append on line %d\n", __LINE__);
+		retval = RL_UNEXPECTED;
+		goto cleanup;
+	}
+
+	if (memcmp(&testdata[size], append_data, append_size) != 0) {
+		fprintf(stderr, "Appended data corrupted on line %d\n", __LINE__);
+		retval = RL_UNEXPECTED;
+		goto cleanup;
+	}
+	rl_free(testdata);
+
+	fprintf(stderr, "End test_append %ld\n", size);
+	retval = 0;
+cleanup:
+	rl_free(data);
+	rl_free(append_data);
+	rl_close(db);
+	return retval;
+}
+
 RL_TEST_MAIN_START(multi_string_test)
 {
 	RL_TEST(basic_set_get, 0);
@@ -326,6 +394,10 @@ RL_TEST_MAIN_START(multi_string_test)
 	RL_TEST(test_cmp, 0, 0, 1);
 	RL_TEST(test_sha, 100);
 	RL_TEST(test_sha, 1000);
+	RL_TEST(test_append, 10, 20);
+	RL_TEST(test_append, 10, 1200);
+	RL_TEST(test_append, 1200, 10);
+	RL_TEST(test_append, 1000, 2000);
 	long i, j;
 	for (i = 0; i < 2; i++) {
 		for (j = 0; j < CMP_SIZE / 500; j++) {
