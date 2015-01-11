@@ -1093,7 +1093,7 @@ cleanup:
 
 int rl_zset_delete(rlite *db, long value_page)
 {
-	long levels_page_number, skiplist_page, scores_page;
+	long skiplist_page, scores_page;
 	rl_skiplist *skiplist;
 	rl_btree *scores;
 	int retval;
