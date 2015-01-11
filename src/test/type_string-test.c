@@ -128,6 +128,41 @@ cleanup:
 	return retval;
 }
 
+static int basic_test_set_getrange(int _commit)
+{
+	int retval = 0;
+	fprintf(stderr, "Start basic_test_set_getrange %d\n", _commit);
+
+	rlite *db = NULL;
+	RL_CALL_VERBOSE(setup_db, RL_OK, &db, _commit, 1);
+	unsigned char *key = UNSIGN("my key");
+	long keylen = strlen((char *)key);
+	unsigned char *value = UNSIGN("my value"), *testvalue;
+	long valuelen = strlen((char *)value), testvaluelen;
+
+	RL_CALL_VERBOSE(rl_set, RL_OK, db, key, keylen, value, valuelen, 0, 0);
+	RL_CALL_VERBOSE(rl_is_balanced, RL_OK, db);
+	if (_commit) {
+		RL_CALL_VERBOSE(rl_commit, RL_OK, db);
+		RL_CALL_VERBOSE(rl_is_balanced, RL_OK, db);
+	}
+
+	RL_CALL_VERBOSE(rl_getrange, RL_OK, db, key, keylen, 2, 5, &testvalue, &testvaluelen);
+	if (testvaluelen != 4 || memcmp(testvalue, &value[2], 4) != 0) {
+		fprintf(stderr, "Expected value to be \"%s\", got \"%s\" (%ld) instead on line %d\n", value, testvalue, testvaluelen, __LINE__);
+		retval = RL_UNEXPECTED;
+		goto cleanup;
+	}
+	rl_free(testvalue);
+
+	fprintf(stderr, "End basic_test_set_getrange\n");
+	retval = 0;
+cleanup:
+	if (db) {
+		rl_close(db);
+	}
+	return retval;
+}
 static int basic_test_append(int _commit)
 {
 	int retval = 0;
@@ -309,6 +344,7 @@ RL_TEST_MAIN_START(type_string_test)
 		RL_TEST(basic_test_set_get, i);
 		RL_TEST(basic_test_set_delete_get, i);
 		RL_TEST(basic_test_set_set_get, i);
+		RL_TEST(basic_test_set_getrange, i);
 		RL_TEST(basic_test_append, i);
 		RL_TEST(basic_test_setnx_setnx_get, i);
 		RL_TEST(basic_test_set_expiration, i);

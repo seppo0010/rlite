@@ -86,6 +86,17 @@ cleanup:
 	return retval;
 }
 
+int rl_getrange(struct rlite *db, const unsigned char *key, long keylen, long start, long stop, unsigned char **value, long *valuelen)
+{
+	long page_number;
+	int retval;
+	RL_CALL(rl_string_get_objects, RL_OK, db, key, keylen, &page_number);
+	RL_CALL(rl_multi_string_getrange, RL_OK, db, page_number, value, valuelen, start, stop);
+	retval = RL_OK;
+cleanup:
+	return retval;
+}
+
 int rl_string_pages(struct rlite *db, long page, short *pages)
 {
 	return rl_multi_string_pages(db, page, pages);
