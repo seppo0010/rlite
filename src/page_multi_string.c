@@ -244,6 +244,10 @@ int rl_multi_string_get(struct rlite *db, long number, unsigned char **_data, lo
 		i = 0;
 		if (!data) {
 			*size = *(long *)node->elements[0];
+			if (!_data) {
+				retval = RL_OK;
+				break;
+			}
 			RL_MALLOC(data, sizeof(unsigned char) * (*size));
 			i = 1;
 		}
@@ -260,7 +264,9 @@ int rl_multi_string_get(struct rlite *db, long number, unsigned char **_data, lo
 		rl_list_node_nocache_destroy(db, node);
 		node = NULL;
 	}
-	*_data = data;
+	if (_data) {
+		*_data = data;
+	}
 	retval = RL_OK;
 cleanup:
 	if (retval != RL_OK) {

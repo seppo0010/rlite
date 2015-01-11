@@ -266,6 +266,42 @@ cleanup:
 	}
 	return retval;
 }
+
+static int basic_test_set_strlen(int _commit)
+{
+	int retval = 0;
+	fprintf(stderr, "Start basic_test_set_strlen %d\n", _commit);
+
+	rlite *db = NULL;
+	RL_CALL_VERBOSE(setup_db, RL_OK, &db, _commit, 1);
+	unsigned char *key = UNSIGN("my key");
+	long keylen = strlen((char *)key);
+	unsigned char *value = UNSIGN("my value");
+	long valuelen = strlen((char *)value), testvaluelen;
+
+	RL_CALL_VERBOSE(rl_set, RL_OK, db, key, keylen, value, valuelen, 0, 0);
+	RL_CALL_VERBOSE(rl_is_balanced, RL_OK, db);
+	if (_commit) {
+		RL_CALL_VERBOSE(rl_commit, RL_OK, db);
+		RL_CALL_VERBOSE(rl_is_balanced, RL_OK, db);
+	}
+
+	RL_CALL_VERBOSE(rl_get, RL_OK, db, key, keylen, NULL, &testvaluelen);
+	if (testvaluelen != valuelen) {
+		fprintf(stderr, "Expected length to be %ld, got %ld instead on line %d\n", valuelen, testvaluelen, __LINE__);
+		retval = RL_UNEXPECTED;
+		goto cleanup;
+	}
+
+	fprintf(stderr, "End basic_test_set_strlen\n");
+	retval = 0;
+cleanup:
+	if (db) {
+		rl_close(db);
+	}
+	return retval;
+}
+
 RL_TEST_MAIN_START(type_string_test)
 {
 	int i;
@@ -276,6 +312,7 @@ RL_TEST_MAIN_START(type_string_test)
 		RL_TEST(basic_test_append, i);
 		RL_TEST(basic_test_setnx_setnx_get, i);
 		RL_TEST(basic_test_set_expiration, i);
+		RL_TEST(basic_test_set_strlen, i);
 	}
 }
 RL_TEST_MAIN_END
