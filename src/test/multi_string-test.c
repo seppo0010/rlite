@@ -393,6 +393,53 @@ cleanup:
 	return retval;
 }
 
+static int test_substr(long strsize, long start, long stop, long startindex, long expectedsize)
+{
+	fprintf(stderr, "Start test_substr %ld %ld %ld %ld %ld\n", strsize, start, stop, startindex, expectedsize);
+	unsigned char *data = malloc(sizeof(unsigned char) * strsize), *data2;
+	rlite *db = NULL;
+	int retval = rl_open(":memory:", &db, RLITE_OPEN_READWRITE | RLITE_OPEN_CREATE);
+	if (retval != RL_OK) {
+		fprintf(stderr, "Unable to open rlite\n");
+		goto cleanup;
+	}
+
+	long page, i, size2;
+	for (i = 0; i < strsize; i++) {
+		data[i] = i % 123;
+	}
+
+	retval = rl_multi_string_set(db, &page, data, strsize);
+	if (retval != RL_OK) {
+		fprintf(stderr, "Failed to set multi string, got %d\n", retval);
+		goto cleanup;
+	}
+
+	retval = rl_multi_string_getrange(db, page, &data2, &size2, start, stop);
+	if (retval != RL_OK) {
+		fprintf(stderr, "Unable to get data, got %d on line %d\n", retval, __LINE__);
+		goto cleanup;
+	}
+	if (size2 != expectedsize) {
+		fprintf(stderr, "Expected size to be %ld, got %ld instead on line %d\n", expectedsize, size2, __LINE__);
+		retval = RL_UNEXPECTED;
+		goto cleanup;
+	}
+	if (memcmp(&data[startindex], data2, size2) != 0) {
+		fprintf(stderr, "Data mismatch on line %d\n", __LINE__);
+		retval = 1;
+		goto cleanup;
+	}
+	rl_free(data2);
+
+	fprintf(stderr, "End test_substr\n");
+	retval = 0;
+cleanup:
+	free(data);
+	rl_close(db);
+	return retval;
+}
+
 RL_TEST_MAIN_START(multi_string_test)
 {
 	RL_TEST(basic_set_get, 0);
@@ -411,5 +458,8 @@ RL_TEST_MAIN_START(multi_string_test)
 			RL_TEST(test_cmp2, i * 2 - 1, j * 500, (j + 1) * 500);
 		}
 	}
+	RL_TEST(test_substr, 20, 0, 10, 0, 11);
+	RL_TEST(test_substr, 2000, 1, -1, 1, 1999);
+	RL_TEST(test_substr, 2000, -10, -1, 1990, 10);
 }
 RL_TEST_MAIN_END

@@ -227,46 +227,57 @@ cleanup:
 	return retval;
 }
 
-int rl_multi_string_get(struct rlite *db, long number, unsigned char **_data, long *size)
+int rl_multi_string_getrange(struct rlite *db, long number, unsigned char **_data, long *size, long start, long stop)
 {
+	long totalsize;
 	rl_list *list = NULL;
 	rl_list_node *node = NULL;
-	void *_list, *_node;
+	void *_list, *tmp;
 	unsigned char *data = NULL;
 	int retval;
 	RL_CALL(rl_read, RL_FOUND, db, &rl_data_type_list_long, number, &rl_list_type_long, &_list, 0);
 	list = _list;
 	unsigned char *tmp_data;
-	long node_number = list->left, i, pos = 0, to_copy;
-	while (node_number > 0) {
-		RL_CALL(rl_read, RL_FOUND, db, list->type->list_node_type, node_number, list, &_node, 0);
-		node = _node;
-		i = 0;
-		if (!data) {
-			*size = *(long *)node->elements[0];
-			if (!_data) {
-				retval = RL_OK;
-				break;
-			}
-			RL_MALLOC(data, sizeof(unsigned char) * (*size));
-			i = 1;
+	long i, pos = 0, pagesize, pagestart;
+
+	RL_CALL(rl_list_get_element, RL_FOUND, db, list, &tmp, 0);
+	totalsize = *(long *)tmp;
+	if (start < 0) {
+		start += totalsize;
+		if (start < 0) {
+			start = 0;
 		}
-		for (; i < node->size; i++) {
-			RL_CALL(rl_string_get, RL_OK, db, &tmp_data, *(long *)node->elements[i]);
-			to_copy = db->page_size;
-			if (pos + to_copy > *size) {
-				to_copy = *size - pos;
-			}
-			memcpy(&data[pos], tmp_data, sizeof(unsigned char) * to_copy);
-			pos += to_copy;
+	}
+	if (stop < 0) {
+		stop += totalsize;
+		if (stop < 0) {
+			stop = 0;
 		}
-		node_number = node->right;
-		rl_list_node_nocache_destroy(db, node);
-		node = NULL;
 	}
-	if (_data) {
-		*_data = data;
+	*size = stop - start + 1;
+	if (!_data) {
+		retval = RL_OK;
+		goto cleanup;
 	}
+
+	RL_MALLOC(data, sizeof(unsigned char) * (*size));
+
+	i = start / db->page_size;
+	pagestart = start % db->page_size;
+	// pos = i * db->page_size + pagestart;
+	// the first element in the list is the length of the array, skip to the second
+	for (i++; i < list->size; i++) {
+		RL_CALL(rl_list_get_element, RL_FOUND, db, list, &tmp, i);
+		RL_CALL(rl_string_get, RL_OK, db, &tmp_data, *(long *)tmp);
+		pagesize = db->page_size - pagestart;
+		if (pos + pagesize > *size) {
+			pagesize = *size - pos;
+		}
+		memcpy(&data[pos], &tmp_data[pagestart], sizeof(unsigned char) * pagesize);
+		pos += pagesize;
+		pagestart = 0;
+	}
+	*_data = data;
 	retval = RL_OK;
 cleanup:
 	if (retval != RL_OK) {
@@ -279,6 +290,11 @@ cleanup:
 		rl_list_node_nocache_destroy(db, node);
 	}
 	return retval;
+}
+
+int rl_multi_string_get(struct rlite *db, long number, unsigned char **_data, long *size)
+{
+	return rl_multi_string_getrange(db, number, _data, size, 0, -1);
 }
 
 int rl_multi_string_set(struct rlite *db, long *number, const unsigned char *data, long size)
