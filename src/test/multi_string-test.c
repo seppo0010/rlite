@@ -440,6 +440,56 @@ cleanup:
 	return retval;
 }
 
+static int test_setrange(long initialsize, long index, long updatesize)
+{
+	fprintf(stderr, "Start test_setrange %ld %ld %ld\n", initialsize, index, updatesize);
+	long finalsize = index + updatesize > initialsize ? index + updatesize : initialsize;
+	long newlength, testdatalen;
+	unsigned char *testdata;
+	unsigned char *finaldata = calloc(finalsize, sizeof(unsigned char));
+	unsigned char *initialdata = malloc(sizeof(unsigned char) * initialsize);
+	unsigned char *updatedata = malloc(sizeof(unsigned char) * updatesize);
+	rlite *db = NULL;
+	int retval = rl_open(":memory:", &db, RLITE_OPEN_READWRITE | RLITE_OPEN_CREATE);
+	if (retval != RL_OK) {
+		fprintf(stderr, "Unable to open rlite\n");
+		goto cleanup;
+	}
+
+	long page, i;
+	for (i = 0; i < initialsize; i++) {
+		finaldata[i] = initialdata[i] = i % 123;
+	}
+	for (i = 0; i < updatesize; i++) {
+		finaldata[index + i] = updatedata[i] = i % 151;
+	}
+
+	RL_CALL_VERBOSE(rl_multi_string_set, RL_OK, db, &page, initialdata, initialsize);
+
+	RL_CALL_VERBOSE(rl_multi_string_setrange, RL_OK, db, page, updatedata, updatesize, index, &newlength);
+	if (finalsize != newlength) {
+		fprintf(stderr, "Expected size to be %ld, got %ld instead on line %d\n", finalsize, newlength, __LINE__);
+		retval = RL_UNEXPECTED;
+		goto cleanup;
+	}
+	RL_CALL_VERBOSE(rl_multi_string_get, RL_OK, db, page, &testdata, &testdatalen);
+	if (testdatalen != finalsize || memcmp(finaldata, testdata, finalsize) != 0) {
+		fprintf(stderr, "Data mismatch on line %d\n", __LINE__);
+		retval = 1;
+		goto cleanup;
+	}
+	rl_free(testdata);
+
+	fprintf(stderr, "End test_setrange\n");
+	retval = 0;
+cleanup:
+	free(finaldata);
+	free(initialdata);
+	free(updatedata);
+	rl_close(db);
+	return retval;
+}
+
 RL_TEST_MAIN_START(multi_string_test)
 {
 	RL_TEST(basic_set_get, 0);
@@ -461,5 +511,11 @@ RL_TEST_MAIN_START(multi_string_test)
 	RL_TEST(test_substr, 20, 0, 10, 0, 11);
 	RL_TEST(test_substr, 2000, 1, -1, 1, 1999);
 	RL_TEST(test_substr, 2000, -10, -1, 1990, 10);
+	RL_TEST(test_setrange, 10, 5, 3);
+	RL_TEST(test_setrange, 10, 5, 20);
+	RL_TEST(test_setrange, 10, 20, 5);
+	RL_TEST(test_setrange, 1024, 1024, 1024);
+	RL_TEST(test_setrange, 1024, 100, 1024);
+	RL_TEST(test_setrange, 1024, 1024, 100);
 }
 RL_TEST_MAIN_END

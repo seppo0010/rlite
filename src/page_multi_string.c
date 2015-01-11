@@ -313,6 +313,76 @@ int rl_multi_string_set(struct rlite *db, long *number, const unsigned char *dat
 cleanup:
 	return retval;
 }
+int rl_multi_string_setrange(struct rlite *db, long number, const unsigned char *data, long size, long offset, long *newlength)
+{
+	long oldsize, newsize;
+	rl_list *list = NULL;
+	void *_list, *tmp;
+	int retval;
+	RL_CALL(rl_read, RL_FOUND, db, &rl_data_type_list_long, number, &rl_list_type_long, &_list, 0);
+	list = _list;
+	unsigned char *tmp_data;
+	long i, pagesize, pagestart, page;
+	if (offset < 0) {
+		retval = RL_INVALID_PARAMETERS;
+		goto cleanup;
+	}
+
+	RL_CALL(rl_list_get_element, RL_FOUND, db, list, &tmp, 0);
+	oldsize = *(long *)tmp;
+	if (oldsize > offset) {
+		i = offset / db->page_size;
+		pagestart = offset % db->page_size;
+
+		newsize = offset + size;
+		if (newsize > (list->size - 1) * db->page_size) {
+			newsize = (list->size - 1) * db->page_size;
+		}
+		if (newsize > oldsize) {
+			RL_CALL(rl_list_remove_element, RL_OK, db, list, number, 0);
+			RL_MALLOC(tmp, sizeof(long));
+			*(long *)tmp = newsize;
+			RL_CALL(rl_list_add_element, RL_OK, db, list, number, tmp, 0);
+		}
+
+		for (i++; size > 0 && i < list->size; i++) {
+			RL_CALL(rl_list_get_element, RL_FOUND, db, list, &tmp, i);
+			page = *(long *)tmp;
+			RL_CALL(rl_string_get, RL_OK, db, &tmp_data, page);
+			pagesize = db->page_size - pagestart;
+			if (pagesize > size) {
+				pagesize = size;
+			}
+			memcpy(&tmp_data[pagestart], data, sizeof(char) * pagesize);
+			RL_CALL(rl_write, RL_OK, db, &rl_data_type_string, page, tmp_data);
+
+			// if there's more bytes that did not enter in this page it will be caught with an append
+			if (oldsize < pagesize + pagestart) {
+				oldsize = pagesize + pagestart;
+			}
+			data += pagesize;
+			offset += pagesize;
+			size -= pagesize;
+			pagestart = 0;
+		}
+		*newlength = oldsize;
+	}
+
+	if (oldsize < offset) {
+		RL_MALLOC(tmp_data, sizeof(char) * (size + offset - oldsize));
+		memset(tmp_data, 0, offset - oldsize);
+		memcpy(&tmp_data[offset - oldsize], data, sizeof(char) * size);
+		RL_CALL(rl_multi_string_append, RL_OK, db, number, tmp_data, size + offset - oldsize, newlength);
+		rl_free(tmp_data);
+	}
+	else if (oldsize == offset && size > 0) {
+		RL_CALL(rl_multi_string_append, RL_OK, db, number, data, size, newlength);
+	}
+	retval = RL_OK;
+cleanup:
+	return retval;
+}
+
 
 int rl_multi_string_sha1(struct rlite *db, unsigned char digest[20], long number)
 {
