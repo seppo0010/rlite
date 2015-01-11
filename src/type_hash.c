@@ -570,15 +570,15 @@ cleanup:
 	return retval;
 }
 
-int rl_hash_delete(rlite *db, const unsigned char *key, long keylen)
+int rl_hash_delete(rlite *db, long value_page)
 {
-	long hash_page_number;
 	rl_btree *hash;
 	rl_btree_iterator *iterator;
 	rl_hashkey *hashkey = NULL;
 	int retval;
 	void *tmp;
-	RL_CALL(rl_hash_get_objects, RL_OK, db, key, keylen, &hash_page_number, &hash, 0);
+	RL_CALL(rl_read, RL_FOUND, db, &rl_data_type_btree_hash_sha1_hashkey, value_page, &rl_btree_type_hash_sha1_hashkey, &tmp, 1);
+	hash = tmp;
 	RL_CALL(rl_btree_iterator_create, RL_OK, db, hash, &iterator);
 	while ((retval = rl_btree_iterator_next(iterator, NULL, &tmp)) == RL_OK) {
 		hashkey = tmp;
@@ -593,8 +593,7 @@ int rl_hash_delete(rlite *db, const unsigned char *key, long keylen)
 	}
 
 	RL_CALL(rl_btree_delete, RL_OK, db, hash);
-	RL_CALL(rl_delete, RL_OK, db, hash_page_number);
-	RL_CALL(rl_key_delete, RL_OK, db, key, keylen);
+	RL_CALL(rl_delete, RL_OK, db, value_page);
 	retval = RL_OK;
 cleanup:
 	return retval;

@@ -28,6 +28,6 @@ int rl_sunion(struct rlite *db, int keyc, unsigned char **keys, long *keyslen, l
 int rl_sunionstore(struct rlite *db, unsigned char *target, long targetlen, int keyc, unsigned char **keys, long *keyslen, long *added);
 
 int rl_set_pages(struct rlite *db, long page, short *pages);
-int rl_set_delete(struct rlite *db, const unsigned char *key, long keylen);
+int rl_set_delete(struct rlite *db, long value_page);
 
 #endif

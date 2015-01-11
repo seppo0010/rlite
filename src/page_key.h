@@ -6,7 +6,7 @@ struct rlite;
 typedef struct {
 	char identifier;
 	const char *name;
-	int (*delete)(struct rlite *db, const unsigned char *key, long keylen);
+	int (*delete)(struct rlite *db, long value_page);
 } rl_type;
 
 extern rl_type types[];

@@ -963,7 +963,7 @@ static int zunionstore_minmax(rlite *db, long keys_size, unsigned char **keys, l
 		}
 	}
 	if (target_scores->number_of_elements == 0) {
-		RL_CALL(rl_zset_delete, RL_OK, db, keys[0], keys_len[0]);
+		RL_CALL(rl_key_delete_with_value, RL_OK, db, keys[0], keys_len[0]);
 	}
 
 	retval = RL_OK;
@@ -1091,22 +1091,31 @@ cleanup:
 	return retval;
 }
 
-int rl_zset_delete(rlite *db, const unsigned char *key, long keylen)
+int rl_zset_delete(rlite *db, long value_page)
 {
 	long levels_page_number, skiplist_page, scores_page;
 	rl_skiplist *skiplist;
 	rl_btree *scores;
 	int retval;
 	void *tmp;
-	RL_CALL(rl_zset_get_objects, RL_OK, db, key, keylen, &levels_page_number, &scores, &scores_page, &skiplist, &skiplist_page, 0);
+	rl_list *levels;
+	RL_CALL(rl_read, RL_FOUND, db, &rl_data_type_list_long, value_page, &rl_list_type_long, &tmp, 1);
+	levels = tmp;
+	RL_CALL(rl_list_get_element, RL_FOUND, db, levels, &tmp, 0);
+	scores_page = *(long *)tmp;
+	RL_CALL(rl_read, RL_FOUND, db, &rl_data_type_btree_hash_sha1_double, scores_page, &rl_btree_type_hash_sha1_double, &tmp, 1);
+	scores = tmp;
+	RL_CALL(rl_list_get_element, RL_FOUND, db, levels, &tmp, 1);
+	skiplist_page = *(long *)tmp;
+	RL_CALL(rl_read, RL_FOUND, db, &rl_data_type_skiplist, skiplist_page, NULL, &tmp, 1);
+	skiplist = tmp;
 	RL_CALL(rl_skiplist_delete_all, RL_OK, db, skiplist);
 	RL_CALL(rl_delete, RL_OK, db, skiplist_page);
 	RL_CALL(rl_btree_delete, RL_OK, db, scores);
 	RL_CALL(rl_delete, RL_OK, db, scores_page);
-	RL_CALL(rl_read, RL_FOUND, db, &rl_data_type_list_long, levels_page_number, &rl_list_type_long, &tmp, 1);
+	RL_CALL(rl_read, RL_FOUND, db, &rl_data_type_list_long, value_page, &rl_list_type_long, &tmp, 1);
 	RL_CALL(rl_list_delete, RL_OK, db, tmp);
-	RL_CALL(rl_delete, RL_OK, db, levels_page_number);
-	RL_CALL(rl_key_delete, RL_OK, db, key, keylen);
+	RL_CALL(rl_delete, RL_OK, db, value_page);
 cleanup:
 	return retval;
 }

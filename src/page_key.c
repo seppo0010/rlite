@@ -191,7 +191,8 @@ int rl_key_delete_with_value(struct rlite *db, const unsigned char *key, long ke
 	long value_page;
 	RL_CALL(rl_key_get_ignore_expire, RL_FOUND, db, key, keylen, &identifier, NULL, &value_page, NULL, 1);
 	RL_CALL(get_type, RL_OK, identifier, &type);
-	RL_CALL(type->delete, RL_OK, db, key, keylen);
+	RL_CALL(type->delete, RL_OK, db, value_page);
+	RL_CALL(rl_key_delete, RL_OK, db, key, keylen);
 cleanup:
 	return retval;
 }

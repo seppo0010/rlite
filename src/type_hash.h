@@ -24,6 +24,6 @@ int rl_hincrby(struct rlite *db, const unsigned char *key, long keylen, unsigned
 int rl_hincrbyfloat(struct rlite *db, const unsigned char *key, long keylen, unsigned char *field, long fieldlen, double increment, double *newvalue);
 
 int rl_hash_pages(struct rlite *db, long page, short *pages);
-int rl_hash_delete(struct rlite *db, const unsigned char *key, long keylen);
+int rl_hash_delete(struct rlite *db, long value_page);
 
 #endif

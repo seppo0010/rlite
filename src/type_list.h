@@ -20,6 +20,6 @@ int rl_lset(struct rlite *db, const unsigned char *key, long keylen, long index,
 int rl_ltrim(struct rlite *db, const unsigned char *key, long keylen, long start, long stop);
 
 int rl_llist_pages(struct rlite *db, long page, short *pages);
-int rl_llist_delete(struct rlite *db, const unsigned char *key, long keylen);
+int rl_llist_delete(struct rlite *db, long value_page);
 
 #endif

@@ -443,15 +443,15 @@ cleanup:
 	return retval;
 }
 
-int rl_llist_delete(rlite *db, const unsigned char *key, long keylen)
+int rl_llist_delete(rlite *db, long value_page)
 {
-	long list_page_number = 0;
 	rl_list *list = NULL;
 	rl_list_iterator *iterator;
 	long member;
 	int retval;
 	void *tmp;
-	RL_CALL(rl_llist_get_objects, RL_OK, db, key, keylen, &list_page_number, &list, 0);
+	RL_CALL(rl_read, RL_FOUND, db, &rl_data_type_list_long, value_page, &rl_list_type_long, &tmp, 1);
+	list = tmp;
 	RL_CALL(rl_list_iterator_create, RL_OK, db, &iterator, list, 1);
 	while ((retval = rl_list_iterator_next(iterator, &tmp)) == RL_OK) {
 		member = *(long *)tmp;
@@ -465,8 +465,7 @@ int rl_llist_delete(rlite *db, const unsigned char *key, long keylen)
 	}
 
 	RL_CALL(rl_list_delete, RL_OK, db, list);
-	RL_CALL(rl_delete, RL_OK, db, list_page_number);
-	RL_CALL(rl_key_delete, RL_OK, db, key, keylen);
+	RL_CALL(rl_delete, RL_OK, db, value_page);
 	retval = RL_OK;
 cleanup:
 	return retval;

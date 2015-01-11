@@ -1,5 +1,5 @@
-#ifndef _RL_STRINGTEST_H
-#define _RL_STRINGTEST_H
+#ifndef _RL_TSTRINGTEST_H
+#define _RL_TSTRINGTEST_H
 
 #include "test_util.h"
 
