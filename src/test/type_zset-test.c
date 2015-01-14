@@ -507,31 +507,23 @@ int basic_test_zadd_zrangebylex_with_empty(int _commit)
 	unsigned char *key = UNSIGN("my key");
 	long keylen = strlen((char *)key);
 
-	RL_CALL_VERBOSE(rl_zadd, RL_OK, db, key, keylen, 0.0, UNSIGN(""), 0);
+	RL_CALL_VERBOSE(rl_zadd, RL_OK, db, key, keylen, 0.0, UNSIGN("a"), 0);
 	RL_CALL_VERBOSE(rl_is_balanced, RL_OK, db);
-	RL_CALL_VERBOSE(rl_zadd, RL_OK, db, key, keylen, 0.0, UNSIGN("a"), 1);
+	RL_CALL_VERBOSE(rl_zadd, RL_OK, db, key, keylen, 0.0, UNSIGN("b"), 1);
 	RL_CALL_VERBOSE(rl_is_balanced, RL_OK, db);
 
 	unsigned char *min = UNSIGN("-");
-	unsigned char *max = UNSIGN("(a");
+	unsigned char *max = UNSIGN("(b");
 	long lexcount;
 	// These test expect different values if offset or limit exist
-	retval = rl_zlexcount(db, key, keylen, min, 1, max, 2, &lexcount);
-	if (retval != RL_OK) {
-		fprintf(stderr, "Unable to rl_zlexcount, got %d\n", retval);
-		goto cleanup;
-	}
+	RL_CALL_VERBOSE(rl_zlexcount, RL_OK, db, key, keylen, min, 1, max, 2, &lexcount);
 	if (1 != lexcount) {
 		fprintf(stderr, "Expected lexcount to be %d, got %ld instead\n", 1, lexcount);
 		retval = RL_UNEXPECTED;
 		goto cleanup;
 	}
 
-	retval = rl_zrangebylex(db, key, keylen, min, 1, max, 2, 0, -1, &iterator);
-	if (retval != RL_OK) {
-		fprintf(stderr, "Unable to zrangebylex, got %d\n", retval);
-		goto cleanup;
-	}
+	RL_CALL_VERBOSE(rl_zrangebylex, RL_OK, db, key, keylen, min, 1, max, 2, 0, -1, &iterator);
 	if (iterator->size != 1) {
 		fprintf(stderr, "Expected zrangebylex size to be %d, got %ld instead on line %d\n", 1, iterator->size, __LINE__);
 		retval = RL_UNEXPECTED;
@@ -539,34 +531,26 @@ int basic_test_zadd_zrangebylex_with_empty(int _commit)
 	}
 	unsigned char *data2;
 	long data2_len;
-	retval = rl_zset_iterator_next(iterator, NULL, &data2, &data2_len);
-	if (data2_len != 0) {
-		fprintf(stderr, "Unexpected datalen %ld, expected %d in line %d\n", data2_len, 0, __LINE__);
+	RL_CALL_VERBOSE(rl_zset_iterator_next, RL_OK, iterator, NULL, &data2, &data2_len);
+	if (data2_len != 1) {
+		fprintf(stderr, "Unexpected datalen %ld, expected %d in line %d\n", data2_len, 1, __LINE__);
+		retval = RL_UNEXPECTED;
 		goto cleanup;
 	}
 	rl_free(data2);
 
 	RL_CALL_VERBOSE(rl_zset_iterator_next, RL_END, iterator, NULL, NULL, NULL);
-
-	if (retval != RL_END) {
-		fprintf(stderr, "Iterator finished without RL_END, got %d\n", retval);
-		goto cleanup;
-	}
-
-	retval = rl_zrevrangebylex(db, key, keylen, max, 2, min, 1, 0, -1, &iterator);
-	if (retval != RL_OK) {
-		fprintf(stderr, "Unable to zrangebylex, got %d\n", retval);
-		goto cleanup;
-	}
+	RL_CALL_VERBOSE(rl_zrevrangebylex, RL_OK, db, key, keylen, max, 2, min, 1, 0, -1, &iterator);
 	if (iterator->size != 1) {
 		fprintf(stderr, "Expected zrangebylex size to be %d, got %ld instead\n", 1, iterator->size);
 		retval = RL_UNEXPECTED;
 		goto cleanup;
 	}
 
-	retval = rl_zset_iterator_next(iterator, NULL, &data2, &data2_len);
-	if (data2_len != 0) {
-		fprintf(stderr, "Unexpected datalen %ld, expected %d in line %d\n", data2_len, 0, __LINE__);
+	RL_CALL_VERBOSE(rl_zset_iterator_next, RL_OK, iterator, NULL, &data2, &data2_len);
+	if (data2_len != 1) {
+		fprintf(stderr, "Unexpected datalen %ld, expected %d in line %d\n", data2_len, 1, __LINE__);
+		retval = RL_UNEXPECTED;
 		goto cleanup;
 	}
 	rl_free(data2);
