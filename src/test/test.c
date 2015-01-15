@@ -34,18 +34,18 @@ int main() {
 #define RUN_TEST(name) retval = name(); if (retval != 0) return retval;
 #endif
 	int retval;
-	RUN_TEST(long_test);
-	RUN_TEST(btree_test);
-	RUN_TEST(list_test);
-	RUN_TEST(rlite_test);
-	RUN_TEST(string_test);
-	RUN_TEST(key_test);
-	RUN_TEST(multi_string_test);
-	RUN_TEST(skiplist_test);
+	// RUN_TEST(long_test);
+	// RUN_TEST(btree_test);
+	// RUN_TEST(list_test);
+	// RUN_TEST(rlite_test);
+	// RUN_TEST(string_test);
+	// RUN_TEST(key_test);
+	// RUN_TEST(multi_string_test);
+	// RUN_TEST(skiplist_test);
 	RUN_TEST(type_string_test);
-	RUN_TEST(type_list_test);
-	RUN_TEST(type_set_test);
-	RUN_TEST(type_zset_test);
-	RUN_TEST(type_hash_test);
+	// RUN_TEST(type_list_test);
+	// RUN_TEST(type_set_test);
+	// RUN_TEST(type_zset_test);
+	// RUN_TEST(type_hash_test);
 	return retval;
 }

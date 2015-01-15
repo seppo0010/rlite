@@ -13,6 +13,7 @@ int rl_append(struct rlite *db, const unsigned char *key, long keylen, unsigned 
 int rl_getrange(struct rlite *db, const unsigned char *key, long keylen, long start, long stop, unsigned char **value, long *valuelen);
 int rl_setrange(struct rlite *db, const unsigned char *key, long keylen, long index, unsigned char *value, long valuelen, long *newlength);
 int rl_incr(struct rlite *db, const unsigned char *key, long keylen, long long increment, long long *newvalue);
+int rl_incrbyfloat(struct rlite *db, const unsigned char *key, long keylen, double increment, double *newvalue);
 
 int rl_string_pages(struct rlite *db, long page, short *pages);
 int rl_string_delete(struct rlite *db, long value_page);

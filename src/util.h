@@ -1,6 +1,8 @@
 #ifndef _RL_UTIL_H
 #define _RL_UTIL_H
 
+#include <float.h>
+#include <ctype.h>
 #include <string.h>
 #include <limits.h>
 #include "../deps/utilfromredis.h"

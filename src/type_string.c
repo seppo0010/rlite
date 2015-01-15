@@ -1,5 +1,6 @@
 #include <stdlib.h>
 #include <errno.h>
+#include <math.h>
 #include <ctype.h>
 #include "rlite.h"
 #include "page_multi_string.h"
@@ -152,6 +153,54 @@ int rl_incr(struct rlite *db, const unsigned char *key, long keylen, long long i
 	}
 	RL_MALLOC(value, sizeof(unsigned char *) * MAX_LLONG_DIGITS);
 	valuelen = snprintf((char *)value, MAX_LLONG_DIGITS, "%lld", lvalue);
+	RL_CALL(rl_set, RL_OK, db, key, keylen, value, valuelen, 0, expires);
+	rl_free(value);
+	retval = RL_OK;
+cleanup:
+	return retval;
+}
+
+int rl_incrbyfloat(struct rlite *db, const unsigned char *key, long keylen, double increment, double *newvalue)
+{
+	long page_number;
+	int retval;
+	unsigned char *value;
+	char *end;
+	long valuelen;
+	double dvalue;
+	unsigned long long expires;
+	RL_CALL2(rl_string_get_objects, RL_OK, RL_NOT_FOUND, db, key, keylen, &page_number, &expires);
+	if (retval == RL_NOT_FOUND) {
+		RL_MALLOC(value, sizeof(unsigned char) * MAX_DOUBLE_DIGITS);
+		valuelen = snprintf((char *)value, MAX_DOUBLE_DIGITS, "%lf", increment);
+		if (newvalue) {
+			*newvalue = increment;
+		}
+		retval = rl_set(db, key, keylen, value, valuelen, 1, 0);
+		rl_free(value);
+		goto cleanup;
+	}
+	RL_CALL(rl_multi_string_getrange, RL_OK, db, page_number, &value, &valuelen, 0, MAX_DOUBLE_DIGITS + 1);
+	if (valuelen == MAX_DOUBLE_DIGITS + 1) {
+		retval = RL_NAN;
+		goto cleanup;
+	}
+	dvalue = strtold((char *)value, &end);
+	if (isspace(((char *)value)[0]) || end[0] != '\0' || errno == ERANGE || isnan(dvalue)) {
+		retval = RL_NAN;
+		goto cleanup;
+	}
+	rl_free(value);
+	dvalue += increment;
+	if (isinf(dvalue) || isnan(dvalue)) {
+		retval = RL_OVERFLOW;
+		goto cleanup;
+	}
+	if (newvalue) {
+		*newvalue = dvalue;
+	}
+	RL_MALLOC(value, sizeof(unsigned char *) * MAX_DOUBLE_DIGITS);
+	valuelen = snprintf((char *)value, MAX_DOUBLE_DIGITS, "%lf", dvalue);
 	RL_CALL(rl_set, RL_OK, db, key, keylen, value, valuelen, 0, expires);
 	rl_free(value);
 	retval = RL_OK;
