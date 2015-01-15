@@ -385,6 +385,63 @@ cleanup:
 	return retval;
 }
 
+static int basic_test_set_incr(int _commit)
+{
+	int retval = 0;
+	fprintf(stderr, "Start basic_test_set_incr %d\n", _commit);
+
+	rlite *db = NULL;
+	RL_CALL_VERBOSE(setup_db, RL_OK, &db, _commit, 1);
+	unsigned char *key = UNSIGN("my key");
+	long keylen = strlen((char *)key);
+	unsigned char *value = UNSIGN("123"), *testvalue;
+	long valuelen = strlen((char *)value), testvaluelen;
+	long long testnewvalue;
+	long long v1 = 123, v2 = 456;
+	long long expectednewvalue = v1 + v2;
+
+	RL_CALL_VERBOSE(rl_incr, RL_OK, db, key, keylen, v1, &testnewvalue);
+	RL_CALL_VERBOSE(rl_is_balanced, RL_OK, db);
+	if (_commit) {
+		RL_CALL_VERBOSE(rl_commit, RL_OK, db);
+		RL_CALL_VERBOSE(rl_is_balanced, RL_OK, db);
+	}
+	if (testnewvalue != v1) {
+		fprintf(stderr, "Expected new value to be %lld, got %lld instead on line %d\n", v1, testnewvalue, __LINE__);
+		retval = RL_UNEXPECTED;
+		goto cleanup;
+	}
+
+	RL_CALL_VERBOSE(rl_incr, RL_OK, db, key, keylen, 456, &testnewvalue);
+	if (testnewvalue != expectednewvalue) {
+		fprintf(stderr, "Expected new value to be %lld, got %lld instead on line %d\n", expectednewvalue, testnewvalue, __LINE__);
+		retval = RL_UNEXPECTED;
+		goto cleanup;
+	}
+
+	RL_CALL_VERBOSE(rl_is_balanced, RL_OK, db);
+	if (_commit) {
+		RL_CALL_VERBOSE(rl_commit, RL_OK, db);
+		RL_CALL_VERBOSE(rl_is_balanced, RL_OK, db);
+	}
+
+	RL_CALL_VERBOSE(rl_get, RL_OK, db, key, keylen, &testvalue, &testvaluelen);
+	if (testvaluelen != valuelen) {
+		fprintf(stderr, "Expected length to be %ld, got %ld instead on line %d\n", valuelen, testvaluelen, __LINE__);
+		retval = RL_UNEXPECTED;
+		goto cleanup;
+	}
+	rl_free(testvalue);
+
+	fprintf(stderr, "End basic_test_set_incr\n");
+	retval = 0;
+cleanup:
+	if (db) {
+		rl_close(db);
+	}
+	return retval;
+}
+
 RL_TEST_MAIN_START(type_string_test)
 {
 	int i;
@@ -398,6 +455,7 @@ RL_TEST_MAIN_START(type_string_test)
 		RL_TEST(basic_test_setnx_setnx_get, i);
 		RL_TEST(basic_test_set_expiration, i);
 		RL_TEST(basic_test_set_strlen, i);
+		RL_TEST(basic_test_set_incr, i);
 	}
 }
 RL_TEST_MAIN_END
