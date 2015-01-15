@@ -208,6 +208,26 @@ cleanup:
 	return retval;
 }
 
+int rl_getbit(struct rlite *db, const unsigned char *key, long keylen, long bitoffset, int *value)
+{
+	int retval;
+	unsigned char *rangevalue = NULL;
+	long rangevaluelen, start;
+	start = bitoffset >> 3;
+	long bit = 7 - (bitoffset & 0x7);
+	RL_CALL2(rl_getrange, RL_OK, RL_NOT_FOUND, db, key, keylen, start, start, &rangevalue, &rangevaluelen);
+	if (retval == RL_NOT_FOUND || rangevaluelen == 0) {
+		*value = 0;
+		retval = RL_OK;
+		goto cleanup;
+	}
+	*value = (rangevalue[0] & (1 << bit)) ? 1 : 0;
+	retval = RL_OK;
+cleanup:
+	rl_free(rangevalue);
+	return retval;
+}
+
 int rl_string_pages(struct rlite *db, long page, short *pages)
 {
 	return rl_multi_string_pages(db, page, pages);

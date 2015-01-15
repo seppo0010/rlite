@@ -458,7 +458,6 @@ static int basic_test_set_incrbyfloat(int _commit)
 	double testnewvalue;
 	double v1 = 7.8, v2 = 2.1;
 	double expectednewvalue = v1 + v2;
-	long expectedvaluelen = 3;
 
 	RL_CALL_VERBOSE(rl_incrbyfloat, RL_OK, db, key, keylen, v1, &testnewvalue);
 	RL_CALL_VERBOSE(rl_is_balanced, RL_OK, db);
@@ -507,6 +506,47 @@ cleanup:
 	return retval;
 }
 
+static int basic_test_set_getbit(int _commit)
+{
+	int retval = 0;
+	fprintf(stderr, "Start basic_test_set_getbit %d\n", _commit);
+
+	rlite *db = NULL;
+	RL_CALL_VERBOSE(setup_db, RL_OK, &db, _commit, 1);
+	unsigned char *key = UNSIGN("my key");
+	long keylen = strlen((char *)key);
+	unsigned char *value = UNSIGN("ab");
+	long valuelen = strlen((char *)value);
+	int bitvalue;
+	long i;
+
+	RL_CALL_VERBOSE(rl_set, RL_OK, db, key, keylen, value, valuelen, 0, 0);
+	RL_CALL_VERBOSE(rl_is_balanced, RL_OK, db);
+	if (_commit) {
+		RL_CALL_VERBOSE(rl_commit, RL_OK, db);
+		RL_CALL_VERBOSE(rl_is_balanced, RL_OK, db);
+	}
+
+#define BIT_COUNT 24
+	int bits[BIT_COUNT] = {0, 1, 1, 0, 0, 0, 0, 1, 0, 1, 1, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0};
+	for (i = 0; i < BIT_COUNT; i++) {
+		RL_CALL_VERBOSE(rl_getbit, RL_OK, db, key, keylen, i, &bitvalue);
+		if (bitvalue != bits[i]) {
+			fprintf(stderr, "Expected bit at position %ld to be %d, got %d instead on line %d\n", i, bits[i], bitvalue, __LINE__);
+			retval = RL_UNEXPECTED;
+			goto cleanup;
+		}
+	}
+
+	fprintf(stderr, "End basic_test_set_getbit\n");
+	retval = 0;
+cleanup:
+	if (db) {
+		rl_close(db);
+	}
+	return retval;
+}
+
 RL_TEST_MAIN_START(type_string_test)
 {
 	int i;
@@ -522,6 +562,7 @@ RL_TEST_MAIN_START(type_string_test)
 		RL_TEST(basic_test_set_strlen, i);
 		RL_TEST(basic_test_set_incr, i);
 		RL_TEST(basic_test_set_incrbyfloat, i);
+		RL_TEST(basic_test_set_getbit, i);
 	}
 }
 RL_TEST_MAIN_END
