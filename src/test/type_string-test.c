@@ -8,6 +8,29 @@
 
 #define UNSIGN(str) ((unsigned char *)(str))
 
+#define EXPECTED_INT(v1, v2)\
+	if (v1 != v2) {\
+		fprintf(stderr, "Expected %d == %d instead on line %d\n", v1, v2, __LINE__);\
+		retval = RL_UNEXPECTED;\
+		goto cleanup;\
+	}
+
+#define EXPECTED_BYTES(s1, l1, s2, l2)\
+	if (l1 != l2 || memcmp(s1, s2, l1) != 0) {\
+		fprintf(stderr, "Expected \"%s\" (%lu) == \"%s\" (%lu) instead on line %d\n", s1, (size_t)l1, s2, (size_t)l2, __LINE__);\
+		retval = RL_UNEXPECTED;\
+		goto cleanup;\
+	}
+
+#define RL_BALANCED()\
+	RL_CALL_VERBOSE(rl_is_balanced, RL_OK, db);\
+	if (_commit) {\
+		RL_CALL_VERBOSE(rl_commit, RL_OK, db);\
+		RL_CALL_VERBOSE(rl_is_balanced, RL_OK, db);\
+	}
+
+#define EXPECTED_STR(s1, s2, l2) EXPECTED_BYTES(s1, strlen((char *)s1), s2, l2)
+
 static int basic_test_set_get(int _commit)
 {
 	int retval = 0;
@@ -21,11 +44,7 @@ static int basic_test_set_get(int _commit)
 	long valuelen = strlen((char *)value), testvaluelen;
 
 	RL_CALL_VERBOSE(rl_set, RL_OK, db, key, keylen, value, valuelen, 0, 0);
-	RL_CALL_VERBOSE(rl_is_balanced, RL_OK, db);
-	if (_commit) {
-		RL_CALL_VERBOSE(rl_commit, RL_OK, db);
-		RL_CALL_VERBOSE(rl_is_balanced, RL_OK, db);
-	}
+	RL_BALANCED();
 
 	RL_CALL_VERBOSE(rl_get, RL_OK, db, key, keylen, &testvalue, &testvaluelen);
 	if (testvaluelen != valuelen || memcmp(testvalue, value, valuelen) != 0) {
@@ -57,18 +76,10 @@ static int basic_test_set_delete_get(int _commit)
 	long valuelen = strlen((char *)value);
 
 	RL_CALL_VERBOSE(rl_set, RL_OK, db, key, keylen, value, valuelen, 0, 0);
-	RL_CALL_VERBOSE(rl_is_balanced, RL_OK, db);
-	if (_commit) {
-		RL_CALL_VERBOSE(rl_commit, RL_OK, db);
-		RL_CALL_VERBOSE(rl_is_balanced, RL_OK, db);
-	}
+	RL_BALANCED();
 
 	RL_CALL_VERBOSE(rl_key_delete_with_value, RL_OK, db, key, keylen);
-	RL_CALL_VERBOSE(rl_is_balanced, RL_OK, db);
-	if (_commit) {
-		RL_CALL_VERBOSE(rl_commit, RL_OK, db);
-		RL_CALL_VERBOSE(rl_is_balanced, RL_OK, db);
-	}
+	RL_BALANCED();
 
 	RL_CALL_VERBOSE(rl_get, RL_NOT_FOUND, db, key, keylen, NULL, NULL);
 
@@ -98,18 +109,10 @@ static int basic_test_set_set_get(int _commit)
 	long testvaluelen;
 
 	RL_CALL_VERBOSE(rl_set, RL_OK, db, key, keylen, value, valuelen, 0, 0);
-	RL_CALL_VERBOSE(rl_is_balanced, RL_OK, db);
-	if (_commit) {
-		RL_CALL_VERBOSE(rl_commit, RL_OK, db);
-		RL_CALL_VERBOSE(rl_is_balanced, RL_OK, db);
-	}
+	RL_BALANCED();
 
 	RL_CALL_VERBOSE(rl_set, RL_OK, db, key, keylen, value2, value2len, 0, 0);
-	RL_CALL_VERBOSE(rl_is_balanced, RL_OK, db);
-	if (_commit) {
-		RL_CALL_VERBOSE(rl_commit, RL_OK, db);
-		RL_CALL_VERBOSE(rl_is_balanced, RL_OK, db);
-	}
+	RL_BALANCED();
 
 	RL_CALL_VERBOSE(rl_get, RL_OK, db, key, keylen, &testvalue, &testvaluelen);
 	if (testvaluelen != value2len || memcmp(testvalue, value2, value2len) != 0) {
@@ -141,11 +144,7 @@ static int basic_test_set_getrange(int _commit)
 	long valuelen = strlen((char *)value), testvaluelen;
 
 	RL_CALL_VERBOSE(rl_set, RL_OK, db, key, keylen, value, valuelen, 0, 0);
-	RL_CALL_VERBOSE(rl_is_balanced, RL_OK, db);
-	if (_commit) {
-		RL_CALL_VERBOSE(rl_commit, RL_OK, db);
-		RL_CALL_VERBOSE(rl_is_balanced, RL_OK, db);
-	}
+	RL_BALANCED();
 
 	RL_CALL_VERBOSE(rl_getrange, RL_OK, db, key, keylen, 2, 5, &testvalue, &testvaluelen);
 	if (testvaluelen != 4 || memcmp(testvalue, &value[2], 4) != 0) {
@@ -181,13 +180,10 @@ static int basic_test_set_setrange(int _commit)
 	long expectedvaluelen = strlen((char *)expectedvalue);
 
 	RL_CALL_VERBOSE(rl_set, RL_OK, db, key, keylen, value, valuelen, 0, 0);
-	RL_CALL_VERBOSE(rl_is_balanced, RL_OK, db);
-	if (_commit) {
-		RL_CALL_VERBOSE(rl_commit, RL_OK, db);
-		RL_CALL_VERBOSE(rl_is_balanced, RL_OK, db);
-	}
+	RL_BALANCED();
 
 	RL_CALL_VERBOSE(rl_setrange, RL_OK, db, key, keylen, 2, updatevalue, updatevaluelen, &newlen);
+	RL_BALANCED();
 	if (newlen != expectedvaluelen) {
 		fprintf(stderr, "Expected new length to be %ld, got %ld instead on line %d\n", expectedvaluelen, newlen, __LINE__);
 		retval = RL_UNEXPECTED;
@@ -225,11 +221,7 @@ static int basic_test_append(int _commit)
 	long firstchunklen = 2;
 
 	RL_CALL_VERBOSE(rl_append, RL_OK, db, key, keylen, value, firstchunklen, &testvaluelen);
-	RL_CALL_VERBOSE(rl_is_balanced, RL_OK, db);
-	if (_commit) {
-		RL_CALL_VERBOSE(rl_commit, RL_OK, db);
-		RL_CALL_VERBOSE(rl_is_balanced, RL_OK, db);
-	}
+	RL_BALANCED();
 
 	if (testvaluelen != firstchunklen) {
 		fprintf(stderr, "Expected length after append to be %ld, got %ld instead on line %d\n", firstchunklen, testvaluelen, __LINE__);
@@ -238,11 +230,7 @@ static int basic_test_append(int _commit)
 	}
 
 	RL_CALL_VERBOSE(rl_append, RL_OK, db, key, keylen, &value[firstchunklen], valuelen - firstchunklen, &testvaluelen);
-	RL_CALL_VERBOSE(rl_is_balanced, RL_OK, db);
-	if (_commit) {
-		RL_CALL_VERBOSE(rl_commit, RL_OK, db);
-		RL_CALL_VERBOSE(rl_is_balanced, RL_OK, db);
-	}
+	RL_BALANCED();
 
 	if (testvaluelen != valuelen) {
 		fprintf(stderr, "Expected length after append to be %ld, got %ld instead on line %d\n", valuelen, testvaluelen, __LINE__);
@@ -284,18 +272,10 @@ static int basic_test_setnx_setnx_get(int _commit)
 	long testvaluelen;
 
 	RL_CALL_VERBOSE(rl_set, RL_OK, db, key, keylen, value, valuelen, 1, 0);
-	RL_CALL_VERBOSE(rl_is_balanced, RL_OK, db);
-	if (_commit) {
-		RL_CALL_VERBOSE(rl_commit, RL_OK, db);
-		RL_CALL_VERBOSE(rl_is_balanced, RL_OK, db);
-	}
+	RL_BALANCED();
 
 	RL_CALL_VERBOSE(rl_set, RL_FOUND, db, key, keylen, value2, value2len, 1, 0);
-	RL_CALL_VERBOSE(rl_is_balanced, RL_OK, db);
-	if (_commit) {
-		RL_CALL_VERBOSE(rl_commit, RL_OK, db);
-		RL_CALL_VERBOSE(rl_is_balanced, RL_OK, db);
-	}
+	RL_BALANCED();
 
 	RL_CALL_VERBOSE(rl_get, RL_OK, db, key, keylen, &testvalue, &testvaluelen);
 	if (testvaluelen != valuelen || memcmp(testvalue, value, valuelen) != 0) {
@@ -328,11 +308,7 @@ static int basic_test_set_expiration(int _commit)
 	unsigned long long expiration = rl_mstime() + 12983, testexpiration;
 
 	RL_CALL_VERBOSE(rl_set, RL_OK, db, key, keylen, value, valuelen, 0, expiration);
-	RL_CALL_VERBOSE(rl_is_balanced, RL_OK, db);
-	if (_commit) {
-		RL_CALL_VERBOSE(rl_commit, RL_OK, db);
-		RL_CALL_VERBOSE(rl_is_balanced, RL_OK, db);
-	}
+	RL_BALANCED();
 
 	RL_CALL_VERBOSE(rl_key_get, RL_FOUND, db, key, keylen, NULL, NULL, NULL, &testexpiration);
 	if (expiration != testexpiration) {
@@ -363,11 +339,7 @@ static int basic_test_set_strlen(int _commit)
 	long valuelen = strlen((char *)value), testvaluelen;
 
 	RL_CALL_VERBOSE(rl_set, RL_OK, db, key, keylen, value, valuelen, 0, 0);
-	RL_CALL_VERBOSE(rl_is_balanced, RL_OK, db);
-	if (_commit) {
-		RL_CALL_VERBOSE(rl_commit, RL_OK, db);
-		RL_CALL_VERBOSE(rl_is_balanced, RL_OK, db);
-	}
+	RL_BALANCED();
 
 	RL_CALL_VERBOSE(rl_get, RL_OK, db, key, keylen, NULL, &testvaluelen);
 	if (testvaluelen != valuelen) {
@@ -402,11 +374,7 @@ static int basic_test_set_incr(int _commit)
 	long expectedvaluelen = 3;
 
 	RL_CALL_VERBOSE(rl_incr, RL_OK, db, key, keylen, v1, &testnewvalue);
-	RL_CALL_VERBOSE(rl_is_balanced, RL_OK, db);
-	if (_commit) {
-		RL_CALL_VERBOSE(rl_commit, RL_OK, db);
-		RL_CALL_VERBOSE(rl_is_balanced, RL_OK, db);
-	}
+	RL_BALANCED();
 	if (testnewvalue != v1) {
 		fprintf(stderr, "Expected new value to be %lld, got %lld instead on line %d\n", v1, testnewvalue, __LINE__);
 		retval = RL_UNEXPECTED;
@@ -420,11 +388,7 @@ static int basic_test_set_incr(int _commit)
 		goto cleanup;
 	}
 
-	RL_CALL_VERBOSE(rl_is_balanced, RL_OK, db);
-	if (_commit) {
-		RL_CALL_VERBOSE(rl_commit, RL_OK, db);
-		RL_CALL_VERBOSE(rl_is_balanced, RL_OK, db);
-	}
+	RL_BALANCED();
 
 	RL_CALL_VERBOSE(rl_get, RL_OK, db, key, keylen, &testvalue, &testvaluelen);
 	if (testvaluelen != expectedvaluelen) {
@@ -460,11 +424,7 @@ static int basic_test_set_incrbyfloat(int _commit)
 	double expectednewvalue = v1 + v2;
 
 	RL_CALL_VERBOSE(rl_incrbyfloat, RL_OK, db, key, keylen, v1, &testnewvalue);
-	RL_CALL_VERBOSE(rl_is_balanced, RL_OK, db);
-	if (_commit) {
-		RL_CALL_VERBOSE(rl_commit, RL_OK, db);
-		RL_CALL_VERBOSE(rl_is_balanced, RL_OK, db);
-	}
+	RL_BALANCED();
 	if (testnewvalue != v1) {
 		fprintf(stderr, "Expected new value to be %lf, got %lf instead on line %d\n", v1, testnewvalue, __LINE__);
 		retval = RL_UNEXPECTED;
@@ -478,11 +438,7 @@ static int basic_test_set_incrbyfloat(int _commit)
 		goto cleanup;
 	}
 
-	RL_CALL_VERBOSE(rl_is_balanced, RL_OK, db);
-	if (_commit) {
-		RL_CALL_VERBOSE(rl_commit, RL_OK, db);
-		RL_CALL_VERBOSE(rl_is_balanced, RL_OK, db);
-	}
+	RL_BALANCED();
 
 	RL_CALL_VERBOSE(rl_get, RL_OK, db, key, keylen, &testvalue, &testvaluelen);
 	testvalue2 = malloc(sizeof(char) * (testvaluelen + 1));
@@ -521,11 +477,7 @@ static int basic_test_set_getbit(int _commit)
 	long i;
 
 	RL_CALL_VERBOSE(rl_set, RL_OK, db, key, keylen, value, valuelen, 0, 0);
-	RL_CALL_VERBOSE(rl_is_balanced, RL_OK, db);
-	if (_commit) {
-		RL_CALL_VERBOSE(rl_commit, RL_OK, db);
-		RL_CALL_VERBOSE(rl_is_balanced, RL_OK, db);
-	}
+	RL_BALANCED();
 
 #define BIT_COUNT 24
 	int bits[BIT_COUNT] = {0, 1, 1, 0, 0, 0, 0, 1, 0, 1, 1, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0};

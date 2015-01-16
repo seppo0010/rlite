@@ -319,7 +319,7 @@ int rl_multi_string_setrange(struct rlite *db, long number, const unsigned char 
 	rl_list *list = NULL;
 	void *_list, *tmp;
 	int retval;
-	RL_CALL(rl_read, RL_FOUND, db, &rl_data_type_list_long, number, &rl_list_type_long, &_list, 0);
+	RL_CALL(rl_read, RL_FOUND, db, &rl_data_type_list_long, number, &rl_list_type_long, &_list, 1);
 	list = _list;
 	unsigned char *tmp_data;
 	long i, pagesize, pagestart, page;
@@ -365,7 +365,9 @@ int rl_multi_string_setrange(struct rlite *db, long number, const unsigned char 
 			size -= pagesize;
 			pagestart = 0;
 		}
-		*newlength = oldsize;
+		if (newlength) {
+			*newlength = oldsize;
+		}
 	}
 
 	if (oldsize < offset) {

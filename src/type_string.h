@@ -15,6 +15,7 @@ int rl_setrange(struct rlite *db, const unsigned char *key, long keylen, long in
 int rl_incr(struct rlite *db, const unsigned char *key, long keylen, long long increment, long long *newvalue);
 int rl_incrbyfloat(struct rlite *db, const unsigned char *key, long keylen, double increment, double *newvalue);
 int rl_getbit(struct rlite *db, const unsigned char *key, long keylen, long offset, int *value);
+int rl_setbit(struct rlite *db, const unsigned char *key, long keylen, long bitoffset, int on, int *previousvalue);
 
 int rl_string_pages(struct rlite *db, long page, short *pages);
 int rl_string_delete(struct rlite *db, long value_page);

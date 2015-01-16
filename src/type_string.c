@@ -104,8 +104,18 @@ int rl_setrange(struct rlite *db, const unsigned char *key, long keylen, long in
 {
 	long page_number;
 	int retval;
-	RL_CALL(rl_string_get_objects, RL_OK, db, key, keylen, &page_number, NULL);
-	RL_CALL(rl_multi_string_setrange, RL_OK, db, page_number, value, valuelen, index, newlength);
+	RL_CALL2(rl_string_get_objects, RL_OK, RL_NOT_FOUND, db, key, keylen, &page_number, NULL);
+	if (retval == RL_NOT_FOUND) {
+		unsigned char *padding;
+		RL_MALLOC(padding, sizeof(unsigned char) * index);
+		memset(padding, 0, index);
+		RL_CALL(rl_set, RL_OK, db, key, keylen, padding, index, 0, 0);
+		rl_free(padding);
+		RL_CALL(rl_append, RL_OK, db, key, keylen, value, valuelen, newlength);
+	}
+	else if (retval == RL_OK) {
+		RL_CALL(rl_multi_string_setrange, RL_OK, db, page_number, value, valuelen, index, newlength);
+	}
 	retval = RL_OK;
 cleanup:
 	return retval;
@@ -223,6 +233,39 @@ int rl_getbit(struct rlite *db, const unsigned char *key, long keylen, long bito
 	}
 	*value = (rangevalue[0] & (1 << bit)) ? 1 : 0;
 	retval = RL_OK;
+cleanup:
+	rl_free(rangevalue);
+	return retval;
+}
+
+int rl_setbit(struct rlite *db, const unsigned char *key, long keylen, long bitoffset, int on, int *previousvalue)
+{
+	int retval;
+	unsigned char *rangevalue = NULL;
+	long rangevaluelen, start;
+	char val;
+	start = bitoffset >> 3;
+	long bit = 7 - (bitoffset & 0x7);
+	RL_CALL2(rl_getrange, RL_OK, RL_NOT_FOUND, db, key, keylen, start, start, &rangevalue, &rangevaluelen);
+	if (retval == RL_NOT_FOUND || rangevaluelen == 0) {
+		val = 0;
+		val &= ~(1 << bit);
+		val |= ((on & 0x1) << bit);
+		retval = rl_setrange(db, key, keylen, start, (unsigned char *)&val, 1, NULL);
+		if (previousvalue) {
+			*previousvalue = 0;
+		}
+		goto cleanup;
+	}
+
+	int bitval = rangevalue[0] & (1 << bit);
+	if (previousvalue) {
+		*previousvalue = bitval ? 1 : 0;
+	}
+
+	rangevalue[0] &= ~(1 << bit);
+	rangevalue[0] |= ((on & 0x1) << bit);
+	retval = rl_setrange(db, key, keylen, start, rangevalue, 1, NULL);
 cleanup:
 	rl_free(rangevalue);
 	return retval;
