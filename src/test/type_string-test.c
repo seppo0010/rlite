@@ -22,19 +22,13 @@ static int basic_test_set_get(int _commit)
 	RL_BALANCED();
 
 	RL_CALL_VERBOSE(rl_get, RL_OK, db, key, keylen, &testvalue, &testvaluelen);
-	if (testvaluelen != valuelen || memcmp(testvalue, value, valuelen) != 0) {
-		fprintf(stderr, "Expected value to be \"%s\", got \"%s\" (%ld) instead on line %d\n", value, testvalue, testvaluelen, __LINE__);
-		retval = RL_UNEXPECTED;
-		goto cleanup;
-	}
+	EXPECT_BYTES(value, valuelen, testvalue, testvaluelen);
 	rl_free(testvalue);
 
 	fprintf(stderr, "End basic_test_set_get\n");
 	retval = 0;
 cleanup:
-	if (db) {
-		rl_close(db);
-	}
+	rl_close(db);
 	return retval;
 }
 
@@ -61,9 +55,7 @@ static int basic_test_set_delete_get(int _commit)
 	fprintf(stderr, "End basic_test_set_delete_get\n");
 	retval = 0;
 cleanup:
-	if (db) {
-		rl_close(db);
-	}
+	rl_close(db);
 	return retval;
 }
 
@@ -90,19 +82,13 @@ static int basic_test_set_set_get(int _commit)
 	RL_BALANCED();
 
 	RL_CALL_VERBOSE(rl_get, RL_OK, db, key, keylen, &testvalue, &testvaluelen);
-	if (testvaluelen != value2len || memcmp(testvalue, value2, value2len) != 0) {
-		fprintf(stderr, "Expected value to be \"%s\", got \"%s\" (%ld) instead on line %d\n", value2, testvalue, testvaluelen, __LINE__);
-		retval = RL_UNEXPECTED;
-		goto cleanup;
-	}
+	EXPECT_BYTES(value2, value2len, testvalue, testvaluelen);
 	rl_free(testvalue);
 
 	fprintf(stderr, "End basic_test_set_set_get\n");
 	retval = 0;
 cleanup:
-	if (db) {
-		rl_close(db);
-	}
+	rl_close(db);
 	return retval;
 }
 
@@ -122,19 +108,13 @@ static int basic_test_set_getrange(int _commit)
 	RL_BALANCED();
 
 	RL_CALL_VERBOSE(rl_getrange, RL_OK, db, key, keylen, 2, 5, &testvalue, &testvaluelen);
-	if (testvaluelen != 4 || memcmp(testvalue, &value[2], 4) != 0) {
-		fprintf(stderr, "Expected value to be \"%s\", got \"%s\" (%ld) instead on line %d\n", value, testvalue, testvaluelen, __LINE__);
-		retval = RL_UNEXPECTED;
-		goto cleanup;
-	}
+	EXPECT_BYTES(&value[2], 4, testvalue, testvaluelen);
 	rl_free(testvalue);
 
 	fprintf(stderr, "End basic_test_set_getrange\n");
 	retval = 0;
 cleanup:
-	if (db) {
-		rl_close(db);
-	}
+	rl_close(db);
 	return retval;
 }
 
@@ -159,26 +139,16 @@ static int basic_test_set_setrange(int _commit)
 
 	RL_CALL_VERBOSE(rl_setrange, RL_OK, db, key, keylen, 2, updatevalue, updatevaluelen, &newlen);
 	RL_BALANCED();
-	if (newlen != expectedvaluelen) {
-		fprintf(stderr, "Expected new length to be %ld, got %ld instead on line %d\n", expectedvaluelen, newlen, __LINE__);
-		retval = RL_UNEXPECTED;
-		goto cleanup;
-	}
+	EXPECT_LONG(newlen, expectedvaluelen);
 
 	RL_CALL_VERBOSE(rl_get, RL_OK, db, key, keylen, &testvalue, &testvaluelen);
-	if (testvaluelen != expectedvaluelen || memcmp(expectedvalue, testvalue, sizeof(expectedvalue)) != 0) {
-		fprintf(stderr, "Expected value to be \"%s\", got \"%s\" (%ld) instead on line %d\n", expectedvalue, testvalue, testvaluelen, __LINE__);
-		retval = RL_UNEXPECTED;
-		goto cleanup;
-	}
+	EXPECT_BYTES(testvalue, testvaluelen, expectedvalue, expectedvaluelen);
 	rl_free(testvalue);
 
 	fprintf(stderr, "End basic_test_set_setrange\n");
 	retval = 0;
 cleanup:
-	if (db) {
-		rl_close(db);
-	}
+	rl_close(db);
 	return retval;
 }
 
@@ -197,36 +167,20 @@ static int basic_test_append(int _commit)
 
 	RL_CALL_VERBOSE(rl_append, RL_OK, db, key, keylen, value, firstchunklen, &testvaluelen);
 	RL_BALANCED();
-
-	if (testvaluelen != firstchunklen) {
-		fprintf(stderr, "Expected length after append to be %ld, got %ld instead on line %d\n", firstchunklen, testvaluelen, __LINE__);
-		retval = RL_UNEXPECTED;
-		goto cleanup;
-	}
+	EXPECT_LONG(testvaluelen, firstchunklen);
 
 	RL_CALL_VERBOSE(rl_append, RL_OK, db, key, keylen, &value[firstchunklen], valuelen - firstchunklen, &testvaluelen);
 	RL_BALANCED();
-
-	if (testvaluelen != valuelen) {
-		fprintf(stderr, "Expected length after append to be %ld, got %ld instead on line %d\n", valuelen, testvaluelen, __LINE__);
-		retval = RL_UNEXPECTED;
-		goto cleanup;
-	}
+	EXPECT_LONG(testvaluelen, valuelen);
 
 	RL_CALL_VERBOSE(rl_get, RL_OK, db, key, keylen, &testvalue, &testvaluelen);
-	if (testvaluelen != valuelen || memcmp(testvalue, value, valuelen) != 0) {
-		fprintf(stderr, "Expected value to be \"%s\", got \"%s\" (%ld) instead on line %d\n", value, testvalue, testvaluelen, __LINE__);
-		retval = RL_UNEXPECTED;
-		goto cleanup;
-	}
+	EXPECT_BYTES(value, valuelen, testvalue, testvaluelen);
 	rl_free(testvalue);
 
 	fprintf(stderr, "End basic_test_append\n");
 	retval = 0;
 cleanup:
-	if (db) {
-		rl_close(db);
-	}
+	rl_close(db);
 	return retval;
 }
 
@@ -253,19 +207,13 @@ static int basic_test_setnx_setnx_get(int _commit)
 	RL_BALANCED();
 
 	RL_CALL_VERBOSE(rl_get, RL_OK, db, key, keylen, &testvalue, &testvaluelen);
-	if (testvaluelen != valuelen || memcmp(testvalue, value, valuelen) != 0) {
-		fprintf(stderr, "Expected value to be \"%s\", got \"%s\" (%ld) instead on line %d\n", value, testvalue, testvaluelen, __LINE__);
-		retval = RL_UNEXPECTED;
-		goto cleanup;
-	}
+	EXPECT_BYTES(value, valuelen, testvalue, testvaluelen);
 	rl_free(testvalue);
 
 	fprintf(stderr, "End basic_test_setnx_setnx_get\n");
 	retval = 0;
 cleanup:
-	if (db) {
-		rl_close(db);
-	}
+	rl_close(db);
 	return retval;
 }
 
@@ -286,18 +234,12 @@ static int basic_test_set_expiration(int _commit)
 	RL_BALANCED();
 
 	RL_CALL_VERBOSE(rl_key_get, RL_FOUND, db, key, keylen, NULL, NULL, NULL, &testexpiration);
-	if (expiration != testexpiration) {
-		fprintf(stderr, "Expected expiration to be %llu, got %llu instead on line %d\n", expiration, testexpiration, __LINE__);
-		retval = RL_UNEXPECTED;
-		goto cleanup;
-	}
+	EXPECT_LLU(expiration, testexpiration);
 
 	fprintf(stderr, "End basic_test_set_expiration\n");
 	retval = 0;
 cleanup:
-	if (db) {
-		rl_close(db);
-	}
+	rl_close(db);
 	return retval;
 }
 
@@ -317,18 +259,12 @@ static int basic_test_set_strlen(int _commit)
 	RL_BALANCED();
 
 	RL_CALL_VERBOSE(rl_get, RL_OK, db, key, keylen, NULL, &testvaluelen);
-	if (testvaluelen != valuelen) {
-		fprintf(stderr, "Expected length to be %ld, got %ld instead on line %d\n", valuelen, testvaluelen, __LINE__);
-		retval = RL_UNEXPECTED;
-		goto cleanup;
-	}
+	EXPECT_LONG(valuelen, testvaluelen);
 
 	fprintf(stderr, "End basic_test_set_strlen\n");
 	retval = 0;
 cleanup:
-	if (db) {
-		rl_close(db);
-	}
+	rl_close(db);
 	return retval;
 }
 
@@ -350,35 +286,20 @@ static int basic_test_set_incr(int _commit)
 
 	RL_CALL_VERBOSE(rl_incr, RL_OK, db, key, keylen, v1, &testnewvalue);
 	RL_BALANCED();
-	if (testnewvalue != v1) {
-		fprintf(stderr, "Expected new value to be %lld, got %lld instead on line %d\n", v1, testnewvalue, __LINE__);
-		retval = RL_UNEXPECTED;
-		goto cleanup;
-	}
+	EXPECT_LL(testnewvalue, v1);
 
 	RL_CALL_VERBOSE(rl_incr, RL_OK, db, key, keylen, v2, &testnewvalue);
-	if (testnewvalue != expectednewvalue) {
-		fprintf(stderr, "Expected new value to be %lld, got %lld instead on line %d\n", expectednewvalue, testnewvalue, __LINE__);
-		retval = RL_UNEXPECTED;
-		goto cleanup;
-	}
-
 	RL_BALANCED();
+	EXPECT_LL(testnewvalue, expectednewvalue);
 
 	RL_CALL_VERBOSE(rl_get, RL_OK, db, key, keylen, &testvalue, &testvaluelen);
-	if (testvaluelen != expectedvaluelen) {
-		fprintf(stderr, "Expected length to be %ld, got %ld instead on line %d\n", expectedvaluelen, testvaluelen, __LINE__);
-		retval = RL_UNEXPECTED;
-		goto cleanup;
-	}
+	EXPECT_LONG(testvaluelen, expectedvaluelen);
 	rl_free(testvalue);
 
 	fprintf(stderr, "End basic_test_set_incr\n");
 	retval = 0;
 cleanup:
-	if (db) {
-		rl_close(db);
-	}
+	rl_close(db);
 	return retval;
 }
 
@@ -400,40 +321,25 @@ static int basic_test_set_incrbyfloat(int _commit)
 
 	RL_CALL_VERBOSE(rl_incrbyfloat, RL_OK, db, key, keylen, v1, &testnewvalue);
 	RL_BALANCED();
-	if (testnewvalue != v1) {
-		fprintf(stderr, "Expected new value to be %lf, got %lf instead on line %d\n", v1, testnewvalue, __LINE__);
-		retval = RL_UNEXPECTED;
-		goto cleanup;
-	}
+	EXPECT_DOUBLE(testnewvalue, v1);
 
 	RL_CALL_VERBOSE(rl_incrbyfloat, RL_OK, db, key, keylen, v2, &testnewvalue);
-	if (testnewvalue != expectednewvalue) {
-		fprintf(stderr, "Expected new value to be %lf, got %lf instead on line %d\n", expectednewvalue, testnewvalue, __LINE__);
-		retval = RL_UNEXPECTED;
-		goto cleanup;
-	}
-
 	RL_BALANCED();
+	EXPECT_DOUBLE(testnewvalue, expectednewvalue);
 
 	RL_CALL_VERBOSE(rl_get, RL_OK, db, key, keylen, &testvalue, &testvaluelen);
 	testvalue2 = malloc(sizeof(char) * (testvaluelen + 1));
 	memcpy(testvalue2, testvalue, sizeof(char) * testvaluelen);
 	testvalue2[testvaluelen] = 0;
 	testnewvalue = strtold(testvalue2, NULL);
-	if (testnewvalue != expectednewvalue) {
-		fprintf(stderr, "Expected value to be %lf, got %lf instead on line %d\n", expectednewvalue, testnewvalue, __LINE__);
-		retval = RL_UNEXPECTED;
-		goto cleanup;
-	}
+	EXPECT_DOUBLE(testnewvalue, expectednewvalue);
 	free(testvalue2);
 	rl_free(testvalue);
 
 	fprintf(stderr, "End basic_test_set_incrbyfloat\n");
 	retval = 0;
 cleanup:
-	if (db) {
-		rl_close(db);
-	}
+	rl_close(db);
 	return retval;
 }
 
@@ -458,19 +364,13 @@ static int basic_test_set_getbit(int _commit)
 	int bits[BIT_COUNT] = {0, 1, 1, 0, 0, 0, 0, 1, 0, 1, 1, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0};
 	for (i = 0; i < BIT_COUNT; i++) {
 		RL_CALL_VERBOSE(rl_getbit, RL_OK, db, key, keylen, i, &bitvalue);
-		if (bitvalue != bits[i]) {
-			fprintf(stderr, "Expected bit at position %ld to be %d, got %d instead on line %d\n", i, bits[i], bitvalue, __LINE__);
-			retval = RL_UNEXPECTED;
-			goto cleanup;
-		}
+		EXPECT_INT(bitvalue, bits[i]);
 	}
 
 	fprintf(stderr, "End basic_test_set_getbit\n");
 	retval = 0;
 cleanup:
-	if (db) {
-		rl_close(db);
-	}
+	rl_close(db);
 	return retval;
 }
 

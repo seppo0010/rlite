@@ -44,7 +44,7 @@ rl_btree_type rl_btree_type_hash_long_long = {
 	0,
 	0,
 	sizeof(long),
-	sizeof(void *),
+	sizeof(long),
 	long_cmp,
 #ifdef DEBUG
 	long_formatter,
@@ -55,7 +55,7 @@ rl_btree_type rl_btree_type_hash_sha1_double = {
 	0,
 	0,
 	sizeof(unsigned char) * 20,
-	sizeof(void *),
+	sizeof(double),
 	sha1_cmp,
 #ifdef DEBUG
 	sha1_formatter,
@@ -66,7 +66,7 @@ rl_btree_type rl_btree_type_hash_sha1_long = {
 	0,
 	0,
 	sizeof(unsigned char) * 20,
-	sizeof(void *),
+	sizeof(long),
 	sha1_cmp,
 #ifdef DEBUG
 	sha1_formatter,

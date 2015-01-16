@@ -20,35 +20,42 @@ int setup_db(struct rlite **db, int file, int del);
 
 #define EXPECT_PTR(v1, v2)\
 	if ((v1) != (v2)) {\
-		fprintf(stderr, "Expected %p == %p instead on line %d\n", (void *)v1, (void *)v2, __LINE__);\
+		fprintf(stderr, "Expected %p == %p instead on line %d\n", (void *)(v1), (void *)(v2), __LINE__);\
 		retval = RL_UNEXPECTED;\
 		goto cleanup;\
 	}
 
 #define EXPECT_INT(v1, v2)\
 	if ((v1) != (v2)) {\
-		fprintf(stderr, "Expected %d == %d instead on line %d\n", v1, v2, __LINE__);\
+		fprintf(stderr, "Expected %d == %d instead on line %d\n", (int)(v1), (int)(v2), __LINE__);\
 		retval = RL_UNEXPECTED;\
 		goto cleanup;\
 	}
 
 #define EXPECT_LONG(v1, v2)\
 	if ((v1) != (v2)) {\
-		fprintf(stderr, "Expected %ld == %ld instead on line %d\n", (long)v1, (long)v2, __LINE__);\
+		fprintf(stderr, "Expected %ld == %ld instead on line %d\n", (long)(v1), (long)(v2), __LINE__);\
 		retval = RL_UNEXPECTED;\
 		goto cleanup;\
 	}
 
 #define EXPECT_DOUBLE(v1, v2)\
 	if ((v1) != (v2)) {\
-		fprintf(stderr, "Expected %lf == %lf instead on line %d\n", (double)v1, (double)v2, __LINE__);\
+		fprintf(stderr, "Expected %lf == %lf instead on line %d\n", (double)(v1), (double)(v2), __LINE__);\
+		retval = RL_UNEXPECTED;\
+		goto cleanup;\
+	}
+
+#define EXPECT_LL(v1, v2)\
+	if ((v1) != (v2)) {\
+		fprintf(stderr, "Expected %lld == %lld instead on line %d\n", (long long)(v1), (long long)(v2), __LINE__);\
 		retval = RL_UNEXPECTED;\
 		goto cleanup;\
 	}
 
 #define EXPECT_LLU(v1, v2)\
 	if ((v1) != (v2)) {\
-		fprintf(stderr, "Expected %llu == %llu instead on line %d\n", (long long unsigned)v1, (long long unsigned)v2, __LINE__);\
+		fprintf(stderr, "Expected %llu == %llu instead on line %d\n", (long long unsigned)(v1), (long long unsigned)(v2), __LINE__);\
 		retval = RL_UNEXPECTED;\
 		goto cleanup;\
 	}

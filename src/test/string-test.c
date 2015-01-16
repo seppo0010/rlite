@@ -18,28 +18,15 @@ static int do_string_test()
 	unsigned char *data, *data2;
 	long number, i;
 
-	retval = rl_string_create(db, &data, &number);
-	if (retval != RL_OK) {
-		fprintf(stderr, "Unable to create string\n");
-		goto cleanup;
-	}
+	RL_CALL_VERBOSE(rl_string_create, RL_OK, db, &data, &number);
 
 	for (i = 0; i < db->page_size; i++) {
 		data[i] = (char)(rand() % CHAR_MAX);
 	}
 
-	retval = rl_string_get(db, &data2, number);
-	if (retval != RL_OK) {
-		fprintf(stderr, "Unable to get string\n");
-		goto cleanup;
-	}
+	RL_CALL_VERBOSE(rl_string_get, RL_OK, db, &data2, number);
 
-	if (memcmp(data, data2, sizeof(char) * db->page_size) != 0) {
-		fprintf(stderr, "data != data2\n");
-		retval = 1;
-		goto cleanup;
-	}
-
+	EXPECT_BYTES(data, db->page_size, data2, db->page_size);
 	fprintf(stderr, "End do_string_test\n");
 cleanup:
 	rl_close(db);

@@ -6,22 +6,12 @@
 #include "../type_set.h"
 #include "test_util.h"
 
-#define UNSIGN(str) ((unsigned char *)(str))
-
 #define IS_EQUAL(s1, l1, s2, l2)\
 	(l1 == l2 && memcmp(s1, s2, l1) == 0)
 
-#define ASSERT_EQUAL(s1, l1, s2, l2)\
-	if (!IS_EQUAL(s1, l1, s2, l2)) {\
-		fprintf(stderr, "Expected \"%s\" (%ld) to equal \"%s\" (%ld) on line %d\n", s1, l1, s2, l2, __LINE__);\
-		retval = RL_UNEXPECTED;\
-		goto cleanup;\
-	}
-
-
 static int basic_test_sadd_sismember(int _commit)
 {
-	int retval = 0;
+	int retval;
 	fprintf(stderr, "Start basic_test_sadd_sismember %d\n", _commit);
 
 	rlite *db = NULL;
@@ -37,35 +27,23 @@ static int basic_test_sadd_sismember(int _commit)
 	long count;
 
 	RL_CALL_VERBOSE(rl_sadd, RL_OK, db, key, keylen, 2, datas, dataslen, &count);
-	RL_CALL_VERBOSE(rl_is_balanced, RL_OK, db);
-
-	if (count != 2) {
-		fprintf(stderr, "Expected count to be 2, got %ld instead on line %d\n", count, __LINE__);
-		retval = RL_UNEXPECTED;
-		goto cleanup;
-	}
-
-	if (_commit) {
-		RL_CALL_VERBOSE(rl_commit, RL_OK, db);
-		RL_CALL_VERBOSE(rl_is_balanced, RL_OK, db);
-	}
+	RL_BALANCED();
+	EXPECT_LONG(count, 2);
 
 	RL_CALL_VERBOSE(rl_sismember, RL_FOUND, db, key, keylen, data, datalen);
 	RL_CALL_VERBOSE(rl_sismember, RL_FOUND, db, key, keylen, data2, data2len);
 	RL_CALL_VERBOSE(rl_sismember, RL_NOT_FOUND, db, key, keylen, (unsigned char *)"new data", 8);
 
 	fprintf(stderr, "End basic_test_sadd_sismember\n");
-	retval = 0;
+	retval = RL_OK;
 cleanup:
-	if (db) {
-		rl_close(db);
-	}
+	rl_close(db);
 	return retval;
 }
 
 static int basic_test_sadd_scard(int _commit)
 {
-	int retval = 0;
+	int retval;
 	fprintf(stderr, "Start basic_test_sadd_scard %d\n", _commit);
 
 	rlite *db = NULL;
@@ -81,49 +59,27 @@ static int basic_test_sadd_scard(int _commit)
 	long card;
 
 	RL_CALL_VERBOSE(rl_sadd, RL_OK, db, key, keylen, 1, datas, dataslen, NULL);
-	RL_CALL_VERBOSE(rl_is_balanced, RL_OK, db);
-
-	if (_commit) {
-		RL_CALL_VERBOSE(rl_commit, RL_OK, db);
-		RL_CALL_VERBOSE(rl_is_balanced, RL_OK, db);
-	}
+	RL_BALANCED();
 
 	RL_CALL_VERBOSE(rl_scard, RL_OK, db, key, keylen, &card);
-
-	if (card != 1) {
-		fprintf(stderr, "Expected card to be 1, got %ld instead on line %d\n", card, __LINE__);
-		retval = RL_UNEXPECTED;
-		goto cleanup;
-	}
+	EXPECT_LONG(card, 1);
 
 	RL_CALL_VERBOSE(rl_sadd, RL_OK, db, key, keylen, 2, datas, dataslen, NULL);
-	RL_CALL_VERBOSE(rl_is_balanced, RL_OK, db);
-
-	if (_commit) {
-		RL_CALL_VERBOSE(rl_commit, RL_OK, db);
-		RL_CALL_VERBOSE(rl_is_balanced, RL_OK, db);
-	}
+	RL_BALANCED();
 
 	RL_CALL_VERBOSE(rl_scard, RL_OK, db, key, keylen, &card);
-
-	if (card != 2) {
-		fprintf(stderr, "Expected card to be 2, got %ld instead on line %d\n", card, __LINE__);
-		retval = RL_UNEXPECTED;
-		goto cleanup;
-	}
+	EXPECT_LONG(card, 2);
 
 	fprintf(stderr, "End basic_test_sadd_scard\n");
-	retval = 0;
+	retval = RL_OK;
 cleanup:
-	if (db) {
-		rl_close(db);
-	}
+	rl_close(db);
 	return retval;
 }
 
 static int basic_test_sadd_srem(int _commit)
 {
-	int retval = 0;
+	int retval;
 	fprintf(stderr, "Start basic_test_sadd_srem %d\n", _commit);
 
 	rlite *db = NULL;
@@ -139,53 +95,28 @@ static int basic_test_sadd_srem(int _commit)
 	long count;
 
 	RL_CALL_VERBOSE(rl_sadd, RL_OK, db, key, keylen, 2, datas, dataslen, NULL);
-	RL_CALL_VERBOSE(rl_is_balanced, RL_OK, db);
-
-	if (_commit) {
-		RL_CALL_VERBOSE(rl_commit, RL_OK, db);
-		RL_CALL_VERBOSE(rl_is_balanced, RL_OK, db);
-	}
+	RL_BALANCED();
 
 	RL_CALL_VERBOSE(rl_srem, RL_OK, db, key, keylen, 1, datas, dataslen, &count);
-
-	if (count != 1) {
-		fprintf(stderr, "Expected count to be 1, got %ld instead on line %d\n", count, __LINE__);
-		retval = RL_UNEXPECTED;
-		goto cleanup;
-	}
-
-	if (_commit) {
-		RL_CALL_VERBOSE(rl_commit, RL_OK, db);
-		RL_CALL_VERBOSE(rl_is_balanced, RL_OK, db);
-	}
+	RL_BALANCED();
+	EXPECT_LONG(count, 1);
 
 	RL_CALL_VERBOSE(rl_srem, RL_OK, db, key, keylen, 2, datas, dataslen, &count);
-
-	if (count != 1) {
-		fprintf(stderr, "Expected count to be 1, got %ld instead on line %d\n", count, __LINE__);
-		retval = RL_UNEXPECTED;
-		goto cleanup;
-	}
-
-	if (_commit) {
-		RL_CALL_VERBOSE(rl_commit, RL_OK, db);
-		RL_CALL_VERBOSE(rl_is_balanced, RL_OK, db);
-	}
+	RL_BALANCED();
+	EXPECT_LONG(count, 1);
 
 	RL_CALL_VERBOSE(rl_key_get, RL_NOT_FOUND, db, key, keylen, NULL, NULL, NULL, NULL);
 
 	fprintf(stderr, "End basic_test_sadd_srem\n");
-	retval = 0;
+	retval = RL_OK;
 cleanup:
-	if (db) {
-		rl_close(db);
-	}
+	rl_close(db);
 	return retval;
 }
 
 static int basic_test_sadd_spop(int _commit)
 {
-	int retval = 0;
+	int retval;
 	fprintf(stderr, "Start basic_test_sadd_spop %d\n", _commit);
 
 	rlite *db = NULL;
@@ -202,12 +133,7 @@ static int basic_test_sadd_spop(int _commit)
 	long datapoplen, datapoplen2;
 
 	RL_CALL_VERBOSE(rl_sadd, RL_OK, db, key, keylen, 2, datas, dataslen, NULL);
-	RL_CALL_VERBOSE(rl_is_balanced, RL_OK, db);
-
-	if (_commit) {
-		RL_CALL_VERBOSE(rl_commit, RL_OK, db);
-		RL_CALL_VERBOSE(rl_is_balanced, RL_OK, db);
-	}
+	RL_BALANCED();
 
 	RL_CALL_VERBOSE(rl_spop, RL_OK, db, key, keylen, &datapop, &datapoplen);
 	RL_CALL_VERBOSE(rl_spop, RL_OK, db, key, keylen, &datapop2, &datapoplen2);
@@ -227,16 +153,14 @@ static int basic_test_sadd_spop(int _commit)
 	RL_CALL_VERBOSE(rl_key_get, RL_NOT_FOUND, db, key, keylen, NULL, NULL, NULL, NULL);
 
 	fprintf(stderr, "End basic_test_sadd_spop\n");
-	retval = 0;
+	retval = RL_OK;
 cleanup:
-	if (db) {
-		rl_close(db);
-	}
+	rl_close(db);
 	return retval;
 }
 static int basic_test_sadd_sdiff(int _commit)
 {
-	int retval = 0;
+	int retval;
 	fprintf(stderr, "Start basic_test_sadd_sdiff %d\n", _commit);
 
 	rlite *db = NULL;
@@ -257,21 +181,13 @@ static int basic_test_sadd_sdiff(int _commit)
 	long *datasdifflen, datasc, i;
 
 	RL_CALL_VERBOSE(rl_sadd, RL_OK, db, key, keylen, 2, datas, dataslen, NULL);
+	RL_BALANCED();
 	RL_CALL_VERBOSE(rl_sadd, RL_OK, db, key2, key2len, 1, datas, dataslen, NULL);
-	if (_commit) {
-		RL_CALL_VERBOSE(rl_commit, RL_OK, db);
-		RL_CALL_VERBOSE(rl_is_balanced, RL_OK, db);
-	}
+	RL_BALANCED();
 
 	RL_CALL_VERBOSE(rl_sdiff, RL_OK, db, 2, keys, keyslen, &datasc, &datasdiff, &datasdifflen);
-
-	if (datasc != 1) {
-		fprintf(stderr, "Expected datasc %ld to be %d on line %d\n", datasc, 1, __LINE__);
-		retval = RL_UNEXPECTED;
-		goto cleanup;
-	}
-
-	ASSERT_EQUAL(data2, data2len, datasdiff[0], datasdifflen[0]);
+	EXPECT_LONG(datasc, 1);
+	EXPECT_BYTES(data2, data2len, datasdiff[0], datasdifflen[0]);
 
 	for (i = 0; i < datasc; i++) {
 		rl_free(datasdiff[i]);
@@ -281,17 +197,15 @@ static int basic_test_sadd_sdiff(int _commit)
 
 
 	fprintf(stderr, "End basic_test_sadd_sdiff\n");
-	retval = 0;
+	retval = RL_OK;
 cleanup:
-	if (db) {
-		rl_close(db);
-	}
+	rl_close(db);
 	return retval;
 }
 
 static int basic_test_sadd_sdiff_nonexistent(int _commit)
 {
-	int retval = 0;
+	int retval;
 	fprintf(stderr, "Start basic_test_sadd_sdiff_nonexistent %d\n", _commit);
 
 	rlite *db = NULL;
@@ -312,18 +226,10 @@ static int basic_test_sadd_sdiff_nonexistent(int _commit)
 	long *datasdifflen, datasc, i;
 
 	RL_CALL_VERBOSE(rl_sadd, RL_OK, db, key, keylen, 2, datas, dataslen, NULL);
-	if (_commit) {
-		RL_CALL_VERBOSE(rl_commit, RL_OK, db);
-		RL_CALL_VERBOSE(rl_is_balanced, RL_OK, db);
-	}
+	RL_BALANCED();
 
 	RL_CALL_VERBOSE(rl_sdiff, RL_OK, db, 2, keys, keyslen, &datasc, &datasdiff, &datasdifflen);
-
-	if (datasc != 2) {
-		fprintf(stderr, "Expected datasc %ld to be %d on line %d\n", datasc, 2, __LINE__);
-		retval = RL_UNEXPECTED;
-		goto cleanup;
-	}
+	EXPECT_LONG(datasc, 2);
 
 	for (i = 0; i < datasc; i++) {
 		rl_free(datasdiff[i]);
@@ -331,19 +237,16 @@ static int basic_test_sadd_sdiff_nonexistent(int _commit)
 	rl_free(datasdiff);
 	rl_free(datasdifflen);
 
-
 	fprintf(stderr, "End basic_test_sadd_sdiff_nonexistent\n");
-	retval = 0;
+	retval = RL_OK;
 cleanup:
-	if (db) {
-		rl_close(db);
-	}
+	rl_close(db);
 	return retval;
 }
 
 static int basic_test_sadd_sdiffstore(int _commit)
 {
-	int retval = 0;
+	int retval;
 	fprintf(stderr, "Start basic_test_sadd_sdiffstore %d\n", _commit);
 
 	rlite *db = NULL;
@@ -366,41 +269,28 @@ static int basic_test_sadd_sdiffstore(int _commit)
 	long datapoplen, size;
 
 	RL_CALL_VERBOSE(rl_sadd, RL_OK, db, key, keylen, 2, datas, dataslen, NULL);
+	RL_BALANCED();
 	RL_CALL_VERBOSE(rl_sadd, RL_OK, db, key2, key2len, 1, datas, dataslen, NULL);
-	if (_commit) {
-		RL_CALL_VERBOSE(rl_commit, RL_OK, db);
-		RL_CALL_VERBOSE(rl_is_balanced, RL_OK, db);
-	}
+	RL_BALANCED();
 
 	RL_CALL_VERBOSE(rl_sdiffstore, RL_OK, db, target, targetlen, 2, keys, keyslen, &size);
-	if (_commit) {
-		RL_CALL_VERBOSE(rl_commit, RL_OK, db);
-		RL_CALL_VERBOSE(rl_is_balanced, RL_OK, db);
-	}
-
-	if (size != 1) {
-		fprintf(stderr, "Expected size %ld to be %d on line %d\n", size, 1, __LINE__);
-		retval = RL_UNEXPECTED;
-		goto cleanup;
-	}
+	RL_BALANCED();
+	EXPECT_LONG(size, 1);
 
 	RL_CALL_VERBOSE(rl_spop, RL_OK, db, target, targetlen, &datapop, &datapoplen);
-
-	ASSERT_EQUAL(datapop, datapoplen, data2, data2len);
+	EXPECT_BYTES(datapop, datapoplen, data2, data2len);
 	rl_free(datapop);
 
 	fprintf(stderr, "End basic_test_sadd_sdiffstore\n");
-	retval = 0;
+	retval = RL_OK;
 cleanup:
-	if (db) {
-		rl_close(db);
-	}
+	rl_close(db);
 	return retval;
 }
 
 static int basic_test_sadd_sinter(int _commit)
 {
-	int retval = 0;
+	int retval;
 	fprintf(stderr, "Start basic_test_sadd_sinter %d\n", _commit);
 
 	rlite *db = NULL;
@@ -421,21 +311,13 @@ static int basic_test_sadd_sinter(int _commit)
 	long *datasdifflen, datasc, i;
 
 	RL_CALL_VERBOSE(rl_sadd, RL_OK, db, key, keylen, 2, datas, dataslen, NULL);
+	RL_BALANCED();
 	RL_CALL_VERBOSE(rl_sadd, RL_OK, db, key2, key2len, 1, datas, dataslen, NULL);
-	if (_commit) {
-		RL_CALL_VERBOSE(rl_commit, RL_OK, db);
-		RL_CALL_VERBOSE(rl_is_balanced, RL_OK, db);
-	}
+	RL_BALANCED();
 
 	RL_CALL_VERBOSE(rl_sinter, RL_OK, db, 2, keys, keyslen, &datasc, &datasdiff, &datasdifflen);
-
-	if (datasc != 1) {
-		fprintf(stderr, "Expected datasc %ld to be %d on line %d\n", datasc, 1, __LINE__);
-		retval = RL_UNEXPECTED;
-		goto cleanup;
-	}
-
-	ASSERT_EQUAL(data, datalen, datasdiff[0], datasdifflen[0]);
+	EXPECT_LONG(datasc, 1);
+	EXPECT_BYTES(data, datalen, datasdiff[0], datasdifflen[0]);
 
 	for (i = 0; i < datasc; i++) {
 		rl_free(datasdiff[i]);
@@ -445,17 +327,15 @@ static int basic_test_sadd_sinter(int _commit)
 
 
 	fprintf(stderr, "End basic_test_sadd_sinter\n");
-	retval = 0;
+	retval = RL_OK;
 cleanup:
-	if (db) {
-		rl_close(db);
-	}
+	rl_close(db);
 	return retval;
 }
 
 static int basic_test_sadd_sinterstore(int _commit)
 {
-	int retval = 0;
+	int retval;
 	fprintf(stderr, "Start basic_test_sadd_sinterstore %d\n", _commit);
 
 	rlite *db = NULL;
@@ -479,40 +359,26 @@ static int basic_test_sadd_sinterstore(int _commit)
 
 	RL_CALL_VERBOSE(rl_sadd, RL_OK, db, key, keylen, 2, datas, dataslen, NULL);
 	RL_CALL_VERBOSE(rl_sadd, RL_OK, db, key2, key2len, 1, datas, dataslen, NULL);
-	if (_commit) {
-		RL_CALL_VERBOSE(rl_commit, RL_OK, db);
-		RL_CALL_VERBOSE(rl_is_balanced, RL_OK, db);
-	}
+	RL_BALANCED();
 
 	RL_CALL_VERBOSE(rl_sinterstore, RL_OK, db, target, targetlen, 2, keys, keyslen, &size);
-	if (_commit) {
-		RL_CALL_VERBOSE(rl_commit, RL_OK, db);
-		RL_CALL_VERBOSE(rl_is_balanced, RL_OK, db);
-	}
-
-	if (size != 1) {
-		fprintf(stderr, "Expected size %ld to be %d on line %d\n", size, 1, __LINE__);
-		retval = RL_UNEXPECTED;
-		goto cleanup;
-	}
+	RL_BALANCED();
+	EXPECT_LONG(size, 1);
 
 	RL_CALL_VERBOSE(rl_spop, RL_OK, db, target, targetlen, &datapop, &datapoplen);
-
-	ASSERT_EQUAL(data, datalen, datapop, datapoplen);
+	EXPECT_BYTES(data, datalen, datapop, datapoplen);
 	rl_free(datapop);
 
 	fprintf(stderr, "End basic_test_sadd_sinterstore\n");
-	retval = 0;
+	retval = RL_OK;
 cleanup:
-	if (db) {
-		rl_close(db);
-	}
+	rl_close(db);
 	return retval;
 }
 
 static int basic_test_sadd_sunion(int _commit)
 {
-	int retval = 0;
+	int retval;
 	fprintf(stderr, "Start basic_test_sadd_sunion %d\n", _commit);
 
 	rlite *db = NULL;
@@ -531,24 +397,17 @@ static int basic_test_sadd_sunion(int _commit)
 	long *datasunionlen, datasc, i;
 
 	RL_CALL_VERBOSE(rl_sadd, RL_OK, db, key, keylen, 2, datas, dataslen, NULL);
+	RL_BALANCED();
 	RL_CALL_VERBOSE(rl_sadd, RL_OK, db, key2, key2len, 3, datas2, datas2len, NULL);
-	if (_commit) {
-		RL_CALL_VERBOSE(rl_commit, RL_OK, db);
-		RL_CALL_VERBOSE(rl_is_balanced, RL_OK, db);
-	}
+	RL_BALANCED();
 
 	RL_CALL_VERBOSE(rl_sunion, RL_OK, db, 2, keys, keyslen, &datasc, &datasunion, &datasunionlen);
+	EXPECT_LONG(datasc, 4);
 
-	if (datasc != 4) {
-		fprintf(stderr, "Expected datasc %ld to be %d on line %d\n", datasc, 2, __LINE__);
-		retval = RL_UNEXPECTED;
-		goto cleanup;
-	}
-
-	ASSERT_EQUAL(datas[1], dataslen[1], datasunion[0], datasunionlen[0]);
-	ASSERT_EQUAL(datas[0], dataslen[0], datasunion[1], datasunionlen[1]);
-	ASSERT_EQUAL(datas2[1], datas2len[1], datasunion[2], datasunionlen[2]);
-	ASSERT_EQUAL(datas2[0], datas2len[0], datasunion[3], datasunionlen[3]);
+	EXPECT_BYTES(datas[1], dataslen[1], datasunion[0], datasunionlen[0]);
+	EXPECT_BYTES(datas[0], dataslen[0], datasunion[1], datasunionlen[1]);
+	EXPECT_BYTES(datas2[1], datas2len[1], datasunion[2], datasunionlen[2]);
+	EXPECT_BYTES(datas2[0], datas2len[0], datasunion[3], datasunionlen[3]);
 
 	for (i = 0; i < datasc; i++) {
 		rl_free(datasunion[i]);
@@ -558,17 +417,15 @@ static int basic_test_sadd_sunion(int _commit)
 
 
 	fprintf(stderr, "End basic_test_sadd_sunion\n");
-	retval = 0;
+	retval = RL_OK;
 cleanup:
-	if (db) {
-		rl_close(db);
-	}
+	rl_close(db);
 	return retval;
 }
 
 static int basic_test_sadd_sunionstore(int _commit)
 {
-	int retval = 0;
+	int retval;
 	fprintf(stderr, "Start basic_test_sadd_sunionstore %d\n", _commit);
 
 	rlite *db = NULL;
@@ -590,19 +447,12 @@ static int basic_test_sadd_sunionstore(int _commit)
 	long added;
 
 	RL_CALL_VERBOSE(rl_sadd, RL_OK, db, key, keylen, 2, datas, dataslen, NULL);
+	RL_BALANCED();
 	RL_CALL_VERBOSE(rl_sadd, RL_OK, db, key2, key2len, 3, datas2, datas2len, NULL);
-	if (_commit) {
-		RL_CALL_VERBOSE(rl_commit, RL_OK, db);
-		RL_CALL_VERBOSE(rl_is_balanced, RL_OK, db);
-	}
+	RL_BALANCED();
 
 	RL_CALL_VERBOSE(rl_sunionstore, RL_OK, db, target, targetlen, 2, keys, keyslen, &added);
-
-	if (added != 4) {
-		fprintf(stderr, "Expected added %ld to be %d on line %d\n", added, 2, __LINE__);
-		retval = RL_UNEXPECTED;
-		goto cleanup;
-	}
+	EXPECT_LONG(added, 4);
 
 	datasc = added;
 	RL_CALL_VERBOSE(rl_srandmembers, RL_OK, db, target, targetlen, 0, &datasc, &datasunion, &datasunionlen);
@@ -631,17 +481,15 @@ static int basic_test_sadd_sunionstore(int _commit)
 
 
 	fprintf(stderr, "End basic_test_sadd_sunionstore\n");
-	retval = 0;
+	retval = RL_OK;
 cleanup:
-	if (db) {
-		rl_close(db);
-	}
+	rl_close(db);
 	return retval;
 }
 
 static int basic_test_sadd_smove(int _commit)
 {
-	int retval = 0;
+	int retval;
 	fprintf(stderr, "Start basic_test_sadd_smove %d\n", _commit);
 
 	rlite *db = NULL;
@@ -658,30 +506,19 @@ static int basic_test_sadd_smove(int _commit)
 	long dataslen[2] = {datalen, data2len};
 
 	RL_CALL_VERBOSE(rl_sadd, RL_OK, db, key, keylen, 2, datas, dataslen, NULL);
-	RL_CALL_VERBOSE(rl_is_balanced, RL_OK, db);
-
-	if (_commit) {
-		RL_CALL_VERBOSE(rl_commit, RL_OK, db);
-		RL_CALL_VERBOSE(rl_is_balanced, RL_OK, db);
-	}
+	RL_BALANCED();
 
 	RL_CALL_VERBOSE(rl_smove, RL_NOT_FOUND, db, key, keylen, key2, key2len, (unsigned char *)"new data", 8);
-	RL_CALL_VERBOSE(rl_smove, RL_OK, db, key, keylen, key2, key2len, data, datalen);
+	RL_BALANCED();
 
-	if (_commit) {
-		RL_CALL_VERBOSE(rl_commit, RL_OK, db);
-		RL_CALL_VERBOSE(rl_is_balanced, RL_OK, db);
-	}
+	RL_CALL_VERBOSE(rl_smove, RL_OK, db, key, keylen, key2, key2len, data, datalen);
+	RL_BALANCED();
 
 	RL_CALL_VERBOSE(rl_sismember, RL_NOT_FOUND, db, key, keylen, data, datalen);
 	RL_CALL_VERBOSE(rl_sismember, RL_FOUND, db, key2, key2len, data, datalen);
 
 	RL_CALL_VERBOSE(rl_smove, RL_OK, db, key, keylen, key2, key2len, data2, data2len);
-
-	if (_commit) {
-		RL_CALL_VERBOSE(rl_commit, RL_OK, db);
-		RL_CALL_VERBOSE(rl_is_balanced, RL_OK, db);
-	}
+	RL_BALANCED();
 
 	RL_CALL_VERBOSE(rl_sismember, RL_NOT_FOUND, db, key, keylen, data2, data2len);
 	RL_CALL_VERBOSE(rl_sismember, RL_FOUND, db, key2, key2len, data2, data2len);
@@ -690,17 +527,15 @@ static int basic_test_sadd_smove(int _commit)
 	RL_CALL_VERBOSE(rl_key_get, RL_NOT_FOUND, db, key, keylen, NULL, NULL, NULL, NULL);
 
 	fprintf(stderr, "End basic_test_sadd_smove\n");
-	retval = 0;
+	retval = RL_OK;
 cleanup:
-	if (db) {
-		rl_close(db);
-	}
+	rl_close(db);
 	return retval;
 }
 
 static int basic_test_sadd_smembers(int _commit)
 {
-	int retval = 0;
+	int retval;
 	fprintf(stderr, "Start basic_test_sadd_smembers %d\n", _commit);
 
 	rlite *db = NULL;
@@ -719,44 +554,26 @@ static int basic_test_sadd_smembers(int _commit)
 	rl_set_iterator *iterator;
 
 	RL_CALL_VERBOSE(rl_sadd, RL_OK, db, key, keylen, 2, datas, dataslen, NULL);
-	RL_CALL_VERBOSE(rl_is_balanced, RL_OK, db);
-
-	if (_commit) {
-		RL_CALL_VERBOSE(rl_commit, RL_OK, db);
-		RL_CALL_VERBOSE(rl_is_balanced, RL_OK, db);
-	}
+	RL_BALANCED();
 
 	RL_CALL_VERBOSE(rl_smembers, RL_OK, db, &iterator, key, keylen);
 
 	i = 0;
 	while ((retval = rl_set_iterator_next(iterator, &testdata, &testdatalen)) == RL_OK) {
 		if (i++ == 1) {
-			if (testdatalen != datalen || memcmp(testdata, data, datalen) != 0) {
-				fprintf(stderr, "Expected data to be \"%s\", got \"%s\" (%ld) on line %d\n", data, testdata, testdatalen, __LINE__);
-				retval = RL_UNEXPECTED;
-				goto cleanup;
-			}
+			EXPECT_BYTES(data, datalen, testdata, testdatalen);
 		} else {
-			if (testdatalen != data2len || memcmp(testdata, data2, data2len) != 0) {
-				fprintf(stderr, "Expected data to be \"%s\", got \"%s\" (%ld) on line %d\n", data2, testdata, testdatalen, __LINE__);
-				retval = RL_UNEXPECTED;
-				goto cleanup;
-			}
+			EXPECT_BYTES(data2, data2len, testdata, testdatalen);
 		}
 		rl_free(testdata);
 	}
 
-	if (retval != RL_END) {
-		fprintf(stderr, "Iterator didn't finish clearly, got %d on line %d\n", retval, __LINE__);
-		goto cleanup;
-	}
+	EXPECT_INT(retval, RL_END);
 
 	fprintf(stderr, "End basic_test_sadd_smembers\n");
-	retval = 0;
+	retval = RL_OK;
 cleanup:
-	if (db) {
-		rl_close(db);
-	}
+	rl_close(db);
 	return retval;
 }
 
@@ -773,7 +590,7 @@ static long indexOf(long size, unsigned char **elements, long *elementslen, unsi
 
 static int fuzzy_test_srandmembers_unique(long size, int _commit)
 {
-	int retval = 0;
+	int retval;
 	fprintf(stderr, "Start fuzzy_test_srandmembers_unique %ld %d\n", size, _commit);
 
 	unsigned char **elements = malloc(sizeof(unsigned char *) * size);
@@ -797,16 +614,12 @@ static int fuzzy_test_srandmembers_unique(long size, int _commit)
 
 	long added;
 	RL_CALL_VERBOSE(rl_sadd, RL_OK, db, key, keylen, size, elements, elementslen, &added);
-	if (added != size) {
-		fprintf(stderr, "Expected to add %ld elements, but added %ld instead\n", size, added);
-		retval = RL_UNEXPECTED;
-		goto cleanup;
-	}
+	EXPECT_LONG(added, size);
 
 	long memberc = 1;
 	unsigned char **members = NULL;
 	long *memberslen = NULL;
-	retval = rl_srandmembers(db, key, keylen, 0, &memberc, &members, &memberslen);
+	RL_CALL_VERBOSE(rl_srandmembers, RL_OK, db, key, keylen, 0, &memberc, &members, &memberslen);
 	for (i = 0; i < memberc; i++) {
 		if (indexOf(size, elements, elementslen, members[i], memberslen[i]) == -1) {
 			fprintf(stderr, "randmembers result not found in elements, got 0x");
@@ -825,12 +638,9 @@ static int fuzzy_test_srandmembers_unique(long size, int _commit)
 	memberc = size * 2;
 	members = NULL;
 	memberslen = NULL;
-	retval = rl_srandmembers(db, key, keylen, 0, &memberc, &members, &memberslen);
-	if (size != memberc) {
-		fprintf(stderr, "Expected memberc %ld to be %ld on line %d\n", memberc, size, __LINE__);
-		retval = RL_UNEXPECTED;
-		goto cleanup;
-	}
+	RL_CALL_VERBOSE(rl_srandmembers, RL_OK, db, key, keylen, 0, &memberc, &members, &memberslen);
+	EXPECT_LONG(size, memberc);
+
 	for (i = 0; i < size; i++) {
 		results[i] = 0;
 	}
@@ -860,12 +670,9 @@ static int fuzzy_test_srandmembers_unique(long size, int _commit)
 	memberc = size * 2;
 	members = NULL;
 	memberslen = NULL;
-	retval = rl_srandmembers(db, key, keylen, 1, &memberc, &members, &memberslen);
-	if (memberc != size * 2) {
-		fprintf(stderr, "Expected memberc %ld to be %ld on line %d\n", memberc, size * 2, __LINE__);
-		retval = RL_UNEXPECTED;
-		goto cleanup;
-	}
+	RL_CALL_VERBOSE(rl_srandmembers, RL_OK, db, key, keylen, 1, &memberc, &members, &memberslen);
+	EXPECT_LONG(memberc, size * 2);
+
 	for (i = 0; i < size; i++) {
 		results[i] = 0;
 	}
@@ -888,7 +695,7 @@ static int fuzzy_test_srandmembers_unique(long size, int _commit)
 	rl_free(members);
 
 	fprintf(stderr, "End fuzzy_test_srandmembers_unique\n");
-	retval = 0;
+	retval = RL_OK;
 cleanup:
 	for (i = 0; i < size; i++) {
 		free(elements[i]);
@@ -896,9 +703,7 @@ cleanup:
 	free(elements);
 	free(results);
 	free(elementslen);
-	if (db) {
-		rl_close(db);
-	}
+	rl_close(db);
 	return retval;
 }
 

@@ -25,16 +25,8 @@ int test_rlite_page_cache()
 		db->read_pages[i]->obj = db->read_pages[i];
 	}
 	for (i = 0; i < size; i++) {
-		retval = rl_read(db, &rl_data_type_header, i, NULL, &obj, 1);
-		if (retval != RL_FOUND) {
-			fprintf(stderr, "Expected retval to be RL_FOUND, got %d insted\n", retval);
-			goto cleanup;
-		}
-		if (obj != db->read_pages[i]) {
-			fprintf(stderr, "Expected obj to be %p, got %p insted\n", (void *) db->read_pages[i], obj);
-			retval = 1;
-			goto cleanup;
-		}
+		RL_CALL_VERBOSE(rl_read, RL_FOUND, db, &rl_data_type_header, i, NULL, &obj, 1);
+		EXPECT_PTR(obj, db->read_pages[i])
 	}
 	for (i = 0; i < size; i++) {
 		rl_free(db->read_pages[i]);
@@ -54,41 +46,17 @@ int test_has_key()
 	if (access(filepath, F_OK) == 0) {
 		unlink(filepath);
 	}
-	retval = rl_open(filepath, &db, RLITE_OPEN_CREATE | RLITE_OPEN_READWRITE);
-	if (retval != RL_OK) {
-		fprintf(stderr, "Failed to open file\n");
-		goto cleanup;
-	}
+	RL_CALL_VERBOSE(rl_open, RL_OK, filepath, &db, RLITE_OPEN_CREATE | RLITE_OPEN_READWRITE);
 	unsigned char type = 'C', type2;
 	const unsigned char *key = (unsigned char *)"random key";
 	long keylen = strlen((char *) key);
 	long value = 529, value2;
-	retval = rl_key_get(db, key, keylen, NULL, NULL, NULL, NULL);
-	if (retval != RL_NOT_FOUND) {
-		fprintf(stderr, "Failed to not find unexisting key (%d)\n", retval);
-		goto cleanup;
-	}
-	retval = rl_key_set(db, key, keylen, type, value, 0);
-	if (retval != RL_OK) {
-		fprintf(stderr, "Failed to set key (%d)\n", retval);
-		goto cleanup;
-	}
-	retval = rl_key_get(db, key, keylen, &type2, NULL, &value2, NULL);
-	if (retval != RL_FOUND) {
-		fprintf(stderr, "Failed to find existing key (%d)\n", retval);
-		goto cleanup;
-	}
-	if (value2 != value) {
-		fprintf(stderr, "Expected value2 (%ld) to be equal to value (%ld)\n", value2, value);
-		retval = 1;
-		goto cleanup;
-	}
-	if (value2 != value) {
-		fprintf(stderr, "Expected type2 (%d) to be equal to type (%d)\n", type2, type);
-		retval = 1;
-		goto cleanup;
-	}
-	retval = 0;
+	RL_CALL_VERBOSE(rl_key_get, RL_NOT_FOUND, db, key, keylen, NULL, NULL, NULL, NULL);
+	RL_CALL_VERBOSE(rl_key_set, RL_OK, db, key, keylen, type, value, 0);
+	RL_CALL_VERBOSE(rl_key_get, RL_FOUND, db, key, keylen, &type2, NULL, &value2, NULL);
+	EXPECT_LONG(value, value2);
+	EXPECT_INT(type, type2);
+	retval = RL_OK;
 cleanup:
 	rl_close(db);
 	return retval;
