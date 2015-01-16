@@ -337,7 +337,9 @@ static int basic_test_hmset_hmget(int _commit)
 		rl_free(datas[i]);
 	}
 	rl_free(datas);
+	datas = NULL;
 	rl_free(dataslen);
+	dataslen = NULL;
 
 	RL_CALL_VERBOSE(rl_hmset, RL_OK, db, key, keylen, 2, fieldsset2, fieldslenset2, datasset, dataslenset);
 	RL_BALANCED();

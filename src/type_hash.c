@@ -188,7 +188,12 @@ int rl_hmget(struct rlite *db, const unsigned char *key, long keylen, int fieldc
 	}
 	*_data = data;
 	*_datalen = datalen;
+	retval = RL_OK;
 cleanup:
+	if (retval != RL_OK) {
+		rl_free(data);
+		rl_free(datalen);
+	}
 	rl_free(digest);
 	return retval;
 }
@@ -369,7 +374,7 @@ int rl_hincrby(struct rlite *db, const unsigned char *key, long keylen, unsigned
 		value += increment;
 		rl_multi_string_delete(db, hashkey->value_page);
 
-		RL_MALLOC(data, sizeof(unsigned char *) * MAX_LLONG_DIGITS);
+		RL_MALLOC(data, sizeof(unsigned char) * MAX_LLONG_DIGITS);
 		datalen = snprintf((char *)data, MAX_LLONG_DIGITS, "%lld", value);
 		RL_CALL(rl_multi_string_set, RL_OK, db, &hashkey->value_page, data, datalen);
 
@@ -386,7 +391,7 @@ int rl_hincrby(struct rlite *db, const unsigned char *key, long keylen, unsigned
 		}
 	}
 	else if (retval == RL_NOT_FOUND) {
-		RL_MALLOC(data, sizeof(unsigned char *) * MAX_LLONG_DIGITS);
+		RL_MALLOC(data, sizeof(unsigned char) * MAX_LLONG_DIGITS);
 		datalen = snprintf((char *)data, MAX_LLONG_DIGITS, "%ld", increment);
 
 		RL_MALLOC(hashkey, sizeof(*hashkey));
@@ -531,7 +536,7 @@ int rl_hash_iterator_destroy(rl_hash_iterator *iterator)
 int rl_hash_pages(struct rlite *db, long page, short *pages)
 {
 	rl_btree *btree;
-	rl_btree_iterator *iterator;
+	rl_btree_iterator *iterator = NULL;
 	int retval;
 	void *tmp;
 	rl_hashkey *hashkey;

@@ -774,7 +774,7 @@ int rl_zinterstore(rlite *db, long keys_size, unsigned char **keys, long *keys_l
 
 	if (keys_size > 1) {
 		RL_MALLOC(btrees, sizeof(rl_btree *) * (keys_size - 1));
-		RL_MALLOC(skiplists, sizeof(rl_btree *) * (keys_size - 1));
+		RL_MALLOC(skiplists, sizeof(rl_skiplist *) * (keys_size - 1));
 	}
 	else {
 		retval = RL_UNEXPECTED;

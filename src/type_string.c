@@ -161,7 +161,7 @@ int rl_incr(struct rlite *db, const unsigned char *key, long keylen, long long i
 	if (newvalue) {
 		*newvalue = lvalue;
 	}
-	RL_MALLOC(value, sizeof(unsigned char *) * MAX_LLONG_DIGITS);
+	RL_MALLOC(value, sizeof(unsigned char) * MAX_LLONG_DIGITS);
 	valuelen = snprintf((char *)value, MAX_LLONG_DIGITS, "%lld", lvalue);
 	RL_CALL(rl_set, RL_OK, db, key, keylen, value, valuelen, 0, expires);
 	rl_free(value);
@@ -209,7 +209,7 @@ int rl_incrbyfloat(struct rlite *db, const unsigned char *key, long keylen, doub
 	if (newvalue) {
 		*newvalue = dvalue;
 	}
-	RL_MALLOC(value, sizeof(unsigned char *) * MAX_DOUBLE_DIGITS);
+	RL_MALLOC(value, sizeof(unsigned char) * MAX_DOUBLE_DIGITS);
 	valuelen = snprintf((char *)value, MAX_DOUBLE_DIGITS, "%lf", dvalue);
 	RL_CALL(rl_set, RL_OK, db, key, keylen, value, valuelen, 0, expires);
 	rl_free(value);

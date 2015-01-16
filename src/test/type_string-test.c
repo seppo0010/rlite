@@ -309,15 +309,15 @@ static int basic_test_set_incrbyfloat(int _commit)
 	fprintf(stderr, "Start basic_test_set_incrbyfloat %d\n", _commit);
 
 	rlite *db = NULL;
-	RL_CALL_VERBOSE(setup_db, RL_OK, &db, _commit, 1);
 	unsigned char *key = UNSIGN("my key");
 	long keylen = strlen((char *)key);
 	unsigned char *testvalue;
-	char *testvalue2;
+	char *testvalue2 = NULL;
 	long testvaluelen;
 	double testnewvalue;
 	double v1 = 7.8, v2 = 2.1;
 	double expectednewvalue = v1 + v2;
+	RL_CALL_VERBOSE(setup_db, RL_OK, &db, _commit, 1);
 
 	RL_CALL_VERBOSE(rl_incrbyfloat, RL_OK, db, key, keylen, v1, &testnewvalue);
 	RL_BALANCED();
@@ -333,12 +333,12 @@ static int basic_test_set_incrbyfloat(int _commit)
 	testvalue2[testvaluelen] = 0;
 	testnewvalue = strtold(testvalue2, NULL);
 	EXPECT_DOUBLE(testnewvalue, expectednewvalue);
-	free(testvalue2);
 	rl_free(testvalue);
 
 	fprintf(stderr, "End basic_test_set_incrbyfloat\n");
 	retval = 0;
 cleanup:
+	free(testvalue2);
 	rl_close(db);
 	return retval;
 }

@@ -484,7 +484,8 @@ int rl_skiplist_is_balanced(rlite *db, rl_skiplist *skiplist)
 	while (page > 0) {
 		if (i > skiplist->size + 1) {
 			fprintf(stderr, "Too many nodes, expected %ld\n", skiplist->size);
-			return RL_UNEXPECTED;
+			retval = RL_UNEXPECTED;
+			goto cleanup;
 		}
 		nodes_page[i] = page;
 		RL_CALL(rl_read, RL_FOUND, db, &rl_data_type_skiplist_node, page, skiplist, &_node, 1);
