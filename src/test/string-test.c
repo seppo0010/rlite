@@ -7,7 +7,7 @@
 #include "../status.h"
 #include "../page_string.h"
 
-static int do_string_test()
+static int do_string_test(int UNUSED(_))
 {
 	srand(1);
 	fprintf(stderr, "Start do_string_test\n");

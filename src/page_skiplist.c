@@ -116,6 +116,7 @@ int rl_skiplist_iterator_create(rlite *db, rl_skiplist_iterator **_iterator, rl_
 	}
 	iterator->position = 0;
 	*_iterator = iterator;
+	retval = RL_OK;
 cleanup:
 	return retval;
 }

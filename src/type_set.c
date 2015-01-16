@@ -406,7 +406,7 @@ int rl_sdiffstore(struct rlite *db, unsigned char *target, long targetlen, int k
 {
 	int retval;
 	unsigned char **members = NULL;
-	long *memberslen = NULL, membersc, i;
+	long *memberslen = NULL, membersc = 0, i;
 
 	retval = rl_key_delete_with_value(db, target, targetlen);
 	if (retval != RL_NOT_FOUND && retval != RL_OK) {
@@ -523,7 +523,7 @@ int rl_sinterstore(struct rlite *db, unsigned char *target, long targetlen, int 
 {
 	int retval;
 	unsigned char **members = NULL;
-	long *memberslen = NULL, membersc, i;
+	long *memberslen = NULL, membersc = 0, i;
 
 	retval = rl_key_delete_with_value(db, target, targetlen);
 	if (retval != RL_NOT_FOUND && retval != RL_OK) {

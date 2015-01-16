@@ -40,7 +40,7 @@ cleanup:
 	return retval;
 }
 
-int basic_test_get_unexisting()
+int basic_test_get_unexisting(int UNUSED(_))
 {
 	int retval;
 	fprintf(stderr, "Start basic_test_get_unexisting\n");
@@ -58,7 +58,7 @@ cleanup:
 	return retval;
 }
 
-int basic_test_set_delete()
+int basic_test_set_delete(int UNUSED(_))
 {
 	int retval;
 	fprintf(stderr, "Start basic_test_set_delete\n");

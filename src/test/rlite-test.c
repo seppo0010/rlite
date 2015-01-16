@@ -5,7 +5,7 @@
 #include "test_util.h"
 #include "../rlite.h"
 
-int test_rlite_page_cache()
+int test_rlite_page_cache(int UNUSED(_))
 {
 	rlite *db = malloc(sizeof(rlite));
 	int retval;
@@ -38,7 +38,7 @@ cleanup:
 	return retval;
 }
 
-int test_has_key()
+int test_has_key(int UNUSED(_))
 {
 	rlite *db = NULL;
 	int retval;

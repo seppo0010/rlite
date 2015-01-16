@@ -41,7 +41,7 @@ cleanup:
 	return retval;
 }
 
-int basic_skiplist_first_node_test()
+int basic_skiplist_first_node_test(int UNUSED(_))
 {
 	fprintf(stderr, "Start basic_skiplist_first_node_test\n");
 
@@ -143,7 +143,7 @@ cleanup:
 	return retval;
 }
 
-int basic_skiplist_node_by_rank()
+int basic_skiplist_node_by_rank(int UNUSED(_))
 {
 	fprintf(stderr, "Start basic_skiplist_node_by_rank\n");
 

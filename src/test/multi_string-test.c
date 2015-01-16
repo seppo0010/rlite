@@ -6,7 +6,7 @@
 #include "../util.h"
 #include "test_util.h"
 
-int basic_set_get()
+int basic_set_get(int UNUSED(_))
 {
 	int retval, i, j;
 	long size, size2, number;
@@ -80,7 +80,7 @@ static int assert_cmp(rlite *db, long p1, unsigned char *data, long size, int ex
 cleanup:
 	return retval;
 }
-static int test_cmp_different_length()
+static int test_cmp_different_length(int UNUSED(_))
 {
 	unsigned char data[3], data2[3];
 	long size = 2, i;

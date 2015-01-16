@@ -6,7 +6,7 @@
 #include "../page_btree.h"
 #include "../status.h"
 
-int basic_insert_set_test()
+int basic_insert_set_test(int UNUSED(_))
 {
 	fprintf(stderr, "Start basic_insert_set_test\n");
 	rl_btree *btree = NULL;
@@ -43,7 +43,7 @@ cleanup:
 	return retval;
 }
 
-int basic_insert_hash_test()
+int basic_insert_hash_test(int UNUSED(_))
 {
 	fprintf(stderr, "Start basic_insert_hash_test\n");
 	long **keys = malloc(sizeof(long *) * 7);

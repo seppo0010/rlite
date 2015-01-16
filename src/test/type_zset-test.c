@@ -122,7 +122,7 @@ cleanup:
 	return retval;
 }
 
-int basic_test_invalidlex()
+int basic_test_invalidlex(int UNUSED(_))
 {
 	int retval;
 	fprintf(stderr, "Start basic_test_invalidlex %d\n", 0);

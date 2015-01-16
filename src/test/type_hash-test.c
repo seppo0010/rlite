@@ -14,7 +14,6 @@ static int basic_test_hset_hget(int _commit)
 	fprintf(stderr, "Start basic_test_hset_hget %d\n", _commit);
 
 	rlite *db = NULL;
-	RL_CALL_VERBOSE(setup_db, RL_OK, &db, _commit, 1);
 	unsigned char *key = UNSIGN("my key");
 	long keylen = strlen((char *)key);
 	unsigned char *field = UNSIGN("my field");
@@ -23,6 +22,7 @@ static int basic_test_hset_hget(int _commit)
 	long datalen = strlen((char *)data);
 	unsigned char *data2 = NULL;
 	long data2len;
+	RL_CALL_VERBOSE(setup_db, RL_OK, &db, _commit, 1);
 
 	RL_CALL_VERBOSE(rl_hset, RL_OK, db, key, keylen, field, fieldlen, data, datalen, NULL, 0);
 	RL_BALANCED();
@@ -249,7 +249,6 @@ static int basic_test_hset_hmget(int _commit)
 	fprintf(stderr, "Start basic_test_hset_hmget %d\n", _commit);
 
 	rlite *db = NULL;
-	RL_CALL_VERBOSE(setup_db, RL_OK, &db, _commit, 1);
 	unsigned char *key = UNSIGN("my key");
 	long keylen = strlen((char *)key);
 	unsigned char *field = UNSIGN("my field");
@@ -264,6 +263,7 @@ static int basic_test_hset_hmget(int _commit)
 	long fieldslen[3] = {fieldlen, strlen((char *)fields[1]), field2len};
 	unsigned char **datas = NULL;
 	long *dataslen = NULL;
+	RL_CALL_VERBOSE(setup_db, RL_OK, &db, _commit, 1);
 
 	RL_CALL_VERBOSE(rl_hset, RL_OK, db, key, keylen, field, fieldlen, data, datalen, &added, 0);
 	EXPECT_LONG(added, 1);
@@ -301,7 +301,6 @@ static int basic_test_hmset_hmget(int _commit)
 	fprintf(stderr, "Start basic_test_hmset_hmget %d\n", _commit);
 
 	rlite *db = NULL;
-	RL_CALL_VERBOSE(setup_db, RL_OK, &db, _commit, 1);
 	unsigned char *key = UNSIGN("my key");
 	long keylen = strlen((char *)key);
 	unsigned char *field = UNSIGN("my field");
@@ -322,6 +321,7 @@ static int basic_test_hmset_hmget(int _commit)
 	long fieldslen[3] = {fieldlen, strlen((char *)fields[1]), field2len};
 	unsigned char **datas = NULL;
 	long *dataslen = NULL;
+	RL_CALL_VERBOSE(setup_db, RL_OK, &db, _commit, 1);
 
 	RL_CALL_VERBOSE(rl_hmset, RL_OK, db, key, keylen, 2, fieldsset, fieldslenset, datasset, dataslenset);
 	RL_BALANCED();
@@ -369,13 +369,13 @@ static int basic_test_hincrby_hget(int _commit)
 	fprintf(stderr, "Start basic_test_hincrby_hget %d\n", _commit);
 
 	rlite *db = NULL;
-	RL_CALL_VERBOSE(setup_db, RL_OK, &db, _commit, 1);
 	unsigned char *key = UNSIGN("my key");
 	long keylen = strlen((char *)key);
 	unsigned char *field = UNSIGN("my field");
 	long fieldlen = strlen((char *)field);
 	unsigned char *data = NULL;
 	long datalen;
+	RL_CALL_VERBOSE(setup_db, RL_OK, &db, _commit, 1);
 
 	RL_CALL_VERBOSE(rl_hincrby, RL_OK, db, key, keylen, field, fieldlen, 10, &value);
 	EXPECT_LONG(value, 10);
@@ -410,13 +410,13 @@ static int basic_test_hincrby_invalid(int _commit)
 	fprintf(stderr, "Start basic_test_hincrby_invalid %d\n", _commit);
 
 	rlite *db = NULL;
-	RL_CALL_VERBOSE(setup_db, RL_OK, &db, _commit, 1);
 	unsigned char *key = UNSIGN("my key");
 	long keylen = strlen((char *)key);
 	unsigned char *field = UNSIGN("my field");
 	long fieldlen = strlen((char *)field);
 	unsigned char *data = UNSIGN("my data");
 	long datalen = strlen((char *)data);
+	RL_CALL_VERBOSE(setup_db, RL_OK, &db, _commit, 1);
 
 	RL_CALL_VERBOSE(rl_hset, RL_OK, db, key, keylen, field, fieldlen, data, datalen, NULL, 0);
 	RL_BALANCED();
@@ -437,7 +437,6 @@ static int basic_test_hincrby_overflow(int _commit)
 	fprintf(stderr, "Start basic_test_hincrby_overflow %d\n", _commit);
 
 	rlite *db = NULL;
-	RL_CALL_VERBOSE(setup_db, RL_OK, &db, _commit, 1);
 	unsigned char *key = UNSIGN("my key");
 	long keylen = strlen((char *)key);
 	unsigned char *field = UNSIGN("my field");
@@ -446,6 +445,7 @@ static int basic_test_hincrby_overflow(int _commit)
 	long datalen = strlen((char *)data);
 	unsigned char *data2;
 	long data2len;
+	RL_CALL_VERBOSE(setup_db, RL_OK, &db, _commit, 1);
 
 	RL_CALL_VERBOSE(rl_hset, RL_OK, db, key, keylen, field, fieldlen, data, datalen, NULL, 0);
 	RL_BALANCED();
@@ -474,13 +474,13 @@ static int basic_test_hincrbyfloat_hget(int _commit)
 	fprintf(stderr, "Start basic_test_hincrbyfloat_hget %d\n", _commit);
 
 	rlite *db = NULL;
-	RL_CALL_VERBOSE(setup_db, RL_OK, &db, _commit, 1);
 	unsigned char *key = UNSIGN("my key");
 	long keylen = strlen((char *)key);
 	unsigned char *field = UNSIGN("my field");
 	long fieldlen = strlen((char *)field);
 	unsigned char *data = NULL;
 	long i, datalen;
+	RL_CALL_VERBOSE(setup_db, RL_OK, &db, _commit, 1);
 
 	RL_CALL_VERBOSE(rl_hincrbyfloat, RL_OK, db, key, keylen, field, fieldlen, 10.5, &value);
 	RL_BALANCED();
@@ -522,13 +522,13 @@ static int basic_test_hincrbyfloat_invalid(int _commit)
 	fprintf(stderr, "Start basic_test_hincrbyfloat_invalid %d\n", _commit);
 
 	rlite *db = NULL;
-	RL_CALL_VERBOSE(setup_db, RL_OK, &db, _commit, 1);
 	unsigned char *key = UNSIGN("my key");
 	long keylen = strlen((char *)key);
 	unsigned char *field = UNSIGN("my field");
 	long fieldlen = strlen((char *)field);
 	unsigned char *data = UNSIGN("my data");
 	long datalen = strlen((char *)data);
+	RL_CALL_VERBOSE(setup_db, RL_OK, &db, _commit, 1);
 
 	RL_CALL_VERBOSE(rl_hset, RL_OK, db, key, keylen, field, fieldlen, data, datalen, NULL, 0);
 	RL_BALANCED();
@@ -549,13 +549,13 @@ static int basic_test_hset_del(int _commit)
 	fprintf(stderr, "Start basic_test_hset_del %d\n", _commit);
 
 	rlite *db = NULL;
-	RL_CALL_VERBOSE(setup_db, RL_OK, &db, _commit, 1);
 	unsigned char *key = UNSIGN("my key");
 	long keylen = strlen((char *)key);
 	unsigned char *field = UNSIGN("my field");
 	long fieldlen = strlen((char *)field);
 	unsigned char *data = UNSIGN("my data");
 	long datalen = strlen((char *)data);
+	RL_CALL_VERBOSE(setup_db, RL_OK, &db, _commit, 1);
 
 	RL_CALL_VERBOSE(rl_hset, RL_OK, db, key, keylen, field, fieldlen, data, datalen, NULL, 0);
 	RL_BALANCED();
