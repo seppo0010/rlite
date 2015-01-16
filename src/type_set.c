@@ -9,9 +9,8 @@ static int rl_set_create(rlite *db, long btree_page, rl_btree **btree)
 {
 	rl_btree *set = NULL;
 
-	long max_node_size = (db->page_size - 8) / 24;
 	int retval;
-	RL_CALL(rl_btree_create, RL_OK, db, &set, &rl_btree_type_hash_sha1_long, max_node_size);
+	RL_CALL(rl_btree_create, RL_OK, db, &set, &rl_btree_type_hash_sha1_long);
 	RL_CALL(rl_write, RL_OK, db, &rl_data_type_btree_hash_sha1_long, btree_page, set);
 
 	if (btree) {
@@ -85,11 +84,7 @@ int rl_sadd(struct rlite *db, const unsigned char *key, long keylen, int memberc
 		if (retval == RL_NOT_FOUND) {
 			RL_MALLOC(member, sizeof(*member));
 			RL_CALL(rl_multi_string_set, RL_OK, db, member, members[i], memberslen[i]);
-
-			retval = rl_btree_add_element(db, set, set_page_number, digest, member);
-			if (retval != RL_OK) {
-				goto cleanup;
-			}
+			RL_CALL(rl_btree_add_element, RL_OK, db, set, set_page_number, digest, member);
 			count++;
 		}
 		else if (retval == RL_FOUND) {

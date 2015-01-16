@@ -75,7 +75,8 @@ typedef struct {
 } rl_btree_iterator;
 
 void rl_btree_init();
-int rl_btree_create(struct rlite *db, rl_btree **btree, rl_btree_type *type, long max_node_size);
+int rl_btree_create_size(struct rlite *db, rl_btree **btree, rl_btree_type *type, long max_node_size);
+int rl_btree_create(struct rlite *db, rl_btree **btree, rl_btree_type *type);
 int rl_btree_destroy(struct rlite *db, void *btree);
 int rl_btree_node_destroy(struct rlite *db, void *node);
 int rl_btree_add_element(struct rlite *db, rl_btree *btree, long btree_page, void *score, void *value);

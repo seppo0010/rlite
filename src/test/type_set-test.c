@@ -615,6 +615,7 @@ static int fuzzy_test_srandmembers_unique(long size, int _commit)
 	long added;
 	RL_CALL_VERBOSE(rl_sadd, RL_OK, db, key, keylen, size, elements, elementslen, &added);
 	EXPECT_LONG(added, size);
+	RL_BALANCED();
 
 	long memberc = 1;
 	unsigned char **members = NULL;

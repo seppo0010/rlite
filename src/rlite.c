@@ -376,8 +376,7 @@ int rl_get_key_btree(rlite *db, rl_btree **retbtree, int create)
 			return RL_NOT_FOUND;
 		}
 		rl_btree *btree;
-		long max_node_size = (db->page_size - 8) / 8; // TODO: this should be in the type
-		RL_CALL(rl_btree_create, RL_OK, db, &btree, &rl_btree_type_hash_sha1_key, max_node_size);
+		RL_CALL(rl_btree_create, RL_OK, db, &btree, &rl_btree_type_hash_sha1_key);
 		db->databases[db->selected_database] = db->next_empty_page;
 		RL_CALL(rl_write, RL_OK, db, &rl_data_type_btree_hash_sha1_key, db->databases[db->selected_database], btree);
 	}

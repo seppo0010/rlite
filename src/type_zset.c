@@ -17,9 +17,8 @@ static int rl_zset_create(rlite *db, long levels_page_number, rl_btree **btree, 
 	long scores_page_number;
 	long skiplist_page_number;
 
-	long max_node_size = (db->page_size - 8) / 24;
 	int retval;
-	RL_CALL(rl_btree_create, RL_OK, db, &scores, &rl_btree_type_hash_sha1_double, max_node_size);
+	RL_CALL(rl_btree_create, RL_OK, db, &scores, &rl_btree_type_hash_sha1_double);
 	scores_page_number = db->next_empty_page;
 	RL_CALL(rl_write, RL_OK, db, &rl_data_type_btree_hash_sha1_double, scores_page_number, scores);
 	RL_CALL(rl_skiplist_create, RL_OK, db, &skiplist);

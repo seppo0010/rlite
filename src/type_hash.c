@@ -13,9 +13,8 @@ static int rl_hash_create(rlite *db, long btree_page, rl_btree **btree)
 {
 	rl_btree *hash = NULL;
 
-	long max_node_size = (db->page_size - 8) / 24;
 	int retval;
-	RL_CALL(rl_btree_create, RL_OK, db, &hash, &rl_btree_type_hash_sha1_hashkey, max_node_size);
+	RL_CALL(rl_btree_create, RL_OK, db, &hash, &rl_btree_type_hash_sha1_hashkey);
 	RL_CALL(rl_write, RL_OK, db, &rl_data_type_btree_hash_sha1_hashkey, btree_page, hash);
 
 	if (btree) {

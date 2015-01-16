@@ -522,8 +522,8 @@ int basic_test_zadd_zcount(int _commit)
 	for (i = 0; i < ZCOUNT_SIZE; i++) {
 		data[0] = i;
 		RL_CALL_VERBOSE(rl_zadd, RL_OK, db, key, keylen, i * 1.0, data, datalen);
+		RL_BALANCED();
 	}
-	RL_BALANCED();
 	rl_free(data);
 	data = NULL;
 

@@ -169,7 +169,7 @@ int rl_btree_node_destroy(rlite *UNUSED(db), void *_node)
 	return RL_OK;
 }
 
-int rl_btree_create(rlite *db, rl_btree **_btree, rl_btree_type *type, long max_node_size)
+int rl_btree_create_size(rlite *db, rl_btree **_btree, rl_btree_type *type, long max_node_size)
 {
 	int retval = RL_OK;
 	rl_btree *btree;
@@ -195,6 +195,16 @@ int rl_btree_create(rlite *db, rl_btree **_btree, rl_btree_type *type, long max_
 	*_btree = btree;
 cleanup:
 	return retval;
+}
+
+int rl_btree_create(rlite *db, rl_btree **_btree, rl_btree_type *type)
+{
+	long size = (db->page_size - 12) / (type->score_size + type->value_size + 4);
+	// TODO: make btree work with even number of elements
+	if (size % 2 != 0) {
+		size--;
+	}
+	return rl_btree_create_size(db, _btree, type, size);
 }
 
 int rl_btree_destroy(rlite *UNUSED(db), void *btree)

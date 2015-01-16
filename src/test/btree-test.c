@@ -15,7 +15,7 @@ int basic_insert_set_test()
 	int retval;
 	rlite *db = NULL;
 	RL_CALL_VERBOSE(setup_db, RL_OK, &db, 0, 1);
-	RL_CALL_VERBOSE(rl_btree_create, RL_OK, db, &btree, &rl_btree_type_set_long, 2);
+	RL_CALL_VERBOSE(rl_btree_create_size, RL_OK, db, &btree, &rl_btree_type_set_long, 2);
 	long btree_page = db->next_empty_page;
 	RL_CALL_VERBOSE(rl_write, RL_OK, db, btree->type->btree_type, btree_page, btree);
 
@@ -53,7 +53,7 @@ int basic_insert_hash_test()
 	int retval;
 	rlite *db = NULL;
 	RL_CALL_VERBOSE(setup_db, RL_OK, &db, 0, 1);
-	RL_CALL_VERBOSE(rl_btree_create, RL_OK, db, &btree, &rl_btree_type_hash_long_long, 2);
+	RL_CALL_VERBOSE(rl_btree_create_size, RL_OK, db, &btree, &rl_btree_type_hash_long_long, 2);
 	long btree_page = db->next_empty_page;
 	RL_CALL_VERBOSE(rl_write, RL_OK, db, btree->type->btree_type, btree_page, btree);
 	long i;
@@ -94,7 +94,7 @@ int basic_delete_set_test(long elements, long element_to_remove, char *name)
 	rl_btree *btree = NULL;
 	long **vals = NULL;
 	RL_CALL_VERBOSE(setup_db, RL_OK, &db, 0, 1);
-	RL_CALL_VERBOSE(rl_btree_create, RL_OK, db, &btree, &rl_btree_type_set_long, 2);
+	RL_CALL_VERBOSE(rl_btree_create_size, RL_OK, db, &btree, &rl_btree_type_set_long, 2);
 	long btree_page = db->next_empty_page;
 	RL_CALL_VERBOSE(rl_write, RL_OK, db, btree->type->btree_type, btree_page, btree);
 
@@ -144,7 +144,7 @@ int random_hash_test(long size, long btree_node_size)
 	int retval;
 	rlite *db = NULL;
 	RL_CALL_VERBOSE(setup_db, RL_OK, &db, 0, 1);
-	RL_CALL_VERBOSE(rl_btree_create, RL_OK, db, &btree, &rl_btree_type_hash_long_long, btree_node_size);
+	RL_CALL_VERBOSE(rl_btree_create_size, RL_OK, db, &btree, &rl_btree_type_hash_long_long, btree_node_size);
 	long btree_page = db->next_empty_page;
 	RL_CALL_VERBOSE(rl_write, RL_OK, db, btree->type->btree_type, btree_page, btree);
 	long i;
@@ -204,7 +204,7 @@ int fuzzy_set_test(long size, long btree_node_size, int _commit)
 	void *tmp;
 	long j, flatten_size;
 	RL_CALL_VERBOSE(setup_db, RL_OK, &db, _commit, 1);
-	RL_CALL_VERBOSE(rl_btree_create, RL_OK, db, &btree, &rl_btree_type_set_long, btree_node_size);
+	RL_CALL_VERBOSE(rl_btree_create_size, RL_OK, db, &btree, &rl_btree_type_set_long, btree_node_size);
 	long btree_page = db->next_empty_page;
 	RL_CALL_VERBOSE(rl_write, RL_OK, db, btree->type->btree_type, btree_page, btree);
 
@@ -283,7 +283,7 @@ int fuzzy_hash_test(long size, long btree_node_size, int _commit)
 	void **flatten_scores = malloc(sizeof(void *) * size);
 
 	RL_CALL_VERBOSE(setup_db, RL_OK, &db, _commit, 1);
-	RL_CALL_VERBOSE(rl_btree_create, RL_OK, db, &btree, &rl_btree_type_hash_long_long, btree_node_size);
+	RL_CALL_VERBOSE(rl_btree_create_size, RL_OK, db, &btree, &rl_btree_type_hash_long_long, btree_node_size);
 	long btree_page = db->next_empty_page;
 	RL_CALL_VERBOSE(rl_write, RL_OK, db, btree->type->btree_type, btree_page, btree);
 
@@ -366,7 +366,7 @@ int fuzzy_hash_test_iterator(long size, long btree_node_size, int _commit)
 	long *values = malloc(sizeof(long) * size);
 	RL_CALL_VERBOSE(setup_db, RL_OK, &db, _commit, 1);
 
-	RL_CALL_VERBOSE(rl_btree_create, RL_OK, db, &btree, &rl_btree_type_hash_long_long, btree_node_size);
+	RL_CALL_VERBOSE(rl_btree_create_size, RL_OK, db, &btree, &rl_btree_type_hash_long_long, btree_node_size);
 	long btree_page = db->next_empty_page;
 	RL_CALL_VERBOSE(rl_write, RL_OK, db, btree->type->btree_type, btree_page, btree);
 
@@ -450,7 +450,7 @@ int fuzzy_set_delete_test(long size, long btree_node_size, int _commit)
 	long *elements = malloc(sizeof(long) * size);
 
 	RL_CALL_VERBOSE(setup_db, RL_OK, &db, _commit, 1);
-	RL_CALL_VERBOSE(rl_btree_create, RL_OK, db, &btree, &rl_btree_type_set_long, btree_node_size);
+	RL_CALL_VERBOSE(rl_btree_create_size, RL_OK, db, &btree, &rl_btree_type_set_long, btree_node_size);
 	long btree_page = db->next_empty_page;
 	RL_CALL_VERBOSE(rl_write, RL_OK, db, btree->type->btree_type, btree_page, btree);
 
