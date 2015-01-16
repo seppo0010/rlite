@@ -285,14 +285,15 @@ int rl_bitop(struct rlite *db, int op, const unsigned char *dest, long destlen, 
 		if (retval == RL_NOT_FOUND) {
 			values[i] = NULL;
 			valueslen[i] = 0;
-		} else if (retval == RL_OK) {
+		}
+		else if (retval == RL_OK) {
 			valueslen[i] = ltmp;
 		}
 	}
 	bitop(op, keyc, values, valueslen, &result, &resultlen);
-    RL_CALL(rl_set, RL_OK, db, dest, destlen, result, resultlen, 0, 0);
-    free(result);
-    retval = RL_OK;
+	RL_CALL(rl_set, RL_OK, db, dest, destlen, result, resultlen, 0, 0);
+	free(result);
+	retval = RL_OK;
 cleanup:
 	if (values) {
 		for (i = 0; i < keyc; i++) {
@@ -301,7 +302,19 @@ cleanup:
 	}
 	rl_free(values);
 	rl_free(valueslen);
-    return retval;
+	return retval;
+}
+
+int rl_bitcount(struct rlite *db, const unsigned char *key, long keylen, long start, long stop, long *bitcount)
+{
+	int retval;
+	unsigned char *value;
+	long valuelen;
+	RL_CALL(rl_getrange, RL_OK, db, key, keylen, start, stop, &value, &valuelen);
+	*bitcount = (long)redisPopcount(value, valuelen);
+	rl_free(value);
+cleanup:
+	return retval;
 }
 
 int rl_string_pages(struct rlite *db, long page, short *pages)

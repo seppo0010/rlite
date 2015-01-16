@@ -17,6 +17,7 @@ int rl_incrbyfloat(struct rlite *db, const unsigned char *key, long keylen, doub
 int rl_getbit(struct rlite *db, const unsigned char *key, long keylen, long offset, int *value);
 int rl_setbit(struct rlite *db, const unsigned char *key, long keylen, long bitoffset, int on, int *previousvalue);
 int rl_bitop(struct rlite *db, int op, const unsigned char *dest, long destlen, unsigned long keylen, const unsigned char **keys, long *keyslen);
+int rl_bitcount(struct rlite *db, const unsigned char *key, long keylen, long start, long stop, long *bitcount);
 
 int rl_string_pages(struct rlite *db, long page, short *pages);
 int rl_string_delete(struct rlite *db, long value_page);

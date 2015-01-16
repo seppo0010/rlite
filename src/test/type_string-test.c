@@ -413,6 +413,37 @@ cleanup:
 	return retval;
 }
 
+static int basic_test_set_bitcount(int _commit)
+{
+	int retval = 0;
+	fprintf(stderr, "Start basic_test_set_bitcount %d\n", _commit);
+
+	rlite *db = NULL;
+	RL_CALL_VERBOSE(setup_db, RL_OK, &db, _commit, 1);
+	unsigned char *key = UNSIGN("my key");
+	long keylen = strlen((char *)key);
+	unsigned char *value = UNSIGN("foobar");
+	long valuelen = strlen((char *)value);
+	long bitcount;
+
+	RL_CALL_VERBOSE(rl_set, RL_OK, db, key, keylen, value, valuelen, 0, 0);
+	RL_BALANCED();
+
+	RL_CALL_VERBOSE(rl_bitcount, RL_OK, db, key, keylen, 0, -1, &bitcount);
+	EXPECT_LONG(bitcount, 26);
+
+	RL_CALL_VERBOSE(rl_bitcount, RL_OK, db, key, keylen, 0, 0, &bitcount);
+	EXPECT_LONG(bitcount, 4);
+	RL_CALL_VERBOSE(rl_bitcount, RL_OK, db, key, keylen, 1, 1, &bitcount);
+	EXPECT_LONG(bitcount, 6);
+
+	fprintf(stderr, "End basic_test_set_bitcount\n");
+	retval = 0;
+cleanup:
+	rl_close(db);
+	return retval;
+}
+
 RL_TEST_MAIN_START(type_string_test)
 {
 	int i;
@@ -430,6 +461,7 @@ RL_TEST_MAIN_START(type_string_test)
 		RL_TEST(basic_test_set_incrbyfloat, i);
 		RL_TEST(basic_test_set_getbit, i);
 		RL_TEST(basic_test_set_bitop, i);
+		RL_TEST(basic_test_set_bitcount, i);
 	}
 }
 RL_TEST_MAIN_END
