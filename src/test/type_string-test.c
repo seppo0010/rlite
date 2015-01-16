@@ -374,6 +374,44 @@ cleanup:
 	return retval;
 }
 
+static int basic_test_set_bitop(int _commit)
+{
+	int retval = 0;
+	fprintf(stderr, "Start basic_test_set_bitop %d\n", _commit);
+
+	rlite *db = NULL;
+	unsigned char *k1 = UNSIGN("key 1");
+	long k1len = strlen((char *)k1);
+	unsigned char *v1 = UNSIGN("foobar");
+	long v1len = strlen((char *)v1);
+	unsigned char *k2 = UNSIGN("key 2");
+	long k2len = strlen((char *)k2);
+	unsigned char *v2 = UNSIGN("abcdef");
+	long v2len = strlen((char *)v2);
+	unsigned char *targetk = UNSIGN("key 2");
+	long targetklen = strlen((char *)targetk);
+	unsigned char *expected = UNSIGN("`bc`ab");
+	long expectedlen = strlen((char *)expected);
+    const unsigned char *keys[2] = {k1, k2};
+    long keyslen[2] = {k1len, k2len};
+	unsigned char *testvalue;
+	long testvaluelen;
+
+	RL_CALL_VERBOSE(setup_db, RL_OK, &db, _commit, 1);
+
+	RL_CALL_VERBOSE(rl_set, RL_OK, db, k1, k1len, v1, v1len, 0, 0);
+	RL_CALL_VERBOSE(rl_set, RL_OK, db, k2, k2len, v2, v2len, 0, 0);
+	RL_CALL_VERBOSE(rl_bitop, RL_OK, db, BITOP_AND, targetk, targetklen, 2, keys, keyslen);
+	RL_CALL_VERBOSE(rl_get, RL_OK, db, targetk, targetklen, &testvalue, &testvaluelen);
+    rl_free(testvalue);
+
+	fprintf(stderr, "End basic_test_set_bitop\n");
+	retval = 0;
+cleanup:
+	rl_close(db);
+	return retval;
+}
+
 RL_TEST_MAIN_START(type_string_test)
 {
 	int i;
@@ -390,6 +428,7 @@ RL_TEST_MAIN_START(type_string_test)
 		RL_TEST(basic_test_set_incr, i);
 		RL_TEST(basic_test_set_incrbyfloat, i);
 		RL_TEST(basic_test_set_getbit, i);
+		RL_TEST(basic_test_set_bitop, i);
 	}
 }
 RL_TEST_MAIN_END

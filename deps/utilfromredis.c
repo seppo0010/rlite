@@ -26,7 +26,10 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
  */
+#include "utilfromredis.h"
 #include <ctype.h>
+#include <string.h>
+#include <stdlib.h>
 
 // https://github.com/antirez/redis/blob/unstable/src/util.c#L45
 //
@@ -151,4 +154,110 @@ int stringmatchlen(const char *pattern, int patternLen,
     if (patternLen == 0 && stringLen == 0)
         return 1;
     return 0;
+}
+
+// Adapted from https://github.com/antirez/redis/blob/unstable/src/bitops.c#L287
+/* BITOP op_name target_key src_key1 src_key2 src_key3 ... src_keyN */
+void bitop(int op, unsigned long numkeys, unsigned char **objects, unsigned long *objectslen, unsigned char **result, long *resultlen)
+{
+    unsigned long j;
+    unsigned long maxlen = 0; /* Array of length of src strings, and max len. */
+    unsigned long minlen = 0; /* Min len among the input keys. */
+    unsigned char *res = NULL; /* Resulting string. */
+
+
+    /* Lookup keys, and store pointers to the string objects into an array. */
+    for (j = 0; j < numkeys; j++) {
+        if (objectslen[j] > maxlen) maxlen = objectslen[j];
+        if (j == 0 || objectslen[j] < minlen) minlen = objectslen[j];
+    }
+
+    /* Compute the bit operation, if at least one string is not empty. */
+    if (maxlen) {
+        res = (unsigned char *)malloc(sizeof(unsigned char) * maxlen);
+        unsigned char output, byte;
+        unsigned long i;
+
+        /* Fast path: as far as we have data for all the input bitmaps we
+         * can take a fast path that performs much better than the
+         * vanilla algorithm. */
+        j = 0;
+        if (minlen && numkeys <= 16) {
+            unsigned long *lp[16];
+            unsigned long *lres = (unsigned long*) res;
+
+            memcpy(lp, objects, sizeof(unsigned long*) * numkeys);
+            memcpy(res, objects[0], minlen);
+
+            /* Different branches per different operations for speed (sorry). */
+            if (op == BITOP_AND) {
+                while(minlen >= sizeof(unsigned long)*4) {
+                    for (i = 1; i < numkeys; i++) {
+                        lres[0] &= lp[i][0];
+                        lres[1] &= lp[i][1];
+                        lres[2] &= lp[i][2];
+                        lres[3] &= lp[i][3];
+                        lp[i]+=4;
+                    }
+                    lres+=4;
+                    j += sizeof(unsigned long)*4;
+                    minlen -= sizeof(unsigned long)*4;
+                }
+            } else if (op == BITOP_OR) {
+                while(minlen >= sizeof(unsigned long)*4) {
+                    for (i = 1; i < numkeys; i++) {
+                        lres[0] |= lp[i][0];
+                        lres[1] |= lp[i][1];
+                        lres[2] |= lp[i][2];
+                        lres[3] |= lp[i][3];
+                        lp[i]+=4;
+                    }
+                    lres+=4;
+                    j += sizeof(unsigned long)*4;
+                    minlen -= sizeof(unsigned long)*4;
+                }
+            } else if (op == BITOP_XOR) {
+                while(minlen >= sizeof(unsigned long)*4) {
+                    for (i = 1; i < numkeys; i++) {
+                        lres[0] ^= lp[i][0];
+                        lres[1] ^= lp[i][1];
+                        lres[2] ^= lp[i][2];
+                        lres[3] ^= lp[i][3];
+                        lp[i]+=4;
+                    }
+                    lres+=4;
+                    j += sizeof(unsigned long)*4;
+                    minlen -= sizeof(unsigned long)*4;
+                }
+            } else if (op == BITOP_NOT) {
+                while(minlen >= sizeof(unsigned long)*4) {
+                    lres[0] = ~lres[0];
+                    lres[1] = ~lres[1];
+                    lres[2] = ~lres[2];
+                    lres[3] = ~lres[3];
+                    lres+=4;
+                    j += sizeof(unsigned long)*4;
+                    minlen -= sizeof(unsigned long)*4;
+                }
+            }
+        }
+
+        /* j is set to the next byte to process by the previous loop. */
+        for (; j < maxlen; j++) {
+            output = (objectslen[0] <= j) ? 0 : objects[0][j];
+            if (op == BITOP_NOT) output = ~output;
+            for (i = 1; i < numkeys; i++) {
+                byte = (objectslen[i] <= j) ? 0 : objects[i][j];
+                switch(op) {
+                case BITOP_AND: output &= byte; break;
+                case BITOP_OR:  output |= byte; break;
+                case BITOP_XOR: output ^= byte; break;
+                }
+            }
+            res[j] = output;
+        }
+    }
+
+    *result = res;
+    *resultlen = maxlen;
 }
