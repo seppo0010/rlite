@@ -13,11 +13,7 @@ int basic_set_get()
 	unsigned char *data, *data2;
 
 	rlite *db = NULL;
-	retval = rl_open(":memory:", &db, RLITE_OPEN_READWRITE | RLITE_OPEN_CREATE);
-	if (retval != RL_OK) {
-		fprintf(stderr, "Unable to open rlite\n");
-		goto cleanup;
-	}
+	RL_CALL_VERBOSE(rl_open, RL_OK, ":memory:", &db, RLITE_OPEN_READWRITE | RLITE_OPEN_CREATE);
 
 	for (i = 0; i < 2; i++) {
 		srand(1);
@@ -27,32 +23,15 @@ int basic_set_get()
 		for (j = 0; j < size; j++) {
 			data[j] = (unsigned char)(rand() / CHAR_MAX);
 		}
-		retval = rl_multi_string_set(db, &number, data, size);
-		if (retval != RL_OK) {
-			fprintf(stderr, "Unable to set data\n");
-			goto cleanup;
-		}
-		retval = rl_multi_string_get(db, number, &data2, &size2);
-		if (retval != RL_OK) {
-			fprintf(stderr, "Unable to get data\n");
-			goto cleanup;
-		}
-		if (size != size2) {
-			fprintf(stderr, "Data size mismatch\n");
-			retval = 1;
-			goto cleanup;
-		}
-		if (memcmp(data, data2, size) != 0) {
-			fprintf(stderr, "Data mismatch\n");
-			retval = 1;
-			goto cleanup;
-		}
+		RL_CALL_VERBOSE(rl_multi_string_set, RL_OK, db, &number, data, size);
+		RL_CALL_VERBOSE(rl_multi_string_get, RL_OK, db, number, &data2, &size2);
+		EXPECT_BYTES(data, size, data2, size2);
 		rl_free(data);
 		rl_free(data2);
 		fprintf(stderr, "End page_multi_string-test %ld\n", size);
 	}
 
-	retval = 0;
+	retval = RL_OK;
 cleanup:
 	rl_close(db);
 	return retval;
@@ -63,45 +42,22 @@ static int test_sha(long size)
 	fprintf(stderr, "Start test_sha %ld\n", size);
 	unsigned char *data = malloc(sizeof(unsigned char) * size);
 	rlite *db = NULL;
-	int retval = rl_open(":memory:", &db, RLITE_OPEN_READWRITE | RLITE_OPEN_CREATE);
-	if (retval != RL_OK) {
-		fprintf(stderr, "Unable to open rlite\n");
-		goto cleanup;
-	}
+	int retval;
+	unsigned char digest1[20], digest2[20];
+	RL_CALL_VERBOSE(rl_open, RL_OK, ":memory:", &db, RLITE_OPEN_READWRITE | RLITE_OPEN_CREATE);
 
 	long page, i;
 	for (i = 0; i < size; i++) {
 		data[i] = i % 123;
 	}
 
-	retval = rl_multi_string_set(db, &page, data, size);
-	if (retval != RL_OK) {
-		fprintf(stderr, "Failed to set multi string, got %d\n", retval);
-		goto cleanup;
-	}
-
-	unsigned char digest1[20], digest2[20];
-
-	retval = rl_multi_string_sha1(db, digest1, page);
-	if (retval != RL_OK) {
-		fprintf(stderr, "Failed to sha1 multi string, got %d\n", retval);
-		goto cleanup;
-	}
-
-	retval = sha1(data, size, digest2);
-	if (retval != RL_OK) {
-		fprintf(stderr, "Failed to sha1 char*, got %d\n", retval);
-		goto cleanup;
-	}
-
-	if (memcmp(digest1, digest2, 20) != 0) {
-		fprintf(stderr, "Digest mismatch for multi string\n");
-		retval = 1;
-		goto cleanup;
-	}
+	RL_CALL_VERBOSE(rl_multi_string_set, RL_OK, db, &page, data, size);
+	RL_CALL_VERBOSE(rl_multi_string_sha1, RL_OK, db, digest1, page);
+	RL_CALL_VERBOSE(sha1, RL_OK, data, size, digest2);
+	EXPECT_BYTES(digest1, 20, digest2, 20);
 
 	fprintf(stderr, "End test_sha %ld\n", size);
-	retval = 0;
+	retval = RL_OK;
 cleanup:
 	rl_free(data);
 	rl_close(db);
@@ -112,31 +68,13 @@ static int assert_cmp(rlite *db, long p1, unsigned char *data, long size, int ex
 {
 	long p2;
 	int cmp;
-	int retval = rl_multi_string_cmp_str(db, p1, data, size, &cmp);
-	if (retval != 0) {
-		fprintf(stderr, "Failed to cmp, got %d on line %d\n", retval, __LINE__);
-		goto cleanup;
-	}
-	if (cmp != expected_cmp) {
-		fprintf(stderr, "Expected cmp=%d got %d instead on line %d\n", expected_cmp, cmp, __LINE__);
-		goto cleanup;
-	}
+	int retval;
+	RL_CALL_VERBOSE(rl_multi_string_cmp_str, RL_OK, db, p1, data, size, &cmp);
+	EXPECT_INT(cmp, expected_cmp);
 	if (data) {
-		retval = rl_multi_string_set(db, &p2, data, size);
-		if (retval != 0) {
-			fprintf(stderr, "Failed to set, got %d on line %d\n", retval, __LINE__);
-			goto cleanup;
-		}
-		retval = rl_multi_string_cmp(db, p1, p2, &cmp);
-		if (retval != 0) {
-			fprintf(stderr, "Failed to cmp, got %d on line %d\n", retval, __LINE__);
-			goto cleanup;
-		}
-		if (cmp != expected_cmp) {
-			fprintf(stderr, "Expected cmp=%d got %d instead on line %d\n", expected_cmp, cmp, __LINE__);
-			retval = 1;
-			goto cleanup;
-		}
+		RL_CALL_VERBOSE(rl_multi_string_set, RL_OK, db, &p2, data, size);
+		RL_CALL_VERBOSE(rl_multi_string_cmp, RL_OK, db, p1, p2, &cmp);
+		EXPECT_INT(cmp, expected_cmp);
 	}
 	retval = 0;
 cleanup:
@@ -149,47 +87,23 @@ static int test_cmp_different_length()
 	long p1;
 	rlite *db = NULL;
 	fprintf(stderr, "Start test_cmp_different_length\n");
-	int retval = rl_open(":memory:", &db, RLITE_OPEN_READWRITE | RLITE_OPEN_CREATE);
-	if (retval != RL_OK) {
-		fprintf(stderr, "Unable to open rlite\n");
-		goto cleanup;
-	}
+	int retval;
+	RL_CALL_VERBOSE(rl_open, RL_OK, ":memory:", &db, RLITE_OPEN_READWRITE | RLITE_OPEN_CREATE);
 	for (i = 0; i < 3; i++) {
 		data[i] = data2[i] = 100 + i;
 	}
-	retval = rl_multi_string_set(db, &p1, data, size);
-	if (retval != 0) {
-		goto cleanup;
-	}
-	retval = assert_cmp(db, p1, data2, 0, 1);
-	if (retval != 0) {
-		goto cleanup;
-	}
-	retval = assert_cmp(db, p1, data2, size, 0);
-	if (retval != 0) {
-		goto cleanup;
-	}
-	retval = assert_cmp(db, p1, data2, size - 1, 1);
-	if (retval != 0) {
-		goto cleanup;
-	}
+	RL_CALL_VERBOSE(rl_multi_string_set, RL_OK, db, &p1, data, size);
+	RL_CALL_VERBOSE(assert_cmp, 0, db, p1, data2, 0, 1);
+	RL_CALL_VERBOSE(assert_cmp, 0, db, p1, data2, size, 0);
+	RL_CALL_VERBOSE(assert_cmp, 0, db, p1, data2, size - 1, 1);
 	data2[0]++;
-	retval = assert_cmp(db, p1, data2, size - 1, -1);
-	if (retval != 0) {
-		goto cleanup;
-	}
-	retval = assert_cmp(db, p1, data2, size, -1);
-	if (retval != 0) {
-		goto cleanup;
-	}
-	retval = assert_cmp(db, p1, NULL, 0, 1);
-	if (retval != 0) {
-		goto cleanup;
-	}
+	RL_CALL_VERBOSE(assert_cmp, 0, db, p1, data2, size - 1, -1);
+	RL_CALL_VERBOSE(assert_cmp, 0, db, p1, data2, size, -1);
+	RL_CALL_VERBOSE(assert_cmp, 0, db, p1, NULL, 0, 1);
 
 	rl_close(db);
 	fprintf(stderr, "End test_cmp_different_length\n");
-	retval = 0;
+	retval = RL_OK;
 cleanup:
 	return retval;
 }
@@ -204,11 +118,8 @@ static int test_cmp_internal(int expected_cmp, long position)
 	rlite *db = NULL;
 	if (position % 500 == 0) {
 	}
-	int retval = rl_open(":memory:", &db, RLITE_OPEN_READWRITE | RLITE_OPEN_CREATE);
-	if (retval != RL_OK) {
-		fprintf(stderr, "Unable to open rlite\n");
-		goto cleanup;
-	}
+	int retval;
+	RL_CALL_VERBOSE(rl_open, RL_OK, ":memory:", &db, RLITE_OPEN_READWRITE | RLITE_OPEN_CREATE);
 	for (i = 0; i < CMP_SIZE; i++) {
 		data[i] = data2[i] = i % CHAR_MAX;
 	}
@@ -223,25 +134,11 @@ static int test_cmp_internal(int expected_cmp, long position)
 			data[position]--;
 		}
 	}
-	retval = rl_multi_string_set(db, &p1, data, size);
-	if (retval != 0) {
-		goto cleanup;
-	}
-	retval = rl_multi_string_set(db, &p2, data2, size);
-	if (retval != 0) {
-		goto cleanup;
-	}
-	retval = rl_multi_string_cmp(db, p1, p2, &cmp);
-	if (retval != 0) {
-		goto cleanup;
-	}
-	if (cmp != expected_cmp) {
-		fprintf(stderr, "Expected cmp=%d got %d instead\n", expected_cmp, cmp);
-		retval = 1;
-		goto cleanup;
-	}
-
-	retval = 0;
+	RL_CALL_VERBOSE(rl_multi_string_set, RL_OK, db, &p1, data, size);
+	RL_CALL_VERBOSE(rl_multi_string_set, RL_OK, db, &p2, data2, size);
+	RL_CALL_VERBOSE(rl_multi_string_cmp, RL_OK, db, p1, p2, &cmp);
+	EXPECT_INT(cmp, expected_cmp);
+	retval = RL_OK;
 cleanup:
 	rl_close(db);
 	return retval;
@@ -267,11 +164,8 @@ static int test_cmp2_internal(int expected_cmp, long position)
 	int cmp;
 	long p1;
 	rlite *db = NULL;
-	int retval = rl_open(":memory:", &db, RLITE_OPEN_READWRITE | RLITE_OPEN_CREATE);
-	if (retval != RL_OK) {
-		fprintf(stderr, "Unable to open rlite\n");
-		goto cleanup;
-	}
+	int retval;
+	RL_CALL_VERBOSE(rl_open, RL_OK, ":memory:", &db, RLITE_OPEN_READWRITE | RLITE_OPEN_CREATE);
 	for (i = 0; i < CMP_SIZE; i++) {
 		data[i] = data2[i] = i % CHAR_MAX;
 	}
@@ -286,21 +180,10 @@ static int test_cmp2_internal(int expected_cmp, long position)
 			data[position]--;
 		}
 	}
-	retval = rl_multi_string_set(db, &p1, data, size);
-	if (retval != 0) {
-		goto cleanup;
-	}
-	retval = rl_multi_string_cmp_str(db, p1, data2, size, &cmp);
-	if (retval != 0) {
-		goto cleanup;
-	}
-	if (cmp != expected_cmp) {
-		fprintf(stderr, "Expected cmp=%d got %d instead\n", expected_cmp, cmp);
-		retval = 1;
-		goto cleanup;
-	}
-
-	retval = 0;
+	RL_CALL_VERBOSE(rl_multi_string_set, RL_OK, db, &p1, data, size);
+	RL_CALL_VERBOSE(rl_multi_string_cmp_str, RL_OK, db, p1, data2, size, &cmp);
+	EXPECT_INT(cmp, expected_cmp);
+	retval = RL_OK;
 cleanup:
 	rl_close(db);
 	return retval;
@@ -327,11 +210,8 @@ static int test_append(long size, long append_size)
 	unsigned char *testdata;
 	long testdatalen;
 	rlite *db = NULL;
-	int retval = rl_open(":memory:", &db, RLITE_OPEN_READWRITE | RLITE_OPEN_CREATE);
-	if (retval != RL_OK) {
-		fprintf(stderr, "Unable to open rlite\n");
-		goto cleanup;
-	}
+	int retval;
+	RL_CALL_VERBOSE(rl_open, RL_OK, ":memory:", &db, RLITE_OPEN_READWRITE | RLITE_OPEN_CREATE);
 
 	long page, i;
 	for (i = 0; i < size; i++) {
@@ -341,47 +221,14 @@ static int test_append(long size, long append_size)
 		append_data[i] = i % 123;
 	}
 
-	retval = rl_multi_string_set(db, &page, data, size);
-	if (retval != RL_OK) {
-		fprintf(stderr, "Failed to set multi string, got %d\n", retval);
-		goto cleanup;
-	}
+	RL_CALL_VERBOSE(rl_multi_string_set, RL_OK, db, &page, data, size);
+	RL_CALL_VERBOSE(rl_multi_string_append, RL_OK, db, page, append_data, append_size, &testdatalen);
+	EXPECT_LONG(testdatalen, size + append_size);
 
-	retval = rl_multi_string_append(db, page, append_data, append_size, &testdatalen);
-	if (retval != RL_OK) {
-		fprintf(stderr, "Failed to append multi string, got %d\n", retval);
-		goto cleanup;
-	}
-
-	if (testdatalen != size + append_size) {
-		fprintf(stderr, "Expected length to be %ld after append, got %ld instead on line %d\n", size + append_size, testdatalen, __LINE__);
-		retval = RL_UNEXPECTED;
-		goto cleanup;
-	}
-
-	retval = rl_multi_string_get(db, page, &testdata, &testdatalen);
-	if (retval != RL_OK) {
-		fprintf(stderr, "Failed to get multi string, got %d\n", retval);
-		goto cleanup;
-	}
-
-	if (testdatalen != size + append_size) {
-		fprintf(stderr, "Expected size to be %ld, got %ld instead on line %d\n", size + append_size, testdatalen, __LINE__);
-		retval = RL_UNEXPECTED;
-		goto cleanup;
-	}
-
-	if (memcmp(testdata, data, size) != 0) {
-		fprintf(stderr, "Existing value corrupted after append on line %d\n", __LINE__);
-		retval = RL_UNEXPECTED;
-		goto cleanup;
-	}
-
-	if (memcmp(&testdata[size], append_data, append_size) != 0) {
-		fprintf(stderr, "Appended data corrupted on line %d\n", __LINE__);
-		retval = RL_UNEXPECTED;
-		goto cleanup;
-	}
+	RL_CALL_VERBOSE(rl_multi_string_get, RL_OK, db, page, &testdata, &testdatalen);
+	EXPECT_LONG(testdatalen, size + append_size);
+	EXPECT_BYTES(testdata, size, data, size);
+	EXPECT_BYTES(&testdata[size], append_size, append_data, append_size);
 	rl_free(testdata);
 
 	fprintf(stderr, "End test_append %ld\n", size);
@@ -398,40 +245,18 @@ static int test_substr(long strsize, long start, long stop, long startindex, lon
 	fprintf(stderr, "Start test_substr %ld %ld %ld %ld %ld\n", strsize, start, stop, startindex, expectedsize);
 	unsigned char *data = malloc(sizeof(unsigned char) * strsize), *data2;
 	rlite *db = NULL;
-	int retval = rl_open(":memory:", &db, RLITE_OPEN_READWRITE | RLITE_OPEN_CREATE);
-	if (retval != RL_OK) {
-		fprintf(stderr, "Unable to open rlite\n");
-		goto cleanup;
-	}
+	int retval;
+	RL_CALL_VERBOSE(rl_open, RL_OK, ":memory:", &db, RLITE_OPEN_READWRITE | RLITE_OPEN_CREATE);
 
 	long page, i, size2;
 	for (i = 0; i < strsize; i++) {
 		data[i] = i % 123;
 	}
 
-	retval = rl_multi_string_set(db, &page, data, strsize);
-	if (retval != RL_OK) {
-		fprintf(stderr, "Failed to set multi string, got %d\n", retval);
-		goto cleanup;
-	}
-
-	retval = rl_multi_string_getrange(db, page, &data2, &size2, start, stop);
-	if (retval != RL_OK) {
-		fprintf(stderr, "Unable to get data, got %d on line %d\n", retval, __LINE__);
-		goto cleanup;
-	}
-	if (size2 != expectedsize) {
-		fprintf(stderr, "Expected size to be %ld, got %ld instead on line %d\n", expectedsize, size2, __LINE__);
-		retval = RL_UNEXPECTED;
-		goto cleanup;
-	}
-	if (memcmp(&data[startindex], data2, size2) != 0) {
-		fprintf(stderr, "Data mismatch on line %d\n", __LINE__);
-		retval = 1;
-		goto cleanup;
-	}
+	RL_CALL_VERBOSE(rl_multi_string_set, RL_OK, db, &page, data, strsize);
+	RL_CALL_VERBOSE(rl_multi_string_getrange, RL_OK, db, page, &data2, &size2, start, stop);
+	EXPECT_BYTES(&data[startindex], size2, data2, expectedsize);
 	rl_free(data2);
-
 	fprintf(stderr, "End test_substr\n");
 	retval = 0;
 cleanup:
@@ -450,11 +275,8 @@ static int test_setrange(long initialsize, long index, long updatesize)
 	unsigned char *initialdata = malloc(sizeof(unsigned char) * initialsize);
 	unsigned char *updatedata = malloc(sizeof(unsigned char) * updatesize);
 	rlite *db = NULL;
-	int retval = rl_open(":memory:", &db, RLITE_OPEN_READWRITE | RLITE_OPEN_CREATE);
-	if (retval != RL_OK) {
-		fprintf(stderr, "Unable to open rlite\n");
-		goto cleanup;
-	}
+	int retval;
+	RL_CALL_VERBOSE(rl_open, RL_OK, ":memory:", &db, RLITE_OPEN_READWRITE | RLITE_OPEN_CREATE);
 
 	long page, i;
 	for (i = 0; i < initialsize; i++) {
@@ -465,19 +287,10 @@ static int test_setrange(long initialsize, long index, long updatesize)
 	}
 
 	RL_CALL_VERBOSE(rl_multi_string_set, RL_OK, db, &page, initialdata, initialsize);
-
 	RL_CALL_VERBOSE(rl_multi_string_setrange, RL_OK, db, page, updatedata, updatesize, index, &newlength);
-	if (finalsize != newlength) {
-		fprintf(stderr, "Expected size to be %ld, got %ld instead on line %d\n", finalsize, newlength, __LINE__);
-		retval = RL_UNEXPECTED;
-		goto cleanup;
-	}
+	EXPECT_LONG(finalsize, newlength);
 	RL_CALL_VERBOSE(rl_multi_string_get, RL_OK, db, page, &testdata, &testdatalen);
-	if (testdatalen != finalsize || memcmp(finaldata, testdata, finalsize) != 0) {
-		fprintf(stderr, "Data mismatch on line %d\n", __LINE__);
-		retval = 1;
-		goto cleanup;
-	}
+	EXPECT_BYTES(finaldata, finalsize, testdata, testdatalen);
 	rl_free(testdata);
 
 	fprintf(stderr, "End test_setrange\n");

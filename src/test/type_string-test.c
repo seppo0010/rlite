@@ -6,31 +6,6 @@
 #include "../type_string.h"
 #include "test_util.h"
 
-#define UNSIGN(str) ((unsigned char *)(str))
-
-#define EXPECTED_INT(v1, v2)\
-	if (v1 != v2) {\
-		fprintf(stderr, "Expected %d == %d instead on line %d\n", v1, v2, __LINE__);\
-		retval = RL_UNEXPECTED;\
-		goto cleanup;\
-	}
-
-#define EXPECTED_BYTES(s1, l1, s2, l2)\
-	if (l1 != l2 || memcmp(s1, s2, l1) != 0) {\
-		fprintf(stderr, "Expected \"%s\" (%lu) == \"%s\" (%lu) instead on line %d\n", s1, (size_t)l1, s2, (size_t)l2, __LINE__);\
-		retval = RL_UNEXPECTED;\
-		goto cleanup;\
-	}
-
-#define RL_BALANCED()\
-	RL_CALL_VERBOSE(rl_is_balanced, RL_OK, db);\
-	if (_commit) {\
-		RL_CALL_VERBOSE(rl_commit, RL_OK, db);\
-		RL_CALL_VERBOSE(rl_is_balanced, RL_OK, db);\
-	}
-
-#define EXPECTED_STR(s1, s2, l2) EXPECTED_BYTES(s1, strlen((char *)s1), s2, l2)
-
 static int basic_test_set_get(int _commit)
 {
 	int retval = 0;

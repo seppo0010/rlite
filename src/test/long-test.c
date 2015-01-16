@@ -6,37 +6,21 @@
 #include "../status.h"
 #include "../page_long.h"
 
-static int do_long_test(int commit)
+static int do_long_test(int _commit)
 {
-	fprintf(stderr, "Start do_long_test %d\n", commit);
+	fprintf(stderr, "Start do_long_test %d\n", _commit);
 	int retval;
 	rlite *db = NULL;
-	RL_CALL_VERBOSE(setup_db, RL_OK, &db, commit, 1);
+	RL_CALL_VERBOSE(setup_db, RL_OK, &db, _commit, 1);
 
 	long data = 123, data2;
 	long number;
 
-	retval = rl_long_create(db, data, &number);
-	if (retval != RL_OK) {
-		fprintf(stderr, "Unable to create long\n");
-		goto cleanup;
-	}
+	RL_CALL_VERBOSE(rl_long_create, RL_OK, db, data, &number);
+	RL_COMMIT();
 
-	if (commit) {
-		RL_CALL_VERBOSE(rl_commit, RL_OK, db);
-	}
-
-	retval = rl_long_get(db, &data2, number);
-	if (retval != RL_OK) {
-		fprintf(stderr, "Unable to get long\n");
-		goto cleanup;
-	}
-
-	if (data != data2) {
-		fprintf(stderr, "data (%ld) != data2 (%ld)\n", data, data2);
-		retval = 1;
-		goto cleanup;
-	}
+	RL_CALL_VERBOSE(rl_long_get, RL_OK, db, &data2, number);
+	EXPECT_LONG(data, data2);
 
 	fprintf(stderr, "End do_long_test\n");
 cleanup:

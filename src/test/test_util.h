@@ -12,6 +12,68 @@ int setup_db(struct rlite **db, int file, int del);
 	retval = func(__VA_ARGS__);\
 	if (expected != retval) { fprintf(stderr, "Failed to %s, expected %d but got %d instead on line %d\n", #func, expected, retval, __LINE__); goto cleanup; }
 
+#define RL_CALL2_VERBOSE(func, expected, expected2, ...)\
+	retval = func(__VA_ARGS__);\
+	if (expected != retval && expected2 != retval) { fprintf(stderr, "Failed to %s, expected %d or %d but got %d instead on line %d\n", #func, expected, expected2, retval, __LINE__); goto cleanup; }
+
+#define UNSIGN(str) ((unsigned char *)(str))
+
+#define EXPECT_PTR(v1, v2)\
+	if ((v1) != (v2)) {\
+		fprintf(stderr, "Expected %p == %p instead on line %d\n", (void *)v1, (void *)v2, __LINE__);\
+		retval = RL_UNEXPECTED;\
+		goto cleanup;\
+	}
+
+#define EXPECT_INT(v1, v2)\
+	if ((v1) != (v2)) {\
+		fprintf(stderr, "Expected %d == %d instead on line %d\n", v1, v2, __LINE__);\
+		retval = RL_UNEXPECTED;\
+		goto cleanup;\
+	}
+
+#define EXPECT_LONG(v1, v2)\
+	if ((v1) != (v2)) {\
+		fprintf(stderr, "Expected %ld == %ld instead on line %d\n", (long)v1, (long)v2, __LINE__);\
+		retval = RL_UNEXPECTED;\
+		goto cleanup;\
+	}
+
+#define EXPECT_DOUBLE(v1, v2)\
+	if ((v1) != (v2)) {\
+		fprintf(stderr, "Expected %lf == %lf instead on line %d\n", (double)v1, (double)v2, __LINE__);\
+		retval = RL_UNEXPECTED;\
+		goto cleanup;\
+	}
+
+#define EXPECT_LLU(v1, v2)\
+	if ((v1) != (v2)) {\
+		fprintf(stderr, "Expected %llu == %llu instead on line %d\n", (long long unsigned)v1, (long long unsigned)v2, __LINE__);\
+		retval = RL_UNEXPECTED;\
+		goto cleanup;\
+	}
+
+#define EXPECT_BYTES(s1, l1, s2, l2)\
+	if ((l1) != (l2) || memcmp(s1, s2, l1) != 0) {\
+		fprintf(stderr, "Expected \"%s\" (%lu) == \"%s\" (%lu) instead on line %d\n", s1, (size_t)l1, s2, (size_t)l2, __LINE__);\
+		retval = RL_UNEXPECTED;\
+		goto cleanup;\
+	}
+
+#define RL_COMMIT()\
+	if (_commit) {\
+		RL_CALL_VERBOSE(rl_commit, RL_OK, db);\
+	}
+
+#define RL_BALANCED()\
+	RL_CALL_VERBOSE(rl_is_balanced, RL_OK, db);\
+	if (_commit) {\
+		RL_CALL_VERBOSE(rl_commit, RL_OK, db);\
+		RL_CALL_VERBOSE(rl_is_balanced, RL_OK, db);\
+	}
+
+#define EXPECT_STR(s1, s2, l2) EXPECT_BYTES(s1, strlen((char *)s1), s2, l2)
+
 #ifdef DEBUG
 #define RL_TEST(func, ...)\
 	if (*passed_tests >= *skip_tests) {\

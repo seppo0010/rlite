@@ -24,40 +24,22 @@ int basic_insert_set_test()
 		vals[i] = malloc(sizeof(long));
 		*vals[i] = i + 1;
 
-		retval = rl_btree_add_element(db, btree, btree_page, vals[i], NULL);
-		if (retval != RL_OK) {
-			fprintf(stderr, "Failed to add child %ld\n", i);
-			goto cleanup;
-		}
-		retval = rl_btree_is_balanced(db, btree);
-		if (retval != RL_OK) {
-			fprintf(stderr, "Node is not balanced after adding child %ld (%d)\n", i, __LINE__);
-			goto cleanup;
-		}
+		RL_CALL_VERBOSE(rl_btree_add_element, RL_OK, db, btree, btree_page, vals[i], NULL);
+		RL_CALL_VERBOSE(rl_btree_is_balanced, RL_OK, db, btree);
 	}
-	// rl_print_btree(btree);
+
 	for (i = 0; i < 7; i++) {
-		retval = rl_btree_find_score(db, btree, vals[i], NULL, NULL, NULL);
-		if (RL_FOUND != retval) {
-			fprintf(stderr, "Failed to find child %ld\n", i);
-			goto cleanup;
-		}
+		RL_CALL_VERBOSE(rl_btree_find_score, RL_FOUND, db, btree, vals[i], NULL, NULL, NULL);
 	}
 	long nonexistent_vals[2] = {0, 8};
 	for (i = 0; i < 2; i++) {
-		retval = rl_btree_find_score(db, btree, &nonexistent_vals[i], NULL, NULL, NULL);
-		if (RL_NOT_FOUND != retval) {
-			fprintf(stderr, "Failed to not find child %ld\n", i);
-			goto cleanup;
-		}
+		RL_CALL_VERBOSE(rl_btree_find_score, RL_NOT_FOUND, db, btree, &nonexistent_vals[i], NULL, NULL, NULL);
 	}
 	fprintf(stderr, "End basic_insert_set_test\n");
 	retval = 0;
 cleanup:
 	free(vals);
-	if (db) {
-		rl_close(db);
-	}
+	rl_close(db);
 	return retval;
 }
 
@@ -80,48 +62,26 @@ int basic_insert_hash_test()
 		vals[i] = malloc(sizeof(long));
 		*keys[i] = i + 1;
 		*vals[i] = i * 10;
-		retval = rl_btree_add_element(db, btree, btree_page, keys[i], vals[i]);
-		if (retval != RL_OK) {
-			fprintf(stderr, "Failed to add child %ld\n", i);
-			goto cleanup;
-		}
-		retval = rl_btree_is_balanced(db, btree);
-		if (RL_OK != retval) {
-			fprintf(stderr, "Node is not balanced after adding child %ld (%d)\n", i, __LINE__);
-			goto cleanup;
-		}
+		RL_CALL_VERBOSE(rl_btree_add_element, RL_OK, db, btree, btree_page, keys[i], vals[i]);
+		RL_CALL_VERBOSE(rl_btree_is_balanced, RL_OK, db, btree);
 	}
-
-	// rl_print_btree(btree);
 
 	void *val;
 	for (i = 0; i < 7; i++) {
-		retval = rl_btree_find_score(db, btree, keys[i], &val, NULL, NULL);
-		if (RL_FOUND != retval) {
-			fprintf(stderr, "Failed to find child %ld\n", i);
-			goto cleanup;
-		}
-		if (val != vals[i] || *(long *)val != i * 10) {
-			fprintf(stderr, "Wrong value in position %ld (%ld)\n", i, *(long *)val);
-			goto cleanup;
-		}
+		RL_CALL_VERBOSE(rl_btree_find_score, RL_FOUND, db, btree, keys[i], &val, NULL, NULL);
+		EXPECT_PTR(val, vals[i]);
+		EXPECT_LONG(*(long *)val, i * 10);
 	}
 	long nonexistent_vals[2] = {0, 8};
 	for (i = 0; i < 2; i++) {
-		retval = rl_btree_find_score(db, btree, &nonexistent_vals[i], NULL, NULL, NULL);
-		if (RL_NOT_FOUND != retval) {
-			fprintf(stderr, "Failed to not find child %ld\n", i);
-			goto cleanup;
-		}
+		RL_CALL_VERBOSE(rl_btree_find_score, RL_NOT_FOUND, db, btree, &nonexistent_vals[i], NULL, NULL, NULL);
 	}
 	fprintf(stderr, "End basic_insert_set_test\n");
 	retval = 0;
 cleanup:
 	free(vals);
 	free(keys);
-	if (db) {
-		rl_close(db);
-	}
+	rl_close(db);
 	return retval;
 }
 
@@ -145,33 +105,12 @@ int basic_delete_set_test(long elements, long element_to_remove, char *name)
 	for (i = 0; i < abs_elements; i++) {
 		vals[i] = malloc(sizeof(long));
 		*vals[i] = elements == abs_elements ? i + 1 : (-i - 1);
-		retval = rl_btree_add_element(db, btree, btree_page, vals[i], NULL);
-		if (RL_OK != retval) {
-			fprintf(stderr, "Failed to add child %ld\n", i);
-			goto cleanup;
-		}
-		retval = rl_btree_is_balanced(db, btree);
-		if (RL_OK != retval) {
-			fprintf(stderr, "Node is not balanced after adding child %ld (%d)\n", i, __LINE__);
-			goto cleanup;
-		}
+		RL_CALL_VERBOSE(rl_btree_add_element, RL_OK, db, btree, btree_page, vals[i], NULL);
+		RL_CALL_VERBOSE(rl_btree_is_balanced, RL_OK, db, btree);
 	}
 
-	// rl_print_btree(btree);
-
-	retval = rl_btree_remove_element(db, btree, btree_page, vals[pos_element_to_remove - 1]);
-	if (RL_OK != retval) {
-		fprintf(stderr, "Failed to remove child %ld\n", element_to_remove - 1);
-		goto cleanup;
-	}
-
-	// rl_print_btree(btree);
-
-	retval = rl_btree_is_balanced(db, btree);
-	if (RL_OK != retval) {
-		fprintf(stderr, "Node is not balanced after removing child %ld\n", element_to_remove - 1);
-		goto cleanup;
-	}
+	RL_CALL_VERBOSE(rl_btree_remove_element, RL_OK, db, btree, btree_page, vals[pos_element_to_remove - 1]);
+	RL_CALL_VERBOSE(rl_btree_is_balanced, RL_OK, db, btree);
 
 	int expected;
 	long score[1];
@@ -184,20 +123,14 @@ int basic_delete_set_test(long elements, long element_to_remove, char *name)
 			expected = RL_FOUND;
 			*score = *vals[j];
 		}
-		retval = rl_btree_find_score(db, btree, score, NULL, NULL, NULL);
-		if (expected != retval) {
-			fprintf(stderr, "Failed to %sfind child %ld (%ld) after deleting element %ld\n", expected == RL_FOUND ? "" : "not ", j, *vals[j], element_to_remove);
-			goto cleanup;
-		}
+		RL_CALL_VERBOSE(rl_btree_find_score, expected, db, btree, score, NULL, NULL, NULL);
 	}
 
 	fprintf(stderr, "End basic_delete_set_test (%ld, %ld)\n", elements, element_to_remove);
 	retval = 0;
 cleanup:
 	free(vals);
-	if (db) {
-		rl_close(db);
-	}
+	rl_close(db);
 	return retval;
 }
 
@@ -221,34 +154,20 @@ int random_hash_test(long size, long btree_node_size)
 		val = malloc(sizeof(long));
 		*key = i;
 		*val = i * 10;
-		retval = rl_btree_add_element(db, btree, btree_page, key, val);
-		if (retval != RL_OK) {
-			fprintf(stderr, "Failed to add child %ld\n", i);
-			goto cleanup;
-		}
-		retval = rl_btree_is_balanced(db, btree);
-		if (RL_OK != retval) {
-			fprintf(stderr, "Node is not balanced after adding child %ld (%d)\n", i, __LINE__);
-			goto cleanup;
-		}
+		RL_CALL_VERBOSE(rl_btree_add_element, RL_OK, db, btree, btree_page, key, val);
+		RL_CALL_VERBOSE(rl_btree_is_balanced, RL_OK, db, btree);
 	}
-
-	// rl_print_btree(db, btree);
 
 	for (i = 0; i < size * 20; i++) {
 		RL_CALL_VERBOSE(rl_btree_random_element, RL_OK, db, btree, (void **)&key, (void **)&val);
-		if (10 * (*key) != *val) {
-			fprintf(stderr, "expected %ld == %ld on line %d\n", 10 * *key, *val, __LINE__);
-			retval = 1;
-			goto cleanup;
-		}
+		EXPECT_LONG(10 * (*key), *val);
 		results[*key]++;
 	}
 
 	for (i = 0; i < size; i++) {
 		if (results[i] == 0) {
 			fprintf(stderr, "key %ld was not randomly returned\n", i);
-			retval = 1;
+			retval = RL_UNEXPECTED;
 			goto cleanup;
 		}
 	}
@@ -257,9 +176,7 @@ int random_hash_test(long size, long btree_node_size)
 	retval = 0;
 cleanup:
 	free(results);
-	if (db) {
-		rl_close(db);
-	}
+	rl_close(db);
 	return retval;
 }
 
@@ -305,41 +222,26 @@ int fuzzy_set_test(long size, long btree_node_size, int _commit)
 			elements[i] = element;
 			element_copy = malloc(sizeof(long));
 			*element_copy = element;
-			retval = rl_btree_add_element(db, btree, btree_page, element_copy, NULL);
-			if (RL_OK != retval) {
-				fprintf(stderr, "Failed to add child %ld\n", i);
-				goto cleanup;
-			}
-			retval = rl_btree_is_balanced(db, btree);
-			if (RL_OK != retval) {
-				fprintf(stderr, "Node is not balanced after adding child %ld (%d)\n", i, __LINE__);
-				goto cleanup;
-			}
+			RL_CALL_VERBOSE(rl_btree_add_element, RL_OK, db, btree, btree_page, element_copy, NULL);
+			RL_CALL_VERBOSE(rl_btree_is_balanced, RL_OK, db, btree);
 		}
 		flatten_size = 0;
-		retval = rl_flatten_btree(db, btree, &flatten_scores, &flatten_size);
-		if (RL_OK != retval) {
-			fprintf(stderr, "Unable to flatten btree\n");
-			goto cleanup;
-		}
+		RL_CALL_VERBOSE(rl_flatten_btree, RL_OK, db, btree, &flatten_scores, &flatten_size);
 		for (j = 1; j < flatten_size; j++) {
 			if (*(long *)flatten_scores[j - 1] >= *(long *)flatten_scores[j]) {
 				fprintf(stderr, "Tree is in a bad state in element %ld after adding child %ld\n", j, i);
+				retval = RL_UNEXPECTED;
 				goto cleanup;
 			}
 		}
+
 		if (_commit) {
-			retval = rl_commit(db);
-			if (RL_OK != retval) {
-				goto cleanup;
-			}
+			RL_CALL_VERBOSE(rl_commit, RL_OK, db);
 			rl_close(db);
 			db = NULL;
 			RL_CALL_VERBOSE(setup_db, RL_OK, &db, _commit, 0);
 		}
 	}
-
-	// rl_print_btree(btree);
 
 	for (i = 0; i < size; i++) {
 		element = rand();
@@ -355,16 +257,8 @@ int fuzzy_set_test(long size, long btree_node_size, int _commit)
 	btree = tmp;
 
 	for (i = 0; i < size; i++) {
-		retval = rl_btree_find_score(db, btree, &elements[i], NULL, NULL, NULL);
-		if (RL_FOUND != retval) {
-			fprintf(stderr, "Failed to find child %ld (%ld)\n", i, elements[i]);
-			goto cleanup;
-		}
-		retval = rl_btree_find_score(db, btree, &nonelements[i], NULL, NULL, NULL);
-		if (RL_NOT_FOUND != retval) {
-			fprintf(stderr, "Failed to not find child %ld\n", i);
-			goto cleanup;
-		}
+		RL_CALL_VERBOSE(rl_btree_find_score, RL_FOUND, db, btree, &elements[i], NULL, NULL, NULL);
+		RL_CALL_VERBOSE(rl_btree_find_score, RL_NOT_FOUND, db, btree, &nonelements[i], NULL, NULL, NULL);
 	}
 	fprintf(stderr, "End fuzzy_set_test\n");
 
@@ -373,9 +267,7 @@ cleanup:
 	rl_free(elements);
 	rl_free(nonelements);
 	rl_free(flatten_scores);
-	if (db) {
-		rl_close(db);
-	}
+	rl_close(db);
 	return retval;
 }
 
@@ -416,26 +308,15 @@ int fuzzy_hash_test(long size, long btree_node_size, int _commit)
 			values[i] = value;
 			value_copy = malloc(sizeof(long));
 			*value_copy = value;
-			retval = rl_btree_add_element(db, btree, btree_page, element_copy, value_copy);
-			if (RL_OK != retval) {
-				fprintf(stderr, "Failed to add child %ld\n", i);
-				goto cleanup;
-			}
-			retval = rl_btree_is_balanced(db, btree);
-			if (RL_OK != retval) {
-				fprintf(stderr, "Node is not balanced after adding child %ld (%ld)\n", i, value);
-				goto cleanup;
-			}
+			RL_CALL_VERBOSE(rl_btree_add_element, RL_OK, db, btree, btree_page, element_copy, value_copy);
+			RL_CALL_VERBOSE(rl_btree_is_balanced, RL_OK, db, btree);
 		}
 		flatten_size = 0;
-		retval = rl_flatten_btree(db, btree, &flatten_scores, &flatten_size);
-		if (RL_OK != retval) {
-			fprintf(stderr, "Unable to flatten btree\n");
-			goto cleanup;
-		}
+		RL_CALL_VERBOSE(rl_flatten_btree, RL_OK, db, btree, &flatten_scores, &flatten_size);
 		for (j = 1; j < flatten_size; j++) {
 			if (*(long *)flatten_scores[j - 1] >= *(long *)flatten_scores[j]) {
 				fprintf(stderr, "Tree is in a bad state in element %ld after adding child %ld\n", j, i);
+				retval = RL_UNEXPECTED;
 				goto cleanup;
 			}
 		}
@@ -445,8 +326,6 @@ int fuzzy_hash_test(long size, long btree_node_size, int _commit)
 			btree = tmp;
 		}
 	}
-
-	// rl_print_btree(btree);
 
 	for (i = 0; i < size; i++) {
 		element = rand();
@@ -459,20 +338,9 @@ int fuzzy_hash_test(long size, long btree_node_size, int _commit)
 	}
 
 	for (i = 0; i < size; i++) {
-		retval = rl_btree_find_score(db, btree, &elements[i], &val, NULL, NULL);
-		if (RL_FOUND != retval) {
-			fprintf(stderr, "Failed to find child %ld (%ld)\n", i, elements[i]);
-			goto cleanup;
-		}
-		if (*(long *)val != values[i]) {
-			fprintf(stderr, "Value doesn't match expected value at position %ld (%ld) (%ld != %ld)\n", i, elements[i], *(long *)val, values[i]);
-			goto cleanup;
-		}
-		retval = rl_btree_find_score(db, btree, &nonelements[i], NULL, NULL, NULL);
-		if (RL_NOT_FOUND != retval) {
-			fprintf(stderr, "Failed to not find child %ld\n", i);
-			goto cleanup;
-		}
+		RL_CALL_VERBOSE(rl_btree_find_score, RL_FOUND, db, btree, &elements[i], &val, NULL, NULL);
+		EXPECT_LONG(*(long *)val, values[i]);
+		RL_CALL_VERBOSE(rl_btree_find_score, RL_NOT_FOUND, db, btree, &nonelements[i], NULL, NULL, NULL);
 	}
 	fprintf(stderr, "End fuzzy_hash_test\n");
 
@@ -482,9 +350,7 @@ cleanup:
 	free(elements);
 	free(nonelements);
 	free(flatten_scores);
-	if (db) {
-		rl_close(db);
-	}
+	rl_close(db);
 	return retval;
 }
 
@@ -525,29 +391,12 @@ int fuzzy_hash_test_iterator(long size, long btree_node_size, int _commit)
 			values[i] = value;
 			value_copy = malloc(sizeof(long));
 			*value_copy = value;
-			retval = rl_btree_add_element(db, btree, btree_page, element_copy, value_copy);
-			if (RL_OK != retval) {
-				fprintf(stderr, "Failed to add child %ld\n", i);
-				goto cleanup;
-			}
-			retval = rl_btree_is_balanced(db, btree);
-			if (RL_OK != retval) {
-				fprintf(stderr, "Node is not balanced after adding child %ld (%ld)\n", i, value);
-				goto cleanup;
-			}
+			RL_CALL_VERBOSE(rl_btree_add_element, RL_OK, db, btree, btree_page, element_copy, value_copy);
+			RL_CALL_VERBOSE(rl_btree_is_balanced, RL_OK, db, btree);
 		}
 
-		retval = rl_btree_iterator_create(db, btree, &iterator);
-		if (RL_OK != retval) {
-			fprintf(stderr, "Unable to create btree iterator\n");
-			goto cleanup;
-		}
-
-		if (iterator->size != i + 1) {
-			fprintf(stderr, "Expected iterator size to be %ld, got %ld instead on line %d\n", i + 1, iterator->size, __LINE__);
-			retval = RL_UNEXPECTED;
-			goto cleanup;
-		}
+		RL_CALL_VERBOSE(rl_btree_iterator_create, RL_OK, db, btree, &iterator);
+		EXPECT_LONG(iterator->size, i + 1);
 
 		j = 0;
 		while (RL_OK == (retval = rl_btree_iterator_next(iterator, &tmp, NULL))) {
@@ -556,6 +405,7 @@ int fuzzy_hash_test_iterator(long size, long btree_node_size, int _commit)
 			if (j++ > 0) {
 				if (prev_score >= score) {
 					fprintf(stderr, "Tree is in a bad state in element %ld after adding child %ld\n", j, i);
+					retval = RL_UNEXPECTED;
 					goto cleanup;
 				}
 			}
@@ -567,11 +417,7 @@ int fuzzy_hash_test_iterator(long size, long btree_node_size, int _commit)
 			goto cleanup;
 		}
 
-		if (j != i + 1) {
-			fprintf(stderr, "Expected to iterate %ld elements, only did %ld\n", i + 1, j);
-			goto cleanup;
-		}
-
+		EXPECT_LONG(j, i + 1);
 		iterator = NULL;
 
 		if (_commit) {
@@ -589,9 +435,7 @@ cleanup:
 	free(values);
 	free(elements);
 	free(nonelements);
-	if (db) {
-		rl_close(db);
-	}
+	rl_close(db);
 	return retval;
 }
 
@@ -622,16 +466,8 @@ int fuzzy_set_delete_test(long size, long btree_node_size, int _commit)
 			elements[i] = element;
 			element_copy = malloc(sizeof(long));
 			*element_copy = element;
-			retval = rl_btree_add_element(db, btree, btree_page, element_copy, NULL);
-			if (RL_OK != retval) {
-				fprintf(stderr, "Failed to add child %ld\n", i);
-				goto cleanup;
-			}
-			retval = rl_btree_is_balanced(db, btree);
-			if (RL_OK != retval) {
-				fprintf(stderr, "Node is not balanced after adding child %ld (%d)\n", i, __LINE__);
-				goto cleanup;
-			}
+			RL_CALL_VERBOSE(rl_btree_add_element, RL_OK, db, btree, btree_page, element_copy, NULL);
+			RL_CALL_VERBOSE(rl_btree_is_balanced, RL_OK, db, btree);
 		}
 		if (_commit) {
 			RL_CALL_VERBOSE(rl_commit, RL_OK, db);
@@ -640,24 +476,13 @@ int fuzzy_set_delete_test(long size, long btree_node_size, int _commit)
 		}
 	}
 
-	// rl_print_btree(btree);
-
 	while (size > 0) {
 		i = (long)(((float)rand() / RAND_MAX) * size);
-		retval = rl_btree_remove_element(db, btree, btree_page, &elements[i]);
-		if (retval != RL_OK && retval != RL_DELETED) {
-			goto cleanup;
-		}
-
-		// rl_print_btree(btree);
+		RL_CALL2_VERBOSE(rl_btree_remove_element, RL_OK, RL_DELETED, db, btree, btree_page, &elements[i]);
 
 		elements[i] = elements[size - 1];
 		if (size-- > 1) {
-			retval = rl_btree_is_balanced(db, btree);
-			if (RL_OK != retval) {
-				fprintf(stderr, "Node is not balanced after deleting child %ld\n", i);
-				goto cleanup;
-			}
+			RL_CALL_VERBOSE(rl_btree_is_balanced, RL_OK, db, btree);
 		}
 	}
 	fprintf(stderr, "End fuzzy_set_delete_test\n");
@@ -665,9 +490,7 @@ int fuzzy_set_delete_test(long size, long btree_node_size, int _commit)
 	retval = 0;
 cleanup:
 	free(elements);
-	if (db) {
-		rl_close(db);
-	}
+	rl_close(db);
 	return retval;
 }
 

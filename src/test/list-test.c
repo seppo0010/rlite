@@ -19,10 +19,7 @@ int basic_insert_list_test(int options)
 	RL_CALL_VERBOSE(setup_db, RL_OK, &db, 0, 1);
 	db->number_of_databases = 1;
 	db->page_size = sizeof(long) * 2 + 12;
-	retval = rl_list_create(db, &list, &rl_list_type_long);
-	if (RL_OK != retval) {
-		goto cleanup;
-	}
+	RL_CALL_VERBOSE(rl_list_create, RL_OK, db, &list, &rl_list_type_long);
 	long list_page = db->next_empty_page;
 	RL_CALL_VERBOSE(rl_write, RL_OK, db, list->type->list_type, list_page, list);
 
@@ -47,52 +44,23 @@ int basic_insert_list_test(int options)
 				retval = RL_UNEXPECTED;
 				goto cleanup;
 		}
-		retval = rl_list_add_element(db, list, list_page, vals[i], position);
-		if (0 != retval) {
-			fprintf(stderr, "Failed to add child %ld (%d)\n", i, retval);
-			goto cleanup;
-		}
-		retval = rl_list_is_balanced(db, list);
-		if (RL_OK != retval) {
-			fprintf(stderr, "Node is not balanced after adding child %ld\n", i);
-			goto cleanup;
-		}
+		RL_CALL_VERBOSE(rl_list_add_element, RL_OK, db, list, list_page, vals[i], position);
+		RL_CALL_VERBOSE(rl_list_is_balanced, RL_OK, db, list);
 	}
 
-	// rl_print_list(list);
-
 	for (i = 0; i < 7; i++) {
-		retval = rl_list_find_element(db, list, vals[i], NULL, &position, NULL, NULL);
-		if (RL_FOUND != retval) {
-			fprintf(stderr, "Failed to find child %ld (%d)\n", i, retval);
-			goto cleanup;
-		}
-		if (position != (options % 2 == 0 ? i : (6 - i))) {
-			fprintf(stderr, "Unexpected position of item %ld, %ld\n", (options % 2 == 0 ? i : (6 - i)), position);
-			goto cleanup;
-		}
+		RL_CALL_VERBOSE(rl_list_find_element, RL_FOUND, db, list, vals[i], NULL, &position, NULL, NULL);
+		EXPECT_LONG(position, (options % 2 == 0 ? i : (6 - i)));
 	}
 	for (i = 0; i < 7; i++) {
 		RL_CALL_VERBOSE(rl_list_get_element, RL_FOUND, db, list, (void **)&element, i);
-		if (*element != *vals[(options % 2 == 0 ? i : (6 - i))]) {
-			fprintf(stderr, "Expected element at position %ld to be %ld, got %ld instead\n", i, *vals[i], *element);
-			retval = RL_UNEXPECTED;
-			goto cleanup;
-		}
-
+		EXPECT_LONG(*element, *vals[(options % 2 == 0 ? i : (6 - i))]);
 		RL_CALL_VERBOSE(rl_list_get_element, RL_FOUND, db, list, (void **)&element, - 7 + i);
-		if (*element != *vals[(options % 2 == 0 ? i : (6 - i))]) {
-			fprintf(stderr, "Expected element at position %ld to be %ld, got %ld instead\n", i, *vals[i], *element);
-			retval = RL_UNEXPECTED;
-			goto cleanup;
-		}
+		EXPECT_LONG(*element, *vals[(options % 2 == 0 ? i : (6 - i))]);
 	}
 	long nonexistent_vals[2] = {0, 8};
 	for (i = 0; i < 2; i++) {
-		if (RL_NOT_FOUND != rl_list_find_element(db, list, &nonexistent_vals[i], NULL, NULL, NULL, NULL)) {
-			fprintf(stderr, "Failed to not find child %ld\n", i);
-			goto cleanup;
-		}
+		RL_CALL_VERBOSE(rl_list_find_element, RL_NOT_FOUND, db, list, &nonexistent_vals[i], NULL, NULL, NULL, NULL);
 	}
 	fprintf(stderr, "End basic_insert_list_test\n");
 	retval = 0;
@@ -111,10 +79,7 @@ int basic_iterator_list_test(int _commit)
 	rl_list *list = NULL;
 	int retval;
 	RL_CALL_VERBOSE(setup_db, RL_OK, &db, _commit, 1);
-	retval = rl_list_create(db, &list, &rl_list_type_long);
-	if (RL_OK != retval) {
-		goto cleanup;
-	}
+	RL_CALL_VERBOSE(rl_list_create, RL_OK, db, &list, &rl_list_type_long);
 	long list_page = db->next_empty_page;
 	RL_CALL_VERBOSE(rl_write, RL_OK, db, list->type->list_type, list_page, list);
 
@@ -122,38 +87,24 @@ int basic_iterator_list_test(int _commit)
 	for (i = 0; i < ITERATOR_SIZE; i++) {
 		element = malloc(sizeof(long));
 		*element = i;
-		retval = rl_list_add_element(db, list, list_page, element, -1);
-		if (0 != retval) {
-			fprintf(stderr, "Failed to add element %ld\n", i);
-			goto cleanup;
-		}
+		RL_CALL_VERBOSE(rl_list_add_element, RL_OK, db, list, list_page, element, -1);
 	}
 
+	RL_COMMIT();
 	if (_commit) {
-		retval = rl_commit(db);
-		if (RL_OK != retval) {
-			fprintf(stderr, "Failed to commit\n");
-			goto cleanup;
-		}
+		RL_CALL_VERBOSE(rl_commit, RL_OK, db);
 		RL_CALL_VERBOSE(rl_read, RL_FOUND, db, &rl_data_type_list_long, list_page, &rl_list_type_long, (void **)&list, 1);
 	}
 
 	rl_list_iterator *iterator;
-	retval = rl_list_iterator_create(db, &iterator, list, 1);
-	if (RL_OK != retval) {
-		fprintf(stderr, "Failed to create iterator, got %d\n", retval);
-		goto cleanup;
-	}
+	RL_CALL_VERBOSE(rl_list_iterator_create, RL_OK, db, &iterator, list, 1);
 
 	i = 0;
 	void *tmp;
 	long val;
 	while ((retval = rl_list_iterator_next(iterator, &tmp)) == RL_OK) {
 		val = *(long *)tmp;
-		if (val != i) {
-			fprintf(stderr, "Expected %ld element to be %ld, got %ld instead\n", i, i, val);
-			goto cleanup;
-		}
+		EXPECT_LONG(val, i);
 		rl_free(tmp);
 		i++;
 	}
@@ -163,11 +114,7 @@ int basic_iterator_list_test(int _commit)
 		goto cleanup;
 	}
 
-	if (i != ITERATOR_SIZE) {
-		fprintf(stderr, "Expected %d iterations, got %ld\n", ITERATOR_SIZE, i);
-		goto cleanup;
-	}
-
+	EXPECT_LONG(i, ITERATOR_SIZE);
 	fprintf(stderr, "End basic_iterator_list_test %d\n", _commit);
 	retval = 0;
 cleanup:
@@ -198,10 +145,7 @@ int fuzzy_list_test(long size, long list_node_size, int _commit)
 	RL_CALL_VERBOSE(setup_db, RL_OK, &db, _commit, 1);
 	db->number_of_databases = 1;
 	db->page_size = sizeof(long) * list_node_size + 12;
-	retval = rl_list_create(db, &list, &rl_list_type_long);
-	if (RL_OK != retval) {
-		goto cleanup;
-	}
+	RL_CALL_VERBOSE(rl_list_create, RL_OK, db, &list, &rl_list_type_long);
 	long list_page = db->next_empty_page;
 	RL_CALL_VERBOSE(rl_write, RL_OK, db, list->type->list_type, list_page, list);
 
@@ -229,33 +173,17 @@ int fuzzy_list_test(long size, long list_node_size, int _commit)
 		element_copy = malloc(sizeof(long));
 		*element_copy = element;
 		positive = rand() % 2;
-		retval = rl_list_add_element(db, list, list_page, element_copy, positive ? position : (- i + position - 1));
-		if (0 != retval) {
-			fprintf(stderr, "Failed to add child %ld\n", i);
-			goto cleanup;
-		}
-		retval = rl_list_is_balanced(db, list);
-		if (RL_OK != retval) {
-			fprintf(stderr, "Node is not balanced after adding child %ld\n", i);
-			goto cleanup;
-		}
+		RL_CALL_VERBOSE(rl_list_add_element, RL_OK, db, list, list_page, element_copy, positive ? position : (- i + position - 1));
+		RL_CALL_VERBOSE(rl_list_is_balanced, RL_OK, db, list);
 		rl_flatten_list(db, list, flatten_elements);
 		for (j = 0; j < list->size; j++) {
-			if (*(long *)flatten_elements[j] != elements[j]) {
-				fprintf(stderr, "Unexpected value in position %ld after adding %ld (expected %ld, got %ld)\n", j, i, elements[j], *(long *)flatten_elements[j]);
-				goto cleanup;
-			}
+			EXPECT_LONG(*(long *)flatten_elements[j], elements[j]);
 		}
 		if (_commit) {
-			retval = rl_commit(db);
-			if (RL_OK != retval) {
-				goto cleanup;
-			}
+			RL_CALL_VERBOSE(rl_commit, RL_OK, db);
 			RL_CALL_VERBOSE(rl_read, RL_FOUND, db, &rl_data_type_list_long, list_page, &rl_list_type_long, (void **)&list, 1);
 		}
 	}
-
-	// rl_print_list(list);
 
 	for (i = 0; i < size; i++) {
 		element = rand();
@@ -268,20 +196,12 @@ int fuzzy_list_test(long size, long list_node_size, int _commit)
 	}
 
 	for (i = 0; i < size; i++) {
-		retval = rl_list_find_element(db, list, &elements[i], NULL, NULL, NULL, NULL);
-		if (RL_FOUND != retval) {
-			fprintf(stderr, "Failed to find child %ld (%ld)\n", i, elements[i]);
-			goto cleanup;
-		}
-		retval = rl_list_find_element(db, list, &nonelements[i], NULL, NULL, NULL, NULL);
-		if (RL_NOT_FOUND != retval) {
-			fprintf(stderr, "Failed to not find child %ld\n", i);
-			goto cleanup;
-		}
+		RL_CALL_VERBOSE(rl_list_find_element, RL_FOUND, db, list, &elements[i], NULL, NULL, NULL, NULL);
+		RL_CALL_VERBOSE(rl_list_find_element, RL_NOT_FOUND, db, list, &nonelements[i], NULL, NULL, NULL, NULL);
 	}
 	fprintf(stderr, "End fuzzy_list_test\n");
 
-	retval = 0;
+	retval = RL_OK;
 cleanup:
 	free(elements);
 	free(nonelements);
@@ -301,10 +221,7 @@ int basic_delete_list_test(long elements, long element_to_remove, char *name)
 	RL_CALL_VERBOSE(setup_db, RL_OK, &db, 0, 1);
 	db->number_of_databases = 1;
 	db->page_size = sizeof(long) * 2 + 12;
-	retval = rl_list_create(db, &list, &rl_list_type_long);
-	if (RL_OK != retval) {
-		goto cleanup;
-	}
+	RL_CALL_VERBOSE(rl_list_create, RL_OK, db, &list, &rl_list_type_long);
 	long list_page = db->next_empty_page;
 	RL_CALL_VERBOSE(rl_write, RL_OK, db, list->type->list_type, list_page, list);
 	long pos_element_to_remove = element_to_remove >= 0 ? (element_to_remove) : (elements + element_to_remove);
@@ -312,25 +229,11 @@ int basic_delete_list_test(long elements, long element_to_remove, char *name)
 	for (i = 0; i < elements; i++) {
 		vals[i] = malloc(sizeof(long));
 		*vals[i] = i;
-		retval = rl_list_add_element(db, list, list_page, vals[i], i);
-		if (0 != retval) {
-			fprintf(stderr, "Failed to add child %ld\n", i);
-			goto cleanup;
-		}
-		retval = rl_list_is_balanced(db, list);
-		if (RL_OK != retval) {
-			fprintf(stderr, "Node is not balanced after adding child %ld\n", i);
-			goto cleanup;
-		}
+		RL_CALL_VERBOSE(rl_list_add_element, RL_OK, db, list, list_page, vals[i], i);
+		RL_CALL_VERBOSE(rl_list_is_balanced, RL_OK, db, list);
 	}
 
-	// rl_print_list(list);
-
-	retval = rl_list_remove_element(db, list, list_page, element_to_remove);
-	if (RL_OK != retval && retval != RL_DELETED) {
-		fprintf(stderr, "Failed to remove child %ld\n", element_to_remove - 1);
-		goto cleanup;
-	}
+	RL_CALL2_VERBOSE(rl_list_remove_element, RL_OK, RL_DELETED, db, list, list_page, element_to_remove);
 
 	if (retval == RL_DELETED) {
 		if (elements == 1) {
@@ -344,13 +247,7 @@ int basic_delete_list_test(long elements, long element_to_remove, char *name)
 		}
 	}
 
-	// rl_print_list(list);
-
-	retval = rl_list_is_balanced(db, list);
-	if (RL_OK != retval) {
-		fprintf(stderr, "Node is not balanced after removing child %ld\n", element_to_remove - 1);
-		goto cleanup;
-	}
+	RL_CALL_VERBOSE(rl_list_is_balanced, RL_OK, db, list);
 
 	int expected;
 	long element[1];
@@ -363,15 +260,11 @@ int basic_delete_list_test(long elements, long element_to_remove, char *name)
 			expected = RL_FOUND;
 			*element = *vals[j];
 		}
-		retval = rl_list_find_element(db, list, element, NULL, NULL, NULL, NULL);
-		if (expected != retval) {
-			fprintf(stderr, "Failed to %sfind child %ld (%ld) after deleting element %ld\n", expected == 0 ? "" : "not ", j, *vals[j], element_to_remove);
-			goto cleanup;
-		}
+		RL_CALL_VERBOSE(rl_list_find_element, expected, db, list, element, NULL, NULL, NULL, NULL);
 	}
 
 	fprintf(stderr, "End basic_delete_list_test (%ld, %ld)\n", elements, element_to_remove);
-	retval = 0;
+	retval = RL_OK;
 cleanup:
 	free(vals);
 	rl_close(db);
@@ -389,10 +282,7 @@ int fuzzy_list_delete_test(long size, long list_node_size, int _commit)
 	RL_CALL_VERBOSE(setup_db, RL_OK, &db, _commit, 1);
 	db->number_of_databases = 1;
 	db->page_size = sizeof(long) * list_node_size + 12;
-	retval = rl_list_create(db, &list, &rl_list_type_long);
-	if (RL_OK != retval) {
-		goto cleanup;
-	}
+	RL_CALL_VERBOSE(rl_list_create, RL_OK, db, &list, &rl_list_type_long);
 	long list_page = db->next_empty_page;
 	RL_CALL_VERBOSE(rl_write, RL_OK, db, list->type->list_type, list_page, list);
 
@@ -408,25 +298,12 @@ int fuzzy_list_delete_test(long size, long list_node_size, int _commit)
 			elements[i] = element;
 			element_copy = malloc(sizeof(long));
 			*element_copy = element;
-			retval = rl_list_add_element(db, list, list_page, element_copy, -1);
-			if (0 != retval) {
-				fprintf(stderr, "Failed to add child %ld\n", i);
-				goto cleanup;
-			}
-			retval = rl_list_is_balanced(db, list);
-			if (RL_OK != retval) {
-				fprintf(stderr, "Node is not balanced after adding child %ld\n", i);
-				goto cleanup;
-			}
+			RL_CALL_VERBOSE(rl_list_add_element, RL_OK, db, list, list_page, element_copy, -1);
+			RL_CALL_VERBOSE(rl_list_is_balanced, RL_OK, db, list);
 		}
-		retval = rl_commit(db);
-		if (RL_OK != retval) {
-			goto cleanup;
-		}
+		RL_CALL_VERBOSE(rl_commit, RL_OK, db);
 		RL_CALL_VERBOSE(rl_read, RL_FOUND, db, &rl_data_type_list_long, list_page, &rl_list_type_long, (void **)&list, 1);
 	}
-
-	// rl_print_list(list);
 
 	while (size > 0) {
 		i = (long)(((float)rand() / RAND_MAX) * size);
@@ -434,24 +311,18 @@ int fuzzy_list_delete_test(long size, long list_node_size, int _commit)
 		if (retval == RL_DELETED && size == 1) {
 			break;
 		}
-		if (0 != retval) {
+		if (RL_OK != retval) {
 			fprintf(stderr, "Failed to delete child %ld\n", elements[i]);
 			goto cleanup;
 		}
 
-		// rl_print_list(list);
-
-		retval = rl_list_is_balanced(db, list);
-		if (RL_OK != retval) {
-			fprintf(stderr, "Node is not balanced after deleting child %ld\n", i);
-			goto cleanup;
-		}
+		RL_CALL_VERBOSE(rl_list_is_balanced, RL_OK, db, list);
 		elements[i] = elements[size - 1];
 		size--;
 	}
 	fprintf(stderr, "End fuzzy_list_delete_test\n");
 
-	retval = 0;
+	retval = RL_OK;
 cleanup:
 	rl_free(elements);
 	rl_close(db);
