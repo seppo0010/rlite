@@ -403,6 +403,7 @@ static int basic_test_set_bitop(int _commit)
 	RL_CALL_VERBOSE(rl_set, RL_OK, db, k2, k2len, v2, v2len, 0, 0);
 	RL_CALL_VERBOSE(rl_bitop, RL_OK, db, BITOP_AND, targetk, targetklen, 2, keys, keyslen);
 	RL_CALL_VERBOSE(rl_get, RL_OK, db, targetk, targetklen, &testvalue, &testvaluelen);
+    EXPECT_BYTES(testvalue, testvaluelen, expected, expectedlen);
     rl_free(testvalue);
 
 	fprintf(stderr, "End basic_test_set_bitop\n");
