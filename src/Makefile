@@ -59,12 +59,21 @@ buildtest: librlite.a test/rlite-test.o test/btree-test.o test/list-test.o test/
 buildhirlitetest: libhirlite.a ../hirlite/test/echo.o ../hirlite/test/hash.o ../hirlite/test/list.o ../hirlite/test/parser.o ../hirlite/test/set.o ../hirlite/test/string.o ../hirlite/test/test.o ../hirlite/test/zset.o
 	$(CC) $(DEBUG) $(CFLAGS) -o hirlite-test echo.o hash.o list.o parser.o set.o string.o test.o zset.o libhirlite.a $(LIBS)
 
-test: buildtest buildhirlitetest
+rlitetest: buildtest
 	./rlite-test
+
+hirlitetest: buildhirlitetest
 	./hirlite-test
 
-vtest: buildtest buildhirlitetest
+test: rlitetest hirlitetest
+
+vrlitetest: buildtest
 	valgrind --track-origins=yes --leak-check=full --show-reachable=yes ./rlite-test
+
+vhirlitetest: buildhirlitetest
+	./hirlite-test
+
+vtest: vrlitetest vhirlitetest
 	valgrind --track-origins=yes --leak-check=full --show-reachable=yes ./hirlite-test
 
 clean:
