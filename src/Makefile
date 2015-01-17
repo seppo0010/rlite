@@ -71,10 +71,9 @@ vrlitetest: buildtest
 	valgrind --track-origins=yes --leak-check=full --show-reachable=yes ./rlite-test
 
 vhirlitetest: buildhirlitetest
-	./hirlite-test
+	valgrind --track-origins=yes --leak-check=full --show-reachable=yes ./hirlite-test
 
 vtest: vrlitetest vhirlitetest
-	valgrind --track-origins=yes --leak-check=full --show-reachable=yes ./hirlite-test
 
 clean:
 	rm -rf *-test *.o *.a *.dSYM *.gcda *.gcno lcov
