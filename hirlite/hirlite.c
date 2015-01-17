@@ -2410,6 +2410,33 @@ cleanup:
 	return;
 }
 
+static void getrangeCommand(rliteClient *c) {
+	unsigned char *key = UNSIGN(c->argv[1]);
+	long keylen = c->argvlen[1];
+	unsigned char *value = NULL;
+	long valuelen;
+	long long start, stop;
+
+	if (getLongLongFromObject(c->argv[2], &start) != RLITE_OK ||
+			getLongLongFromObject(c->argv[3], &stop) != RLITE_OK) {
+		c->reply = createErrorObject(RLITE_SYNTAXERR);
+		return;
+	}
+
+	int retval;
+	retval = rl_getrange(c->context->db, key, keylen, start, stop, &value, &valuelen);
+	RLITE_SERVER_ERR(c, retval);
+	if (retval == RL_NOT_FOUND) {
+		c->reply = createReplyObject(RLITE_REPLY_NIL);
+	} else {
+		c->reply = createStringObject((char *)value, valuelen);
+	}
+
+	rl_free(value);
+cleanup:
+	return;
+}
+
 static void delCommand(rliteClient *c) {
 	int deleted = 0, j, retval;
 
@@ -2604,8 +2631,8 @@ struct rliteCommand rliteCommandTable[] = {
 	// {"setbit",setbitCommand,4,"wm",0,NULL,1,1,1,0,0},
 	// {"getbit",getbitCommand,3,"rF",0,NULL,1,1,1,0,0},
 	// {"setrange",setrangeCommand,4,"wm",0,NULL,1,1,1,0,0},
-	// {"getrange",getrangeCommand,4,"r",0,NULL,1,1,1,0,0},
-	// {"substr",getrangeCommand,4,"r",0,NULL,1,1,1,0,0},
+	{"getrange",getrangeCommand,4,"r",0,1,1,1,0,0},
+	{"substr",getrangeCommand,4,"r",0,1,1,1,0,0},
 	// {"incr",incrCommand,2,"wmF",0,NULL,1,1,1,0,0},
 	// {"decr",decrCommand,2,"wmF",0,NULL,1,1,1,0,0},
 	{"mget",mgetCommand,-2,"r",0,1,-1,1,0,0},
