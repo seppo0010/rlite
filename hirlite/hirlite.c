@@ -2285,6 +2285,30 @@ cleanup:
 	return;
 }
 
+static void getsetCommand(rliteClient *c) {
+	unsigned char *key = UNSIGN(c->argv[1]);
+	long keylen = c->argvlen[1];
+	unsigned char *value = UNSIGN(c->argv[2]);
+	long valuelen = c->argvlen[2];
+	unsigned char *prevvalue = NULL;
+	long prevvaluelen;
+
+	int retval;
+	retval = rl_get(c->context->db, key, keylen, &prevvalue, &prevvaluelen);
+	RLITE_SERVER_ERR(c, retval);
+	if (retval == RL_NOT_FOUND) {
+		c->reply = createReplyObject(RLITE_REPLY_NIL);
+	} else {
+		c->reply = createStringObject((char *)prevvalue, prevvaluelen);
+	}
+	rl_free(prevvalue);
+
+	retval = rl_set(c->context->db, key, keylen, value, valuelen, 0, 0);
+	RLITE_SERVER_ERR(c, retval);
+cleanup:
+	return;
+}
+
 static void delCommand(rliteClient *c) {
 	int deleted = 0, j, retval;
 
@@ -2554,7 +2578,7 @@ struct rliteCommand rliteCommandTable[] = {
 	// {"incrby",incrbyCommand,3,"wmF",0,NULL,1,1,1,0,0},
 	// {"decrby",decrbyCommand,3,"wmF",0,NULL,1,1,1,0,0},
 	// {"incrbyfloat",incrbyfloatCommand,3,"wmF",0,NULL,1,1,1,0,0},
-	// {"getset",getsetCommand,3,"wm",0,NULL,1,1,1,0,0},
+	{"getset",getsetCommand,3,"wm",0,1,1,1,0,0},
 	// {"mset",msetCommand,-3,"wm",0,NULL,1,-1,2,0,0},
 	// {"msetnx",msetnxCommand,-3,"wm",0,NULL,1,-1,2,0,0},
 	// {"randomkey",randomkeyCommand,1,"rR",0,NULL,0,0,0,0,0},

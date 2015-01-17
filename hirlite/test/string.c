@@ -208,6 +208,38 @@ int test_append() {
 	return 0;
 }
 
+int test_getset() {
+	rliteContext *context = rliteConnect(":memory:", 0);
+
+	rliteReply* reply;
+	size_t argvlen[100];
+
+	{
+		char* argv[100] = {"getset", "mykey", "val1", NULL};
+		reply = rliteCommandArgv(context, populateArgvlen(argv, argvlen), argv, argvlen);
+		EXPECT_NIL(reply);
+		rliteFreeReplyObject(reply);
+	}
+
+	{
+		char* argv[100] = {"getset", "mykey", "val2", NULL};
+		reply = rliteCommandArgv(context, populateArgvlen(argv, argvlen), argv, argvlen);
+		EXPECT_STR(reply, "val1", 4);
+		rliteFreeReplyObject(reply);
+	}
+
+
+	{
+		char* argv[100] = {"get", "mykey", NULL};
+		reply = rliteCommandArgv(context, populateArgvlen(argv, argvlen), argv, argvlen);
+		EXPECT_STR(reply, "val2", 4);
+		rliteFreeReplyObject(reply);
+	}
+
+	rliteFree(context);
+	return 0;
+}
+
 int run_string() {
 	if (test_set() != 0) {
 		return 1;
@@ -225,6 +257,9 @@ int run_string() {
 		return 1;
 	}
 	if (test_append() != 0) {
+		return 1;
+	}
+	if (test_getset() != 0) {
 		return 1;
 	}
 	return 0;
