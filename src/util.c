@@ -314,5 +314,5 @@ unsigned long long rl_mstime()
 {
 	struct timeval tp;
 	gettimeofday(&tp, NULL);
-	return tp.tv_sec + tp.tv_usec / 1000;
+	return tp.tv_sec * 1000 + tp.tv_usec / 1000;
 }

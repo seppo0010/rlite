@@ -9,6 +9,7 @@
 #include "type_zset.h"
 #include "type_set.h"
 #include "type_list.h"
+#include "type_string.h"
 
 #define RL_MEMORY_DRIVER 0
 #define RL_FILE_DRIVER 1
