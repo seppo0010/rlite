@@ -451,6 +451,57 @@ int test_strlen() {
 	return 0;
 }
 
+int test_incr() {
+	rliteContext *context = rliteConnect(":memory:", 0);
+
+	rliteReply* reply;
+	size_t argvlen[100];
+
+	{
+		char* argv[100] = {"incr", "mykey", NULL};
+		reply = rliteCommandArgv(context, populateArgvlen(argv, argvlen), argv, argvlen);
+		EXPECT_INTEGER(reply, 1);
+		rliteFreeReplyObject(reply);
+	}
+
+	{
+		char* argv[100] = {"incr", "mykey", NULL};
+		reply = rliteCommandArgv(context, populateArgvlen(argv, argvlen), argv, argvlen);
+		EXPECT_INTEGER(reply, 2);
+		rliteFreeReplyObject(reply);
+	}
+
+	{
+		char* argv[100] = {"decr", "mykey", NULL};
+		reply = rliteCommandArgv(context, populateArgvlen(argv, argvlen), argv, argvlen);
+		EXPECT_INTEGER(reply, 1);
+		rliteFreeReplyObject(reply);
+	}
+
+	{
+		char* argv[100] = {"incrby", "mykey", "1000", NULL};
+		reply = rliteCommandArgv(context, populateArgvlen(argv, argvlen), argv, argvlen);
+		EXPECT_INTEGER(reply, 1001);
+		rliteFreeReplyObject(reply);
+	}
+
+	{
+		char* argv[100] = {"decrby", "mykey", "100", NULL};
+		reply = rliteCommandArgv(context, populateArgvlen(argv, argvlen), argv, argvlen);
+		EXPECT_INTEGER(reply, 901);
+		rliteFreeReplyObject(reply);
+	}
+	{
+		char* argv[100] = {"get", "mykey", NULL};
+		reply = rliteCommandArgv(context, populateArgvlen(argv, argvlen), argv, argvlen);
+		EXPECT_STR(reply, "901", 3);
+		rliteFreeReplyObject(reply);
+	}
+
+	rliteFree(context);
+	return 0;
+}
+
 int run_string() {
 	if (test_set() != 0) {
 		return 1;
@@ -489,6 +540,9 @@ int run_string() {
 		return 1;
 	}
 	if (test_strlen() != 0) {
+		return 1;
+	}
+	if (test_incr() != 0) {
 		return 1;
 	}
 	return 0;

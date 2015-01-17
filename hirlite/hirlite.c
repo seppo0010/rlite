@@ -2473,6 +2473,46 @@ cleanup:
 	return;
 }
 
+static void incrGenericCommand(rliteClient *c, long long increment) {
+	unsigned char *key = UNSIGN(c->argv[1]);
+	long keylen = c->argvlen[1];
+	long long newvalue;
+
+	int retval = rl_incr(c->context->db, key, keylen, increment, &newvalue);
+	RLITE_SERVER_ERR(c, retval);
+	if (retval == RL_OK) {
+		c->reply = createLongLongObject(newvalue);
+	}
+cleanup:
+	return;
+}
+
+static void incrCommand(rliteClient *c) {
+	incrGenericCommand(c, 1);
+}
+
+static void decrCommand(rliteClient *c) {
+	incrGenericCommand(c, -1);
+}
+
+static void incrbyCommand(rliteClient *c) {
+	long long increment;
+	if (getLongLongFromObject(c->argv[2], &increment) != RLITE_OK) {
+		c->reply = createErrorObject(RLITE_SYNTAXERR);
+		return;
+	}
+	incrGenericCommand(c, increment);
+}
+
+static void decrbyCommand(rliteClient *c) {
+	long long decrement;
+	if (getLongLongFromObject(c->argv[2], &decrement) != RLITE_OK) {
+		c->reply = createErrorObject(RLITE_SYNTAXERR);
+		return;
+	}
+	incrGenericCommand(c, -decrement);
+}
+
 static void delCommand(rliteClient *c) {
 	int deleted = 0, j, retval;
 
@@ -2669,8 +2709,8 @@ struct rliteCommand rliteCommandTable[] = {
 	{"setrange",setrangeCommand,4,"wm",0,1,1,1,0,0},
 	{"getrange",getrangeCommand,4,"r",0,1,1,1,0,0},
 	{"substr",getrangeCommand,4,"r",0,1,1,1,0,0},
-	// {"incr",incrCommand,2,"wmF",0,NULL,1,1,1,0,0},
-	// {"decr",decrCommand,2,"wmF",0,NULL,1,1,1,0,0},
+	{"incr",incrCommand,2,"wmF",0,1,1,1,0,0},
+	{"decr",decrCommand,2,"wmF",0,1,1,1,0,0},
 	{"mget",mgetCommand,-2,"r",0,1,-1,1,0,0},
 	{"rpush",rpushCommand,-3,"wmF",0,1,1,1,0,0},
 	{"lpush",lpushCommand,-3,"wmF",0,1,1,1,0,0},
@@ -2739,8 +2779,8 @@ struct rliteCommand rliteCommandTable[] = {
 	{"hgetall",hgetallCommand,2,"r",0,1,1,1,0,0},
 	{"hexists",hexistsCommand,3,"rF",0,1,1,1,0,0},
 	// {"hscan",hscanCommand,-3,"rR",0,NULL,1,1,1,0,0},
-	// {"incrby",incrbyCommand,3,"wmF",0,NULL,1,1,1,0,0},
-	// {"decrby",decrbyCommand,3,"wmF",0,NULL,1,1,1,0,0},
+	{"incrby",incrbyCommand,3,"wmF",0,1,1,1,0,0},
+	{"decrby",decrbyCommand,3,"wmF",0,1,1,1,0,0},
 	// {"incrbyfloat",incrbyfloatCommand,3,"wmF",0,NULL,1,1,1,0,0},
 	{"getset",getsetCommand,3,"wm",0,1,1,1,0,0},
 	{"mset",msetCommand,-3,"wm",0,1,-1,2,0,0},
