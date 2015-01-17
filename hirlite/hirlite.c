@@ -2268,6 +2268,23 @@ cleanup:
 	return;
 }
 
+static void appendCommand(rliteClient *c) {
+	unsigned char *key = UNSIGN(c->argv[1]);
+	long keylen = c->argvlen[1];
+	unsigned char *value = UNSIGN(c->argv[2]);
+	long valuelen = c->argvlen[2];
+	long newlen;
+
+	int retval;
+	retval = rl_append(c->context->db, key, keylen, value, valuelen, &newlen);
+	RLITE_SERVER_ERR(c, retval);
+	if (retval == RL_OK) {
+		c->reply = createLongLongObject(newlen);
+	}
+cleanup:
+	return;
+}
+
 static void delCommand(rliteClient *c) {
 	int deleted = 0, j, retval;
 
@@ -2455,7 +2472,7 @@ struct rliteCommand rliteCommandTable[] = {
 	{"setnx",setnxCommand,3,"wmF",0,1,1,1,0,0},
 	{"setex",setexCommand,4,"wm",0,1,1,1,0,0},
 	{"psetex",psetexCommand,4,"wm",0,1,1,1,0,0},
-	// {"append",appendCommand,3,"wm",0,NULL,1,1,1,0,0},
+	{"append",appendCommand,3,"wm",0,1,1,1,0,0},
 	// {"strlen",strlenCommand,2,"rF",0,NULL,1,1,1,0,0},
 	{"del",delCommand,-2,"w",0,1,-1,1,0,0},
 	{"exists",existsCommand,2,"rF",0,1,1,1,0,0},
