@@ -194,10 +194,10 @@ int rl_multi_string_append(struct rlite *db, long number, const unsigned char *d
 
 	RL_CALL(rl_list_get_element, RL_FOUND, db, list, &tmp, 0);
 	size = *(long *)tmp;
-	RL_CALL(rl_list_remove_element, RL_OK, db, list, number, 0);
 	RL_MALLOC(tmp, sizeof(long));
 	*(long *)tmp = size + datasize;
 	RL_CALL(rl_list_add_element, RL_OK, db, list, number, tmp, 0);
+	RL_CALL(rl_list_remove_element, RL_OK, db, list, number, 1);
 	if (newlength) {
 		*newlength = size + datasize;
 	}
