@@ -291,6 +291,39 @@ int test_mget() {
 	return 0;
 }
 
+int test_mset() {
+	rliteContext *context = rliteConnect(":memory:", 0);
+
+	rliteReply* reply;
+	size_t argvlen[100];
+
+	{
+		char* argv[100] = {"mset", "key2", "val2", "key1", "val1", "unexpected", NULL};
+		reply = rliteCommandArgv(context, populateArgvlen(argv, argvlen), argv, argvlen);
+		EXPECT_ERROR(reply);
+		rliteFreeReplyObject(reply);
+	}
+
+	{
+		char* argv[100] = {"mset", "key2", "val2", "key1", "val1", NULL};
+		reply = rliteCommandArgv(context, populateArgvlen(argv, argvlen), argv, argvlen);
+		EXPECT_STATUS(reply, "OK", 2);
+		rliteFreeReplyObject(reply);
+	}
+
+	{
+		char* argv[100] = {"mget", "key1", "key2", NULL};
+		reply = rliteCommandArgv(context, populateArgvlen(argv, argvlen), argv, argvlen);
+		EXPECT_LEN(reply, 2);
+		EXPECT_STR(reply->element[0], "val1", 4);
+		EXPECT_STR(reply->element[1], "val2", 4);
+		rliteFreeReplyObject(reply);
+	}
+
+	rliteFree(context);
+	return 0;
+}
+
 int run_string() {
 	if (test_set() != 0) {
 		return 1;
@@ -314,6 +347,9 @@ int run_string() {
 		return 1;
 	}
 	if (test_mget() != 0) {
+		return 1;
+	}
+	if (test_mset() != 0) {
 		return 1;
 	}
 	return 0;
