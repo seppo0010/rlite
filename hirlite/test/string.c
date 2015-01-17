@@ -396,6 +396,37 @@ int test_getrange() {
 	return 0;
 }
 
+int test_setrange() {
+	rliteContext *context = rliteConnect(":memory:", 0);
+
+	rliteReply* reply;
+	size_t argvlen[100];
+
+	{
+		char* argv[100] = {"setrange", "mykey", "0", "myvalue", NULL};
+		reply = rliteCommandArgv(context, populateArgvlen(argv, argvlen), argv, argvlen);
+		EXPECT_INTEGER(reply, 7);
+		rliteFreeReplyObject(reply);
+	}
+
+	{
+		char* argv[100] = {"setrange", "mykey", "2", "newvalue", NULL};
+		reply = rliteCommandArgv(context, populateArgvlen(argv, argvlen), argv, argvlen);
+		EXPECT_INTEGER(reply, 10);
+		rliteFreeReplyObject(reply);
+	}
+
+	{
+		char* argv[100] = {"get", "mykey", NULL};
+		reply = rliteCommandArgv(context, populateArgvlen(argv, argvlen), argv, argvlen);
+		EXPECT_STR(reply, "mynewvalue", 10);
+		rliteFreeReplyObject(reply);
+	}
+
+	rliteFree(context);
+	return 0;
+}
+
 int run_string() {
 	if (test_set() != 0) {
 		return 1;
@@ -428,6 +459,9 @@ int run_string() {
 		return 1;
 	}
 	if (test_getrange() != 0) {
+		return 1;
+	}
+	if (test_setrange() != 0) {
 		return 1;
 	}
 	return 0;

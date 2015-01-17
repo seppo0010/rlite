@@ -2437,6 +2437,28 @@ cleanup:
 	return;
 }
 
+static void setrangeCommand(rliteClient *c) {
+	unsigned char *key = UNSIGN(c->argv[1]);
+	long keylen = c->argvlen[1];
+	unsigned char *value = UNSIGN(c->argv[3]);
+	long valuelen = c->argvlen[3];
+	long long offset;
+	long newlength;
+
+	if (getLongLongFromObject(c->argv[2], &offset) != RLITE_OK) {
+		c->reply = createErrorObject(RLITE_SYNTAXERR);
+		return;
+	}
+
+	int retval = rl_setrange(c->context->db, key, keylen, offset, value, valuelen, &newlength);
+	RLITE_SERVER_ERR(c, retval);
+	if (retval == RL_OK) {
+		c->reply = createLongLongObject(newlength);
+	}
+cleanup:
+	return;
+}
+
 static void delCommand(rliteClient *c) {
 	int deleted = 0, j, retval;
 
@@ -2630,7 +2652,7 @@ struct rliteCommand rliteCommandTable[] = {
 	{"exists",existsCommand,2,"rF",0,1,1,1,0,0},
 	// {"setbit",setbitCommand,4,"wm",0,NULL,1,1,1,0,0},
 	// {"getbit",getbitCommand,3,"rF",0,NULL,1,1,1,0,0},
-	// {"setrange",setrangeCommand,4,"wm",0,NULL,1,1,1,0,0},
+	{"setrange",setrangeCommand,4,"wm",0,1,1,1,0,0},
 	{"getrange",getrangeCommand,4,"r",0,1,1,1,0,0},
 	{"substr",getrangeCommand,4,"r",0,1,1,1,0,0},
 	// {"incr",incrCommand,2,"wmF",0,NULL,1,1,1,0,0},
