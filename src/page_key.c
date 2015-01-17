@@ -96,7 +96,7 @@ static int rl_key_get_ignore_expire(struct rlite *db, const unsigned char *key, 
 	retval = rl_btree_find_score(db, btree, digest, &tmp, NULL, NULL);
 	if (retval == RL_FOUND) {
 		key_obj = tmp;
-		if (ignore_expire == 0 && key_obj->expires != 0 && key_obj->expires < rl_mstime()) {
+		if (ignore_expire == 0 && key_obj->expires != 0 && key_obj->expires <= rl_mstime()) {
 			rl_key_delete_with_value(db, key, keylen);
 			retval = RL_NOT_FOUND;
 			goto cleanup;
