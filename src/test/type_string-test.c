@@ -443,6 +443,55 @@ cleanup:
 	rl_close(db);
 	return retval;
 }
+/*
+redis> SET mykey "\xff\xf0\x00"
+OK
+redis> BITPOS mykey 0
+(integer) 12
+redis> SET mykey "\x00\xff\xf0"
+OK
+redis> BITPOS mykey 1 0
+(integer) 8
+redis> BITPOS mykey 1 2
+(integer) 16
+ */
+
+static int basic_test_set_bitpos(int _commit)
+{
+	int retval = 0;
+	fprintf(stderr, "Start basic_test_set_bitpos %d\n", _commit);
+
+	rlite *db = NULL;
+	RL_CALL_VERBOSE(setup_db, RL_OK, &db, _commit, 1);
+	unsigned char *key = UNSIGN("my key");
+	long keylen = strlen((char *)key);
+	unsigned char *value = UNSIGN("\xff\xf0\x00");
+	long valuelen = 3;
+	unsigned char *value2 = UNSIGN("\x00\xff\xf0");
+	long value2len = 3;
+	long bitpos;
+
+	RL_CALL_VERBOSE(rl_set, RL_OK, db, key, keylen, value, valuelen, 0, 0);
+	RL_BALANCED();
+
+	//  int rl_bitpos(struct rlite *db, const unsigned char *key, long keylen, int bit, long start, long stop, int end_given, long *position)
+	RL_CALL_VERBOSE(rl_bitpos, RL_OK, db, key, keylen, 0, 0, -1, 0, &bitpos);
+	EXPECT_LONG(bitpos, 12);
+
+	RL_CALL_VERBOSE(rl_set, RL_OK, db, key, keylen, value2, value2len, 0, 0);
+	RL_BALANCED();
+
+	RL_CALL_VERBOSE(rl_bitpos, RL_OK, db, key, keylen, 1, 0, -1, 0, &bitpos);
+	EXPECT_LONG(bitpos, 8);
+	RL_CALL_VERBOSE(rl_bitpos, RL_OK, db, key, keylen, 1, 2, -1, 1, &bitpos);
+	EXPECT_LONG(bitpos, 16);
+
+	fprintf(stderr, "End basic_test_set_bitpos\n");
+	retval = 0;
+cleanup:
+	rl_close(db);
+	return retval;
+}
 
 RL_TEST_MAIN_START(type_string_test)
 {
@@ -462,6 +511,7 @@ RL_TEST_MAIN_START(type_string_test)
 		RL_TEST(basic_test_set_getbit, i);
 		RL_TEST(basic_test_set_bitop, i);
 		RL_TEST(basic_test_set_bitcount, i);
+		RL_TEST(basic_test_set_bitpos, i);
 	}
 }
 RL_TEST_MAIN_END

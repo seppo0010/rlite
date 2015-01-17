@@ -317,6 +317,60 @@ cleanup:
 	return retval;
 }
 
+int rl_bitpos(struct rlite *db, const unsigned char *key, long keylen, int bit, long start, long stop, int end_given, long *position)
+{
+	int retval;
+	unsigned char *value = NULL;
+	long valuelen;
+
+	if (bit != 0 && bit != 1) {
+		retval = RL_INVALID_PARAMETERS;
+		goto cleanup;
+	}
+
+	RL_CALL(rl_getrange, RL_OK, db, key, keylen, start, stop, &value, &valuelen);
+
+	if (valuelen == 0) {
+		*position = -1;
+		retval = RL_OK;
+		goto cleanup;
+	}
+
+	long bytes = stop - start + 1;
+	// stop may be after the end of the string and in that case it is treated
+	// as if it had 0 padding
+	//
+	// however, it can also be negative! the following check will handle
+	// the negative case (which cannot exceed the string size)
+	if (bytes < valuelen) {
+		bytes = valuelen;
+	}
+	long pos = bitpos(value, bytes, bit);
+
+	/* If we are looking for clear bits, and the user specified an exact
+	 * range with start-end, we can't consider the right of the range as
+	 * zero padded (as we do when no explicit end is given).
+	 *
+	 * So if bitpos() returns the first bit outside the range,
+	 * we return -1 to the caller, to mean, in the specified range there
+	 * is not a single "0" bit. */
+	if (end_given && bit == 0 && pos == bytes * 8) {
+		*position = -1;
+		retval = RL_OK;
+		goto cleanup;
+	}
+
+	if (pos != -1) {
+		pos += start * 8; /* Adjust for the bytes we skipped. */
+	}
+
+	*position = pos;
+	retval = RL_OK;
+cleanup:
+	rl_free(value);
+	return retval;
+}
+
 int rl_string_pages(struct rlite *db, long page, short *pages)
 {
 	return rl_multi_string_pages(db, page, pages);
