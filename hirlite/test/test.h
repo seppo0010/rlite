@@ -36,3 +36,13 @@
 		fprintf(stderr, "Expected reply to be NIL, got %d instead on line %d\n", reply->type, __LINE__);\
 		return 1;\
 	}
+#define EXPECT_LEN(reply, expectedlen)\
+	NO_ERROR(reply);\
+	if (reply->type != RLITE_REPLY_ARRAY) {\
+		fprintf(stderr, "Expected reply to be ARRAY, got %d instead on line %d\n", reply->type, __LINE__);\
+		return 1;\
+	}\
+	if (reply->elements != expectedlen) {\
+		fprintf(stderr, "Expected reply length to be %ld got %ld instead on line %d\n", (long)expectedlen, reply->elements, __LINE__);\
+		return 1;\
+	}

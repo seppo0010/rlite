@@ -2309,6 +2309,51 @@ cleanup:
 	return;
 }
 
+static void mgetCommand(rliteClient *c) {
+	int retval, i = 0, keyc = c->argc - 1;
+	unsigned char *key;
+	long keylen;
+	unsigned char *value;
+	long valuelen;
+
+	c->reply = createReplyObject(RLITE_REPLY_ARRAY);
+	c->reply->elements = keyc;
+	c->reply->element = malloc(sizeof(rliteReply*) * c->reply->elements);
+	if (!c->reply->element) {
+		free(c->reply);
+		c->reply = NULL;
+		__rliteSetError(c->context, RLITE_ERR_OOM, "Out of memory");
+		goto cleanup;
+	}
+
+	for (i = 0; i < keyc; i++) {
+		key = (unsigned char *)c->argv[1 + i];
+		keylen = (long)c->argvlen[1 + i];
+		int retval = rl_get(c->context->db, key, keylen, &value, &valuelen);
+		// return nil for keys that are not strings
+		if (retval == RL_WRONG_TYPE) {
+			retval = RL_NOT_FOUND;
+		}
+		RLITE_SERVER_ERR(c, retval);
+		if (retval == RL_NOT_FOUND) {
+			c->reply->element[i] = createReplyObject(RLITE_REPLY_NIL);
+		} else {
+			c->reply->element[i] = createStringObject((char *)value, valuelen);
+			rl_free(value);
+		}
+	}
+	retval = RL_OK;
+cleanup:
+	if (retval != RL_OK) {
+		for (; i >= 0; i--) {
+			free(c->reply->element[i]);
+		}
+		free(c->reply);
+		c->reply = NULL;
+	}
+	return;
+}
+
 static void delCommand(rliteClient *c) {
 	int deleted = 0, j, retval;
 
@@ -2507,7 +2552,7 @@ struct rliteCommand rliteCommandTable[] = {
 	// {"substr",getrangeCommand,4,"r",0,NULL,1,1,1,0,0},
 	// {"incr",incrCommand,2,"wmF",0,NULL,1,1,1,0,0},
 	// {"decr",decrCommand,2,"wmF",0,NULL,1,1,1,0,0},
-	// {"mget",mgetCommand,-2,"r",0,NULL,1,-1,1,0,0},
+	{"mget",mgetCommand,-2,"r",0,1,-1,1,0,0},
 	{"rpush",rpushCommand,-3,"wmF",0,1,1,1,0,0},
 	{"lpush",lpushCommand,-3,"wmF",0,1,1,1,0,0},
 	{"rpushx",rpushxCommand,3,"wmF",0,1,1,1,0,0},
