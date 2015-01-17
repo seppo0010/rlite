@@ -502,6 +502,37 @@ int test_incr() {
 	return 0;
 }
 
+int test_incrbyfloat() {
+	rliteContext *context = rliteConnect(":memory:", 0);
+
+	rliteReply* reply;
+	size_t argvlen[100];
+
+	{
+		char* argv[100] = {"incrbyfloat", "mykey", "1.2", NULL};
+		reply = rliteCommandArgv(context, populateArgvlen(argv, argvlen), argv, argvlen);
+		EXPECT_STR(reply, "1.2", 3);
+		rliteFreeReplyObject(reply);
+	}
+
+	{
+		char* argv[100] = {"incrbyfloat", "mykey", "2.3", NULL};
+		reply = rliteCommandArgv(context, populateArgvlen(argv, argvlen), argv, argvlen);
+		EXPECT_STR(reply, "3.5", 3);
+		rliteFreeReplyObject(reply);
+	}
+
+	{
+		char* argv[100] = {"get", "mykey", NULL};
+		reply = rliteCommandArgv(context, populateArgvlen(argv, argvlen), argv, argvlen);
+		EXPECT_STR(reply, "3.500000", 8);
+		rliteFreeReplyObject(reply);
+	}
+
+	rliteFree(context);
+	return 0;
+}
+
 int run_string() {
 	if (test_set() != 0) {
 		return 1;
@@ -543,6 +574,9 @@ int run_string() {
 		return 1;
 	}
 	if (test_incr() != 0) {
+		return 1;
+	}
+	if (test_incrbyfloat() != 0) {
 		return 1;
 	}
 	return 0;

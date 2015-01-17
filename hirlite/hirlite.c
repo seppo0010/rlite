@@ -2513,6 +2513,23 @@ static void decrbyCommand(rliteClient *c) {
 	incrGenericCommand(c, -decrement);
 }
 
+static void incrbyfloatCommand(rliteClient *c) {
+	unsigned char *key = UNSIGN(c->argv[1]);
+	long keylen = c->argvlen[1];
+	double increment;
+	double newvalue;
+
+	if ((getDoubleFromObjectOrReply(c, c->argv[2], &increment, NULL) != RLITE_OK)) return;
+
+	int retval = rl_incrbyfloat(c->context->db, key, keylen, increment, &newvalue);
+	RLITE_SERVER_ERR(c, retval);
+	if (retval == RL_OK) {
+		c->reply = createDoubleObject(newvalue);
+	}
+cleanup:
+	return;
+}
+
 static void delCommand(rliteClient *c) {
 	int deleted = 0, j, retval;
 
@@ -2781,7 +2798,7 @@ struct rliteCommand rliteCommandTable[] = {
 	// {"hscan",hscanCommand,-3,"rR",0,NULL,1,1,1,0,0},
 	{"incrby",incrbyCommand,3,"wmF",0,1,1,1,0,0},
 	{"decrby",decrbyCommand,3,"wmF",0,1,1,1,0,0},
-	// {"incrbyfloat",incrbyfloatCommand,3,"wmF",0,NULL,1,1,1,0,0},
+	{"incrbyfloat",incrbyfloatCommand,3,"wmF",0,1,1,1,0,0},
 	{"getset",getsetCommand,3,"wm",0,1,1,1,0,0},
 	{"mset",msetCommand,-3,"wm",0,1,-1,2,0,0},
 	{"msetnx",msetnxCommand,-3,"wm",0,1,-1,2,0,0},
