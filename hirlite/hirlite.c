@@ -22,7 +22,7 @@
 		goto cleanup;\
 	}\
 	if (retval == RL_NAN) {\
-		c->reply = createErrorObject("resulting score is not a number (NaN)");\
+		c->reply = createErrorObject("ERR resulting score is not a number (NaN)");\
 		goto cleanup;\
 	}\
 
@@ -237,7 +237,7 @@ static int getDoubleFromObjectOrReply(rliteClient *c, const char *o, double *tar
 		if (msg != NULL) {
 			c->reply = createErrorObject(msg);
 		} else {
-			c->reply = createErrorObject("value is not a valid float");
+			c->reply = createErrorObject("ERR value is not a valid float");
 		}
 		return RLITE_ERR;
 	}
@@ -267,7 +267,7 @@ static int getLongLongFromObjectOrReply(rliteClient *c, const char *o, long long
 		if (msg != NULL) {
 			c->reply = createErrorObject(msg);
 		} else {
-			c->reply = createErrorObject("value is not an integer or out of range");
+			c->reply = createErrorObject("ERR value is not an integer or out of range");
 		}
 		return RLITE_ERR;
 	}
@@ -283,7 +283,7 @@ static int getLongFromObjectOrReply(rliteClient *c, const char *o, long *target,
 		if (msg != NULL) {
 			c->reply = createErrorObject(msg);
 		} else {
-			c->reply = createErrorObject("value is out of range");
+			c->reply = createErrorObject("ERR value is out of range");
 		}
 		return RLITE_ERR;
 	}
@@ -916,7 +916,7 @@ static void zremrangeGenericCommand(rliteClient *c, int rangetype) {
 		retval = rl_zremrangebyrank(c->context->db, UNSIGN(c->argv[1]), c->argvlen[1], start, end, &deleted);
 	} else if (rangetype == ZRANGE_SCORE) {
 		if (zslParseRange(c->argv[2],c->argv[3],&rlrange) != RLITE_OK) {
-			c->reply = createErrorObject("min or max is not a float");
+			c->reply = createErrorObject("ERR min or max is not a float");
 			return;
 		}
 		retval = rl_zremrangebyscore(c->context->db, UNSIGN(c->argv[1]), c->argvlen[1], &rlrange, &deleted);
@@ -970,7 +970,7 @@ static void zunionInterGenericCommand(rliteClient *c, int op) {
 		return;
 
 	if (setnum < 1) {
-		c->reply = createErrorObject("at least 1 input key is needed for ZUNIONSTORE/ZINTERSTORE");
+		c->reply = createErrorObject("ERR at least 1 input key is needed for ZUNIONSTORE/ZINTERSTORE");
 		return;
 	}
 
@@ -1061,7 +1061,7 @@ static void genericZrangebyscoreCommand(rliteClient *c, int reverse) {
 	}
 
 	if (zslParseRange(c->argv[minidx],c->argv[maxidx],&range) != RLITE_OK) {
-		c->reply = createErrorObject("min or max is not a float");
+		c->reply = createErrorObject("ERR min or max is not a float");
 		return;
 	}
 
@@ -1194,7 +1194,7 @@ static void zcountCommand(rliteClient *c) {
 
 	/* Parse the range arguments */
 	if (zslParseRange(c->argv[2],c->argv[3],&rlrange) != RLITE_OK) {
-		c->reply = createErrorObject("min or max is not a float");
+		c->reply = createErrorObject("ERR min or max is not a float");
 		return;
 	}
 
@@ -1371,7 +1371,7 @@ static void bitopCommand(rliteClient *c) {
 
 	/* Sanity check: NOT accepts only a single key argument. */
 	if (op == BITOP_NOT && c->argc != 4) {
-		c->reply = createErrorObject("BITOP NOT must be called with a single source key.");
+		c->reply = createErrorObject("ERR BITOP NOT must be called with a single source key.");
 		return;
 	}
 
@@ -1482,11 +1482,11 @@ static void hincrbyCommand(rliteClient *c) {
 
 	retval = rl_hincrby(c->context->db, key, keylen, UNSIGN(c->argv[2]), c->argvlen[2], increment, &newvalue);
 	if (retval == RL_NAN) {
-		c->reply = createErrorObject("hash value is not an integer");
+		c->reply = createErrorObject("ERR hash value is not an integer");
 		goto cleanup;
 	}
 	else if (retval == RL_OVERFLOW) {
-		c->reply = createErrorObject("increment or decrement would overflow");
+		c->reply = createErrorObject("ERR increment or decrement would overflow");
 		goto cleanup;
 	}
 	RLITE_SERVER_ERR(c, retval);
@@ -1505,7 +1505,7 @@ static void hincrbyfloatCommand(rliteClient *c) {
 
 	retval = rl_hincrbyfloat(c->context->db, key, keylen, UNSIGN(c->argv[2]), c->argvlen[2], increment, &newvalue);
 	if (retval == RL_NAN) {
-		c->reply = createErrorObject("hash value is not a float");
+		c->reply = createErrorObject("ERR hash value is not a float");
 		goto cleanup;
 	}
 	RLITE_SERVER_ERR(c, retval);
@@ -2855,7 +2855,7 @@ static void debugCommand(rliteClient *c) {
 		c->reply = createStatusObject(RLITE_STR_OK);
 	} else if (!strcasecmp(c->argv[1],"assert")) {
 		// TODO
-		c->reply = createErrorObject("Not implemented");
+		c->reply = createErrorObject("ERR Not implemented");
 	} else if (!strcasecmp(c->argv[1],"reload")) {
 		c->reply = createStatusObject(RLITE_STR_OK);
 	} else if (!strcasecmp(c->argv[1],"loadaof")) {
@@ -2871,12 +2871,12 @@ static void debugCommand(rliteClient *c) {
 		}
 	} else if (!strcasecmp(c->argv[1],"sdslen") && c->argc == 3) {
 		// TODO
-		c->reply = createErrorObject("Not implemented");
+		c->reply = createErrorObject("ERR Not implemented");
 	} else if (!strcasecmp(c->argv[1],"populate") &&
 			   (c->argc == 3 || c->argc == 4)) {
-		c->reply = createErrorObject("Not implemented");
+		c->reply = createErrorObject("ERR Not implemented");
 	} else if (!strcasecmp(c->argv[1],"digest") && c->argc == 2) {
-		c->reply = createErrorObject("Not implemented");
+		c->reply = createErrorObject("ERR Not implemented");
 	} else if (!strcasecmp(c->argv[1],"sleep") && c->argc == 3) {
 		double dtime = strtod(c->argv[2], NULL);
 		long long utime = dtime*1000000;
@@ -2889,7 +2889,7 @@ static void debugCommand(rliteClient *c) {
 	} else if (!strcasecmp(c->argv[1],"set-active-expire") &&
 			   c->argc == 3)
 	{
-		c->reply = createErrorObject("Not implemented");
+		c->reply = createErrorObject("ERR Not implemented");
 	} else if (!strcasecmp(c->argv[1],"error") && c->argc == 3) {
 		c->reply = createStringObject(c->argv[2], c->argvlen[2]);
 	} else {
