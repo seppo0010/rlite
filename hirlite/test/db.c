@@ -90,11 +90,54 @@ int test_dbsize() {
 	return 0;
 }
 
+int test_expire(char *command, char *time) {
+	rliteContext *context = rliteConnect(":memory:", 0);
+
+	rliteReply* reply;
+	size_t argvlen[100];
+
+	{
+		char* argv[100] = {"set", "key1", "mydata", NULL};
+		reply = rliteCommandArgv(context, populateArgvlen(argv, argvlen), argv, argvlen);
+		EXPECT_STATUS(reply, "OK", 2);
+		rliteFreeReplyObject(reply);
+	}
+
+	{
+		char* argv[100] = {command, "key1", time, NULL};
+		reply = rliteCommandArgv(context, populateArgvlen(argv, argvlen), argv, argvlen);
+		EXPECT_INTEGER(reply, 1);
+		rliteFreeReplyObject(reply);
+	}
+
+	{
+		char* argv[100] = {"exists", "key1", NULL};
+		reply = rliteCommandArgv(context, populateArgvlen(argv, argvlen), argv, argvlen);
+		EXPECT_INTEGER(reply, 0);
+		rliteFreeReplyObject(reply);
+	}
+
+	rliteFree(context);
+	return 0;
+}
+
 int run_db() {
 	if (test_keys() != 0) {
 		return 1;
 	}
 	if (test_dbsize() != 0) {
+		return 1;
+	}
+	if (test_expire("expire", "-1") != 0) {
+		return 1;
+	}
+	if (test_expire("pexpire", "-1") != 0) {
+		return 1;
+	}
+	if (test_expire("expireat", "1000") != 0) {
+		return 1;
+	}
+	if (test_expire("pexpireat", "1000") != 0) {
 		return 1;
 	}
 	return 0;

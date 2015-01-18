@@ -2700,6 +2700,54 @@ cleanup:
 	return;
 }
 
+static void expireGenericCommand(rliteClient *c, unsigned long long expires) {
+	unsigned char *key = UNSIGN(c->argv[1]);
+	long keylen = c->argvlen[1];
+	int retval = rl_key_expires(c->context->db, key, keylen, expires);
+	RLITE_SERVER_ERR(c, retval);
+	if (retval == RL_NOT_FOUND) {
+		c->reply = createLongLongObject(0);
+	} else if (retval == RL_OK) {
+		c->reply = createLongLongObject(1);
+	}
+cleanup:
+	return;
+}
+
+static void expireCommand(rliteClient *c) {
+	unsigned long long now = rl_mstime();
+	long long arg;
+	if (getLongLongFromObjectOrReply(c, c->argv[2], &arg, RLITE_SYNTAXERR) != RLITE_OK) {
+		return;
+	}
+	expireGenericCommand(c, now + arg * 1000);
+}
+
+static void expireatCommand(rliteClient *c) {
+	long long arg;
+	if (getLongLongFromObjectOrReply(c, c->argv[2], &arg, RLITE_SYNTAXERR) != RLITE_OK) {
+		return;
+	}
+	expireGenericCommand(c, arg * 1000);
+}
+
+static void pexpireCommand(rliteClient *c) {
+	unsigned long long now = rl_mstime();
+	long long arg;
+	if (getLongLongFromObjectOrReply(c, c->argv[2], &arg, RLITE_SYNTAXERR) != RLITE_OK) {
+		return;
+	}
+	expireGenericCommand(c, now + arg);
+}
+
+static void pexpireatCommand(rliteClient *c) {
+	long long arg;
+	if (getLongLongFromObjectOrReply(c, c->argv[2], &arg, RLITE_SYNTAXERR) != RLITE_OK) {
+		return;
+	}
+	expireGenericCommand(c, arg);
+}
+
 static void delCommand(rliteClient *c) {
 	int deleted = 0, j, retval;
 
@@ -3021,10 +3069,10 @@ struct rliteCommand rliteCommandTable[] = {
 	// {"move",moveCommand,3,"wF",0,NULL,1,1,1,0,0},
 	// {"rename",renameCommand,3,"w",0,NULL,1,2,1,0,0},
 	// {"renamenx",renamenxCommand,3,"wF",0,NULL,1,2,1,0,0},
-	// {"expire",expireCommand,3,"wF",0,NULL,1,1,1,0,0},
-	// {"expireat",expireatCommand,3,"wF",0,NULL,1,1,1,0,0},
-	// {"pexpire",pexpireCommand,3,"wF",0,NULL,1,1,1,0,0},
-	// {"pexpireat",pexpireatCommand,3,"wF",0,NULL,1,1,1,0,0},
+	{"expire",expireCommand,3,"wF",0,1,1,1,0,0},
+	{"expireat",expireatCommand,3,"wF",0,1,1,1,0,0},
+	{"pexpire",pexpireCommand,3,"wF",0,1,1,1,0,0},
+	{"pexpireat",pexpireatCommand,3,"wF",0,1,1,1,0,0},
 	{"keys",keysCommand,2,"rS",0,0,0,0,0,0},
 	// {"scan",scanCommand,-2,"rR",0,NULL,0,0,0,0,0},
 	{"dbsize",dbsizeCommand,1,"rF",0,0,0,0,0,0},
