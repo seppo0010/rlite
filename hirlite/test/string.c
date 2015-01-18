@@ -86,7 +86,7 @@ int test_setex() {
 	size_t argvlen[100];
 
 	{
-		char* argv[100] = {"setex", "mykey", "mydata", "1", NULL};
+		char* argv[100] = {"setex", "mykey", "1", "mydata", NULL};
 		reply = rliteCommandArgv(context, populateArgvlen(argv, argvlen), argv, argvlen);
 		EXPECT_STATUS(reply, "OK", 2);
 		rliteFreeReplyObject(reply);
@@ -119,7 +119,7 @@ int test_psetex() {
 	size_t argvlen[100];
 
 	{
-		char* argv[100] = {"psetex", "mykey", "mydata", "100", NULL};
+		char* argv[100] = {"psetex", "mykey", "100", "mydata", NULL};
 		reply = rliteCommandArgv(context, populateArgvlen(argv, argvlen), argv, argvlen);
 		EXPECT_STATUS(reply, "OK", 2);
 		rliteFreeReplyObject(reply);
