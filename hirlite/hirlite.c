@@ -2759,6 +2759,31 @@ static void delCommand(rliteClient *c) {
 	}
 	c->reply = createLongLongObject(deleted);
 }
+static void renameGenericCommand(rliteClient *c, int overwrite) {
+	unsigned char *src = UNSIGN(c->argv[1]);
+	long srclen = c->argvlen[1];
+	unsigned char *target = UNSIGN(c->argv[2]);
+	long targetlen = c->argvlen[2];
+	int retval = rl_rename(c->context->db, src, srclen, target, targetlen, overwrite);
+	RLITE_SERVER_ERR(c, retval);
+	if (retval == RL_OK && overwrite) {
+		c->reply = createStatusObject(RLITE_STR_OK);
+	} else if (retval == RL_OK && !overwrite) {
+		c->reply = createLongLongObject(1);
+	} else if (retval == RL_FOUND && !overwrite) {
+		c->reply = createLongLongObject(0);
+	}
+cleanup:
+	return;
+}
+
+static void renameCommand(rliteClient *c) {
+	renameGenericCommand(c, 1);
+}
+
+static void renamenxCommand(rliteClient *c) {
+	renameGenericCommand(c, 0);
+}
 
 static void dbsizeCommand(rliteClient *c) {
 	long size;
@@ -3067,8 +3092,8 @@ struct rliteCommand rliteCommandTable[] = {
 	// {"randomkey",randomkeyCommand,1,"rR",0,NULL,0,0,0,0,0},
 	// {"select",selectCommand,2,"rlF",0,NULL,0,0,0,0,0},
 	// {"move",moveCommand,3,"wF",0,NULL,1,1,1,0,0},
-	// {"rename",renameCommand,3,"w",0,NULL,1,2,1,0,0},
-	// {"renamenx",renamenxCommand,3,"wF",0,NULL,1,2,1,0,0},
+	{"rename",renameCommand,3,"w",0,1,2,1,0,0},
+	{"renamenx",renamenxCommand,3,"wF",0,1,2,1,0,0},
 	{"expire",expireCommand,3,"wF",0,1,1,1,0,0},
 	{"expireat",expireatCommand,3,"wF",0,1,1,1,0,0},
 	{"pexpire",pexpireCommand,3,"wF",0,1,1,1,0,0},
