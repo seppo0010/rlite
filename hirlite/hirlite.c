@@ -2356,20 +2356,20 @@ static void setnxCommand(rliteClient *c) {
 
 static void setexCommand(rliteClient *c) {
 	long long expire;
-	if (getLongLongFromObject(c->argv[3], &expire) != RLITE_OK) {
+	if (getLongLongFromObject(c->argv[2], &expire) != RLITE_OK) {
 		c->reply = createErrorObject(RLITE_SYNTAXERR);
 		return;
 	}
-	setGenericCommand(c, REDIS_SET_NO_FLAGS, UNSIGN(c->argv[1]), c->argvlen[1], UNSIGN(c->argv[2]), c->argvlen[2], expire * 1000);
+	setGenericCommand(c, REDIS_SET_NO_FLAGS, UNSIGN(c->argv[1]), c->argvlen[1], UNSIGN(c->argv[3]), c->argvlen[3], expire * 1000);
 }
 
 static void psetexCommand(rliteClient *c) {
 	long long expire;
-	if (getLongLongFromObject(c->argv[3], &expire) != RLITE_OK) {
+	if (getLongLongFromObject(c->argv[2], &expire) != RLITE_OK) {
 		c->reply = createErrorObject(RLITE_SYNTAXERR);
 		return;
 	}
-	setGenericCommand(c, REDIS_SET_NO_FLAGS, UNSIGN(c->argv[1]), c->argvlen[1], UNSIGN(c->argv[2]), c->argvlen[2], expire);
+	setGenericCommand(c, REDIS_SET_NO_FLAGS, UNSIGN(c->argv[1]), c->argvlen[1], UNSIGN(c->argv[3]), c->argvlen[3], expire);
 }
 
 static void getCommand(rliteClient *c) {
