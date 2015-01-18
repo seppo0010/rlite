@@ -2770,7 +2770,7 @@ static void moveCommand(rliteClient *c) {
 	unsigned char *key = UNSIGN(c->argv[1]);
 	long keylen = c->argvlen[1];
 	long long db;
-	if (getLongLongFromObjectOrReply(c, c->argv[2], &db, RLITE_SYNTAXERR) != RLITE_OK) {
+	if (getLongLongFromObjectOrReply(c, c->argv[2], &db, "ERR index out of range") != RLITE_OK) {
 		return;
 	}
 	int retval = rl_move(c->context->db, key, keylen, db);
