@@ -217,27 +217,35 @@ static int addReplyErrorFormat(rliteContext *c, const char *fmt, ...) {
 	return RLITE_OK;
 }
 
-static int getDoubleFromObject(const char *o, double *target) {
+static int getDoubleFromObject(const char *_o, long olen, double *target) {
 	double value;
 	char *eptr;
+	char o[64];
 
-	if (o == NULL) {
-		value = 0;
-	} else {
-		errno = 0;
-		value = strtod(o, &eptr);
-		if (isspace(((char*)o)[0]) || eptr[0] != '\0' ||
-				(errno == ERANGE && (value == HUGE_VAL ||
-									 value == -HUGE_VAL || value == 0)) ||
-				errno == EINVAL || isnan(value))
+	if (_o == NULL) {
+		*target = 0;
+		return RLITE_OK;
+	}
+	if (olen > 63) {
 		return RLITE_ERR;
 	}
+	memcpy(o, _o, olen * sizeof(char));
+	// valgrind likes to read 8 bytes at a time
+	memset(&o[olen], 0, 64 - olen);
+
+	errno = 0;
+	value = strtod(o, &eptr);
+	if (isspace(((char*)o)[0]) || eptr[0] != '\0' ||
+			(errno == ERANGE && (value == HUGE_VAL ||
+								 value == -HUGE_VAL || value == 0)) ||
+			errno == EINVAL || isnan(value))
+		return RLITE_ERR;
 	*target = value;
 	return RLITE_OK;
 }
 
-static int getDoubleFromObjectOrReply(rliteClient *c, const char *o, double *target, const char *msg) {
-	if (getDoubleFromObject(o, target) != RLITE_OK) {
+static int getDoubleFromObjectOrReply(rliteClient *c, const char *o, long olen, double *target, const char *msg) {
+	if (getDoubleFromObject(o, olen, target) != RLITE_OK) {
 		if (msg != NULL) {
 			c->reply = createErrorObject(msg);
 		} else {
@@ -786,7 +794,7 @@ static void zaddGenericCommand(rliteClient *c, int incr) {
 	 * either execute fully or nothing at all. */
 	scores = malloc(sizeof(double) * elements);
 	for (j = 0; j < elements; j++) {
-		if (getDoubleFromObjectOrReply(c,c->argv[2+j*2],&scores[j],NULL)
+		if (getDoubleFromObjectOrReply(c, c->argv[2+j*2], c->argvlen[2+j*2], &scores[j],NULL)
 			!= RLITE_OK) goto cleanup;
 	}
 
@@ -993,7 +1001,7 @@ static void zunionInterGenericCommand(rliteClient *c, int op) {
 			}
 			weights = malloc(sizeof(double) * setnum);
 			for (i = 0; i < setnum; i++) {
-				if (getDoubleFromObjectOrReply(c,c->argv[j + 1 + i], &weights[i],
+				if (getDoubleFromObjectOrReply(c,c->argv[j + 1 + i],c->argvlen[j + 1 + i], &weights[i],
 						"weight value is not a float") != RLITE_OK) {
 					free(weights);
 					return;
@@ -1505,7 +1513,7 @@ static void hincrbyfloatCommand(rliteClient *c) {
 	int retval;
 	double increment, newvalue;
 
-	if ((getDoubleFromObjectOrReply(c, c->argv[3], &increment, NULL) != RLITE_OK)) return;
+	if ((getDoubleFromObjectOrReply(c, c->argv[3], c->argvlen[3], &increment, NULL) != RLITE_OK)) return;
 
 	retval = rl_hincrbyfloat(c->context->db, key, keylen, UNSIGN(c->argv[2]), c->argvlen[2], increment, &newvalue);
 	if (retval == RL_NAN) {
@@ -2633,7 +2641,7 @@ static void incrbyfloatCommand(rliteClient *c) {
 	double increment;
 	double newvalue;
 
-	if ((getDoubleFromObjectOrReply(c, c->argv[2], &increment, NULL) != RLITE_OK)) return;
+	if ((getDoubleFromObjectOrReply(c, c->argv[2], c->argvlen[2], &increment, NULL) != RLITE_OK)) return;
 
 	int retval = rl_incrbyfloat(c->context->db, key, keylen, increment, &newvalue);
 	if (retval == RL_NAN) {
