@@ -1323,6 +1323,30 @@ cleanup:
 	return;
 }
 
+static void bitcountCommand(rliteClient *c) {
+	unsigned char *key = UNSIGN(c->argv[1]);
+	long keylen = c->argvlen[1];
+	long start = 0, stop = -1;
+	int retval;
+	long bitcount;
+
+	if (c->argc != 2 && c->argc != 4) {
+		addReplyErrorFormat(c->context, RLITE_WRONGNUMBEROFARGUMENTS, c->argv[0]);
+		return;
+	}
+
+	if (c->argc == 4) {
+		if (getLongFromObjectOrReply(c, c->argv[2], &start, NULL) != RLITE_OK ||
+				getLongFromObjectOrReply(c, c->argv[3], &stop, NULL) != RLITE_OK)
+			return;
+	}
+
+	retval = rl_bitcount(c->context->db, key, keylen, start, stop, &bitcount);
+	RLITE_SERVER_ERR(c, retval);
+	c->reply = createLongLongObject(bitcount);
+cleanup:
+	return;
+}
 static void hdelCommand(rliteClient *c) {
 	unsigned char *key = UNSIGN(c->argv[1]);
 	size_t keylen = c->argvlen[1];
@@ -2865,7 +2889,7 @@ struct rliteCommand rliteCommandTable[] = {
 	// {"script",scriptCommand,-2,"ras",0,NULL,0,0,0,0,0},
 	// {"time",timeCommand,1,"rRF",0,NULL,0,0,0,0,0},
 	// {"bitop",bitopCommand,-4,"wm",0,NULL,2,-1,1,0,0},
-	// {"bitcount",bitcountCommand,-2,"r",0,NULL,1,1,1,0,0},
+	{"bitcount",bitcountCommand,-2,"r",0,1,1,1,0,0},
 	// {"bitpos",bitposCommand,-3,"r",0,NULL,1,1,1,0,0},
 	// {"wait",waitCommand,3,"rs",0,NULL,0,0,0,0,0},
 	// {"command",commandCommand,0,"rlt",0,NULL,0,0,0,0,0},

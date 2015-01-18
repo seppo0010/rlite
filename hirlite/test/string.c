@@ -533,6 +533,44 @@ int test_incrbyfloat() {
 	return 0;
 }
 
+int test_bitcount() {
+	rliteContext *context = rliteConnect(":memory:", 0);
+
+	rliteReply* reply;
+	size_t argvlen[100];
+
+	{
+		char* argv[100] = {"set", "mykey", "foobar", NULL};
+		reply = rliteCommandArgv(context, populateArgvlen(argv, argvlen), argv, argvlen);
+		EXPECT_STATUS(reply, "OK", 2);
+		rliteFreeReplyObject(reply);
+	}
+
+	{
+		char* argv[100] = {"bitcount", "mykey", NULL};
+		reply = rliteCommandArgv(context, populateArgvlen(argv, argvlen), argv, argvlen);
+		EXPECT_INTEGER(reply, 26);
+		rliteFreeReplyObject(reply);
+	}
+
+	{
+		char* argv[100] = {"bitcount", "mykey", "0", "0", NULL};
+		reply = rliteCommandArgv(context, populateArgvlen(argv, argvlen), argv, argvlen);
+		EXPECT_INTEGER(reply, 4);
+		rliteFreeReplyObject(reply);
+	}
+
+	{
+		char* argv[100] = {"bitcount", "mykey", "1", "1", NULL};
+		reply = rliteCommandArgv(context, populateArgvlen(argv, argvlen), argv, argvlen);
+		EXPECT_INTEGER(reply, 6);
+		rliteFreeReplyObject(reply);
+	}
+
+	rliteFree(context);
+	return 0;
+}
+
 int run_string() {
 	if (test_set() != 0) {
 		return 1;
@@ -577,6 +615,9 @@ int run_string() {
 		return 1;
 	}
 	if (test_incrbyfloat() != 0) {
+		return 1;
+	}
+	if (test_bitcount() != 0) {
 		return 1;
 	}
 	return 0;
