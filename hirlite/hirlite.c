@@ -2766,6 +2766,24 @@ cleanup:
 	return;
 }
 
+static void moveCommand(rliteClient *c) {
+	unsigned char *key = UNSIGN(c->argv[1]);
+	long keylen = c->argvlen[1];
+	long long db;
+	if (getLongLongFromObjectOrReply(c, c->argv[2], &db, RLITE_SYNTAXERR) != RLITE_OK) {
+		return;
+	}
+	int retval = rl_move(c->context->db, key, keylen, db);
+	RLITE_SERVER_ERR(c, retval);
+	if (retval == RL_FOUND || retval == RL_NOT_FOUND) {
+		c->reply = createLongLongObject(0);
+	} else if (retval == RL_OK) {
+		c->reply = createLongLongObject(1);
+	}
+cleanup:
+	return;
+}
+
 static void delCommand(rliteClient *c) {
 	int deleted = 0, j, retval;
 
@@ -3137,7 +3155,7 @@ struct rliteCommand rliteCommandTable[] = {
 	{"msetnx",msetnxCommand,-3,"wm",0,1,-1,2,0,0},
 	// {"randomkey",randomkeyCommand,1,"rR",0,NULL,0,0,0,0,0},
 	{"select",selectCommand,2,"rlF",0,0,0,0,0,0},
-	// {"move",moveCommand,3,"wF",0,NULL,1,1,1,0,0},
+	{"move",moveCommand,3,"wF",0,1,1,1,0,0},
 	{"rename",renameCommand,3,"w",0,1,2,1,0,0},
 	{"renamenx",renamenxCommand,3,"wF",0,1,2,1,0,0},
 	{"expire",expireCommand,3,"wF",0,1,1,1,0,0},

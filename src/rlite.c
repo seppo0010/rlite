@@ -1034,6 +1034,9 @@ int rl_move(struct rlite *db, unsigned char *key, long keylen, int database)
 	long value_page;
 	// this could be more efficient, if we don't delete the value page
 	RL_CALL(rl_key_get, RL_FOUND, db, key, keylen, &type, NULL, &value_page, &expires);
+	RL_CALL(rl_select, RL_OK, db, database);
+	RL_CALL(rl_key_get, RL_NOT_FOUND, db, key, keylen, NULL, NULL, NULL, NULL);
+	RL_CALL(rl_select, RL_OK, db, olddb);
 	RL_CALL(rl_key_delete, RL_OK, db, key, keylen);
 	RL_CALL(rl_select, RL_OK, db, database);
 	RL_CALL(rl_key_set, RL_OK, db, key, keylen, type, value_page, expires);
