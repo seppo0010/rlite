@@ -2696,6 +2696,17 @@ static void delCommand(rliteClient *c) {
 	c->reply = createLongLongObject(deleted);
 }
 
+static void dbsizeCommand(rliteClient *c) {
+	long size;
+	int retval = rl_dbsize(c->context->db, &size);
+	RLITE_SERVER_ERR(c, retval);
+	if (retval != RL_OK) {
+		goto cleanup;
+	}
+	c->reply = createLongLongObject(size);
+cleanup:
+	return;
+}
 static void keysCommand(rliteClient *c) {
 	long i, size = 0;
 	unsigned char **result = NULL;
@@ -3000,7 +3011,7 @@ struct rliteCommand rliteCommandTable[] = {
 	// {"pexpireat",pexpireatCommand,3,"wF",0,NULL,1,1,1,0,0},
 	{"keys",keysCommand,2,"rS",0,0,0,0,0,0},
 	// {"scan",scanCommand,-2,"rR",0,NULL,0,0,0,0,0},
-	// {"dbsize",dbsizeCommand,1,"rF",0,NULL,0,0,0,0,0},
+	{"dbsize",dbsizeCommand,1,"rF",0,0,0,0,0,0},
 	// {"auth",authCommand,2,"rsltF",0,NULL,0,0,0,0,0},
 	{"ping",pingCommand,-1,"rtF",0,0,0,0,0,0},
 	{"echo",echoCommand,2,"rF",0,0,0,0,0,0},

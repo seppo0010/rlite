@@ -52,8 +52,49 @@ int test_keys() {
 	return 0;
 }
 
+int test_dbsize() {
+	rliteContext *context = rliteConnect(":memory:", 0);
+
+	rliteReply* reply;
+	size_t argvlen[100];
+
+	{
+		char* argv[100] = {"set", "key1", "mydata", NULL};
+		reply = rliteCommandArgv(context, populateArgvlen(argv, argvlen), argv, argvlen);
+		EXPECT_STATUS(reply, "OK", 2);
+		rliteFreeReplyObject(reply);
+	}
+
+	{
+		char* argv[100] = {"dbsize", NULL};
+		reply = rliteCommandArgv(context, populateArgvlen(argv, argvlen), argv, argvlen);
+		EXPECT_INTEGER(reply, 1);
+		rliteFreeReplyObject(reply);
+	}
+
+	{
+		char* argv[100] = {"set", "key2", "otherdata", NULL};
+		reply = rliteCommandArgv(context, populateArgvlen(argv, argvlen), argv, argvlen);
+		EXPECT_STATUS(reply, "OK", 2);
+		rliteFreeReplyObject(reply);
+	}
+
+	{
+		char* argv[100] = {"dbsize", NULL};
+		reply = rliteCommandArgv(context, populateArgvlen(argv, argvlen), argv, argvlen);
+		EXPECT_INTEGER(reply, 2);
+		rliteFreeReplyObject(reply);
+	}
+
+	rliteFree(context);
+	return 0;
+}
+
 int run_db() {
 	if (test_keys() != 0) {
+		return 1;
+	}
+	if (test_dbsize() != 0) {
 		return 1;
 	}
 	return 0;
