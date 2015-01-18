@@ -2658,6 +2658,32 @@ cleanup:
 	return;
 }
 
+static void setbitCommand(rliteClient *c) {
+	unsigned char *key = UNSIGN(c->argv[1]);
+	long keylen = c->argvlen[1];
+	long long offset;
+	int previousvalue;
+	int bit;
+
+	if (getLongLongFromObjectOrReply(c, c->argv[2], &offset, RLITE_SYNTAXERR) != RLITE_OK) {
+		return;
+	}
+
+	if (c->argvlen[3] != 1 || (c->argv[3][0] != '0' && c->argv[3][0] != '1')) {
+		c->reply = createErrorObject(RLITE_SYNTAXERR);
+		return;
+	}
+
+	bit = c->argv[3][0] == '0' ? 0 : 1;
+	int retval = rl_setbit(c->context->db, key, keylen, offset, bit, &previousvalue);
+	RLITE_SERVER_ERR(c, retval);
+	if (retval == RL_OK) {
+		c->reply = createLongLongObject(previousvalue);
+	}
+cleanup:
+	return;
+}
+
 static void delCommand(rliteClient *c) {
 	int deleted = 0, j, retval;
 
@@ -2849,7 +2875,7 @@ struct rliteCommand rliteCommandTable[] = {
 	{"strlen",strlenCommand,2,"rF",0,1,1,1,0,0},
 	{"del",delCommand,-2,"w",0,1,-1,1,0,0},
 	{"exists",existsCommand,2,"rF",0,1,1,1,0,0},
-	// {"setbit",setbitCommand,4,"wm",0,NULL,1,1,1,0,0},
+	{"setbit",setbitCommand,4,"wm",0,1,1,1,0,0},
 	{"getbit",getbitCommand,3,"rF",0,1,1,1,0,0},
 	{"setrange",setrangeCommand,4,"wm",0,1,1,1,0,0},
 	{"getrange",getrangeCommand,4,"r",0,1,1,1,0,0},
