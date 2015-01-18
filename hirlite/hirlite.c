@@ -2748,6 +2748,24 @@ static void pexpireatCommand(rliteClient *c) {
 	expireGenericCommand(c, arg);
 }
 
+static void selectCommand(rliteClient *c) {
+	long long db;
+	if (getLongLongFromObjectOrReply(c, c->argv[1], &db, RLITE_SYNTAXERR) != RLITE_OK) {
+		return;
+	}
+	int retval = rl_select(c->context->db, db);
+	if (retval == RL_INVALID_PARAMETERS) {
+		c->reply = createErrorObject("ERR invalid DB index");
+		return;
+	}
+	RLITE_SERVER_ERR(c, retval);
+	if (retval == RL_OK) {
+		c->reply = createStatusObject(RLITE_STR_OK);
+	}
+cleanup:
+	return;
+}
+
 static void delCommand(rliteClient *c) {
 	int deleted = 0, j, retval;
 
@@ -3118,7 +3136,7 @@ struct rliteCommand rliteCommandTable[] = {
 	{"mset",msetCommand,-3,"wm",0,1,-1,2,0,0},
 	{"msetnx",msetnxCommand,-3,"wm",0,1,-1,2,0,0},
 	// {"randomkey",randomkeyCommand,1,"rR",0,NULL,0,0,0,0,0},
-	// {"select",selectCommand,2,"rlF",0,NULL,0,0,0,0,0},
+	{"select",selectCommand,2,"rlF",0,0,0,0,0,0},
 	// {"move",moveCommand,3,"wF",0,NULL,1,1,1,0,0},
 	{"rename",renameCommand,3,"w",0,1,2,1,0,0},
 	{"renamenx",renamenxCommand,3,"wF",0,1,2,1,0,0},

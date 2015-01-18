@@ -1018,6 +1018,9 @@ cleanup:
 
 int rl_select(struct rlite *db, int selected_database)
 {
+	if (selected_database < 0 || selected_database >= db->number_of_databases) {
+		return RL_INVALID_PARAMETERS;
+	}
 	db->selected_database = selected_database;
 	return RL_OK;
 }
