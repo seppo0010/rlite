@@ -21,6 +21,10 @@
 		c->reply = createErrorObject(RLITE_WRONGTYPEERR);\
 		goto cleanup;\
 	}\
+	if (retval == RL_OVERFLOW) {\
+		c->reply = createErrorObject("ERR increment would produce NaN or Infinity");\
+		return;\
+	}\
 	if (retval == RL_NAN) {\
 		c->reply = createErrorObject("ERR resulting score is not a number (NaN)");\
 		goto cleanup;\
@@ -2632,6 +2636,10 @@ static void incrbyfloatCommand(rliteClient *c) {
 	if ((getDoubleFromObjectOrReply(c, c->argv[2], &increment, NULL) != RLITE_OK)) return;
 
 	int retval = rl_incrbyfloat(c->context->db, key, keylen, increment, &newvalue);
+	if (retval == RL_NAN) {
+		c->reply = createErrorObject("ERR value is not a valid float");
+		goto cleanup;
+	}
 	RLITE_SERVER_ERR(c, retval);
 	if (retval == RL_OK) {
 		c->reply = createDoubleObject(newvalue);
