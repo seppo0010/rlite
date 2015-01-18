@@ -1644,7 +1644,6 @@ static void hmgetCommand(rliteClient *c) {
 			rl_free(values[i]);
 		}
 	}
-	retval = RL_OK;
 cleanup:
 	free(fields);
 	free(fieldslen);
@@ -2434,7 +2433,7 @@ cleanup:
 }
 
 static void mgetCommand(rliteClient *c) {
-	int retval, i = 0, keyc = c->argc - 1;
+	int retval = RL_OK, i = 0, keyc = c->argc - 1;
 	unsigned char *key;
 	long keylen;
 	unsigned char *value;
@@ -2453,7 +2452,7 @@ static void mgetCommand(rliteClient *c) {
 	for (i = 0; i < keyc; i++) {
 		key = (unsigned char *)c->argv[1 + i];
 		keylen = (long)c->argvlen[1 + i];
-		int retval = rl_get(c->context->db, key, keylen, &value, &valuelen);
+		retval = rl_get(c->context->db, key, keylen, &value, &valuelen);
 		// return nil for keys that are not strings
 		if (retval == RL_WRONG_TYPE) {
 			retval = RL_NOT_FOUND;
@@ -2499,7 +2498,6 @@ static void msetCommand(rliteClient *c) {
 		RLITE_SERVER_ERR(c, retval);
 	}
 	c->reply = createStatusObject(RLITE_STR_OK);
-	retval = RL_OK;
 cleanup:
 	return;
 }
@@ -2529,7 +2527,6 @@ static void msetnxCommand(rliteClient *c) {
 		}
 	}
 	c->reply = createLongLongObject(count);
-	retval = RL_OK;
 cleanup:
 	return;
 }
