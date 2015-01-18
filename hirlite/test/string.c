@@ -716,6 +716,78 @@ int test_bitopnot() {
 	return 0;
 }
 
+int test_bitpos() {
+	rliteContext *context = rliteConnect(":memory:", 0);
+
+	rliteReply* reply;
+	size_t argvlen[100];
+
+	{
+		char* argv[100] = {"set", "mykey", "\xff\xf0\x00", NULL};
+		populateArgvlen(argv, argvlen);
+		argvlen[2] = 3;
+		reply = rliteCommandArgv(context, 3, argv, argvlen);
+		EXPECT_STATUS(reply, "OK", 2);
+		rliteFreeReplyObject(reply);
+	}
+
+	{
+		char* argv[100] = {"bitpos", "mykey", "0", NULL};
+		reply = rliteCommandArgv(context, populateArgvlen(argv, argvlen), argv, argvlen);
+		EXPECT_INTEGER(reply, 12);
+		rliteFreeReplyObject(reply);
+	}
+
+	{
+		char* argv[100] = {"set", "mykey", "\x00\xff\xf0", NULL};
+		populateArgvlen(argv, argvlen);
+		argvlen[2] = 3;
+		reply = rliteCommandArgv(context, 3, argv, argvlen);
+		EXPECT_STATUS(reply, "OK", 2);
+		rliteFreeReplyObject(reply);
+	}
+
+	{
+		char* argv[100] = {"strlen", "mykey", NULL};
+		reply = rliteCommandArgv(context, populateArgvlen(argv, argvlen), argv, argvlen);
+		EXPECT_INTEGER(reply, 3);
+		rliteFreeReplyObject(reply);
+	}
+
+	{
+		char* argv[100] = {"bitpos", "mykey", "1", "0", NULL};
+		reply = rliteCommandArgv(context, populateArgvlen(argv, argvlen), argv, argvlen);
+		EXPECT_INTEGER(reply, 8);
+		rliteFreeReplyObject(reply);
+	}
+
+	{
+		char* argv[100] = {"bitpos", "mykey", "1", "2", NULL};
+		reply = rliteCommandArgv(context, populateArgvlen(argv, argvlen), argv, argvlen);
+		EXPECT_INTEGER(reply, 16);
+		rliteFreeReplyObject(reply);
+	}
+
+	{
+		char* argv[100] = {"set", "mykey", "\x00\x00\x00", NULL};
+		populateArgvlen(argv, argvlen);
+		argvlen[2] = 3;
+		reply = rliteCommandArgv(context, 3, argv, argvlen);
+		EXPECT_STATUS(reply, "OK", 2);
+		rliteFreeReplyObject(reply);
+	}
+
+	{
+		char* argv[100] = {"bitpos", "mykey", "1", NULL};
+		reply = rliteCommandArgv(context, populateArgvlen(argv, argvlen), argv, argvlen);
+		EXPECT_INTEGER(reply, -1);
+		rliteFreeReplyObject(reply);
+	}
+
+	rliteFree(context);
+	return 0;
+}
+
 int run_string() {
 	if (test_set() != 0) {
 		return 1;
@@ -775,6 +847,9 @@ int run_string() {
 		return 1;
 	}
 	if (test_bitopnot() != 0) {
+		return 1;
+	}
+	if (test_bitpos() != 0) {
 		return 1;
 	}
 	return 0;

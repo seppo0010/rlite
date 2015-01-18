@@ -1397,6 +1397,44 @@ cleanup:
 	return;
 }
 
+static void bitposCommand(rliteClient *c) {
+	unsigned char *key = UNSIGN(c->argv[1]);
+	long keylen = c->argvlen[1];
+	long start = 0, stop = -1;
+	int retval;
+	int bit;
+	long pos;
+
+	if (c->argc != 3 && c->argc != 4 && c->argc != 5) {
+		addReplyErrorFormat(c->context, RLITE_WRONGNUMBEROFARGUMENTS, c->argv[0]);
+		return;
+	}
+
+	if (c->argvlen[2] != 1 || (c->argv[2][0] != '0' && c->argv[2][0] != '1')) {
+		c->reply = createErrorObject(RLITE_SYNTAXERR);
+		return;
+	}
+	bit = c->argv[2][0] == '0' ? 0 : 1;
+
+	if (c->argc == 4) {
+		if (getLongFromObjectOrReply(c, c->argv[3], &start, NULL) != RLITE_OK)
+			return;
+	}
+
+	int end_given = 0;
+	if (c->argc == 5) {
+		end_given = 1;
+		if (getLongFromObjectOrReply(c, c->argv[4], &stop, NULL) != RLITE_OK)
+			return;
+	}
+
+	retval = rl_bitpos(c->context->db, key, keylen, bit, start, stop, end_given, &pos);
+	RLITE_SERVER_ERR(c, retval);
+	c->reply = createLongLongObject(pos);
+cleanup:
+	return;
+}
+
 static void hdelCommand(rliteClient *c) {
 	unsigned char *key = UNSIGN(c->argv[1]);
 	size_t keylen = c->argvlen[1];
@@ -2940,7 +2978,7 @@ struct rliteCommand rliteCommandTable[] = {
 	// {"time",timeCommand,1,"rRF",0,NULL,0,0,0,0,0},
 	{"bitop",bitopCommand,-4,"wm",0,2,-1,1,0,0},
 	{"bitcount",bitcountCommand,-2,"r",0,1,1,1,0,0},
-	// {"bitpos",bitposCommand,-3,"r",0,NULL,1,1,1,0,0},
+	{"bitpos",bitposCommand,-3,"r",0,1,1,1,0,0},
 	// {"wait",waitCommand,3,"rs",0,NULL,0,0,0,0,0},
 	// {"command",commandCommand,0,"rlt",0,NULL,0,0,0,0,0},
 	// {"pfselftest",pfselftestCommand,1,"r",0,NULL,0,0,0,0,0},
