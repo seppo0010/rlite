@@ -1115,6 +1115,7 @@ int rl_keys(struct rlite *db, unsigned char *pattern, long patternlen, long *_le
 		if (allkeys || rl_stringmatchlen((char *)pattern, patternlen, (char *)keystr, keystrlen, 0)) {
 			if (len + 1 == alloc) {
 				RL_REALLOC(result, sizeof(unsigned char *) * alloc * 2)
+				RL_REALLOC(resultlen, sizeof(long) * alloc * 2)
 				alloc *= 2;
 			}
 			result[len] = keystr;
