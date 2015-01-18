@@ -2262,7 +2262,7 @@ cleanup:
 #define REDIS_SET_NX (1<<0)	 /* Set if key not exists. */
 #define REDIS_SET_XX (1<<1)	 /* Set if key exists. */
 
-void setGenericCommand(rliteClient *c, int flags, const unsigned char *key, long keylen, unsigned char *value, long valuelen, long long expire) {
+static void setGenericCommand(rliteClient *c, int flags, const unsigned char *key, long keylen, unsigned char *value, long valuelen, long long expire) {
 	int retval;
 	long long milliseconds = 0; /* initialized to avoid any harmness warning */
 
@@ -2292,7 +2292,7 @@ cleanup:
 }
 
 /* SET key value [NX] [XX] [EX <seconds>] [PX <milliseconds>] */
-void setCommand(rliteClient *c) {
+static void setCommand(rliteClient *c) {
 	const unsigned char *key = UNSIGN(c->argv[1]);
 	size_t keylen = c->argvlen[1];
 	int j;
@@ -2330,7 +2330,7 @@ void setCommand(rliteClient *c) {
 	setGenericCommand(c, flags, key, keylen, UNSIGN(c->argv[2]), c->argvlen[2], expire);
 }
 
-void setnxCommand(rliteClient *c) {
+static void setnxCommand(rliteClient *c) {
 	rliteReply *reply;
 	setGenericCommand(c, REDIS_SET_NX, UNSIGN(c->argv[1]), c->argvlen[1], UNSIGN(c->argv[2]), c->argvlen[2], 0);
 	reply = c->reply;
@@ -2342,7 +2342,7 @@ void setnxCommand(rliteClient *c) {
 	rliteFreeReplyObject(reply);
 }
 
-void setexCommand(rliteClient *c) {
+static void setexCommand(rliteClient *c) {
 	long long expire;
 	if (getLongLongFromObject(c->argv[3], &expire) != RLITE_OK) {
 		c->reply = createErrorObject(RLITE_SYNTAXERR);
@@ -2351,7 +2351,7 @@ void setexCommand(rliteClient *c) {
 	setGenericCommand(c, REDIS_SET_NO_FLAGS, UNSIGN(c->argv[1]), c->argvlen[1], UNSIGN(c->argv[2]), c->argvlen[2], expire * 1000);
 }
 
-void psetexCommand(rliteClient *c) {
+static void psetexCommand(rliteClient *c) {
 	long long expire;
 	if (getLongLongFromObject(c->argv[3], &expire) != RLITE_OK) {
 		c->reply = createErrorObject(RLITE_SYNTAXERR);

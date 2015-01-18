@@ -1112,7 +1112,7 @@ int rl_keys(struct rlite *db, unsigned char *pattern, long patternlen, long *_le
 	while ((retval = rl_btree_iterator_next(iterator, NULL, &tmp)) == RL_OK) {
 		key = tmp;
 		RL_CALL(rl_multi_string_get, RL_OK, db, key->string_page, &keystr, &keystrlen);
-		if (allkeys || stringmatchlen((char *)pattern, patternlen, (char *)keystr, keystrlen, 0)) {
+		if (allkeys || rl_stringmatchlen((char *)pattern, patternlen, (char *)keystr, keystrlen, 0)) {
 			if (len + 1 == alloc) {
 				RL_REALLOC(result, sizeof(unsigned char *) * alloc * 2)
 				alloc *= 2;

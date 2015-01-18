@@ -290,7 +290,7 @@ int rl_bitop(struct rlite *db, int op, const unsigned char *dest, long destlen, 
 			valueslen[i] = ltmp;
 		}
 	}
-	bitop(op, keyc, values, valueslen, &result, &resultlen);
+	rl_internal_bitop(op, keyc, values, valueslen, &result, &resultlen);
 	RL_CALL(rl_set, RL_OK, db, dest, destlen, result, resultlen, 0, 0);
 	free(result);
 	retval = RL_OK;
@@ -311,7 +311,7 @@ int rl_bitcount(struct rlite *db, const unsigned char *key, long keylen, long st
 	unsigned char *value;
 	long valuelen;
 	RL_CALL(rl_getrange, RL_OK, db, key, keylen, start, stop, &value, &valuelen);
-	*bitcount = (long)redisPopcount(value, valuelen);
+	*bitcount = (long)rl_redisPopcount(value, valuelen);
 	rl_free(value);
 cleanup:
 	return retval;
@@ -345,13 +345,13 @@ int rl_bitpos(struct rlite *db, const unsigned char *key, long keylen, int bit, 
 	if (bytes < valuelen) {
 		bytes = valuelen;
 	}
-	long pos = bitpos(value, bytes, bit);
+	long pos = rl_internal_bitpos(value, bytes, bit);
 
 	/* If we are looking for clear bits, and the user specified an exact
 	 * range with start-end, we can't consider the right of the range as
 	 * zero padded (as we do when no explicit end is given).
 	 *
-	 * So if bitpos() returns the first bit outside the range,
+	 * So if rl_internal_bitpos() returns the first bit outside the range,
 	 * we return -1 to the caller, to mean, in the specified range there
 	 * is not a single "0" bit. */
 	if (end_given && bit == 0 && pos == bytes * 8) {

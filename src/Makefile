@@ -22,7 +22,7 @@ endif
 
 LIBS=-lm
 
-all: buildtest
+all: buildtest buildhirlitetest
 
 gcov: CFLAGS += -fprofile-arcs -ftest-coverage
 gcov: clean test
@@ -38,7 +38,7 @@ lcov: gcov
 	genhtml  lcov/app.info -o lcov/html
 
 full-lcov: CFLAGS += -fprofile-arcs -ftest-coverage -DDEBUG=1
-full-lcov: clean buildtest
+full-lcov: clean buildtest buildhirlitetest
 
 clang-analyzer:
 	rm -rf analyzer

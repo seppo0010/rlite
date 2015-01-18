@@ -35,7 +35,7 @@
 // https://github.com/antirez/redis/blob/unstable/src/util.c#L45
 //
 /* Glob-style pattern matching. */
-int stringmatchlen(const char *pattern, int patternLen,
+int rl_stringmatchlen(const char *pattern, int patternLen,
         const char *string, int stringLen, int nocase)
 {
     while(patternLen) {
@@ -48,7 +48,7 @@ int stringmatchlen(const char *pattern, int patternLen,
             if (patternLen == 1)
                 return 1; /* match */
             while(stringLen) {
-                if (stringmatchlen(pattern+1, patternLen-1,
+                if (rl_stringmatchlen(pattern+1, patternLen-1,
                             string, stringLen, nocase))
                     return 1; /* match */
                 string++;
@@ -159,7 +159,7 @@ int stringmatchlen(const char *pattern, int patternLen,
 
 // Adapted from https://github.com/antirez/redis/blob/unstable/src/bitops.c#L287
 /* BITOP op_name target_key src_key1 src_key2 src_key3 ... src_keyN */
-void bitop(int op, unsigned long numkeys, unsigned char **objects, unsigned long *objectslen, unsigned char **result, long *resultlen)
+void rl_internal_bitop(int op, unsigned long numkeys, unsigned char **objects, unsigned long *objectslen, unsigned char **result, long *resultlen)
 {
     unsigned long j;
     unsigned long maxlen = 0; /* Array of length of src strings, and max len. */
@@ -267,7 +267,7 @@ void bitop(int op, unsigned long numkeys, unsigned char **objects, unsigned long
 /* Count number of bits set in the binary array pointed by 's' and long
  * 'count' bytes. The implementation of this function is required to
  * work with a input string length up to 512 MB. */
-size_t redisPopcount(void *s, long count) {
+size_t rl_redisPopcount(void *s, long count) {
     size_t bits = 0;
     unsigned char *p = s;
     uint32_t *p4;
@@ -317,7 +317,7 @@ size_t redisPopcount(void *s, long count) {
  * no zero bit is found, it returns count*8 assuming the string is zero
  * padded on the right. However if 'bit' is 1 it is possible that there is
  * not a single set bit in the bitmap. In this special case -1 is returned. */
-long bitpos(void *s, unsigned long count, int bit) {
+long rl_internal_bitpos(void *s, unsigned long count, int bit) {
     unsigned long *l;
     unsigned char *c;
     unsigned long skipval, word = 0, one;
