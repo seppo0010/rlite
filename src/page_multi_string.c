@@ -242,6 +242,14 @@ int rl_multi_string_getrange(struct rlite *db, long number, unsigned char **_dat
 
 	RL_CALL(rl_list_get_element, RL_FOUND, db, list, &tmp, 0);
 	totalsize = *(long *)tmp;
+	if (totalsize == 0) {
+		*size = 0;
+		if (_data) {
+			*_data = NULL;
+		}
+		retval = RL_OK;
+		goto cleanup;
+	}
 	if (start < 0) {
 		start += totalsize;
 		if (start < 0) {

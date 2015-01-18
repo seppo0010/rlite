@@ -37,6 +37,27 @@ cleanup:
 	return retval;
 }
 
+int empty_set_get(int UNUSED(_))
+{
+	int retval;
+	long size, number;
+	unsigned char *data;
+
+	rlite *db = NULL;
+	RL_CALL_VERBOSE(rl_open, RL_OK, ":memory:", &db, RLITE_OPEN_READWRITE | RLITE_OPEN_CREATE);
+
+	RL_CALL_VERBOSE(rl_multi_string_set, RL_OK, db, &number, NULL, 0);
+	RL_CALL_VERBOSE(rl_multi_string_get, RL_OK, db, number, &data, &size);
+	EXPECT_INT(size, 0);
+	EXPECT_PTR(data, NULL);
+	fprintf(stderr, "End page_multi_string-test %ld\n", size);
+
+	retval = RL_OK;
+cleanup:
+	rl_close(db);
+	return retval;
+}
+
 static int test_sha(long size)
 {
 	fprintf(stderr, "Start test_sha %ld\n", size);
@@ -306,6 +327,7 @@ cleanup:
 RL_TEST_MAIN_START(multi_string_test)
 {
 	RL_TEST(basic_set_get, 0);
+	RL_TEST(empty_set_get, 0);
 	RL_TEST(test_cmp_different_length, 0);
 	RL_TEST(test_cmp, 0, 0, 1);
 	RL_TEST(test_sha, 100);
