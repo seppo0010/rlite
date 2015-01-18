@@ -1047,7 +1047,7 @@ int rl_rename(struct rlite *db, const unsigned char *src, long srclen, const uns
 	unsigned long long expires;
 	long value_page;
 	if (overwrite) {
-		RL_CALL(rl_key_delete_with_value, RL_OK, db, target, targetlen);
+		RL_CALL2(rl_key_delete_with_value, RL_OK, RL_NOT_FOUND, db, target, targetlen);
 	}
 	else {
 		RL_CALL(rl_key_get, RL_NOT_FOUND, db, target, targetlen, NULL, NULL, NULL, NULL);
