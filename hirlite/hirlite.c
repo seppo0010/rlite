@@ -2609,8 +2609,7 @@ static void decrCommand(rliteClient *c) {
 
 static void incrbyCommand(rliteClient *c) {
 	long long increment;
-	if (getLongLongFromObject(c->argv[2], &increment) != RLITE_OK) {
-		c->reply = createErrorObject(RLITE_SYNTAXERR);
+	if (getLongLongFromObjectOrReply(c, c->argv[2], &increment, RLITE_SYNTAXERR) != RLITE_OK) {
 		return;
 	}
 	incrGenericCommand(c, increment);
@@ -2618,8 +2617,7 @@ static void incrbyCommand(rliteClient *c) {
 
 static void decrbyCommand(rliteClient *c) {
 	long long decrement;
-	if (getLongLongFromObject(c->argv[2], &decrement) != RLITE_OK) {
-		c->reply = createErrorObject(RLITE_SYNTAXERR);
+	if (getLongLongFromObjectOrReply(c, c->argv[2], &decrement, RLITE_SYNTAXERR) != RLITE_OK) {
 		return;
 	}
 	incrGenericCommand(c, -decrement);
@@ -2637,6 +2635,24 @@ static void incrbyfloatCommand(rliteClient *c) {
 	RLITE_SERVER_ERR(c, retval);
 	if (retval == RL_OK) {
 		c->reply = createDoubleObject(newvalue);
+	}
+cleanup:
+	return;
+}
+
+static void getbitCommand(rliteClient *c) {
+	unsigned char *key = UNSIGN(c->argv[1]);
+	long keylen = c->argvlen[1];
+	long long offset;
+	int value;
+
+	if (getLongLongFromObjectOrReply(c, c->argv[2], &offset, RLITE_SYNTAXERR) != RLITE_OK) {
+		return;
+	}
+	int retval = rl_getbit(c->context->db, key, keylen, offset, &value);
+	RLITE_SERVER_ERR(c, retval);
+	if (retval == RL_OK) {
+		c->reply = createLongLongObject(value);
 	}
 cleanup:
 	return;
@@ -2834,7 +2850,7 @@ struct rliteCommand rliteCommandTable[] = {
 	{"del",delCommand,-2,"w",0,1,-1,1,0,0},
 	{"exists",existsCommand,2,"rF",0,1,1,1,0,0},
 	// {"setbit",setbitCommand,4,"wm",0,NULL,1,1,1,0,0},
-	// {"getbit",getbitCommand,3,"rF",0,NULL,1,1,1,0,0},
+	{"getbit",getbitCommand,3,"rF",0,1,1,1,0,0},
 	{"setrange",setrangeCommand,4,"wm",0,1,1,1,0,0},
 	{"getrange",getrangeCommand,4,"r",0,1,1,1,0,0},
 	{"substr",getrangeCommand,4,"r",0,1,1,1,0,0},
