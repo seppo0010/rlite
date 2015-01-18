@@ -329,14 +329,14 @@ int basic_test_zadd_zrangebylex_with_empty(int _commit)
 	unsigned char *key = UNSIGN("my key");
 	long keylen = strlen((char *)key);
 	unsigned char *min = UNSIGN("-");
-	unsigned char *max = UNSIGN("(b");
+	unsigned char *max = UNSIGN("(a");
 	long lexcount;
 	unsigned char *data2;
 	long data2_len;
 
-	RL_CALL_VERBOSE(rl_zadd, RL_OK, db, key, keylen, 0.0, UNSIGN("a"), 0);
+	RL_CALL_VERBOSE(rl_zadd, RL_OK, db, key, keylen, 0.0, UNSIGN(""), 0);
 	RL_BALANCED();
-	RL_CALL_VERBOSE(rl_zadd, RL_OK, db, key, keylen, 0.0, UNSIGN("b"), 1);
+	RL_CALL_VERBOSE(rl_zadd, RL_OK, db, key, keylen, 0.0, UNSIGN("a"), 1);
 	RL_BALANCED();
 
 	// These test expect different values if offset or limit exist
@@ -346,7 +346,7 @@ int basic_test_zadd_zrangebylex_with_empty(int _commit)
 	RL_CALL_VERBOSE(rl_zrangebylex, RL_OK, db, key, keylen, min, 1, max, 2, 0, -1, &iterator);
 	EXPECT_LONG(iterator->size, 1);
 	RL_CALL_VERBOSE(rl_zset_iterator_next, RL_OK, iterator, NULL, &data2, &data2_len);
-	EXPECT_LONG(data2_len, 1);
+	EXPECT_LONG(data2_len, 0);
 	rl_free(data2);
 
 	RL_CALL_VERBOSE(rl_zset_iterator_next, RL_END, iterator, NULL, NULL, NULL);
@@ -354,7 +354,7 @@ int basic_test_zadd_zrangebylex_with_empty(int _commit)
 	EXPECT_LONG(iterator->size, 1);
 
 	RL_CALL_VERBOSE(rl_zset_iterator_next, RL_OK, iterator, NULL, &data2, &data2_len);
-	EXPECT_LONG(data2_len, 1);
+	EXPECT_LONG(data2_len, 0);
 	rl_free(data2);
 
 	RL_CALL_VERBOSE(rl_zset_iterator_next, RL_END, iterator, NULL, NULL, NULL);
