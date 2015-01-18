@@ -36,6 +36,17 @@
 		return 1;\
 	}
 
+#define EXPECT_INTEGER_LTE(reply, expectedinteger)\
+	NO_ERROR(reply);\
+	if (reply->type != RLITE_REPLY_INTEGER) {\
+		fprintf(stderr, "Expected reply to be INTEGER, got %d instead on %s:%d\n", reply->type, __FILE__, __LINE__);\
+		return 1;\
+	}\
+	if (reply->integer > expectedinteger) {\
+		fprintf(stderr, "Expected reply to be at most %lld, got %lld instead on %s:%d\n", (long long)expectedinteger, reply->integer, __FILE__, __LINE__);\
+		return 1;\
+	}
+
 #define EXPECT_NIL(reply)\
 	NO_ERROR(reply);\
 	if (reply->type != RLITE_REPLY_NIL) {\

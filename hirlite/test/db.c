@@ -225,6 +225,38 @@ int test_renamenx() {
 	return 0;
 }
 
+int test_ttl_pttl() {
+	rliteContext *context = rliteConnect(":memory:", 0);
+
+	rliteReply* reply;
+	size_t argvlen[100];
+
+	{
+		char* argv[100] = {"setex", "key1", "5", "mydata", NULL};
+		reply = rliteCommandArgv(context, populateArgvlen(argv, argvlen), argv, argvlen);
+		EXPECT_STATUS(reply, "OK", 2);
+		rliteFreeReplyObject(reply);
+	}
+
+	{
+		char* argv[100] = {"ttl", "key1", NULL};
+		reply = rliteCommandArgv(context, populateArgvlen(argv, argvlen), argv, argvlen);
+		NO_ERROR(reply);
+		EXPECT_INTEGER_LTE(reply, 5);
+		rliteFreeReplyObject(reply);
+	}
+
+	{
+		char* argv[100] = {"pttl", "key1", NULL};
+		reply = rliteCommandArgv(context, populateArgvlen(argv, argvlen), argv, argvlen);
+		EXPECT_INTEGER_LTE(reply, 5000);
+		rliteFreeReplyObject(reply);
+	}
+
+	rliteFree(context);
+	return 0;
+}
+
 int run_db() {
 	if (test_keys() != 0) {
 		return 1;
@@ -248,6 +280,9 @@ int run_db() {
 		return 1;
 	}
 	if (test_renamenx() != 0) {
+		return 1;
+	}
+	if (test_ttl_pttl() != 0) {
 		return 1;
 	}
 	return 0;
