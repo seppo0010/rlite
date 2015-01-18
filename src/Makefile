@@ -56,8 +56,8 @@ librlite.a: rlite.o page_skiplist.o page_string.o page_list.o page_btree.o page_
 buildtest: librlite.a test/rlite-test.o test/btree-test.o test/list-test.o test/string-test.o test/multi_string-test.o test/key-test.o test/type_string-test.o test/type_list-test.o test/type_set-test.o test/type_zset-test.o test/type_hash-test.o test/skiplist-test.o test/long-test.o test/test_util.o test/test.o
 	$(CC) $(DEBUG) $(CFLAGS) -o rlite-test test.o rlite-test.o btree-test.o list-test.o string-test.o multi_string-test.o key-test.o type_string-test.o type_list-test.o type_set-test.o type_zset-test.o type_hash-test.o skiplist-test.o long-test.o test_util.o librlite.a $(LIBS)
 
-buildhirlitetest: libhirlite.a ../hirlite/test/echo.o ../hirlite/test/hash.o ../hirlite/test/list.o ../hirlite/test/parser.o ../hirlite/test/set.o ../hirlite/test/string.o ../hirlite/test/test.o ../hirlite/test/zset.o
-	$(CC) $(DEBUG) $(CFLAGS) -o hirlite-test echo.o hash.o list.o parser.o set.o string.o test.o zset.o libhirlite.a $(LIBS)
+buildhirlitetest: libhirlite.a ../hirlite/test/echo.o ../hirlite/test/hash.o ../hirlite/test/list.o ../hirlite/test/parser.o ../hirlite/test/set.o ../hirlite/test/string.o ../hirlite/test/test.o ../hirlite/test/zset.o ../hirlite/test/db.o
+	$(CC) $(DEBUG) $(CFLAGS) -o hirlite-test echo.o hash.o list.o parser.o set.o string.o test.o zset.o db.o libhirlite.a $(LIBS)
 
 rlitetest: buildtest
 	./rlite-test

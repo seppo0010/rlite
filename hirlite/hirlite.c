@@ -2696,6 +2696,39 @@ static void delCommand(rliteClient *c) {
 	c->reply = createLongLongObject(deleted);
 }
 
+static void keysCommand(rliteClient *c) {
+	long i, size = 0;
+	unsigned char **result = NULL;
+	long *resultlen = NULL;
+	int retval = rl_keys(c->context->db, UNSIGN(c->argv[1]), c->argvlen[1], &size, &result, &resultlen);
+	RLITE_SERVER_ERR(c, retval);
+	if (retval != RL_OK) {
+		goto cleanup;
+	}
+	c->reply = createReplyObject(RLITE_REPLY_ARRAY);
+	if (retval == RL_NOT_FOUND) {
+		c->reply->elements = 0;
+		return;
+	}
+	c->reply->elements = size;
+	c->reply->element = malloc(sizeof(rliteReply*) * c->reply->elements);
+	if (!c->reply->element) {
+		free(c->reply);
+		c->reply = NULL;
+		__rliteSetError(c->context, RLITE_ERR_OOM, "Out of memory");
+		goto cleanup;
+	}
+
+	for (i = 0; i < size; i++) {
+		c->reply->element[i] = createStringObject((char *)result[i], resultlen[i]);
+		rl_free(result[i]);
+	}
+	rl_free(result);
+	rl_free(resultlen);
+cleanup:
+	return;
+}
+
 static void existsCommand(rliteClient *c) {
 	int retval = rl_key_get(c->context->db, UNSIGN(c->argv[1]), c->argvlen[1], NULL, NULL, NULL, NULL);
 	c->reply = createLongLongObject(retval == RL_FOUND ? 1 : 0);
@@ -2965,7 +2998,7 @@ struct rliteCommand rliteCommandTable[] = {
 	// {"expireat",expireatCommand,3,"wF",0,NULL,1,1,1,0,0},
 	// {"pexpire",pexpireCommand,3,"wF",0,NULL,1,1,1,0,0},
 	// {"pexpireat",pexpireatCommand,3,"wF",0,NULL,1,1,1,0,0},
-	// {"keys",keysCommand,2,"rS",0,NULL,0,0,0,0,0},
+	{"keys",keysCommand,2,"rS",0,0,0,0,0,0},
 	// {"scan",scanCommand,-2,"rR",0,NULL,0,0,0,0,0},
 	// {"dbsize",dbsizeCommand,1,"rF",0,NULL,0,0,0,0,0},
 	// {"auth",authCommand,2,"rsltF",0,NULL,0,0,0,0,0},
