@@ -571,6 +571,151 @@ int test_bitcount() {
 	return 0;
 }
 
+int test_bitopand() {
+	rliteContext *context = rliteConnect(":memory:", 0);
+
+	rliteReply* reply;
+	size_t argvlen[100];
+
+	{
+		char* argv[100] = {"set", "key1", "foobar", NULL};
+		reply = rliteCommandArgv(context, populateArgvlen(argv, argvlen), argv, argvlen);
+		EXPECT_STATUS(reply, "OK", 2);
+		rliteFreeReplyObject(reply);
+	}
+
+	{
+		char* argv[100] = {"set", "key2", "abcdef", NULL};
+		reply = rliteCommandArgv(context, populateArgvlen(argv, argvlen), argv, argvlen);
+		EXPECT_STATUS(reply, "OK", 2);
+		rliteFreeReplyObject(reply);
+	}
+
+	{
+		char* argv[100] = {"bitop", "AND", "dest", "key1", "key2", NULL};
+		reply = rliteCommandArgv(context, populateArgvlen(argv, argvlen), argv, argvlen);
+		EXPECT_INTEGER(reply, 6);
+		rliteFreeReplyObject(reply);
+	}
+
+	{
+		char* argv[100] = {"get", "dest", NULL};
+		reply = rliteCommandArgv(context, populateArgvlen(argv, argvlen), argv, argvlen);
+		EXPECT_STR(reply, "`bc`ab", 6);
+		rliteFreeReplyObject(reply);
+	}
+
+	rliteFree(context);
+	return 0;
+}
+
+int test_bitopor() {
+	rliteContext *context = rliteConnect(":memory:", 0);
+
+	rliteReply* reply;
+	size_t argvlen[100];
+
+	{
+		char* argv[100] = {"set", "key1", "foobar", NULL};
+		reply = rliteCommandArgv(context, populateArgvlen(argv, argvlen), argv, argvlen);
+		EXPECT_STATUS(reply, "OK", 2);
+		rliteFreeReplyObject(reply);
+	}
+
+	{
+		char* argv[100] = {"set", "key2", "abcdef", NULL};
+		reply = rliteCommandArgv(context, populateArgvlen(argv, argvlen), argv, argvlen);
+		EXPECT_STATUS(reply, "OK", 2);
+		rliteFreeReplyObject(reply);
+	}
+
+	{
+		char* argv[100] = {"bitop", "OR", "dest", "key1", "key2", NULL};
+		reply = rliteCommandArgv(context, populateArgvlen(argv, argvlen), argv, argvlen);
+		EXPECT_INTEGER(reply, 6);
+		rliteFreeReplyObject(reply);
+	}
+
+	{
+		char* argv[100] = {"get", "dest", NULL};
+		reply = rliteCommandArgv(context, populateArgvlen(argv, argvlen), argv, argvlen);
+		EXPECT_STR(reply, "goofev", 6);
+		rliteFreeReplyObject(reply);
+	}
+
+	rliteFree(context);
+	return 0;
+}
+
+int test_bitopxor() {
+	rliteContext *context = rliteConnect(":memory:", 0);
+
+	rliteReply* reply;
+	size_t argvlen[100];
+
+	{
+		char* argv[100] = {"set", "key1", "foobar", NULL};
+		reply = rliteCommandArgv(context, populateArgvlen(argv, argvlen), argv, argvlen);
+		EXPECT_STATUS(reply, "OK", 2);
+		rliteFreeReplyObject(reply);
+	}
+
+	{
+		char* argv[100] = {"set", "key2", "abcdef", NULL};
+		reply = rliteCommandArgv(context, populateArgvlen(argv, argvlen), argv, argvlen);
+		EXPECT_STATUS(reply, "OK", 2);
+		rliteFreeReplyObject(reply);
+	}
+
+	{
+		char* argv[100] = {"bitop", "XOR", "dest", "key1", "key2", NULL};
+		reply = rliteCommandArgv(context, populateArgvlen(argv, argvlen), argv, argvlen);
+		EXPECT_INTEGER(reply, 6);
+		rliteFreeReplyObject(reply);
+	}
+
+	{
+		char* argv[100] = {"get", "dest", NULL};
+		reply = rliteCommandArgv(context, populateArgvlen(argv, argvlen), argv, argvlen);
+		EXPECT_STR(reply, "\a\r\f\x0006\x0004\x0014", 6);
+		rliteFreeReplyObject(reply);
+	}
+
+	rliteFree(context);
+	return 0;
+}
+
+int test_bitopnot() {
+	rliteContext *context = rliteConnect(":memory:", 0);
+
+	rliteReply* reply;
+	size_t argvlen[100];
+
+	{
+		char* argv[100] = {"set", "key1", "foobar", NULL};
+		reply = rliteCommandArgv(context, populateArgvlen(argv, argvlen), argv, argvlen);
+		EXPECT_STATUS(reply, "OK", 2);
+		rliteFreeReplyObject(reply);
+	}
+
+	{
+		char* argv[100] = {"bitop", "NOT", "dest", "key1", NULL};
+		reply = rliteCommandArgv(context, populateArgvlen(argv, argvlen), argv, argvlen);
+		EXPECT_INTEGER(reply, 6);
+		rliteFreeReplyObject(reply);
+	}
+
+	{
+		char* argv[100] = {"get", "dest", NULL};
+		reply = rliteCommandArgv(context, populateArgvlen(argv, argvlen), argv, argvlen);
+		EXPECT_STR(reply, "\x99\x90\x90\x9D\x9E\x8D", 6);
+		rliteFreeReplyObject(reply);
+	}
+
+	rliteFree(context);
+	return 0;
+}
+
 int run_string() {
 	if (test_set() != 0) {
 		return 1;
@@ -618,6 +763,18 @@ int run_string() {
 		return 1;
 	}
 	if (test_bitcount() != 0) {
+		return 1;
+	}
+	if (test_bitopand() != 0) {
+		return 1;
+	}
+	if (test_bitopor() != 0) {
+		return 1;
+	}
+	if (test_bitopxor() != 0) {
+		return 1;
+	}
+	if (test_bitopnot() != 0) {
 		return 1;
 	}
 	return 0;

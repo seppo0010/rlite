@@ -1347,6 +1347,56 @@ static void bitcountCommand(rliteClient *c) {
 cleanup:
 	return;
 }
+
+static void bitopCommand(rliteClient *c) {
+	unsigned char *destkey = UNSIGN(c->argv[2]);
+	long destkeylen = c->argvlen[2];
+	char *opname = c->argv[1];
+	int op, retval;
+	long j, length;
+
+	/* Parse the operation name. */
+	if ((opname[0] == 'a' || opname[0] == 'A') && !strcasecmp(opname,"and"))
+		op = BITOP_AND;
+	else if((opname[0] == 'o' || opname[0] == 'O') && !strcasecmp(opname,"or"))
+		op = BITOP_OR;
+	else if((opname[0] == 'x' || opname[0] == 'X') && !strcasecmp(opname,"xor"))
+		op = BITOP_XOR;
+	else if((opname[0] == 'n' || opname[0] == 'N') && !strcasecmp(opname,"not"))
+		op = BITOP_NOT;
+	else {
+		c->reply = createErrorObject(RLITE_SYNTAXERR);
+		return;
+	}
+
+	/* Sanity check: NOT accepts only a single key argument. */
+	if (op == BITOP_NOT && c->argc != 4) {
+		c->reply = createErrorObject("BITOP NOT must be called with a single source key.");
+		return;
+	}
+
+	long *memberslen = malloc(sizeof(long) * (c->argc - 2));
+	if (!memberslen) {
+		__rliteSetError(c->context, RLITE_ERR_OOM, "Out of memory");
+		goto cleanup;
+	}
+	for (j = 3; j < c->argc; j++) {
+		memberslen[j - 3] = c->argvlen[j];
+	}
+
+	retval = rl_bitop(c->context->db, op, destkey, destkeylen, c->argc - 3, (const unsigned char **)&c->argv[3], memberslen);
+	free(memberslen);
+	RLITE_SERVER_ERR(c, retval);
+
+	retval = rl_get(c->context->db, destkey, destkeylen, NULL, &length);
+	RLITE_SERVER_ERR(c, retval);
+	if (retval == RL_OK) {
+		c->reply = createLongLongObject(length);
+	}
+cleanup:
+	return;
+}
+
 static void hdelCommand(rliteClient *c) {
 	unsigned char *key = UNSIGN(c->argv[1]);
 	size_t keylen = c->argvlen[1];
@@ -2888,7 +2938,7 @@ struct rliteCommand rliteCommandTable[] = {
 	// {"slowlog",slowlogCommand,-2,"r",0,NULL,0,0,0,0,0},
 	// {"script",scriptCommand,-2,"ras",0,NULL,0,0,0,0,0},
 	// {"time",timeCommand,1,"rRF",0,NULL,0,0,0,0,0},
-	// {"bitop",bitopCommand,-4,"wm",0,NULL,2,-1,1,0,0},
+	{"bitop",bitopCommand,-4,"wm",0,2,-1,1,0,0},
 	{"bitcount",bitcountCommand,-2,"r",0,1,1,1,0,0},
 	// {"bitpos",bitposCommand,-3,"r",0,NULL,1,1,1,0,0},
 	// {"wait",waitCommand,3,"rs",0,NULL,0,0,0,0,0},
