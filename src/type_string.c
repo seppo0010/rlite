@@ -125,7 +125,7 @@ int rl_incr(struct rlite *db, const unsigned char *key, long keylen, long long i
 {
 	long page_number;
 	int retval;
-	unsigned char *value;
+	unsigned char *value = NULL;
 	char *end;
 	long valuelen;
 	long long lvalue;
@@ -138,7 +138,6 @@ int rl_incr(struct rlite *db, const unsigned char *key, long keylen, long long i
 			*newvalue = increment;
 		}
 		retval = rl_set(db, key, keylen, value, valuelen, 1, 0);
-		rl_free(value);
 		goto cleanup;
 	}
 	RL_CALL(rl_multi_string_getrange, RL_OK, db, page_number, &value, &valuelen, 0, MAX_LLONG_DIGITS + 1);
@@ -152,6 +151,7 @@ int rl_incr(struct rlite *db, const unsigned char *key, long keylen, long long i
 		goto cleanup;
 	}
 	rl_free(value);
+	value = NULL;
 	if ((increment < 0 && lvalue < 0 && increment < (LLONG_MIN - lvalue)) ||
 	        (increment > 0 && lvalue > 0 && increment > (LLONG_MAX - lvalue))) {
 		retval = RL_OVERFLOW;
@@ -164,9 +164,9 @@ int rl_incr(struct rlite *db, const unsigned char *key, long keylen, long long i
 	RL_MALLOC(value, sizeof(unsigned char) * MAX_LLONG_DIGITS);
 	valuelen = snprintf((char *)value, MAX_LLONG_DIGITS, "%lld", lvalue);
 	RL_CALL(rl_set, RL_OK, db, key, keylen, value, valuelen, 0, expires);
-	rl_free(value);
 	retval = RL_OK;
 cleanup:
+	rl_free(value);
 	return retval;
 }
 
@@ -174,7 +174,7 @@ int rl_incrbyfloat(struct rlite *db, const unsigned char *key, long keylen, doub
 {
 	long page_number;
 	int retval;
-	unsigned char *value;
+	unsigned char *value = NULL;
 	char *end;
 	long valuelen;
 	double dvalue;
@@ -187,7 +187,6 @@ int rl_incrbyfloat(struct rlite *db, const unsigned char *key, long keylen, doub
 			*newvalue = increment;
 		}
 		retval = rl_set(db, key, keylen, value, valuelen, 1, 0);
-		rl_free(value);
 		goto cleanup;
 	}
 	RL_CALL(rl_multi_string_getrange, RL_OK, db, page_number, &value, &valuelen, 0, MAX_DOUBLE_DIGITS + 1);
@@ -201,6 +200,7 @@ int rl_incrbyfloat(struct rlite *db, const unsigned char *key, long keylen, doub
 		goto cleanup;
 	}
 	rl_free(value);
+	value = NULL;
 	dvalue += increment;
 	if (isinf(dvalue) || isnan(dvalue)) {
 		retval = RL_OVERFLOW;
@@ -212,9 +212,9 @@ int rl_incrbyfloat(struct rlite *db, const unsigned char *key, long keylen, doub
 	RL_MALLOC(value, sizeof(unsigned char) * MAX_DOUBLE_DIGITS);
 	valuelen = snprintf((char *)value, MAX_DOUBLE_DIGITS, "%lf", dvalue);
 	RL_CALL(rl_set, RL_OK, db, key, keylen, value, valuelen, 0, expires);
-	rl_free(value);
 	retval = RL_OK;
 cleanup:
+	rl_free(value);
 	return retval;
 }
 
