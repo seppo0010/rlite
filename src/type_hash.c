@@ -439,7 +439,7 @@ int rl_hincrbyfloat(struct rlite *db, const unsigned char *key, long keylen, uns
 		}
 		data = tmp;
 		// valgrind reads 8 bytes at a time
-		memset(&data[datalen], 0, datalen % 8);
+		memset(&data[datalen], 0, datalen % 8 + 8);
 		value = strtod((char *)data, &end);
 		if (isspace(((char *)data)[0]) || end[0] != '\0' ||
 		        (errno == ERANGE && (value == HUGE_VAL || value == -HUGE_VAL || value == 0)) ||
