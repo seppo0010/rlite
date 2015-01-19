@@ -190,6 +190,7 @@ static int addReplyStatusFormat(rliteContext *c, const char *fmt, ...) {
 		return RLITE_ERR;
 	}
 	reply->str = str;
+	reply->len = written;
 	addReply(c, reply);
 	return RLITE_OK;
 }
@@ -213,6 +214,7 @@ static int addReplyErrorFormat(rliteContext *c, const char *fmt, ...) {
 		return RLITE_ERR;
 	}
 	reply->str = str;
+	reply->len = written;
 	addReply(c, reply);
 	return RLITE_OK;
 }
