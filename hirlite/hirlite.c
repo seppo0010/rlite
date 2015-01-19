@@ -2840,6 +2840,25 @@ static void pttlCommand(rliteClient *c) {
 	ttlGenericCommand(c, 1);
 }
 
+static void persistCommand(rliteClient *c) {
+	unsigned char *key = UNSIGN(c->argv[1]);
+	long keylen = c->argvlen[1];
+	long page;
+	unsigned char type;
+    unsigned long long expires;
+	int retval = rl_key_get(c->context->db, key, keylen, &type, NULL, &page, &expires);
+	RLITE_SERVER_ERR(c, retval);
+	if (retval == RL_NOT_FOUND || expires == 0) {
+		c->reply = createLongLongObject(0);
+		goto cleanup;
+	}
+	retval = rl_key_set(c->context->db, key, keylen, type, page, 0);
+	RLITE_SERVER_ERR(c, retval);
+	c->reply = createLongLongObject(1);
+cleanup:
+	return;
+}
+
 static void renameCommand(rliteClient *c) {
 	renameGenericCommand(c, 1);
 }
@@ -3186,7 +3205,7 @@ struct rliteCommand rliteCommandTable[] = {
 	// {"monitor",monitorCommand,1,"ars",0,NULL,0,0,0,0,0},
 	{"ttl",ttlCommand,2,"rF",0,1,1,1,0,0},
 	{"pttl",pttlCommand,2,"rF",0,1,1,1,0,0},
-	// {"persist",persistCommand,2,"wF",0,NULL,1,1,1,0,0},
+	{"persist",persistCommand,2,"wF",0,1,1,1,0,0},
 	// {"slaveof",slaveofCommand,3,"ast",0,NULL,0,0,0,0,0},
 	// {"role",roleCommand,1,"last",0,NULL,0,0,0,0,0},
 	{"debug",debugCommand,-2,"as",0,0,0,0,0,0},
