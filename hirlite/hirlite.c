@@ -2845,7 +2845,7 @@ static void persistCommand(rliteClient *c) {
 	long keylen = c->argvlen[1];
 	long page;
 	unsigned char type;
-    unsigned long long expires;
+	unsigned long long expires;
 	int retval = rl_key_get(c->context->db, key, keylen, &type, NULL, &page, &expires);
 	RLITE_SERVER_ERR(c, retval);
 	if (retval == RL_NOT_FOUND || expires == 0) {
@@ -2914,6 +2914,34 @@ cleanup:
 static void existsCommand(rliteClient *c) {
 	int retval = rl_key_get(c->context->db, UNSIGN(c->argv[1]), c->argvlen[1], NULL, NULL, NULL, NULL);
 	c->reply = createLongLongObject(retval == RL_FOUND ? 1 : 0);
+}
+
+static void typeCommand(rliteClient *c) {
+	unsigned char type;
+	int retval = rl_key_get(c->context->db, UNSIGN(c->argv[1]), c->argvlen[1], &type, NULL, NULL, NULL);
+	RLITE_SERVER_ERR(c, retval);
+	if (retval == RL_NOT_FOUND) {
+		c->reply = createStringObject("none", 4);
+	}
+	else if (retval == RL_FOUND) {
+		if (type == RL_TYPE_ZSET) {
+			c->reply = createStringObject("zset", 4);
+		}
+		else if (type == RL_TYPE_SET) {
+			c->reply = createStringObject("set", 3);
+		}
+		else if (type == RL_TYPE_HASH) {
+			c->reply = createStringObject("hash", 4);
+		}
+		else if (type == RL_TYPE_LIST) {
+			c->reply = createStringObject("list", 4);
+		}
+		else if (type == RL_TYPE_STRING) {
+			c->reply = createStringObject("string", 6);
+		}
+	}
+cleanup:
+	return;
 }
 
 static void getKeyEncoding(rliteClient *c, char *encoding, unsigned char *key, long keylen)
@@ -3191,7 +3219,7 @@ struct rliteCommand rliteCommandTable[] = {
 	// {"bgrewriteaof",bgrewriteaofCommand,1,"ar",0,NULL,0,0,0,0,0},
 	// {"shutdown",shutdownCommand,-1,"arlt",0,NULL,0,0,0,0,0},
 	// {"lastsave",lastsaveCommand,1,"rRF",0,NULL,0,0,0,0,0},
-	// {"type",typeCommand,2,"rF",0,NULL,1,1,1,0,0},
+	{"type",typeCommand,2,"rF",0,1,1,1,0,0},
 	// {"multi",multiCommand,1,"rsF",0,NULL,0,0,0,0,0},
 	// {"exec",execCommand,1,"sM",0,NULL,0,0,0,0,0},
 	// {"discard",discardCommand,1,"rsF",0,NULL,0,0,0,0,0},

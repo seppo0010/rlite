@@ -399,6 +399,93 @@ int test_move() {
 	return 0;
 }
 
+int test_type() {
+	rliteContext *context = rliteConnect(":memory:", 0);
+
+	rliteReply* reply;
+	size_t argvlen[100];
+
+	{
+		char* argv[100] = {"set", "str", "mydata", NULL};
+		reply = rliteCommandArgv(context, populateArgvlen(argv, argvlen), argv, argvlen);
+		NO_ERROR(reply);
+		rliteFreeReplyObject(reply);
+	}
+
+	{
+		char* argv[100] = {"type", "str", NULL};
+		reply = rliteCommandArgv(context, populateArgvlen(argv, argvlen), argv, argvlen);
+		EXPECT_STR(reply, "string", 6);
+		rliteFreeReplyObject(reply);
+	}
+
+	{
+		char* argv[100] = {"lpush", "list", "mydata", NULL};
+		reply = rliteCommandArgv(context, populateArgvlen(argv, argvlen), argv, argvlen);
+		NO_ERROR(reply);
+		rliteFreeReplyObject(reply);
+	}
+
+	{
+		char* argv[100] = {"type", "list", NULL};
+		reply = rliteCommandArgv(context, populateArgvlen(argv, argvlen), argv, argvlen);
+		EXPECT_STR(reply, "list", 4);
+		rliteFreeReplyObject(reply);
+	}
+
+	{
+		char* argv[100] = {"sadd", "set", "mydata", NULL};
+		reply = rliteCommandArgv(context, populateArgvlen(argv, argvlen), argv, argvlen);
+		NO_ERROR(reply);
+		rliteFreeReplyObject(reply);
+	}
+
+	{
+		char* argv[100] = {"type", "set", NULL};
+		reply = rliteCommandArgv(context, populateArgvlen(argv, argvlen), argv, argvlen);
+		EXPECT_STR(reply, "set", 3);
+		rliteFreeReplyObject(reply);
+	}
+
+	{
+		char* argv[100] = {"zadd", "zset", "0", "mydata", NULL};
+		reply = rliteCommandArgv(context, populateArgvlen(argv, argvlen), argv, argvlen);
+		NO_ERROR(reply);
+		rliteFreeReplyObject(reply);
+	}
+
+	{
+		char* argv[100] = {"type", "zset", NULL};
+		reply = rliteCommandArgv(context, populateArgvlen(argv, argvlen), argv, argvlen);
+		EXPECT_STR(reply, "zset", 4);
+		rliteFreeReplyObject(reply);
+	}
+
+	{
+		char* argv[100] = {"hset", "hash", "field", "value", NULL};
+		reply = rliteCommandArgv(context, populateArgvlen(argv, argvlen), argv, argvlen);
+		NO_ERROR(reply);
+		rliteFreeReplyObject(reply);
+	}
+
+	{
+		char* argv[100] = {"type", "hash", NULL};
+		reply = rliteCommandArgv(context, populateArgvlen(argv, argvlen), argv, argvlen);
+		EXPECT_STR(reply, "hash", 4);
+		rliteFreeReplyObject(reply);
+	}
+
+	{
+		char* argv[100] = {"type", "none", NULL};
+		reply = rliteCommandArgv(context, populateArgvlen(argv, argvlen), argv, argvlen);
+		EXPECT_STR(reply, "none", 4);
+		rliteFreeReplyObject(reply);
+	}
+
+	rliteFree(context);
+	return 0;
+}
+
 int run_db() {
 	if (test_keys() != 0) {
 		return 1;
@@ -434,6 +521,9 @@ int run_db() {
 		return 1;
 	}
 	if (test_move() != 0) {
+		return 1;
+	}
+	if (test_type() != 0) {
 		return 1;
 	}
 	return 0;
