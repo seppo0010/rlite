@@ -78,6 +78,7 @@ int rl_move(struct rlite *db, unsigned char *key, long keylen, int database);
 int rl_rename(struct rlite *db, const unsigned char *src, long srclen, const unsigned char *target, long targetlen, int overwrite);
 int rl_dbsize(struct rlite *db, long *size);
 int rl_keys(struct rlite *db, unsigned char *pattern, long patternlen, long *size, unsigned char ***result, long **resultlen);
+int rl_randomkey(struct rlite *db, unsigned char **key, long *keylen);
 
 extern rl_data_type rl_data_type_header;
 extern rl_data_type rl_data_type_btree_hash_sha1_hashkey;

@@ -486,6 +486,50 @@ cleanup:
 	return retval;
 }
 
+static int test_randomkey(int _commit)
+{
+	int retval = 0;
+	fprintf(stderr, "Start test_randomkey %d\n", _commit);
+
+	rlite *db;
+	unsigned char *key = (unsigned char *)"my key";
+	long keylen = strlen((char *)key);
+	unsigned char *key2 = (unsigned char *)"my key 2";
+	long key2len = strlen((char *)key2);
+	unsigned char *data = (unsigned char *)"asd";
+	long datalen = strlen((char *)data);
+	unsigned char *testkey;
+	long testkeylen, i;
+	RL_CALL_VERBOSE(setup_db, RL_OK, &db, _commit, 1);
+
+	RL_CALL_VERBOSE(rl_set, RL_OK, db, key, keylen, data, datalen, 0, 0);
+	RL_COMMIT();
+
+	RL_CALL_VERBOSE(rl_randomkey, RL_OK, db, &testkey, &testkeylen);
+	EXPECT_BYTES(testkey, testkeylen, key, keylen);
+	rl_free(testkey);
+
+	RL_CALL_VERBOSE(rl_set, RL_OK, db, key2, key2len, data, datalen, 0, 0);
+	RL_COMMIT();
+
+	for (i = 0; i < 20; i++) {
+		RL_CALL_VERBOSE(rl_randomkey, RL_OK, db, &testkey, &testkeylen);
+
+		if ((keylen == testkeylen && memcmp(key, testkey, testkeylen) != 0) || (key2len == testkeylen && memcmp(key2, testkey, testkeylen) != 0)) {
+			fprintf(stderr, "Expected keys to contain key on line %d\n", __LINE__);
+			retval = RL_UNEXPECTED;
+			goto cleanup;
+		}
+		rl_free(testkey);
+	}
+
+	fprintf(stderr, "End test_randomkey\n");
+	retval = 0;
+cleanup:
+	rl_close(db);
+	return retval;
+}
+
 RL_TEST_MAIN_START(key_test)
 {
 	long i;
@@ -502,6 +546,7 @@ RL_TEST_MAIN_START(key_test)
 		RL_TEST(test_rename_no_overwrite, i);
 		RL_TEST(test_dbsize, i);
 		RL_TEST(test_keys, i);
+		RL_TEST(test_randomkey, i);
 	}
 	RL_TEST(basic_test_get_unexisting, 0);
 	RL_TEST(basic_test_set_delete, 0);

@@ -1151,3 +1151,15 @@ cleanup:
 	}
 	return retval;
 }
+
+int rl_randomkey(struct rlite *db, unsigned char **key, long *keylen)
+{
+	int retval;
+	rl_btree *btree;
+	rl_key *key_obj;
+	RL_CALL(rl_get_key_btree, RL_OK, db, &btree, 0);
+	RL_CALL(rl_btree_random_element, RL_OK, db, btree, NULL, (void **)&key_obj);
+	RL_CALL(rl_multi_string_get, RL_OK, db, key_obj->string_page, key, keylen);
+cleanup:
+	return retval;
+}
