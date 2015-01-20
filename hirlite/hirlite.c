@@ -2878,6 +2878,22 @@ static void dbsizeCommand(rliteClient *c) {
 cleanup:
 	return;
 }
+
+static void randomkeyCommand(rliteClient *c) {
+	unsigned char *key = NULL;
+	long keylen;
+	int retval = rl_randomkey(c->context->db, &key, &keylen);
+	RLITE_SERVER_ERR(c, retval);
+	if (retval == RL_OK) {
+		c->reply = createStringObject((char *)key, keylen);
+	} else {
+		c->reply = createReplyObject(RLITE_REPLY_NIL);
+	}
+cleanup:
+	rl_free(key);
+	return;
+}
+
 static void keysCommand(rliteClient *c) {
 	long i, size = 0;
 	unsigned char **result = NULL;
@@ -3199,7 +3215,7 @@ struct rliteCommand rliteCommandTable[] = {
 	{"getset",getsetCommand,3,"wm",0,1,1,1,0,0},
 	{"mset",msetCommand,-3,"wm",0,1,-1,2,0,0},
 	{"msetnx",msetnxCommand,-3,"wm",0,1,-1,2,0,0},
-	// {"randomkey",randomkeyCommand,1,"rR",0,NULL,0,0,0,0,0},
+	{"randomkey",randomkeyCommand,1,"rR",0,0,0,0,0,0},
 	{"select",selectCommand,2,"rlF",0,0,0,0,0,0},
 	{"move",moveCommand,3,"wF",0,1,1,1,0,0},
 	{"rename",renameCommand,3,"w",0,1,2,1,0,0},

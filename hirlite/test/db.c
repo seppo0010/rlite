@@ -486,6 +486,37 @@ int test_type() {
 	return 0;
 }
 
+int test_randomkey() {
+	rliteContext *context = rliteConnect(":memory:", 0);
+
+	rliteReply* reply;
+	size_t argvlen[100];
+
+	{
+		char* argv[100] = {"randomkey", NULL};
+		reply = rliteCommandArgv(context, populateArgvlen(argv, argvlen), argv, argvlen);
+		EXPECT_NIL(reply);
+		rliteFreeReplyObject(reply);
+	}
+
+	{
+		char* argv[100] = {"set", "key1", "mydata", NULL};
+		reply = rliteCommandArgv(context, populateArgvlen(argv, argvlen), argv, argvlen);
+		EXPECT_STATUS(reply, "OK", 2);
+		rliteFreeReplyObject(reply);
+	}
+
+	{
+		char* argv[100] = {"randomkey", NULL};
+		reply = rliteCommandArgv(context, populateArgvlen(argv, argvlen), argv, argvlen);
+		EXPECT_STR(reply, "key1", 4);
+		rliteFreeReplyObject(reply);
+	}
+
+	rliteFree(context);
+	return 0;
+}
+
 int run_db() {
 	if (test_keys() != 0) {
 		return 1;
@@ -524,6 +555,9 @@ int run_db() {
 		return 1;
 	}
 	if (test_type() != 0) {
+		return 1;
+	}
+	if (test_randomkey() != 0) {
 		return 1;
 	}
 	return 0;
