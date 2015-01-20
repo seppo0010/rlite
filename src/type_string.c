@@ -288,6 +288,8 @@ int rl_bitop(struct rlite *db, int op, const unsigned char *dest, long destlen, 
 		}
 		else if (retval == RL_OK) {
 			valueslen[i] = ltmp;
+		} else {
+			goto cleanup;
 		}
 	}
 	rl_internal_bitop(op, keyc, values, valueslen, &result, &resultlen);
