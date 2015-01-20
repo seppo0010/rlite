@@ -1357,7 +1357,11 @@ static void bitcountCommand(rliteClient *c) {
 
 	retval = rl_bitcount(c->context->db, key, keylen, start, stop, &bitcount);
 	RLITE_SERVER_ERR(c, retval);
-	c->reply = createLongLongObject(bitcount);
+	if (retval == RL_NOT_FOUND) {
+		c->reply = createLongLongObject(0);
+	} else if (retval == RL_OK) {
+		c->reply = createLongLongObject(bitcount);
+	}
 cleanup:
 	return;
 }
