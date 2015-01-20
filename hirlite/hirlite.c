@@ -1448,7 +1448,15 @@ static void bitposCommand(rliteClient *c) {
 
 	retval = rl_bitpos(c->context->db, key, keylen, bit, start, stop, end_given, &pos);
 	RLITE_SERVER_ERR(c, retval);
-	c->reply = createLongLongObject(pos);
+	if (retval == RL_OK) {
+		c->reply = createLongLongObject(pos);
+	} else if (retval == RL_NOT_FOUND) {
+		if (bit == 0) {
+			c->reply = createLongLongObject(0);
+		} else {
+			c->reply = createLongLongObject(-1);
+		}
+	}
 cleanup:
 	return;
 }
