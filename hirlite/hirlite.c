@@ -1345,7 +1345,7 @@ static void bitcountCommand(rliteClient *c) {
 	long bitcount;
 
 	if (c->argc != 2 && c->argc != 4) {
-		addReplyErrorFormat(c->context, RLITE_WRONGNUMBEROFARGUMENTS, c->argv[0]);
+		addReplyErrorFormat(c->context, RLITE_SYNTAXERR, c->argv[0]);
 		return;
 	}
 
