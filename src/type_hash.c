@@ -419,7 +419,7 @@ int rl_hincrbyfloat(struct rlite *db, const unsigned char *key, long keylen, uns
 	void *tmp;
 	unsigned char *digest = NULL, *data = NULL;
 	char *end;
-	long datalen, hash_page_number;
+	long dataalloc, datalen, hash_page_number;
 	double value;
 	rl_hashkey *hashkey;
 
@@ -432,14 +432,15 @@ int rl_hincrbyfloat(struct rlite *db, const unsigned char *key, long keylen, uns
 	if (retval == RL_FOUND) {
 		hashkey = tmp;
 		rl_multi_string_get(db, hashkey->value_page, &data, &datalen);
-		tmp = realloc(data, sizeof(unsigned char) * ((datalen / 8 + 1) * 8 + 1));
+		dataalloc = (datalen / 8 + 1) * 8;
+		tmp = realloc(data, sizeof(unsigned char) * dataalloc);
 		if (!tmp) {
 			retval = RL_OUT_OF_MEMORY;
 			goto cleanup;
 		}
 		data = tmp;
 		// valgrind reads 8 bytes at a time
-		memset(&data[datalen], 0, datalen % 8 + 8);
+		memset(&data[datalen], 0, dataalloc - datalen);
 		value = strtod((char *)data, &end);
 		if (isspace(((char *)data)[0]) || end[0] != '\0' ||
 		        (errno == ERANGE && (value == HUGE_VAL || value == -HUGE_VAL || value == 0)) ||
