@@ -280,6 +280,7 @@ int rl_bitop(struct rlite *db, int op, const unsigned char *dest, long destlen, 
 	long resultlen;
 	RL_MALLOC(valueslen, sizeof(unsigned long) * keyc);
 	RL_MALLOC(values, sizeof(unsigned char *) * keyc);
+	values[0] = NULL;
 	for (i = 0; i < keyc; i++) {
 		RL_CALL2(rl_get, RL_OK, RL_NOT_FOUND, db, keys[i], keyslen[i], &values[i], &ltmp);
 		if (retval == RL_NOT_FOUND) {
@@ -298,9 +299,12 @@ int rl_bitop(struct rlite *db, int op, const unsigned char *dest, long destlen, 
 	retval = RL_OK;
 cleanup:
 	if (values) {
-		for (i = 0; i < keyc; i++) {
-			rl_free(values[i]);
+		if (i > 0) {
+			for (i--; i > 0; i--) {
+				rl_free(values[i]);
+			}
 		}
+		rl_free(values[0]);
 	}
 	rl_free(values);
 	rl_free(valueslen);
