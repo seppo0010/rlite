@@ -262,6 +262,15 @@ int rl_multi_string_getrange(struct rlite *db, long number, unsigned char **_dat
 			stop = 0;
 		}
 	}
+	if (stop < start) {
+		*size = 0;
+		if (_data) {
+			*_data = NULL;
+		}
+		retval = RL_OK;
+		goto cleanup;
+	}
+
 	*size = stop - start + 1;
 	if (!_data) {
 		retval = RL_OK;
