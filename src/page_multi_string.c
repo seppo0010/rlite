@@ -7,6 +7,23 @@
 #include "page_multi_string.h"
 #include "util.h"
 
+int rl_normalize_string_range(long totalsize, long *start, long *stop)
+{
+	if (*start < 0) {
+		*start += totalsize;
+		if (*start < 0) {
+			*start = 0;
+		}
+	}
+	if (*stop < 0) {
+		*stop += totalsize;
+		if (*stop < 0) {
+			*stop = 0;
+		}
+	}
+	return RL_OK;
+}
+
 int rl_multi_string_cmp(struct rlite *db, long p1, long p2, int *cmp)
 {
 	rl_list *list1 = NULL, *list2 = NULL;
@@ -250,18 +267,7 @@ int rl_multi_string_getrange(struct rlite *db, long number, unsigned char **_dat
 		retval = RL_OK;
 		goto cleanup;
 	}
-	if (start < 0) {
-		start += totalsize;
-		if (start < 0) {
-			start = 0;
-		}
-	}
-	if (stop < 0) {
-		stop += totalsize;
-		if (stop < 0) {
-			stop = 0;
-		}
-	}
+	rl_normalize_string_range(totalsize, &start, &stop);
 	if (stop < start) {
 		*size = 0;
 		if (_data) {
@@ -270,7 +276,6 @@ int rl_multi_string_getrange(struct rlite *db, long number, unsigned char **_dat
 		retval = RL_OK;
 		goto cleanup;
 	}
-
 	*size = stop - start + 1;
 	if (!_data) {
 		retval = RL_OK;

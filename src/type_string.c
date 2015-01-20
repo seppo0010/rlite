@@ -323,7 +323,7 @@ int rl_bitpos(struct rlite *db, const unsigned char *key, long keylen, int bit, 
 {
 	int retval;
 	unsigned char *value = NULL;
-	long valuelen;
+	long valuelen, totalsize;
 
 	if (bit != 0 && bit != 1) {
 		retval = RL_INVALID_PARAMETERS;
@@ -337,6 +337,9 @@ int rl_bitpos(struct rlite *db, const unsigned char *key, long keylen, int bit, 
 		retval = RL_OK;
 		goto cleanup;
 	}
+
+	RL_CALL(rl_get, RL_OK, db, key, keylen, NULL, &totalsize);
+	RL_CALL(rl_normalize_string_range, RL_OK, totalsize, &start, &stop);
 
 	long bytes = stop - start + 1;
 	// stop may be after the end of the string and in that case it is treated

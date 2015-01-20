@@ -790,6 +790,22 @@ int test_bitpos() {
 	}
 
 	{
+		char* argv[100] = {"set", "mykey", "\x00\xff\x00", NULL};
+		populateArgvlen(argv, argvlen);
+		argvlen[2] = 3;
+		reply = rliteCommandArgv(context, 3, argv, argvlen);
+		EXPECT_STATUS(reply, "OK", 2);
+		rliteFreeReplyObject(reply);
+	}
+
+	{
+		char* argv[100] = {"bitpos", "mykey", "0", "1", "-1", NULL};
+		reply = rliteCommandArgv(context, populateArgvlen(argv, argvlen), argv, argvlen);
+		EXPECT_INTEGER(reply, 16);
+		rliteFreeReplyObject(reply);
+	}
+
+	{
 		char* argv[100] = {"set", "mykey", "\x00\x00\x00", NULL};
 		populateArgvlen(argv, argvlen);
 		argvlen[2] = 3;

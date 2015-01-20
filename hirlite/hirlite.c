@@ -1434,7 +1434,7 @@ static void bitposCommand(rliteClient *c) {
 	}
 	bit = c->argv[2][0] == '0' ? 0 : 1;
 
-	if (c->argc == 4) {
+	if (c->argc >= 4) {
 		if (getLongFromObjectOrReply(c, c->argv[3], &start, NULL) != RLITE_OK)
 			return;
 	}
