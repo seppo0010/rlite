@@ -769,8 +769,18 @@ int rl_zinterstore(rlite *db, long keys_size, unsigned char **keys, long *keys_l
 	double weight = 1.0, weight_tmp;
 	double *weights = NULL;
 	rl_skiplist_node *node;
-	rl_skiplist_iterator *iterator = NULL;
+	rl_skiplist_iterator *skiplist_iterator = NULL;
+	rl_btree_iterator *btree_iterator = NULL;
 	int retval;
+	long target_btree_page, target_skiplist_page;
+	long multi_string_page;
+	rl_btree *target_btree;
+	rl_skiplist *target_skiplist;
+	int found;
+	void *tmp;
+	double skiplist_score, tmp_score;
+	long memberlen;
+	unsigned char digest[20];
 
 	if (keys_size > 1) {
 		RL_MALLOC(btrees, sizeof(rl_btree *) * (keys_size - 1));
@@ -793,7 +803,11 @@ int rl_zinterstore(rlite *db, long keys_size, unsigned char **keys, long *keys_l
 	RL_MALLOC(weights, sizeof(double) * (keys_size - 2));
 	for (i = 1; i < keys_size; i++) {
 		weight_tmp = _weights ? _weights[i - 1] : 1.0;
-		RL_CALL(rl_zset_get_objects, RL_OK, db, keys[i], keys_len[i], NULL, &btree_tmp, NULL, &skiplist_tmp, NULL, 0);
+		RL_CALL2(rl_zset_get_objects, RL_OK, RL_WRONG_TYPE, db, keys[i], keys_len[i], NULL, &btree_tmp, NULL, &skiplist_tmp, NULL, 0);
+		if (retval == RL_WRONG_TYPE) {
+			skiplist_tmp = NULL;
+			RL_CALL(rl_set_get_objects, RL_OK, db, keys[i], keys_len[i], NULL, &btree_tmp, 0);
+		}
 		if (i == 1) {
 			btree = btree_tmp;
 			skiplist = skiplist_tmp;
@@ -813,23 +827,26 @@ int rl_zinterstore(rlite *db, long keys_size, unsigned char **keys, long *keys_l
 			skiplists[i - 2] = skiplist_tmp;
 		}
 	}
-	RL_CALL(rl_skiplist_iterator_create, RL_OK, db, &iterator, skiplist, 0, 0, 0);
 
-	long target_btree_page, target_skiplist_page;
-	rl_btree *target_btree;
-	rl_skiplist *target_skiplist;
 	RL_CALL(rl_zset_get_objects, RL_OK, db, keys[0], keys_len[0], NULL, &target_btree, &target_btree_page, &target_skiplist, &target_skiplist_page, 1);
 
-	int found;
-	void *tmp;
-	double skiplist_score, tmp_score;
-	long memberlen;
-	unsigned char digest[20];
-	while ((retval = rl_skiplist_iterator_next(iterator, &node)) == RL_OK) {
+	if (skiplist) {
+		RL_CALL(rl_skiplist_iterator_create, RL_OK, db, &skiplist_iterator, skiplist, 0, 0, 0);
+	} else {
+		RL_CALL(rl_btree_iterator_create, RL_OK, db, btree, &btree_iterator);
+	}
+	while ((retval = skiplist ? rl_skiplist_iterator_next(skiplist_iterator, &node) : rl_btree_iterator_next(btree_iterator, NULL, &tmp)) == RL_OK) {
 		found = 1;
-		skiplist_score = node->score * weight;
+		if (skiplist) {
+			skiplist_score = node->score * weight;
+			multi_string_page = node->value;
+		} else {
+			skiplist_score = weight;
+			multi_string_page = *(long *)tmp;
+			rl_free(tmp);
+		}
 		for (i = 1; i < keys_size - 1; i++) {
-			RL_CALL(rl_multi_string_sha1, RL_OK, db, digest, node->value);
+			RL_CALL(rl_multi_string_sha1, RL_OK, db, digest, multi_string_page);
 
 			retval = rl_btree_find_score(db, btrees[i - 1], digest, &tmp, NULL, NULL);
 			if (retval == RL_NOT_FOUND) {
@@ -837,7 +854,7 @@ int rl_zinterstore(rlite *db, long keys_size, unsigned char **keys, long *keys_l
 				break;
 			}
 			else if (retval == RL_FOUND) {
-				tmp_score = *(double *)tmp;
+				tmp_score = skiplist ? *(double *)tmp : 1.0;
 				if (aggregate == RL_ZSET_AGGREGATE_SUM) {
 					skiplist_score += tmp_score * weights[i - 1];
 				}
@@ -853,13 +870,14 @@ int rl_zinterstore(rlite *db, long keys_size, unsigned char **keys, long *keys_l
 			}
 		}
 		if (found) {
-			RL_CALL(rl_multi_string_get, RL_OK, db, node->value, &member, &memberlen);
+			RL_CALL(rl_multi_string_get, RL_OK, db, multi_string_page, &member, &memberlen);
 			RL_CALL(add_member, RL_OK, db, target_btree, target_btree_page, target_skiplist, target_skiplist_page, isnan(skiplist_score) ? 0.0 : skiplist_score, member, memberlen);
 			rl_free(member);
 			member = NULL;
 		}
 	}
-	iterator = NULL;
+	skiplist_iterator = NULL;
+	btree_iterator = NULL;
 
 	if (retval != RL_END) {
 		goto cleanup;
@@ -868,8 +886,11 @@ int rl_zinterstore(rlite *db, long keys_size, unsigned char **keys, long *keys_l
 	retval = RL_OK;
 cleanup:
 	rl_free(member);
-	if (iterator) {
-		rl_zset_iterator_destroy(iterator);
+	if (skiplist_iterator) {
+		rl_zset_iterator_destroy(skiplist_iterator);
+	}
+	if (btree_iterator) {
+		rl_btree_iterator_destroy(btree_iterator);
 	}
 	rl_free(weights);
 	rl_free(btrees);

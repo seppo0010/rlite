@@ -31,7 +31,7 @@ cleanup:
 	return retval;
 }
 
-static int rl_set_get_objects(rlite *db, const unsigned char *key, long keylen, long *_set_page_number, rl_btree **btree, int create)
+int rl_set_get_objects(rlite *db, const unsigned char *key, long keylen, long *_set_page_number, rl_btree **btree, int create)
 {
 	long set_page_number;
 	int retval;

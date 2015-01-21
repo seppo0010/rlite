@@ -722,6 +722,81 @@ cleanup:
 	return retval;
 }
 
+int basic_test_sadd_zinterstore(int _commit, long params[5])
+{
+	unsigned char *data = NULL;
+	int retval;
+	fprintf(stderr, "Start basic_test_sadd_zinterstore %d %ld %ld %ld %ld %ld\n", _commit, params[0], params[1], params[2], params[3], params[4]);
+
+	long keys_len[ZINTERSTORE_KEYS];
+	unsigned char *keys[ZINTERSTORE_KEYS];
+	long i;
+	for (i = 0; i < ZINTERSTORE_KEYS; i++) {
+		keys[i] = malloc(sizeof(unsigned char));
+		keys[i][0] = 'a' + i;
+		keys_len[i] = 1;
+	}
+
+	rlite *db = NULL;
+	RL_CALL_VERBOSE(setup_db, RL_OK, &db, _commit, 1);
+
+	unsigned char *members[ZINTERSTORE_MEMBERS];
+	long memberslen[ZINTERSTORE_MEMBERS];
+	for (i = 0; i < ZINTERSTORE_MEMBERS; i++) {
+		members[i] = malloc(sizeof(unsigned char));
+		members[i][0] = 'A' + i;
+		memberslen[i] = 1;
+	}
+
+	for (i = 1; i < ZINTERSTORE_KEYS; i++) {
+		RL_CALL_VERBOSE(rl_sadd, RL_OK, db, keys[i], 1, ZINTERSTORE_MEMBERS, (unsigned char **)members, memberslen, NULL);
+
+		RL_BALANCED();
+		unsigned char *own_member = malloc(sizeof(unsigned char));
+		own_member[0] = (unsigned char)(CHAR_MAX - i);
+		RL_CALL_VERBOSE(rl_sadd, RL_OK, db, keys[i], 1, 1, (unsigned char **)&own_member, keys_len, NULL);
+		RL_BALANCED();
+        free(own_member);
+	}
+
+	double weights[3];
+	weights[0] = params[1];
+	weights[1] = params[2];
+	weights[2] = params[3];
+	RL_CALL_VERBOSE(rl_zinterstore, RL_OK, db, ZINTERSTORE_KEYS, keys, keys_len, params[1] == 0 && params[2] == 0 && params[3] == 0 ? NULL : weights, params[0]);
+	RL_BALANCED();
+
+	rl_zset_iterator *iterator;
+	RL_CALL_VERBOSE(rl_zrange, RL_OK, db, keys[0], 1, 0, -1, &iterator);
+	EXPECT_LONG(iterator->size, ZINTERSTORE_MEMBERS);
+
+	i = 0;
+	long datalen;
+	double score;
+	while ((retval = rl_zset_iterator_next(iterator, &score, &data, &datalen)) == RL_OK) {
+		EXPECT_DOUBLE(score, params[4]);
+		EXPECT_LONG(data[0], members[i][0]);
+		EXPECT_LONG(datalen, 1);
+		rl_free(data);
+		data = NULL;
+		free(members[i]);
+		i++;
+	}
+
+	EXPECT_INT(retval, RL_END);
+
+	fprintf(stderr, "End basic_test_sadd_zinterstore\n");
+
+	retval = RL_OK;
+cleanup:
+	for (i = 0; i < ZINTERSTORE_KEYS; i++) {
+		rl_free(keys[i]);
+	}
+	rl_free(data);
+	rl_close(db);
+	return retval;
+}
+
 #define ZUNIONSTORE_KEYS 4
 #define ZUNIONSTORE_MEMBERS 10
 int basic_test_zadd_zunionstore(int _commit, long params[5])
@@ -998,9 +1073,17 @@ cleanup:
 	return retval;
 }
 
+#define SADD_ZINTERSTORE_TESTS 4
 #define ZINTERSTORE_TESTS 7
 RL_TEST_MAIN_START(type_zset_test)
 {
+	long sadd_zinterunionstore_tests[SADD_ZINTERSTORE_TESTS][5] = {
+		{RL_ZSET_AGGREGATE_SUM, 0, 0, 0, 3},
+		{RL_ZSET_AGGREGATE_SUM, 1, 1, 1, 3},
+		{RL_ZSET_AGGREGATE_MIN, 1, 1, 1, 1},
+		{RL_ZSET_AGGREGATE_MAX, 1, 1, 1, 1},
+	};
+
 	long zinterunionstore_tests[ZINTERSTORE_TESTS][5] = {
 		{RL_ZSET_AGGREGATE_SUM, 0, 0, 0, 6},
 		{RL_ZSET_AGGREGATE_SUM, 1, 1, 1, 6},
@@ -1030,6 +1113,9 @@ RL_TEST_MAIN_START(type_zset_test)
 		for (j = 0; j < ZINTERSTORE_TESTS; j++) {
 			RL_TEST(basic_test_zadd_zinterstore, i, zinterunionstore_tests[j]);
 			RL_TEST(basic_test_zadd_zunionstore, i, zinterunionstore_tests[j]);
+		}
+		for (j = 0; j < SADD_ZINTERSTORE_TESTS; j++) {
+			RL_TEST(basic_test_sadd_zinterstore, i, sadd_zinterunionstore_tests[j]);
 		}
 		RL_TEST(basic_test_zadd_zrange, 0);
 	}
