@@ -701,6 +701,7 @@ static int __rliteAppendCommandClient(rliteClient *client) {
 		if (client->reply) {
 			retval = addReply(client->context, client->reply);
 		}
+		rl_commit(client->context->db);
 	}
 	return retval;
 }
