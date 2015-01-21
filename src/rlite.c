@@ -1040,9 +1040,9 @@ int rl_move(struct rlite *db, unsigned char *key, long keylen, int database)
 	RL_CALL(rl_key_delete, RL_OK, db, key, keylen);
 	RL_CALL(rl_select, RL_OK, db, database);
 	RL_CALL(rl_key_set, RL_OK, db, key, keylen, type, value_page, expires);
-	RL_CALL(rl_select, RL_OK, db, olddb);
 	retval = RL_OK;
 cleanup:
+	rl_select(db, olddb);
 	return retval;
 }
 

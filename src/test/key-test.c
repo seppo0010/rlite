@@ -171,6 +171,40 @@ cleanup:
 	return retval;
 }
 
+int existing_test_move(int _commit)
+{
+	int retval = 0;
+	fprintf(stderr, "Start existing_test_move %d\n", _commit);
+
+	rlite *db;
+	RL_CALL_VERBOSE(setup_db, RL_OK, &db, _commit, 1);
+	unsigned char *key = (unsigned char *)"my key";
+	long keylen = strlen((char *)key);
+	unsigned char type = 'A';
+	long page = 100, page2 = 101, pagetest; // set dummy values for != assert
+
+	RL_CALL_VERBOSE(rl_select, RL_OK, db, 1);
+	RL_CALL_VERBOSE(rl_key_get_or_create, RL_NOT_FOUND, db, key, keylen, type, &page);
+	RL_COMMIT();
+
+	RL_CALL_VERBOSE(rl_select, RL_OK, db, 0);
+	RL_CALL_VERBOSE(rl_key_get_or_create, RL_NOT_FOUND, db, key, keylen, type, &page2);
+	RL_COMMIT();
+
+	RL_CALL_VERBOSE(rl_move, RL_FOUND, db, key, keylen, 1);
+	RL_CALL_VERBOSE(rl_key_get, RL_FOUND, db, key, keylen, NULL, NULL, &pagetest, NULL);
+	EXPECT_LONG(pagetest, page2)
+
+	RL_CALL_VERBOSE(rl_select, RL_OK, db, 1);
+	RL_CALL_VERBOSE(rl_key_get_or_create, RL_FOUND, db, key, keylen, type, &pagetest);
+	EXPECT_LONG(pagetest, page);
+	fprintf(stderr, "End existing_test_move\n");
+	retval = RL_OK;
+cleanup:
+	rl_close(db);
+	return retval;
+}
+
 int basic_test_expires(int _commit)
 {
 	int retval = 0;
@@ -538,6 +572,7 @@ RL_TEST_MAIN_START(key_test)
 		RL_TEST(basic_test_get_or_create, i);
 		RL_TEST(basic_test_multidb, i);
 		RL_TEST(basic_test_move, i);
+		RL_TEST(existing_test_move, i);
 		RL_TEST(basic_test_expires, i);
 		RL_TEST(basic_test_change_expiration, i);
 		RL_TEST(test_delete_with_value, i);
