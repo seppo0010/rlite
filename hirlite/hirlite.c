@@ -2719,6 +2719,8 @@ static void setbitCommand(rliteClient *c) {
 	RLITE_SERVER_ERR(c, retval);
 	if (retval == RL_OK) {
 		c->reply = createLongLongObject(previousvalue);
+	} else if (retval == RL_INVALID_PARAMETERS) {
+		c->reply = createErrorObject("ERR bit offset is not an integer or out of range");
 	}
 cleanup:
 	return;

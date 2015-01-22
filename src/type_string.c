@@ -248,6 +248,14 @@ int rl_setbit(struct rlite *db, const unsigned char *key, long keylen, long bito
 	char val;
 	start = bitoffset >> 3;
 	long bit = 7 - (bitoffset & 0x7);
+
+	/* Limit offset to 512MB in bytes */
+	if ((bitoffset < 0) || ((unsigned long long)bitoffset >> 3) >= (512*1024*1024))
+	{
+		retval = RL_INVALID_PARAMETERS;
+		goto cleanup;
+	}
+
 	RL_CALL2(rl_getrange, RL_OK, RL_NOT_FOUND, db, key, keylen, start, start, &rangevalue, &rangevaluelen);
 	if (retval == RL_NOT_FOUND || rangevaluelen == 0) {
 		val = 0;
