@@ -2607,11 +2607,17 @@ static void setrangeCommand(rliteClient *c) {
 		}
 		goto cleanup;
 	}
+	if (offset < 0) {
+		c->reply = createErrorObject("ERR offset is out of range");
+		goto cleanup;
+	}
 
 	retval = rl_setrange(c->context->db, key, keylen, offset, value, valuelen, &newlength);
 	RLITE_SERVER_ERR(c, retval);
 	if (retval == RL_OK) {
 		c->reply = createLongLongObject(newlength);
+	} else if (retval == RL_INVALID_PARAMETERS) {
+		c->reply = createErrorObject("ERR string exceeds maximum allowed size (512MB)");
 	}
 cleanup:
 	return;

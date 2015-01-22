@@ -106,6 +106,10 @@ int rl_setrange(struct rlite *db, const unsigned char *key, long keylen, long in
 {
 	long page_number;
 	int retval;
+	if (valuelen + index > 512*1024*1024) {
+		retval = RL_INVALID_PARAMETERS;
+		goto cleanup;
+	}
 	RL_CALL2(rl_string_get_objects, RL_OK, RL_NOT_FOUND, db, key, keylen, &page_number, NULL);
 	if (retval == RL_NOT_FOUND) {
 		unsigned char *padding;
