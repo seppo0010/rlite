@@ -3,6 +3,7 @@
 #include "util.h"
 #include "../deps/crc64.h"
 #include "../deps/endianconv.h"
+#include "../deps/lzf.h"
 
 #define REDIS_RDB_VERSION 6
 
@@ -89,7 +90,7 @@ int rl_restore(struct rlite *db, const unsigned char *key, long keylen, unsigned
 	int is_encoded;
 	unsigned char *strdata = NULL;
 	unsigned char *data = _data;
-	long strdatalen, cdatalen;
+	long strdatalen = 0, cdatalen = 0;
 
 	RL_CALL(verify, RL_OK, data, datalen);
 	RL_CALL(rl_key_get, RL_NOT_FOUND, db, key, keylen, NULL, NULL, NULL, NULL);
@@ -124,8 +125,10 @@ int rl_restore(struct rlite *db, const unsigned char *key, long keylen, unsigned
 				goto cleanup;
 			}
 		} else if (is_encoded && length == REDIS_RDB_ENC_LZF) {
-			retval = RL_NOT_IMPLEMENTED;
-			goto cleanup;
+			data = read_length_with_encoding(data, &cdatalen, NULL);
+			data = read_length_with_encoding(data, &strdatalen, NULL);
+			strdata = rl_malloc(strdatalen * sizeof(unsigned char));
+			rl_lzf_decompress(data, cdatalen, strdata, strdatalen);
 		} else if (!is_encoded) {
 			strdatalen = length;
 			strdata = rl_malloc(strdatalen * sizeof(unsigned char));
