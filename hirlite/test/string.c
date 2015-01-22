@@ -403,6 +403,20 @@ int test_setrange() {
 	size_t argvlen[100];
 
 	{
+		char* argv[100] = {"setrange", "mykey", "0", "", NULL};
+		reply = rliteCommandArgv(context, populateArgvlen(argv, argvlen), argv, argvlen);
+		EXPECT_INTEGER(reply, 0);
+		rliteFreeReplyObject(reply);
+	}
+
+	{
+		char* argv[100] = {"exists", "mykey", NULL};
+		reply = rliteCommandArgv(context, populateArgvlen(argv, argvlen), argv, argvlen);
+		EXPECT_INTEGER(reply, 0);
+		rliteFreeReplyObject(reply);
+	}
+
+	{
 		char* argv[100] = {"setrange", "mykey", "0", "myvalue", NULL};
 		reply = rliteCommandArgv(context, populateArgvlen(argv, argvlen), argv, argvlen);
 		EXPECT_INTEGER(reply, 7);

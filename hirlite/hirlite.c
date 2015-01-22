@@ -2590,13 +2590,25 @@ static void setrangeCommand(rliteClient *c) {
 	long valuelen = c->argvlen[3];
 	long long offset;
 	long newlength;
+	int retval;
 
 	if (getLongLongFromObject(c->argv[2], &offset) != RLITE_OK) {
 		c->reply = createErrorObject(RLITE_SYNTAXERR);
 		return;
 	}
 
-	int retval = rl_setrange(c->context->db, key, keylen, offset, value, valuelen, &newlength);
+	if (offset == 0 && valuelen == 0) {
+		retval = rl_get(c->context->db, key, keylen, NULL, &newlength);
+		RLITE_SERVER_ERR(c, retval);
+		if (retval == RL_OK) {
+			c->reply = createLongLongObject(newlength);
+		} else {
+			c->reply = createLongLongObject(0);
+		}
+		goto cleanup;
+	}
+
+	retval = rl_setrange(c->context->db, key, keylen, offset, value, valuelen, &newlength);
 	RLITE_SERVER_ERR(c, retval);
 	if (retval == RL_OK) {
 		c->reply = createLongLongObject(newlength);
