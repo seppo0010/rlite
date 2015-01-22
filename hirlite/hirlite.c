@@ -2523,7 +2523,6 @@ static void msetnxCommand(rliteClient *c) {
 	long keylen;
 	unsigned char *value;
 	long valuelen;
-	long count = 0;
 
 	if (c->argc % 2 == 0) {
 		c->reply = createErrorObject(RLITE_SYNTAXERR);
@@ -2533,7 +2532,11 @@ static void msetnxCommand(rliteClient *c) {
 	for (i = 1; i < keyc; i += 2) {
 		key = (unsigned char *)c->argv[i];
 		keylen = (long)c->argvlen[i];
-		RL_CALL(rl_get, RL_NOT_FOUND, c->context->db, key, keylen, NULL, NULL);
+		retval = rl_get(c->context->db, key, keylen, NULL, NULL);
+		if (retval != RL_NOT_FOUND) {
+			retval = RL_FOUND;
+			goto cleanup;
+		}
 	}
 
 	for (i = 1; i < keyc; i += 2) {
@@ -2543,12 +2546,13 @@ static void msetnxCommand(rliteClient *c) {
 		valuelen = (long)c->argvlen[i + 1];
 		retval = rl_set(c->context->db, key, keylen, value, valuelen, 1, 0);
 		RLITE_SERVER_ERR(c, retval);
-		if (retval == RL_OK) {
-			count++;
+		if (retval != RL_OK) {
+			goto cleanup;
 		}
 	}
+	retval = RL_OK;
 cleanup:
-	c->reply = createLongLongObject(count);
+	c->reply = createLongLongObject(retval == RL_OK ? 1 : 0);
 	return;
 }
 
