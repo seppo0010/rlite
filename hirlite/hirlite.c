@@ -2710,7 +2710,7 @@ static void setbitCommand(rliteClient *c) {
 	}
 
 	if (c->argvlen[3] != 1 || (c->argv[3][0] != '0' && c->argv[3][0] != '1')) {
-		c->reply = createErrorObject(RLITE_SYNTAXERR);
+		c->reply = createErrorObject(RLITE_OUTOFRANGEERR);
 		return;
 	}
 
