@@ -21,6 +21,12 @@ int rl_normalize_string_range(long totalsize, long *start, long *stop)
 			*stop = 0;
 		}
 	}
+	if (*start >= totalsize) {
+		*start = totalsize;
+	}
+	if (*stop >= totalsize) {
+		*stop = totalsize - 1;
+	}
 	return RL_OK;
 }
 
@@ -282,7 +288,7 @@ int rl_multi_string_getrange(struct rlite *db, long number, unsigned char **_dat
 		goto cleanup;
 	}
 
-	RL_MALLOC(data, sizeof(unsigned char) * (*size));
+	RL_MALLOC(data, sizeof(unsigned char) * (*size + 1));
 
 	i = start / db->page_size;
 	pagestart = start % db->page_size;
@@ -299,6 +305,7 @@ int rl_multi_string_getrange(struct rlite *db, long number, unsigned char **_dat
 		pos += pagesize;
 		pagestart = 0;
 	}
+	data[*size] = 0;
 	*_data = data;
 	retval = RL_OK;
 cleanup:
