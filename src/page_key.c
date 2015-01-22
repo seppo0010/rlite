@@ -183,16 +183,25 @@ cleanup:
 	return retval;
 }
 
+int rl_key_delete_value(struct rlite *db, unsigned char identifier, long value_page)
+{
+	int retval;
+	rl_type *type;
+	RL_CALL(get_type, RL_OK, identifier, &type);
+	RL_CALL(type->delete, RL_OK, db, value_page);
+	retval = RL_OK;
+cleanup:
+	return retval;
+}
+
 int rl_key_delete_with_value(struct rlite *db, const unsigned char *key, long keylen)
 {
 	int retval;
 	unsigned char identifier;
-	rl_type *type;
 	long value_page;
 	unsigned long long expires;
 	RL_CALL(rl_key_get_ignore_expire, RL_FOUND, db, key, keylen, &identifier, NULL, &value_page, &expires, 1);
-	RL_CALL(get_type, RL_OK, identifier, &type);
-	RL_CALL(type->delete, RL_OK, db, value_page);
+	RL_CALL(rl_key_delete_value, RL_OK, db, identifier, value_page);
 	RL_CALL(rl_key_delete, RL_OK, db, key, keylen);
 	retval = expires != 0 && expires <= rl_mstime() ? RL_NOT_FOUND : RL_OK;
 cleanup:

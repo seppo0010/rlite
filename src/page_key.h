@@ -16,6 +16,7 @@ int rl_key_get(struct rlite *db, const unsigned char *key, long keylen, unsigned
 int rl_key_set(struct rlite *db, const unsigned char *key, long keylen, unsigned char type, long page, unsigned long long expires);
 int rl_key_delete(struct rlite *db, const unsigned char *key, long keylen);
 int rl_key_expires(struct rlite *db, const unsigned char *key, long keylen, unsigned long long expires);
+int rl_key_delete_value(struct rlite *db, unsigned char identifier, long value_page);
 int rl_key_delete_with_value(struct rlite *db, const unsigned char *key, long keylen);
 
 #endif

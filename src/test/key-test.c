@@ -564,6 +564,38 @@ cleanup:
 	return retval;
 }
 
+static int test_flushdb(int _commit)
+{
+	int retval = 0;
+	fprintf(stderr, "Start test_flushdb %d\n", _commit);
+
+	rlite *db;
+	unsigned char *key = (unsigned char *)"my key";
+	long keylen = strlen((char *)key);
+	unsigned char *key2 = (unsigned char *)"my key 2";
+	long key2len = strlen((char *)key2);
+	unsigned char *data = (unsigned char *)"asd";
+	long datalen = strlen((char *)data);
+	long len;
+	RL_CALL_VERBOSE(setup_db, RL_OK, &db, _commit, 1);
+
+	RL_CALL_VERBOSE(rl_set, RL_OK, db, key, keylen, data, datalen, 0, 0);
+	RL_CALL_VERBOSE(rl_set, RL_OK, db, key2, key2len, data, datalen, 0, 0);
+	RL_COMMIT();
+
+	RL_CALL_VERBOSE(rl_flushdb, RL_OK, db);
+	RL_COMMIT();
+
+	RL_CALL_VERBOSE(rl_dbsize, RL_OK, db, &len);
+	EXPECT_LONG(len, 0);
+
+	fprintf(stderr, "End test_flushdb\n");
+	retval = 0;
+cleanup:
+	rl_close(db);
+	return retval;
+}
+
 RL_TEST_MAIN_START(key_test)
 {
 	long i;
@@ -582,6 +614,7 @@ RL_TEST_MAIN_START(key_test)
 		RL_TEST(test_dbsize, i);
 		RL_TEST(test_keys, i);
 		RL_TEST(test_randomkey, i);
+		RL_TEST(test_flushdb, i);
 	}
 	RL_TEST(basic_test_get_unexisting, 0);
 	RL_TEST(basic_test_set_delete, 0);

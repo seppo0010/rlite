@@ -1163,3 +1163,36 @@ int rl_randomkey(struct rlite *db, unsigned char **key, long *keylen)
 cleanup:
 	return retval;
 }
+
+int rl_flushdb(struct rlite *db)
+{
+	int retval;
+	rl_btree *btree;
+	rl_btree_iterator *iterator = NULL;
+	rl_key *key;
+	void *tmp;
+	RL_CALL2(rl_get_key_btree, RL_OK, RL_NOT_FOUND, db, &btree, 0);
+	if (retval == RL_NOT_FOUND) {
+		retval = RL_OK;
+		goto cleanup;
+	}
+
+	RL_CALL(rl_btree_iterator_create, RL_OK, db, btree, &iterator);
+
+	while ((retval = rl_btree_iterator_next(iterator, NULL, &tmp)) == RL_OK) {
+		key = tmp;
+		RL_CALL(rl_key_delete_value, RL_OK, db, key->type, key->value_page);
+		RL_CALL(rl_multi_string_delete, RL_OK, db, key->string_page);
+		rl_free(key);
+	}
+	if (retval != RL_END) {
+		goto cleanup;
+	}
+	RL_CALL(rl_btree_delete, RL_OK, db, btree);
+	RL_CALL(rl_delete, RL_OK, db, db->databases[db->selected_database]);
+	db->databases[db->selected_database] = 0;
+	RL_CALL(rl_write, RL_OK, db, &rl_data_type_header, 0, NULL);
+	retval = RL_OK;
+cleanup:
+	return retval;
+}
