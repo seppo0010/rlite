@@ -434,6 +434,13 @@ int test_strlen() {
 	size_t argvlen[100];
 
 	{
+		char* argv[100] = {"strlen", "mykey", NULL};
+		reply = rliteCommandArgv(context, populateArgvlen(argv, argvlen), argv, argvlen);
+		EXPECT_INTEGER(reply, 0);
+		rliteFreeReplyObject(reply);
+	}
+
+	{
 		char* argv[100] = {"set", "mykey", "myvalue", NULL};
 		reply = rliteCommandArgv(context, populateArgvlen(argv, argvlen), argv, argvlen);
 		EXPECT_STATUS(reply, "OK", 2);

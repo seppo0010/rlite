@@ -2614,6 +2614,8 @@ static void strlenCommand(rliteClient *c) {
 	RLITE_SERVER_ERR(c, retval);
 	if (retval == RL_OK) {
 		c->reply = createLongLongObject(length);
+	} else if (retval == RL_NOT_FOUND) {
+		c->reply = createLongLongObject(0);
 	}
 cleanup:
 	return;
