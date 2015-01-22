@@ -3000,7 +3000,11 @@ static void getKeyEncoding(rliteClient *c, char *encoding, unsigned char *key, l
 	unsigned char type;
 	encoding[0] = 0;
 	if (rl_key_get(c->context->db, UNSIGN(key), keylen, &type, NULL, NULL, NULL)) {
-		if (type == RL_TYPE_ZSET) {
+		if (type == RL_TYPE_STRING) {
+			const char *enc = "int";
+			memcpy(encoding, enc, (strlen(enc) + 1) * sizeof(char));
+		}
+		else if (type == RL_TYPE_ZSET) {
 			const char *enc = c->context->debugSkiplist ? "skiplist" : "ziplist";
 			memcpy(encoding, enc, (strlen(enc) + 1) * sizeof(char));
 		}
