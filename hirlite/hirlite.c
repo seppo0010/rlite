@@ -2533,6 +2533,12 @@ static void msetnxCommand(rliteClient *c) {
 	for (i = 1; i < keyc; i += 2) {
 		key = (unsigned char *)c->argv[i];
 		keylen = (long)c->argvlen[i];
+		RL_CALL(rl_get, RL_NOT_FOUND, c->context->db, key, keylen, NULL, NULL);
+	}
+
+	for (i = 1; i < keyc; i += 2) {
+		key = (unsigned char *)c->argv[i];
+		keylen = (long)c->argvlen[i];
 		value = (unsigned char *)c->argv[i + 1];
 		valuelen = (long)c->argvlen[i + 1];
 		retval = rl_set(c->context->db, key, keylen, value, valuelen, 1, 0);
@@ -2541,8 +2547,8 @@ static void msetnxCommand(rliteClient *c) {
 			count++;
 		}
 	}
-	c->reply = createLongLongObject(count);
 cleanup:
+	c->reply = createLongLongObject(count);
 	return;
 }
 

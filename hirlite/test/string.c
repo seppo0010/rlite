@@ -347,7 +347,7 @@ int test_msetnx() {
 	{
 		char* argv[100] = {"msetnx", "key2", "val2", "key3", "val3", NULL};
 		reply = rliteCommandArgv(context, populateArgvlen(argv, argvlen), argv, argvlen);
-		EXPECT_INTEGER(reply, 1);
+		EXPECT_INTEGER(reply, 0);
 		rliteFreeReplyObject(reply);
 	}
 
@@ -357,7 +357,7 @@ int test_msetnx() {
 		EXPECT_LEN(reply, 3);
 		EXPECT_STR(reply->element[0], "val1", 4);
 		EXPECT_STR(reply->element[1], "val2", 4);
-		EXPECT_STR(reply->element[2], "val3", 4);
+		EXPECT_NIL(reply->element[2]);
 		rliteFreeReplyObject(reply);
 	}
 

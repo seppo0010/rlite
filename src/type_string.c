@@ -63,7 +63,9 @@ int rl_get(struct rlite *db, const unsigned char *key, long keylen, unsigned cha
 	long page_number;
 	int retval;
 	RL_CALL(rl_string_get_objects, RL_OK, db, key, keylen, &page_number, NULL);
-	RL_CALL(rl_multi_string_get, RL_OK, db, page_number, value, valuelen);
+	if (valuelen) {
+		RL_CALL(rl_multi_string_get, RL_OK, db, page_number, value, valuelen);
+	}
 	retval = RL_OK;
 cleanup:
 	return retval;
