@@ -2500,7 +2500,7 @@ static void msetCommand(rliteClient *c) {
 	long valuelen;
 
 	if (c->argc % 2 == 0) {
-		c->reply = createErrorObject(RLITE_SYNTAXERR);
+		addReplyErrorFormat(c->context, RLITE_WRONGNUMBEROFARGUMENTS, c->argv[0]);
 		return;
 	}
 
