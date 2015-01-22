@@ -2796,6 +2796,16 @@ cleanup:
 	return;
 }
 
+static void flushdbCommand(rliteClient *c) {
+	int retval = rl_flushdb(c->context->db);
+	RLITE_SERVER_ERR(c, retval);
+	if (retval == RL_OK) {
+		c->reply = createStatusObject(RLITE_STR_OK);
+	}
+cleanup:
+	return;
+}
+
 static void delCommand(rliteClient *c) {
 	int deleted = 0, j, retval;
 
@@ -3255,7 +3265,7 @@ struct rliteCommand rliteCommandTable[] = {
 	// {"sync",syncCommand,1,"ars",0,NULL,0,0,0,0,0},
 	// {"psync",syncCommand,3,"ars",0,NULL,0,0,0,0,0},
 	// {"replconf",replconfCommand,-1,"arslt",0,NULL,0,0,0,0,0},
-	// {"flushdb",flushdbCommand,1,"w",0,NULL,0,0,0,0,0},
+	{"flushdb",flushdbCommand,1,"w",0,0,0,0,0,0},
 	// {"flushall",flushallCommand,1,"w",0,NULL,0,0,0,0,0},
 	// {"sort",sortCommand,-2,"wm",0,sortGetKeys,1,1,1,0,0},
 	// {"info",infoCommand,-1,"rlt",0,NULL,0,0,0,0,0},
