@@ -144,10 +144,12 @@ int rl_restore(struct rlite *db, const unsigned char *key, long keylen, unsigned
 {
 	int retval;
 	unsigned char type;
-	long i, length;
+	long i, length, length2;
 	unsigned char *strdata = NULL;
 	unsigned char *data = _data;
 	long strdatalen = 0;
+	char f[40];
+	double d;
 
 	RL_CALL(verify, RL_OK, data, datalen);
 	RL_CALL(rl_key_get, RL_NOT_FOUND, db, key, keylen, NULL, NULL, NULL, NULL);
@@ -177,6 +179,30 @@ int rl_restore(struct rlite *db, const unsigned char *key, long keylen, unsigned
 			strdata = NULL;
 		}
 	}
+	else if (type == REDIS_RDB_TYPE_ZSET) {
+		data = read_length_with_encoding(data, &length, NULL);
+		for (i = 0; i < length; i++) {
+			RL_CALL(read_string, RL_OK, data, &strdata, &strdatalen, &data);
+			length2 = data[0];
+			data++;
+			if (length2 > 40 || length2 < 1) {
+				retval = RL_UNEXPECTED;
+				goto cleanup;
+			}
+			memcpy(f, data, length2);
+			data += length2;
+			f[length2] = 0;
+			d = strtold(f, NULL);
+
+			RL_CALL(rl_zadd, RL_OK, db, key, keylen, d, strdata, strdatalen);
+			rl_free(strdata);
+			strdata = NULL;
+		}
+	} else {
+		retval = RL_NOT_IMPLEMENTED;
+		goto cleanup;
+	}
+	retval = RL_OK;
 cleanup:
 	rl_free(strdata);
 	return retval;

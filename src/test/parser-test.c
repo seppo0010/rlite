@@ -163,6 +163,28 @@ cleanup:
 	return retval;
 }
 
+static int test_zset()
+{
+	int retval;
+	rlite *db = NULL;
+	unsigned char *key = UNSIGN("mykey");
+	long keylen = 5;
+	long size = 10;
+	double score;
+
+	RL_CALL_VERBOSE(rl_open, RL_OK, ":memory:", &db, RLITE_OPEN_READWRITE | RLITE_OPEN_CREATE);
+
+	RL_CALL_VERBOSE(rl_restore, RL_OK, db, key, keylen, 0, UNSIGN("\x03\x01\x02hi\x12\x31.2345600000000001\x06\x00\xe6ho\xad\x11.\x93\xbd"), 34);
+	RL_CALL_VERBOSE(rl_zcard, RL_OK, db, key, keylen, &size);
+	EXPECT_LONG(size, 1);
+	RL_CALL_VERBOSE(rl_zscore, RL_FOUND, db, key, keylen, UNSIGN("hi"), 2, &score);
+	EXPECT_DOUBLE(score, 1.23456);
+	retval = RL_OK;
+cleanup:
+	rl_close(db);
+	return retval;
+}
+
 RL_TEST_MAIN_START(parser_test)
 {
 	if (test_int8()) {
@@ -187,6 +209,9 @@ RL_TEST_MAIN_START(parser_test)
 		return 1;
 	}
 	if (test_set()) {
+		return 1;
+	}
+	if (test_zset()) {
 		return 1;
 	}
 	return 0;
