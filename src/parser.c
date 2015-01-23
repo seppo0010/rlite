@@ -145,7 +145,7 @@ int rl_restore(struct rlite *db, const unsigned char *key, long keylen, unsigned
 	int retval;
 	unsigned char type;
 	long i, length, length2;
-	unsigned char *strdata = NULL;
+	unsigned char *strdata = NULL, *strdata2 = NULL;
 	unsigned char *data = _data;
 	long strdatalen = 0;
 	char f[40];
@@ -198,6 +198,19 @@ int rl_restore(struct rlite *db, const unsigned char *key, long keylen, unsigned
 			rl_free(strdata);
 			strdata = NULL;
 		}
+	}
+	else if (type == REDIS_RDB_TYPE_HASH) {
+		data = read_length_with_encoding(data, &length, NULL);
+		for (i = 0; i < length; i++) {
+			RL_CALL(read_string, RL_OK, data, &strdata, &strdatalen, &data);
+			RL_CALL(read_string, RL_OK, data, &strdata2, &length2, &data);
+
+			RL_CALL(rl_hset, RL_OK, db, key, keylen, strdata, strdatalen, strdata2, length2, NULL, 0);
+			rl_free(strdata);
+			strdata = NULL;
+			rl_free(strdata2);
+			strdata2 = NULL;
+		}
 	} else {
 		retval = RL_NOT_IMPLEMENTED;
 		goto cleanup;
@@ -205,5 +218,6 @@ int rl_restore(struct rlite *db, const unsigned char *key, long keylen, unsigned
 	retval = RL_OK;
 cleanup:
 	rl_free(strdata);
+	rl_free(strdata2);
 	return retval;
 }

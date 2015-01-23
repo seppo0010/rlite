@@ -185,6 +185,28 @@ cleanup:
 	return retval;
 }
 
+static int test_hash()
+{
+	int retval;
+	rlite *db = NULL;
+	unsigned char *key = UNSIGN("mykey"), *testvalue;
+	long keylen = 5;
+	long size = 10, testvaluelen = 0;
+
+	RL_CALL_VERBOSE(rl_open, RL_OK, ":memory:", &db, RLITE_OPEN_READWRITE | RLITE_OPEN_CREATE);
+
+	RL_CALL_VERBOSE(rl_restore, RL_OK, db, key, keylen, 0, UNSIGN("\x04\x01\x05\x66ield\x05value\x06\x00.,\x91!\xa3\xac\x97:"), 24);
+	RL_CALL_VERBOSE(rl_hlen, RL_OK, db, key, keylen, &size);
+	EXPECT_LONG(size, 1);
+	RL_CALL_VERBOSE(rl_hget, RL_FOUND, db, key, keylen, UNSIGN("field"), 5, &testvalue, &testvaluelen);
+	EXPECT_BYTES("value", 5, testvalue, testvaluelen);
+	rl_free(testvalue);
+	retval = RL_OK;
+cleanup:
+	rl_close(db);
+	return retval;
+}
+
 RL_TEST_MAIN_START(parser_test)
 {
 	if (test_int8()) {
@@ -212,6 +234,9 @@ RL_TEST_MAIN_START(parser_test)
 		return 1;
 	}
 	if (test_zset()) {
+		return 1;
+	}
+	if (test_hash()) {
 		return 1;
 	}
 	return 0;
