@@ -168,6 +168,15 @@ int rl_restore(struct rlite *db, const unsigned char *key, long keylen, unsigned
 			strdata = NULL;
 		}
 	}
+	else if (type == REDIS_RDB_TYPE_SET) {
+		data = read_length_with_encoding(data, &length, NULL);
+		for (i = 0; i < length; i++) {
+			RL_CALL(read_string, RL_OK, data, &strdata, &strdatalen, &data);
+			RL_CALL(rl_sadd, RL_OK, db, key, keylen, 1, &strdata, &strdatalen, NULL);
+			rl_free(strdata);
+			strdata = NULL;
+		}
+	}
 cleanup:
 	rl_free(strdata);
 	return retval;
