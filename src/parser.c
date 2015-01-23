@@ -82,15 +82,72 @@ static unsigned char *read_length_with_encoding(unsigned char *f, long *length, 
 	}
 }
 
+static int read_string(unsigned char *data, unsigned char **str, long *strlen, unsigned char **newdata)
+{
+	int retval = RL_OK;
+	long length, strdatalen, cdatalen;
+	unsigned char *strdata;
+	int is_encoded;
+	data = read_length_with_encoding(data, &length, &is_encoded);
+	if (is_encoded && length == REDIS_RDB_ENC_INT8) {
+		strdatalen = 5;
+		RL_MALLOC(strdata, strdatalen * sizeof(unsigned char));
+		strdatalen = snprintf((char *)strdata, strdatalen, "%d", (signed char)data[0]);
+		if (strdatalen < 0) {
+			retval = RL_UNEXPECTED;
+			goto cleanup;
+		}
+		data++;
+	} else if (is_encoded && length == REDIS_RDB_ENC_INT16) {
+		strdatalen = 7;
+		strdata = rl_malloc(strdatalen * sizeof(unsigned char));
+		strdatalen = snprintf((char *)strdata, strdatalen, "%d", (int16_t)(data[0] | (data[1] << 8)));
+		if (strdatalen < 0) {
+			retval = RL_UNEXPECTED;
+			goto cleanup;
+		}
+		data += 2;
+	} else if (is_encoded && length == REDIS_RDB_ENC_INT32) {
+		strdatalen = 12;
+		strdata = rl_malloc(strdatalen * sizeof(unsigned char));
+		strdatalen = snprintf((char *)strdata, strdatalen, "%d", (int32_t)(data[0] | (data[1] << 8) | (data[2] << 16) | (data[3] << 24)));
+		if (strdatalen < 0) {
+			retval = RL_UNEXPECTED;
+			goto cleanup;
+		}
+		data += 4;
+	} else if (is_encoded && length == REDIS_RDB_ENC_LZF) {
+		data = read_length_with_encoding(data, &cdatalen, NULL);
+		data = read_length_with_encoding(data, &strdatalen, NULL);
+		strdata = rl_malloc(strdatalen * sizeof(unsigned char));
+		rl_lzf_decompress(data, cdatalen, strdata, strdatalen);
+		data += cdatalen;
+	} else if (!is_encoded) {
+		strdatalen = length;
+		strdata = rl_malloc(strdatalen * sizeof(unsigned char));
+		memcpy(strdata, data, strdatalen);
+		data += strdatalen;
+	} else {
+		retval = RL_NOT_IMPLEMENTED;
+		goto cleanup;
+	}
+	*str = strdata;
+	*strlen = strdatalen;
+	if (newdata) {
+		*newdata = data;
+	}
+cleanup:
+	return retval;
+}
+
 int rl_restore(struct rlite *db, const unsigned char *key, long keylen, unsigned long long expires, unsigned char *_data, long datalen)
 {
 	int retval;
 	unsigned char type;
-	long length;
-	int is_encoded;
+	long i, length;
 	unsigned char *strdata = NULL;
 	unsigned char *data = _data;
-	long strdatalen = 0, cdatalen = 0;
+	long strdatalen = 0;
 
 	RL_CALL(verify, RL_OK, data, datalen);
 	RL_CALL(rl_key_get, RL_NOT_FOUND, db, key, keylen, NULL, NULL, NULL, NULL);
@@ -99,45 +156,17 @@ int rl_restore(struct rlite *db, const unsigned char *key, long keylen, unsigned
 	data++;
 
 	if (type == REDIS_RDB_TYPE_STRING) {
-		data = read_length_with_encoding(data, &length, &is_encoded);
-		if (is_encoded && length == REDIS_RDB_ENC_INT8) {
-			strdatalen = 5;
-			strdata = rl_malloc(strdatalen * sizeof(unsigned char));
-			strdatalen = snprintf((char *)strdata, strdatalen, "%d", (signed char)data[0]);
-			if (strdatalen < 0) {
-				retval = RL_UNEXPECTED;
-				goto cleanup;
-			}
-		} else if (is_encoded && length == REDIS_RDB_ENC_INT16) {
-			strdatalen = 7;
-			strdata = rl_malloc(strdatalen * sizeof(unsigned char));
-			strdatalen = snprintf((char *)strdata, strdatalen, "%d", (int16_t)(data[0] | (data[1] << 8)));
-			if (strdatalen < 0) {
-				retval = RL_UNEXPECTED;
-				goto cleanup;
-			}
-		} else if (is_encoded && length == REDIS_RDB_ENC_INT32) {
-			strdatalen = 12;
-			strdata = rl_malloc(strdatalen * sizeof(unsigned char));
-			strdatalen = snprintf((char *)strdata, strdatalen, "%d", (int32_t)(data[0] | (data[1] << 8) | (data[2] << 16) | (data[3] << 24)));
-			if (strdatalen < 0) {
-				retval = RL_UNEXPECTED;
-				goto cleanup;
-			}
-		} else if (is_encoded && length == REDIS_RDB_ENC_LZF) {
-			data = read_length_with_encoding(data, &cdatalen, NULL);
-			data = read_length_with_encoding(data, &strdatalen, NULL);
-			strdata = rl_malloc(strdatalen * sizeof(unsigned char));
-			rl_lzf_decompress(data, cdatalen, strdata, strdatalen);
-		} else if (!is_encoded) {
-			strdatalen = length;
-			strdata = rl_malloc(strdatalen * sizeof(unsigned char));
-			memcpy(strdata, data, strdatalen);
-		} else {
-			retval = RL_NOT_IMPLEMENTED;
-			goto cleanup;
-		}
+		RL_CALL(read_string, RL_OK, data, &strdata, &strdatalen, NULL);
 		RL_CALL(rl_set, RL_OK, db, key, keylen, strdata, strdatalen, 1, expires);
+	}
+	else if (type == REDIS_RDB_TYPE_LIST) {
+		data = read_length_with_encoding(data, &length, NULL);
+		for (i = 0; i < length; i++) {
+			RL_CALL(read_string, RL_OK, data, &strdata, &strdatalen, &data);
+			RL_CALL(rl_push, RL_OK, db, key, keylen, 1, 0, 1, &strdata, &strdatalen, NULL);
+			rl_free(strdata);
+			strdata = NULL;
+		}
 	}
 cleanup:
 	rl_free(strdata);

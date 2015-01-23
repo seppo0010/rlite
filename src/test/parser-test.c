@@ -89,6 +89,30 @@ cleanup:
 	return retval;
 }
 
+static int test_list()
+{
+	int retval;
+	rlite *db = NULL;
+	unsigned char *key = UNSIGN("mykey");
+	long keylen = 5;
+	long size;
+	unsigned char **values;
+	long *valueslen;
+
+	RL_CALL_VERBOSE(rl_open, RL_OK, ":memory:", &db, RLITE_OPEN_READWRITE | RLITE_OPEN_CREATE);
+
+	RL_CALL_VERBOSE(rl_restore, RL_OK, db, key, keylen, 0, UNSIGN("\x01\x01\x01\x61\x06\x00\x63]:\x13x\x95\xd8\xf1"), 14);
+	RL_CALL_VERBOSE(rl_lrange, RL_OK, db, key, keylen, 0, -1, &size, &values, &valueslen);
+	EXPECT_LONG(size, 1);
+	EXPECT_BYTES("a", 1, values[0], valueslen[0])
+	rl_free(values[0]);
+	rl_free(values);
+	rl_free(valueslen);
+cleanup:
+	rl_close(db);
+	return retval;
+}
+
 RL_TEST_MAIN_START(parser_test)
 {
 	if (test_int8()) {
@@ -104,6 +128,9 @@ RL_TEST_MAIN_START(parser_test)
 		return 1;
 	}
 	if (test_compressedstring()) {
+		return 1;
+	}
+	if (test_list()) {
 		return 1;
 	}
 	return 0;
