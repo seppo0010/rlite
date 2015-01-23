@@ -290,8 +290,9 @@ int rl_zcard(rlite *db, const unsigned char *key, long keylen, long *card)
 	int retval;
 	RL_CALL(rl_zset_get_objects, RL_OK, db, key, keylen, NULL, NULL, NULL, &skiplist, NULL, 0);
 	*card = skiplist->size;
+	retval = RL_OK;
 cleanup:
-	return RL_OK;
+	return retval;
 }
 
 int rl_zcount(rlite *db, const unsigned char *key, long keylen, rl_zrangespec *range, long *count)
