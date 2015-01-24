@@ -1,3 +1,6 @@
+#include "../../deps/crc64.h"
+#include "../../deps/endianconv.h"
+
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
@@ -207,6 +210,33 @@ cleanup:
 	return retval;
 }
 
+static int test_ziplist()
+{
+	int retval;
+	rlite *db = NULL;
+	unsigned char *key = UNSIGN("mykey");
+	long keylen = 5;
+	long size = 10;
+	unsigned char **values = NULL;
+	long *valueslen = NULL;
+
+	RL_CALL_VERBOSE(rl_open, RL_OK, ":memory:", &db, RLITE_OPEN_READWRITE | RLITE_OPEN_CREATE);
+	RL_CALL_VERBOSE(rl_restore, RL_OK, db, key, keylen, 0, UNSIGN("\n\x0f\x0f\x00\x00\x00\x0c\x00\x00\x00\x02\x00\x00\xf3\x02\xf2\xff\x06\x00\x8d#\x11n'Fl\x80"), 27);
+	RL_CALL_VERBOSE(rl_llen, RL_OK, db, key, keylen, &size);
+	EXPECT_LONG(size, 2);
+	RL_CALL_VERBOSE(rl_lrange, RL_OK, db, key, keylen, 0, -1, &size, &values, &valueslen);
+	EXPECT_BYTES("2", 1, values[0], valueslen[0])
+	rl_free(values[0]);
+	EXPECT_BYTES("1", 1, values[1], valueslen[1])
+	rl_free(values[1]);
+	rl_free(values);
+	rl_free(valueslen);
+	retval = RL_OK;
+cleanup:
+	rl_close(db);
+	return retval;
+}
+
 RL_TEST_MAIN_START(parser_test)
 {
 	if (test_int8()) {
@@ -237,6 +267,9 @@ RL_TEST_MAIN_START(parser_test)
 		return 1;
 	}
 	if (test_hash()) {
+		return 1;
+	}
+	if (test_ziplist()) {
 		return 1;
 	}
 	return 0;

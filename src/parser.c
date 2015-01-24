@@ -52,6 +52,54 @@ static int verify(unsigned char *data, long datalen) {
 	return (memcmp(&crc,footer+2,8) == 0) ? RL_OK : RL_INVALID_PARAMETERS;
 }
 
+static unsigned char *read_signed_short(unsigned char *data, long *value) {
+	*value = (char)data[0] | (char)(data[1] << 8);
+	return data + 2;
+}
+
+static unsigned char *read_signed_int(unsigned char *data, long *value) {
+	*value = (long)data[0] | (long)(data[1] << 8) | (long)(data[2] << 16) | (long)(data[3] << 24);
+	return data + 4;
+}
+
+static unsigned char *read_signed_long(unsigned char *data, long *value) {
+	long tmp;
+	*value = data[0] | (data[1] << 8) | (data[2] << 16) | (data[3] << 24);
+	tmp = data[4];
+	*value |= tmp << 32;
+	tmp = data[5];
+	*value |= tmp << 40;
+	tmp = data[6];
+	*value |= tmp << 48;
+	tmp = data[7];
+	*value |= tmp << 56;
+	return data + 8;
+}
+
+static unsigned char *read_unsigned_short(unsigned char *data, unsigned long *value) {
+	*value = data[0] | (data[1] << 8);
+	return data + 2;
+}
+
+static unsigned char *read_unsigned_int(unsigned char *data, unsigned long *value) {
+	*value = data[0] | (data[1] << 8) | (data[2] << 16) | (data[3] << 24);
+	return data + 4;
+}
+
+static unsigned char *read_unsigned_long(unsigned char *data, unsigned long *value) {
+	unsigned long tmp;
+	*value = data[0] | (data[1] << 8) | (data[2] << 16) | (data[3] << 24);
+	tmp = data[4];
+	*value |= tmp << 32;
+	tmp = data[5];
+	*value |= tmp << 40;
+	tmp = data[6];
+	*value |= tmp << 48;
+	tmp = data[7];
+	*value |= tmp << 56;
+	return data + 8;
+}
+
 static unsigned char *read_length_with_encoding(unsigned char *f, long *length, int *is_encoded)
 {
 	int enc_type = (f[0] & 0xC0) >> 6;
@@ -80,6 +128,61 @@ static unsigned char *read_length_with_encoding(unsigned char *f, long *length, 
 		*length = ntohl((uint32_t)f);
 		return f + 5;
 	}
+}
+
+static unsigned char *read_ziplist_entry(unsigned char *data, unsigned char **_entry, long *_length)
+{
+	long length = 0;
+	unsigned char *entry;
+	unsigned long prev_length = data[0];
+	data++;
+	if (prev_length == 254) {
+		data = read_unsigned_int(data, &prev_length);
+	}
+	unsigned long entry_header = data[0];
+	if ((entry_header >> 6) == 0) {
+		length = entry_header & 0x3F;
+	}
+	else if ((entry_header >> 6) == 1) {
+		length = ((entry_header & 0x3F) << 8) | data[0];
+		data++;
+	}
+	else if ((entry_header >> 6) == 2) {
+		// TODO: length = read_big_endian_unsigned_int(f)
+		data = NULL;
+	} else if ((entry_header >> 4) == 12) {
+		data = read_signed_short(data, &length);
+	} else if ((entry_header >> 4) == 13) {
+		data = read_signed_int(data, &length);
+	} else if ((entry_header >> 4) == 14) {
+		data = read_signed_long(data, &length);
+	} else if (entry_header == 240) {
+		unsigned char tmp[5];
+		tmp[0] = tmp[4] = 0;
+		memcpy(&tmp[1], data, 3);
+		data = read_signed_int(data, &length);
+	} else if (entry_header == 254) {
+		length = data[0];
+		data++;
+	} else if (entry_header >= 241 && entry_header <= 253) {
+		entry = rl_malloc(sizeof(unsigned char) * 2);
+		if (!entry) {
+			return NULL;
+		}
+		length = snprintf((char *)entry, 2, "%lu", entry_header - 241);
+		data++;
+		goto ret;
+	}
+	entry = rl_malloc(sizeof(unsigned char) * length);
+	if (!entry) {
+		return NULL;
+	}
+	memcpy(entry, data, length);
+	data += length;
+ret:
+	*_entry = entry;
+	*_length = length;
+	return data;
 }
 
 static int read_string(unsigned char *data, unsigned char **str, long *strlen, unsigned char **newdata)
@@ -146,8 +249,8 @@ int rl_restore(struct rlite *db, const unsigned char *key, long keylen, unsigned
 	unsigned char type;
 	long i, length, length2;
 	unsigned char *strdata = NULL, *strdata2 = NULL;
-	unsigned char *data = _data;
-	long strdatalen = 0;
+	unsigned char *data = _data, *tmpdata;
+	long strdatalen = 0, strdata2len;
 	char f[40];
 	double d;
 
@@ -211,6 +314,26 @@ int rl_restore(struct rlite *db, const unsigned char *key, long keylen, unsigned
 			rl_free(strdata2);
 			strdata2 = NULL;
 		}
+	}
+	else if (type == REDIS_RDB_TYPE_HASH_ZIPMAP) {
+		retval = RL_NOT_IMPLEMENTED;
+		goto cleanup;
+	}
+	else if (type == REDIS_RDB_TYPE_LIST_ZIPLIST) {
+		RL_CALL(read_string, RL_OK, data, &strdata, &strdatalen, &data);
+		tmpdata = strdata + 10;
+		while (*tmpdata != 255) {
+			tmpdata = read_ziplist_entry(tmpdata, &strdata2, &strdata2len);
+			if (!tmpdata) {
+				retval = RL_UNEXPECTED;
+				goto cleanup;
+			}
+			RL_CALL(rl_push, RL_OK, db, key, keylen, 1, 0, 1, &strdata2, &strdata2len, NULL);
+			rl_free(strdata2);
+		}
+		rl_free(strdata);
+		strdata = NULL;
+		strdata2 = NULL;
 	} else {
 		retval = RL_NOT_IMPLEMENTED;
 		goto cleanup;
