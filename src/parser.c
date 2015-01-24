@@ -251,6 +251,8 @@ int rl_restore(struct rlite *db, const unsigned char *key, long keylen, unsigned
 	unsigned char *strdata = NULL, *strdata2 = NULL;
 	unsigned char *data = _data, *tmpdata;
 	long strdatalen = 0, strdata2len;
+	unsigned long j, encoding, numentries, ulvalue;
+	void **tmp = NULL;
 	char f[40];
 	double d;
 
@@ -334,12 +336,36 @@ int rl_restore(struct rlite *db, const unsigned char *key, long keylen, unsigned
 		rl_free(strdata);
 		strdata = NULL;
 		strdata2 = NULL;
+	}
+	else if (type == REDIS_RDB_TYPE_SET_INTSET) {
+		RL_CALL(read_string, RL_OK, data, &strdata, &strdatalen, &data);
+		tmpdata = strdata;
+		tmpdata = read_unsigned_int(tmpdata, &encoding);
+		tmpdata = read_unsigned_int(tmpdata, &numentries);
+		if (encoding != 2 && encoding != 4 && encoding != 8) {
+			retval = RL_UNEXPECTED;
+			goto cleanup;
+		}
+		RL_MALLOC(tmp, sizeof(void *));
+		for (j = 0; j < numentries; j++) {
+			if (encoding == 8) {
+				tmpdata = read_unsigned_long(tmpdata, &ulvalue);
+			} else if (encoding == 4) {
+				tmpdata = read_unsigned_int(tmpdata, &ulvalue);
+			} else if (encoding == 2) {
+				tmpdata = read_unsigned_short(tmpdata, &ulvalue);
+			}
+			length2 = snprintf(f, 40, "%lu", ulvalue);
+			tmp[0] = f;
+			RL_CALL(rl_sadd, RL_OK, db, key, keylen, 1, (unsigned char **)tmp, &length2, NULL);
+		}
 	} else {
 		retval = RL_NOT_IMPLEMENTED;
 		goto cleanup;
 	}
 	retval = RL_OK;
 cleanup:
+	rl_free(tmp);
 	rl_free(strdata);
 	rl_free(strdata2);
 	return retval;
