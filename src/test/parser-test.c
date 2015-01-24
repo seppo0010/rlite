@@ -280,6 +280,32 @@ cleanup:
 	return retval;
 }
 
+static int test_hashziplist()
+{
+	int retval;
+	rlite *db = NULL;
+	unsigned char *key = UNSIGN("mykey");
+	long keylen = 5;
+	long size = 10;
+	unsigned char *data;
+	long datalen;
+
+	RL_CALL_VERBOSE(rl_open, RL_OK, ":memory:", &db, RLITE_OPEN_READWRITE | RLITE_OPEN_CREATE);
+	RL_CALL_VERBOSE(rl_restore, RL_OK, db, key, keylen, 0, UNSIGN("\r))\x00\x00\x00 \x00\x00\x00\x04\x00\x00\x05\x66ield\a\x05value\a\x06\x66ield2\b\x06value2\xff\x06\x00\x1b\xd0\x96\xcb\xa8\x90\xfb\x39"), 53);
+	RL_CALL_VERBOSE(rl_hlen, RL_OK, db, key, keylen, &size);
+	EXPECT_LONG(size, 2);
+	RL_CALL_VERBOSE(rl_hget, RL_FOUND, db, key, keylen, UNSIGN("field"), 5, &data, &datalen);
+	EXPECT_BYTES("value", 5, data, datalen);
+	rl_free(data);
+	RL_CALL_VERBOSE(rl_hget, RL_FOUND, db, key, keylen, UNSIGN("field2"), 6, &data, &datalen);
+	EXPECT_BYTES("value2", 6, data, datalen);
+	rl_free(data);
+	retval = RL_OK;
+cleanup:
+	rl_close(db);
+	return retval;
+}
+
 RL_TEST_MAIN_START(parser_test)
 {
 	if (test_int8()) {
@@ -319,6 +345,9 @@ RL_TEST_MAIN_START(parser_test)
 		return 1;
 	}
 	if (test_zsetziplist()) {
+		return 1;
+	}
+	if (test_hashziplist()) {
 		return 1;
 	}
 	return 0;

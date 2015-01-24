@@ -391,6 +391,29 @@ int rl_restore(struct rlite *db, const unsigned char *key, long keylen, unsigned
 		}
 		rl_free(strdata);
 		strdata = NULL;
+	}
+	else if (type == REDIS_RDB_TYPE_HASH_ZIPLIST) {
+		RL_CALL(read_string, RL_OK, data, &strdata, &strdatalen, &data);
+		tmpdata = strdata + 10;
+		while (*tmpdata != 255) {
+			tmpdata = read_ziplist_entry(tmpdata, &strdata2, &strdata2len);
+			if (!tmpdata) {
+				retval = RL_UNEXPECTED;
+				goto cleanup;
+			}
+			tmpdata = read_ziplist_entry(tmpdata, &strdata3, &strdata3len);
+			if (!tmpdata) {
+				retval = RL_UNEXPECTED;
+				goto cleanup;
+			}
+			RL_CALL(rl_hset, RL_OK, db, key, keylen, strdata2, strdata2len, strdata3, strdata3len, NULL, 0);
+			rl_free(strdata2);
+			strdata2 = NULL;
+			rl_free(strdata3);
+			strdata3 = NULL;
+		}
+		rl_free(strdata);
+		strdata = NULL;
 	} else {
 		retval = RL_NOT_IMPLEMENTED;
 		goto cleanup;
