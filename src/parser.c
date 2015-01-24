@@ -142,6 +142,7 @@ static unsigned char *read_ziplist_entry(unsigned char *data, unsigned char **_e
 	unsigned long entry_header = data[0];
 	if ((entry_header >> 6) == 0) {
 		length = entry_header & 0x3F;
+		data++;
 	}
 	else if ((entry_header >> 6) == 1) {
 		length = ((entry_header & 0x3F) << 8) | data[0];
@@ -248,9 +249,9 @@ int rl_restore(struct rlite *db, const unsigned char *key, long keylen, unsigned
 	int retval;
 	unsigned char type;
 	long i, length, length2;
-	unsigned char *strdata = NULL, *strdata2 = NULL;
+	unsigned char *strdata = NULL, *strdata2 = NULL, *strdata3 = NULL;
 	unsigned char *data = _data, *tmpdata;
-	long strdatalen = 0, strdata2len;
+	long strdatalen = 0, strdata2len, strdata3len;
 	unsigned long j, encoding, numentries, ulvalue;
 	void **tmp = NULL;
 	char f[40];
@@ -332,10 +333,10 @@ int rl_restore(struct rlite *db, const unsigned char *key, long keylen, unsigned
 			}
 			RL_CALL(rl_push, RL_OK, db, key, keylen, 1, 0, 1, &strdata2, &strdata2len, NULL);
 			rl_free(strdata2);
+			strdata2 = NULL;
 		}
 		rl_free(strdata);
 		strdata = NULL;
-		strdata2 = NULL;
 	}
 	else if (type == REDIS_RDB_TYPE_SET_INTSET) {
 		RL_CALL(read_string, RL_OK, data, &strdata, &strdatalen, &data);
@@ -359,6 +360,37 @@ int rl_restore(struct rlite *db, const unsigned char *key, long keylen, unsigned
 			tmp[0] = f;
 			RL_CALL(rl_sadd, RL_OK, db, key, keylen, 1, (unsigned char **)tmp, &length2, NULL);
 		}
+	}
+	else if (type == REDIS_RDB_TYPE_ZSET_ZIPLIST) {
+		RL_CALL(read_string, RL_OK, data, &strdata, &strdatalen, &data);
+		tmpdata = strdata + 10;
+		while (*tmpdata != 255) {
+			tmpdata = read_ziplist_entry(tmpdata, &strdata2, &strdata2len);
+			if (!tmpdata) {
+				retval = RL_UNEXPECTED;
+				goto cleanup;
+			}
+			tmpdata = read_ziplist_entry(tmpdata, &strdata3, &strdata3len);
+			if (!tmpdata) {
+				retval = RL_UNEXPECTED;
+				goto cleanup;
+			}
+
+			if (strdata3len > 40 || strdata3len < 1) {
+				retval = RL_UNEXPECTED;
+				goto cleanup;
+			}
+			memcpy(f, strdata3, strdata3len);
+			f[strdata3len] = 0;
+			d = strtold(f, NULL);
+			RL_CALL(rl_zadd, RL_OK, db, key, keylen, d, strdata2, strdata2len);
+			rl_free(strdata2);
+			strdata2 = NULL;
+			rl_free(strdata3);
+			strdata3 = NULL;
+		}
+		rl_free(strdata);
+		strdata = NULL;
 	} else {
 		retval = RL_NOT_IMPLEMENTED;
 		goto cleanup;
@@ -368,5 +400,6 @@ cleanup:
 	rl_free(tmp);
 	rl_free(strdata);
 	rl_free(strdata2);
+	rl_free(strdata3);
 	return retval;
 }
