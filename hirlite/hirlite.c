@@ -3173,6 +3173,51 @@ static void debugCommand(rliteClient *c) {
 	}
 }
 
+static void dumpCommand(rliteClient *c) {
+	unsigned char *key = UNSIGN(c->argv[1]);
+	long keylen = c->argvlen[1];
+	unsigned char *data;
+	long datalen;
+
+	int retval = rl_dump(c->context->db, key, keylen, &data, &datalen);
+	RLITE_SERVER_ERR(c, retval);
+	if (retval == RL_NOT_FOUND) {
+		c->reply = createReplyObject(RLITE_REPLY_NIL);
+	} else if (retval == RL_OK){
+		c->reply = createStringObject((char *)data, datalen);
+		rl_free(data);
+	}
+cleanup:
+	return;
+}
+
+static void restoreCommand(rliteClient *c) {
+	unsigned char *key = UNSIGN(c->argv[1]);
+	long keylen = c->argvlen[1];
+	unsigned char *payload = UNSIGN(c->argv[3]);
+	long payloadlen = c->argvlen[3];
+	long long expires = 0;
+	if (getLongLongFromObjectOrReply(c, c->argv[2], &expires, RLITE_SYNTAXERR) != RLITE_OK) {
+		return;
+	}
+
+	int retval = rl_restore(c->context->db, key, keylen, expires, payload, payloadlen);
+	RLITE_SERVER_ERR(c, retval);
+	if (retval == RL_FOUND) {
+		c->reply = createReplyObject(RLITE_REPLY_NIL);
+	} else if (retval == RL_FOUND){
+		c->reply = createErrorObject("BUSYKEY Target key name already exists");
+	} else if (retval == RL_INVALID_PARAMETERS){
+		c->reply = createErrorObject("ERR DUMP payload version or checksum are wrong");
+	} else if (retval == RL_UNEXPECTED){
+		c->reply = createErrorObject("ERR unexpected");
+	} else if (retval == RL_OK){
+		c->reply = createStatusObject(RLITE_STR_OK);
+	}
+cleanup:
+	return;
+}
+
 static void objectCommand(rliteClient *c) {
 	if (!strcasecmp(c->argv[1],"encoding")) {
 		char encoding[100];
@@ -3322,13 +3367,13 @@ struct rliteCommand rliteCommandTable[] = {
 	// {"watch",watchCommand,-2,"rsF",0,NULL,1,-1,1,0,0},
 	// {"unwatch",unwatchCommand,1,"rsF",0,NULL,0,0,0,0,0},
 	// {"cluster",clusterCommand,-2,"ar",0,NULL,0,0,0,0,0},
-	// {"restore",restoreCommand,-4,"awm",0,NULL,1,1,1,0,0},
+	{"restore",restoreCommand,-4,"awm",0,1,1,1,0,0},
 	// {"restore-asking",restoreCommand,-4,"awmk",0,NULL,1,1,1,0,0},
 	// {"migrate",migrateCommand,-6,"aw",0,NULL,0,0,0,0,0},
 	// {"asking",askingCommand,1,"r",0,NULL,0,0,0,0,0},
 	// {"readonly",readonlyCommand,1,"rF",0,NULL,0,0,0,0,0},
 	// {"readwrite",readwriteCommand,1,"rF",0,NULL,0,0,0,0,0},
-	// {"dump",dumpCommand,2,"ar",0,NULL,1,1,1,0,0},
+	{"dump",dumpCommand,2,"ar",0,1,1,1,0,0},
 	{"object",objectCommand,3,"r",0,2,2,2,0,0},
 	// {"client",clientCommand,-2,"ars",0,NULL,0,0,0,0,0},
 	// {"eval",evalCommand,-3,"s",0,evalGetKeys,0,0,0,0,0},
