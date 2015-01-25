@@ -14,6 +14,7 @@
 #include "skiplist-test.h"
 #include "long-test.h"
 #include "restore-test.h"
+#include "dump-test.h"
 #include "../util.h"
 
 #ifdef DEBUG
@@ -49,5 +50,6 @@ int main() {
 	RUN_TEST(type_zset_test);
 	RUN_TEST(type_hash_test);
 	RUN_TEST(restore_test);
+	RUN_TEST(dump_test);
 	return retval;
 }

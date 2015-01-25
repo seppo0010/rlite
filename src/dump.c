@@ -12,6 +12,8 @@ int rl_dump(struct rlite *db, const unsigned char *key, long keylen, unsigned ch
 	unsigned char *buf = NULL;
 	long buflen;
 	long valuelen;
+	unsigned char **values = NULL;
+	long i = -1, *valueslen = NULL;
 	uint32_t length;
 	RL_CALL(rl_key_get, RL_FOUND, db, key, keylen, &type, NULL, NULL, NULL);
 	if (type == RL_TYPE_STRING) {
@@ -23,6 +25,29 @@ int rl_dump(struct rlite *db, const unsigned char *key, long keylen, unsigned ch
 		memcpy(&buf[2], &length, 4);
 		memcpy(&buf[6], value, valuelen);
 		buflen = valuelen + 6;
+	} else if (type == RL_TYPE_LIST) {
+		RL_CALL(rl_lrange, RL_OK, db, key, keylen, 0, -1, &valuelen, &values, &valueslen);
+		buflen = 16;
+		for (i = 0; i < valuelen; i++) {
+			buflen += 5 + valueslen[i];
+		}
+		RL_MALLOC(buf, sizeof(unsigned char) * buflen);
+		buf[0] = REDIS_RDB_TYPE_LIST;
+		buf[1] = (REDIS_RDB_32BITLEN << 6);
+		length = htonl(valuelen);
+		memcpy(&buf[2], &length, 4);
+		buflen = 6;
+		for (i = 0; i < valuelen; i++) {
+			buf[buflen++] = (REDIS_RDB_32BITLEN << 6);
+			length = htonl(valueslen[i]);
+			memcpy(&buf[buflen], &length, 4);
+			buflen += 4;
+			memcpy(&buf[buflen], values[i], valueslen[i]);
+			buflen += valueslen[i];
+		}
+	} else {
+		retval = RL_UNEXPECTED;
+		goto cleanup;
 	}
 	buf[buflen++] = REDIS_RDB_VERSION;
 	buf[buflen++] = REDIS_RDB_VERSION >> 8;
@@ -36,6 +61,13 @@ int rl_dump(struct rlite *db, const unsigned char *key, long keylen, unsigned ch
 	*datalen = buflen;
 	retval = RL_OK;
 cleanup:
+	if (values) {
+		for (i = 0; i < valuelen; i++) {
+			rl_free(values[i]);
+		}
+		rl_free(values);
+	}
+	rl_free(valueslen);
 	rl_free(value);
 	return retval;
 }
