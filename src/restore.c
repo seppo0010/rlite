@@ -229,8 +229,8 @@ int rl_restore(struct rlite *db, const unsigned char *key, long keylen, unsigned
 	char f[40];
 	double d;
 
-	RL_CALL(verify, RL_OK, data, datalen);
 	RL_CALL(rl_key_get, RL_NOT_FOUND, db, key, keylen, NULL, NULL, NULL, NULL);
+	RL_CALL(verify, RL_OK, data, datalen);
 
 	type = data[0];
 	data++;

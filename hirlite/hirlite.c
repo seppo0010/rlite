@@ -3200,12 +3200,27 @@ static void restoreCommand(rliteClient *c) {
 	if (getLongLongFromObjectOrReply(c, c->argv[2], &expires, RLITE_SYNTAXERR) != RLITE_OK) {
 		return;
 	}
+	if (expires != 0) {
+		expires += rl_mstime();
+	}
 
-	int retval = rl_restore(c->context->db, key, keylen, expires, payload, payloadlen);
+	int retval;
+	if (c->argc >= 5) {
+		if (c->argvlen[4] == 7 && strcasecmp(c->argv[4], "replace") == 0) {
+			retval = rl_key_delete_with_value(c->context->db, key, keylen);
+			RLITE_SERVER_ERR(c, retval);
+			if (retval != RL_OK && retval != RL_FOUND && retval != RL_NOT_FOUND) {
+				return;
+			}
+		} else {
+			c->reply = createErrorObject(RLITE_SYNTAXERR);
+			return;
+		}
+	}
+
+	retval = rl_restore(c->context->db, key, keylen, expires, payload, payloadlen);
 	RLITE_SERVER_ERR(c, retval);
 	if (retval == RL_FOUND) {
-		c->reply = createReplyObject(RLITE_REPLY_NIL);
-	} else if (retval == RL_FOUND){
 		c->reply = createErrorObject("BUSYKEY Target key name already exists");
 	} else if (retval == RL_INVALID_PARAMETERS){
 		c->reply = createErrorObject("ERR DUMP payload version or checksum are wrong");
