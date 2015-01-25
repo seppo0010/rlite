@@ -45,6 +45,40 @@ int rl_dump(struct rlite *db, const unsigned char *key, long keylen, unsigned ch
 			memcpy(&buf[buflen], values[i], valueslen[i]);
 			buflen += valueslen[i];
 		}
+	} else if (type == RL_TYPE_SET) {
+		rl_set_iterator *iterator;
+		RL_CALL(rl_smembers, RL_OK, db, &iterator, key, keylen);
+		buflen = 16;
+		length = 0;
+		while ((retval = rl_set_iterator_next(iterator, NULL, &valuelen)) == RL_OK) {
+			buflen += 5 + valuelen;
+			length++;
+		}
+		if (retval != RL_END) {
+			goto cleanup;
+		}
+
+		RL_MALLOC(buf, sizeof(unsigned char) * buflen);
+		buf[0] = REDIS_RDB_TYPE_LIST;
+		buf[1] = (REDIS_RDB_32BITLEN << 6);
+		length = htonl(length);
+		memcpy(&buf[2], &length, 4);
+		buflen = 6;
+
+		RL_CALL(rl_smembers, RL_OK, db, &iterator, key, keylen);
+		while ((retval = rl_set_iterator_next(iterator, &value, &valuelen)) == RL_OK) {
+			buf[buflen++] = (REDIS_RDB_32BITLEN << 6);
+			length = htonl(valuelen);
+			memcpy(&buf[buflen], &length, 4);
+			buflen += 4;
+			memcpy(&buf[buflen], value, valuelen);
+			buflen += valuelen;
+			rl_free(value);
+			value = NULL;
+		}
+		if (retval != RL_END) {
+			goto cleanup;
+		}
 	} else {
 		retval = RL_UNEXPECTED;
 		goto cleanup;
