@@ -562,8 +562,8 @@ cleanup:
 
 int rl_zset_iterator_next(rl_zset_iterator *iterator, double *score, unsigned char **member, long *memberlen)
 {
-	if ((!member && memberlen) || (member && !memberlen)) {
-		fprintf(stderr, "Expected to receive either member and memberlen or neither\n");
+	if (member && !memberlen) {
+		fprintf(stderr, "If member is provided, memberlen is required\n");
 		return RL_UNEXPECTED;
 	}
 
@@ -571,7 +571,7 @@ int rl_zset_iterator_next(rl_zset_iterator *iterator, double *score, unsigned ch
 	int retval;
 	RL_CALL(rl_skiplist_iterator_next, RL_OK, iterator, &node);
 
-	if (member) {
+	if (memberlen) {
 		retval = rl_multi_string_get(iterator->db, node->value, member, memberlen);
 		if (retval != RL_OK) {
 			rl_skiplist_iterator_destroy(iterator->db, iterator);

@@ -15,6 +15,9 @@ int rl_dump(struct rlite *db, const unsigned char *key, long keylen, unsigned ch
 	unsigned char **values = NULL;
 	long i = -1, *valueslen = NULL;
 	uint32_t length;
+	double score;
+	char f[40];
+
 	RL_CALL(rl_key_get, RL_FOUND, db, key, keylen, &type, NULL, NULL, NULL);
 	if (type == RL_TYPE_STRING) {
 		RL_CALL(rl_get, RL_OK, db, key, keylen, &value, &valuelen);
@@ -59,7 +62,7 @@ int rl_dump(struct rlite *db, const unsigned char *key, long keylen, unsigned ch
 		}
 
 		RL_MALLOC(buf, sizeof(unsigned char) * buflen);
-		buf[0] = REDIS_RDB_TYPE_LIST;
+		buf[0] = REDIS_RDB_TYPE_SET;
 		buf[1] = (REDIS_RDB_32BITLEN << 6);
 		length = htonl(length);
 		memcpy(&buf[2], &length, 4);
@@ -75,6 +78,45 @@ int rl_dump(struct rlite *db, const unsigned char *key, long keylen, unsigned ch
 			buflen += valuelen;
 			rl_free(value);
 			value = NULL;
+		}
+		if (retval != RL_END) {
+			goto cleanup;
+		}
+	} else if (type == RL_TYPE_ZSET) {
+		rl_zset_iterator *iterator;
+		RL_CALL(rl_zrange, RL_OK, db, key, keylen, 0, -1, &iterator);
+		buflen = 16;
+		length = 0;
+		while ((retval = rl_zset_iterator_next(iterator, &score, NULL, &valuelen)) == RL_OK) {
+			buflen += 6 + valuelen + snprintf(f, 40, "%lf", score);
+			length++;
+		}
+		if (retval != RL_END) {
+			goto cleanup;
+		}
+
+		RL_MALLOC(buf, sizeof(unsigned char) * buflen);
+		buf[0] = REDIS_RDB_TYPE_ZSET;
+		buf[1] = (REDIS_RDB_32BITLEN << 6);
+		length = htonl(length);
+		memcpy(&buf[2], &length, 4);
+		buflen = 6;
+
+		RL_CALL(rl_zrange, RL_OK, db, key, keylen, 0, -1, &iterator);
+		while ((retval = rl_zset_iterator_next(iterator, &score, &value, &valuelen)) == RL_OK) {
+			buf[buflen++] = (REDIS_RDB_32BITLEN << 6);
+			length = htonl(valuelen);
+			memcpy(&buf[buflen], &length, 4);
+			buflen += 4;
+			memcpy(&buf[buflen], value, valuelen);
+			buflen += valuelen;
+			rl_free(value);
+			value = NULL;
+
+			valuelen = snprintf(f, 40, "%lf", score);
+			buf[buflen++] = valuelen;
+			memcpy(&buf[buflen], f, valuelen);
+			buflen += valuelen;
 		}
 		if (retval != RL_END) {
 			goto cleanup;

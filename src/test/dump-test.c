@@ -7,6 +7,15 @@
 #include "../rlite.h"
 #include "test_util.h"
 
+#define PRINT(str, strlen)\
+	{\
+		long i;\
+		for (i = 0; i < strlen; i++) {\
+			fprintf(stderr, "\\x%.2x", str[i]);\
+		}\
+		fprintf(stderr, "\n");\
+	}
+
 static int test_string()
 {
 	int retval;
@@ -55,7 +64,25 @@ static int test_set()
 	long valueslen[2] = {1, 1};
 	RL_CALL_VERBOSE(rl_sadd, RL_OK, db, key, keylen, 2, values, valueslen, NULL);
 	RL_CALL_VERBOSE(rl_dump, RL_OK, db, key, keylen, &testvalue, &testvaluelen);
-	EXPECT_BYTES(UNSIGN("\x01\x80\x00\x00\x00\x00\x80\x00\x00\x00\x01\x61\x80\x00\x00\x00\x01\x62\x06\x00\xa5\xd1\x37G\xe7\x87\xda\xf0"), 28, testvalue, testvaluelen);
+	EXPECT_BYTES(UNSIGN("\x02\x80\x00\x00\x00\x02\x80\x00\x00\x00\x01\x61\x80\x00\x00\x00\x01\x62\x06\x00\xbb\x8c\x8c\xcf\x86{ \xfd"), 28, testvalue, testvaluelen);
+	rl_free(testvalue);
+cleanup:
+	rl_close(db);
+	return retval;
+}
+
+static int test_zset()
+{
+	int retval;
+	rlite *db = NULL;
+	unsigned char *key = UNSIGN("mykey"), *testvalue;
+	long keylen = 5, testvaluelen;
+	RL_CALL_VERBOSE(rl_open, RL_OK, ":memory:", &db, RLITE_OPEN_READWRITE | RLITE_OPEN_CREATE);
+
+	RL_CALL_VERBOSE(rl_zadd, RL_OK, db, key, keylen, 1.23, UNSIGN("a"), 1);
+	RL_CALL_VERBOSE(rl_zadd, RL_OK, db, key, keylen, 4.5, UNSIGN("b"), 1);
+	RL_CALL_VERBOSE(rl_dump, RL_OK, db, key, keylen, &testvalue, &testvaluelen);
+	EXPECT_BYTES(UNSIGN("\x03\x80\x00\x00\x00\x02\x80\x00\x00\x00\x01\x61\x08\x31\x2e\x32\x33\x30\x30\x30\x30\x80\x00\x00\x00\x01\x62\x08\x34\x2e\x35\x30\x30\x30\x30\x30\x06\x00\x62\xf2\xc1\x8b\x73\x18\x51\xe6"), 46, testvalue, testvaluelen);
 	rl_free(testvalue);
 cleanup:
 	rl_close(db);
@@ -71,6 +98,9 @@ RL_TEST_MAIN_START(dump_test)
 		return 1;
 	}
 	if (test_set()) {
+		return 1;
+	}
+	if (test_zset()) {
 		return 1;
 	}
 	return 0;
