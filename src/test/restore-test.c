@@ -306,7 +306,7 @@ cleanup:
 	return retval;
 }
 
-RL_TEST_MAIN_START(parser_test)
+RL_TEST_MAIN_START(restore_test)
 {
 	if (test_int8()) {
 		return 1;

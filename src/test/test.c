@@ -13,7 +13,7 @@
 #include "multi_string-test.h"
 #include "skiplist-test.h"
 #include "long-test.h"
-#include "parser-test.h"
+#include "restore-test.h"
 #include "../util.h"
 
 #ifdef DEBUG
@@ -48,6 +48,6 @@ int main() {
 	RUN_TEST(type_set_test);
 	RUN_TEST(type_zset_test);
 	RUN_TEST(type_hash_test);
-	RUN_TEST(parser_test);
+	RUN_TEST(restore_test);
 	return retval;
 }

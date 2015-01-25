@@ -3,6 +3,6 @@
 
 #include "test_util.h"
 
-RL_TEST_MAIN_DECL(parser_test);
+RL_TEST_MAIN_DECL(restore_test);
 
 #endif
