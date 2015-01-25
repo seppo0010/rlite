@@ -8,10 +8,10 @@ int rl_dump(struct rlite *db, const unsigned char *key, long keylen, unsigned ch
 	int retval;
 	uint64_t crc;
 	unsigned char type;
-	unsigned char *value = NULL;
+	unsigned char *value = NULL, *value2 = NULL;
 	unsigned char *buf = NULL;
 	long buflen;
-	long valuelen;
+	long valuelen, value2len;
 	unsigned char **values = NULL;
 	long i = -1, *valueslen = NULL;
 	uint32_t length;
@@ -121,6 +121,46 @@ int rl_dump(struct rlite *db, const unsigned char *key, long keylen, unsigned ch
 		if (retval != RL_END) {
 			goto cleanup;
 		}
+	} else if (type == RL_TYPE_HASH) {
+		rl_hash_iterator *iterator;
+		RL_CALL(rl_hgetall, RL_OK, db, &iterator, key, keylen);
+		buflen = 16;
+		length = 0;
+		while ((retval = rl_hash_iterator_next(iterator, NULL, &value2len, NULL, &valuelen)) == RL_OK) {
+			buflen += 10 + valuelen + value2len;
+			length++;
+		}
+		if (retval != RL_END) {
+			goto cleanup;
+		}
+
+		RL_MALLOC(buf, sizeof(unsigned char) * buflen);
+		buf[0] = REDIS_RDB_TYPE_HASH;
+		buf[1] = (REDIS_RDB_32BITLEN << 6);
+		length = htonl(length);
+		memcpy(&buf[2], &length, 4);
+		buflen = 6;
+
+		RL_CALL(rl_hgetall, RL_OK, db, &iterator, key, keylen);
+		while ((retval = rl_hash_iterator_next(iterator, &value, &valuelen, &value2, &value2len)) == RL_OK) {
+			buf[buflen++] = (REDIS_RDB_32BITLEN << 6);
+			length = htonl(valuelen);
+			memcpy(&buf[buflen], &length, 4);
+			buflen += 4;
+			memcpy(&buf[buflen], value, valuelen);
+			buflen += valuelen;
+			rl_free(value);
+			value = NULL;
+
+			buf[buflen++] = (REDIS_RDB_32BITLEN << 6);
+			length = htonl(value2len);
+			memcpy(&buf[buflen], &length, 4);
+			buflen += 4;
+			memcpy(&buf[buflen], value2, value2len);
+			buflen += value2len;
+			rl_free(value2);
+			value2 = NULL;
+		}
 	} else {
 		retval = RL_UNEXPECTED;
 		goto cleanup;
@@ -145,5 +185,6 @@ cleanup:
 	}
 	rl_free(valueslen);
 	rl_free(value);
+	rl_free(value2);
 	return retval;
 }

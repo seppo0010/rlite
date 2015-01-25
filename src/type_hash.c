@@ -497,20 +497,20 @@ int rl_hash_iterator_next(rl_hash_iterator *iterator, unsigned char **field, lon
 	void *tmp;
 	rl_hashkey *hashkey = NULL;
 	int retval;
-	if ((!member && memberlen) || (member && !memberlen)) {
-		fprintf(stderr, "Expected to receive either member and memberlen or neither\n");
+	if (member && !memberlen) {
+		fprintf(stderr, "If member is provided, memberlen is required\n");
 		return RL_UNEXPECTED;
 	}
 
-	if ((!field && fieldlen) || (field && !fieldlen)) {
-		fprintf(stderr, "Expected to receive either field and fieldlen or neither\n");
+	if (field && !fieldlen) {
+		fprintf(stderr, "If field is provided, fieldlen is required\n");
 		return RL_UNEXPECTED;
 	}
 
 	RL_CALL(rl_btree_iterator_next, RL_OK, iterator, NULL, &tmp);
 	hashkey = tmp;
 
-	if (field) {
+	if (fieldlen) {
 		retval = rl_multi_string_get(iterator->db, hashkey->string_page, field, fieldlen);
 		if (retval != RL_OK) {
 			rl_btree_iterator_destroy(iterator);
@@ -518,7 +518,7 @@ int rl_hash_iterator_next(rl_hash_iterator *iterator, unsigned char **field, lon
 		}
 	}
 
-	if (member) {
+	if (memberlen) {
 		retval = rl_multi_string_get(iterator->db, hashkey->value_page, member, memberlen);
 		if (retval != RL_OK) {
 			rl_btree_iterator_destroy(iterator);

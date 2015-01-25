@@ -89,6 +89,24 @@ cleanup:
 	return retval;
 }
 
+static int test_hash()
+{
+	int retval;
+	rlite *db = NULL;
+	unsigned char *key = UNSIGN("mykey"), *testvalue;
+	long keylen = 5, testvaluelen;
+	RL_CALL_VERBOSE(rl_open, RL_OK, ":memory:", &db, RLITE_OPEN_READWRITE | RLITE_OPEN_CREATE);
+
+	RL_CALL_VERBOSE(rl_hset, RL_OK, db, key, keylen, UNSIGN("field"), 5, UNSIGN("value"), 5, NULL, 0);
+	RL_CALL_VERBOSE(rl_hset, RL_OK, db, key, keylen, UNSIGN("field2"), 6, UNSIGN("value2"), 6, NULL, 0);
+	RL_CALL_VERBOSE(rl_dump, RL_OK, db, key, keylen, &testvalue, &testvaluelen);
+	EXPECT_BYTES(UNSIGN("\x04\x80\x00\x00\x00\x02\x80\x00\x00\x00\x05\x66\x69\x65\x6c\x64\x80\x00\x00\x00\x05\x76\x61\x6c\x75\x65\x80\x00\x00\x00\x06\x66\x69\x65\x6c\x64\x32\x80\x00\x00\x00\x06\x76\x61\x6c\x75\x65\x32\x06\x00\x74\xaf\xd2\x25\x1d\x50\x0c\xee"), 58, testvalue, testvaluelen);
+	rl_free(testvalue);
+cleanup:
+	rl_close(db);
+	return retval;
+}
+
 RL_TEST_MAIN_START(dump_test)
 {
 	if (test_string()) {
@@ -101,6 +119,9 @@ RL_TEST_MAIN_START(dump_test)
 		return 1;
 	}
 	if (test_zset()) {
+		return 1;
+	}
+	if (test_hash()) {
 		return 1;
 	}
 	return 0;
