@@ -97,7 +97,7 @@ static unsigned char *read_length_with_encoding(unsigned char *f, long *length, 
 		if (is_encoded) {
 			*is_encoded = 0;
 		}
-		*length = ntohl((uint32_t)f);
+		*length = ntohl(*(uint32_t*)(f + 1));
 		return f + 5;
 	}
 }
