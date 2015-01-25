@@ -11,6 +11,7 @@
 #include "type_list.h"
 #include "type_string.h"
 #include "restore.h"
+#include "dump.h"
 
 #define REDIS_RDB_VERSION 6
 
