@@ -15,6 +15,7 @@
 #include "long-test.h"
 #include "restore-test.h"
 #include "dump-test.h"
+#include "hyperloglog-test.h"
 #include "../util.h"
 
 #ifdef DEBUG
@@ -51,5 +52,6 @@ int main() {
 	RUN_TEST(type_hash_test);
 	RUN_TEST(restore_test);
 	RUN_TEST(dump_test);
+	RUN_TEST(hyperloglog_test);
 	return retval;
 }

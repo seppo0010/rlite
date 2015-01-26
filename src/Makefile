@@ -48,13 +48,13 @@ clang-analyzer:
 	$(CC) $(ARCH) $(DEBUG) $(CFLAGS) -c $<
 
 libhirlite.a: ../hirlite/hirlite.o librlite.a
-	ar -cq libhirlite.a rlite.o page_skiplist.o page_string.o page_list.o page_btree.o page_key.o type_string.o type_list.o type_set.o type_zset.o type_hash.o page_long.o page_multi_string.o util.o utilfromredis.o sha1.o crc64.o restore.o dump.o lzf_c.o lzf_d.o hirlite.o
+	ar -cq libhirlite.a rlite.o page_skiplist.o page_string.o page_list.o page_btree.o page_key.o type_string.o type_list.o type_set.o type_zset.o type_hash.o page_long.o page_multi_string.o util.o utilfromredis.o hyperloglog.o sha1.o crc64.o restore.o dump.o lzf_c.o lzf_d.o hirlite.o
 
-librlite.a: rlite.o page_skiplist.o page_string.o page_list.o page_btree.o page_key.o page_multi_string.o page_long.o type_string.o type_list.o type_set.o type_zset.o type_hash.o util.o restore.o dump.o ../deps/utilfromredis.o ../deps/sha1.o ../deps/crc64.o ../deps/lzf_c.o ../deps/lzf_d.o
-	ar -cq librlite.a rlite.o page_skiplist.o page_string.o page_list.o page_btree.o page_key.o type_string.o type_list.o type_set.o type_zset.o type_hash.o page_long.o page_multi_string.o util.o utilfromredis.o sha1.o crc64.o lzf_c.o lzf_d.o restore.o dump.o
+librlite.a: rlite.o page_skiplist.o page_string.o page_list.o page_btree.o page_key.o page_multi_string.o page_long.o type_string.o type_list.o type_set.o type_zset.o type_hash.o util.o restore.o dump.o ../deps/utilfromredis.o ../deps/hyperloglog.o ../deps/sha1.o ../deps/crc64.o ../deps/lzf_c.o ../deps/lzf_d.o
+	ar -cq librlite.a rlite.o page_skiplist.o page_string.o page_list.o page_btree.o page_key.o type_string.o type_list.o type_set.o type_zset.o type_hash.o page_long.o page_multi_string.o util.o utilfromredis.o hyperloglog.o sha1.o crc64.o lzf_c.o lzf_d.o restore.o dump.o
 
-buildtest: librlite.a test/rlite-test.o test/btree-test.o test/list-test.o test/string-test.o test/multi_string-test.o test/key-test.o test/type_string-test.o test/type_list-test.o test/type_set-test.o test/type_zset-test.o test/type_hash-test.o test/skiplist-test.o test/long-test.o test/restore-test.o test/dump-test.o test/test_util.o test/test.o
-	$(CC) $(DEBUG) $(CFLAGS) -o rlite-test test.o rlite-test.o btree-test.o list-test.o string-test.o multi_string-test.o key-test.o type_string-test.o type_list-test.o type_set-test.o type_zset-test.o type_hash-test.o skiplist-test.o long-test.o restore-test.o dump-test.o test_util.o librlite.a $(LIBS)
+buildtest: librlite.a test/rlite-test.o test/btree-test.o test/list-test.o test/string-test.o test/multi_string-test.o test/key-test.o test/type_string-test.o test/type_list-test.o test/type_set-test.o test/type_zset-test.o test/type_hash-test.o test/skiplist-test.o test/long-test.o test/restore-test.o test/hyperloglog-test.o test/dump-test.o test/test_util.o test/test.o
+	$(CC) $(DEBUG) $(CFLAGS) -o rlite-test test.o rlite-test.o btree-test.o list-test.o string-test.o multi_string-test.o key-test.o type_string-test.o type_list-test.o type_set-test.o type_zset-test.o type_hash-test.o skiplist-test.o long-test.o restore-test.o hyperloglog-test.o dump-test.o test_util.o librlite.a $(LIBS)
 
 buildhirlitetest: libhirlite.a ../hirlite/test/echo.o ../hirlite/test/hash.o ../hirlite/test/list.o ../hirlite/test/parser.o ../hirlite/test/set.o ../hirlite/test/string.o ../hirlite/test/test.o ../hirlite/test/zset.o ../hirlite/test/db.o
 	$(CC) $(DEBUG) $(CFLAGS) -o hirlite-test echo.o hash.o list.o parser.o set.o string.o test.o zset.o db.o libhirlite.a $(LIBS)
