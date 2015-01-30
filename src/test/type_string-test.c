@@ -493,6 +493,269 @@ cleanup:
 	return retval;
 }
 
+static int basic_test_pfadd(int _commit)
+{
+	int retval = 0;
+	fprintf(stderr, "Start basic_test_pfadd %d\n", _commit);
+
+	rlite *db = NULL;
+	RL_CALL_VERBOSE(setup_db, RL_OK, &db, _commit, 1);
+	unsigned char *key = UNSIGN("my key");
+	long keylen = strlen((char *)key);
+	unsigned char *value = UNSIGN("asd");
+	long valuelen = 3;
+	unsigned char *value2 = UNSIGN("qwe");
+	long value2len = 3;
+	unsigned char *value3 = UNSIGN("zxc");
+	long value3len = 3;
+
+	unsigned char *values[] = {value, value2};
+	long valueslen[] = {valuelen, value2len};
+	int updated = -1;
+	unsigned long long expires = rl_mstime() + 100000, testexpires;
+
+	RL_CALL_VERBOSE(rl_pfadd, RL_OK, db, key, keylen, 2, values, valueslen, &updated);
+	RL_BALANCED();
+
+	EXPECT_LONG(updated, 1);
+
+	RL_CALL_VERBOSE(rl_pfadd, RL_OK, db, key, keylen, 2, values, valueslen, &updated);
+	RL_BALANCED();
+
+	EXPECT_LONG(updated, 0);
+
+	RL_CALL(rl_key_expires, RL_OK, db, key, keylen, expires);
+	RL_CALL_VERBOSE(rl_pfadd, RL_OK, db, key, keylen, 1, &value3, &value3len, &updated);
+	RL_BALANCED();
+
+	EXPECT_LONG(updated, 1);
+	RL_CALL_VERBOSE(rl_key_get, RL_FOUND, db, key, keylen, NULL, NULL, NULL, &testexpires);
+
+	EXPECT_LONG(expires, testexpires);
+
+	RL_CALL_VERBOSE(rl_set, RL_OK, db, key, keylen, value, valuelen, 0, 0);
+	RL_CALL_VERBOSE(rl_pfadd, RL_INVALID_STATE, db, key, keylen, 1, &value3, &value3len, &updated);
+
+	fprintf(stderr, "End basic_test_pfadd\n");
+	retval = 0;
+cleanup:
+	rl_close(db);
+	return retval;
+}
+
+static int basic_test_pfadd_pfcount(int _commit)
+{
+	int retval = 0;
+	fprintf(stderr, "Start basic_test_pfadd_pfcount %d\n", _commit);
+
+	rlite *db = NULL;
+	RL_CALL_VERBOSE(setup_db, RL_OK, &db, _commit, 1);
+	unsigned char *key = UNSIGN("my key");
+	long keylen = strlen((char *)key);
+	unsigned char *key2 = UNSIGN("my key2");
+	long key2len = strlen((char *)key2);
+	unsigned char *value = UNSIGN("asd");
+	long valuelen = 3;
+	unsigned char *value2 = UNSIGN("qwe");
+	long value2len = 3;
+	unsigned char *value3 = UNSIGN("zxc");
+	long value3len = 3;
+	long count;
+
+	unsigned char *values[] = {value, value2};
+	long valueslen[] = {valuelen, value2len};
+	unsigned char *keys[] = {key, key2};
+	long keyslen[] = {keylen, key2len};
+
+	RL_CALL_VERBOSE(rl_pfadd, RL_OK, db, key, keylen, 2, values, valueslen, NULL);
+	RL_BALANCED();
+
+	RL_CALL_VERBOSE(rl_pfadd, RL_OK, db, key2, key2len, 1, &value3, &value3len, NULL);
+	RL_BALANCED();
+
+	RL_CALL_VERBOSE(rl_pfcount, RL_OK, db, 1, (const unsigned char **)&key, &keylen, &count);
+	EXPECT_LONG(count, 2);
+
+	RL_CALL_VERBOSE(rl_pfcount, RL_OK, db, 2, (const unsigned char **)keys, keyslen, &count);
+	EXPECT_LONG(count, 3);
+
+	fprintf(stderr, "End basic_test_pfadd_pfcount\n");
+	retval = 0;
+cleanup:
+	rl_close(db);
+	return retval;
+}
+
+static int basic_test_pfadd_pfmerge(int _commit)
+{
+	int retval = 0;
+	fprintf(stderr, "Start basic_test_pfadd_pfmerge %d\n", _commit);
+
+	rlite *db = NULL;
+	RL_CALL_VERBOSE(setup_db, RL_OK, &db, _commit, 1);
+	unsigned char *key = UNSIGN("my key");
+	long keylen = strlen((char *)key);
+	unsigned char *key2 = UNSIGN("my key2");
+	long key2len = strlen((char *)key2);
+	unsigned char *value = UNSIGN("asd");
+	long valuelen = 3;
+	unsigned char *value2 = UNSIGN("qwe");
+	long value2len = 3;
+	unsigned char *value3 = UNSIGN("zxc");
+	long value3len = 3;
+	long count;
+
+	unsigned char *values[] = {value, value2};
+	long valueslen[] = {valuelen, value2len};
+
+	RL_CALL_VERBOSE(rl_pfadd, RL_OK, db, key, keylen, 2, values, valueslen, NULL);
+	RL_BALANCED();
+
+	RL_CALL_VERBOSE(rl_pfadd, RL_OK, db, key2, key2len, 1, &value3, &value3len, NULL);
+	RL_BALANCED();
+
+	RL_CALL_VERBOSE(rl_pfmerge, RL_OK, db, key2, key2len, 1, (const unsigned char **)&key, &keylen);
+
+	RL_CALL_VERBOSE(rl_pfcount, RL_OK, db, 1, (const unsigned char **)&key2, &key2len, &count);
+	EXPECT_LONG(count, 3);
+
+	fprintf(stderr, "End basic_test_pfadd_pfmerge\n");
+	retval = 0;
+cleanup:
+	rl_close(db);
+	return retval;
+}
+
+static int basic_test_pfadd_pfdebug_getreg(int _commit)
+{
+	int retval = 0;
+	fprintf(stderr, "Start basic_test_pfadd_pfdebug_getreg %d\n", _commit);
+
+	rlite *db = NULL;
+	unsigned char *key = UNSIGN("my key");
+	long keylen = strlen((char *)key);
+	unsigned char *value = UNSIGN("1");
+	long valuelen = 1;
+	int size, i;
+	long *elements = NULL;
+	RL_CALL_VERBOSE(setup_db, RL_OK, &db, _commit, 1);
+
+	RL_CALL_VERBOSE(rl_pfadd, RL_OK, db, key, keylen, 1, &value, &valuelen, NULL);
+	RL_BALANCED();
+
+	RL_CALL_VERBOSE(rl_pfdebug_getreg, RL_OK, db, key, keylen, &size, &elements);
+	EXPECT_LONG(size, 16384);
+
+	for (i = 0; i < size; i++) {
+		EXPECT_LONG(elements[i], i == 7527 ? 1 : 0);
+	}
+
+	fprintf(stderr, "End basic_test_pfadd_pfdebug_getreg\n");
+	retval = 0;
+cleanup:
+	free(elements);
+	rl_close(db);
+	return retval;
+}
+
+static int basic_test_pfadd_pfdebug_decode(int _commit)
+{
+	int retval = 0;
+	fprintf(stderr, "Start basic_test_pfadd_pfdebug_decode %d\n", _commit);
+
+	rlite *db = NULL;
+	unsigned char *key = UNSIGN("my key");
+	long keylen = strlen((char *)key);
+	unsigned char *value = UNSIGN("1");
+	long valuelen = 1;
+	unsigned char *decode = NULL;
+	long decodelen = 0;
+	RL_CALL_VERBOSE(setup_db, RL_OK, &db, _commit, 1);
+
+	RL_CALL_VERBOSE(rl_pfadd, RL_OK, db, key, keylen, 1, &value, &valuelen, NULL);
+	RL_BALANCED();
+
+	RL_CALL_VERBOSE(rl_pfdebug_decode, RL_OK, db, key, keylen, &decode, &decodelen);
+	const char *expect = "Z:7527 v:1,1 Z:8856";
+	long expectlen = strlen(expect);
+	EXPECT_BYTES(expect, expectlen, decode, decodelen);
+
+	fprintf(stderr, "End basic_test_pfadd_pfdebug_decode\n");
+	retval = 0;
+cleanup:
+	free(decode);
+	rl_close(db);
+	return retval;
+}
+
+static int basic_test_pfadd_pfdebug_encoding(int _commit)
+{
+	int retval = 0;
+	fprintf(stderr, "Start basic_test_pfadd_pfdebug_encoding %d\n", _commit);
+
+	rlite *db = NULL;
+	unsigned char *key = UNSIGN("my key");
+	long keylen = strlen((char *)key);
+	unsigned char *value = UNSIGN("1");
+	long valuelen = 1;
+	unsigned char *encoding = NULL;
+	long encodinglen = 0;
+	RL_CALL_VERBOSE(setup_db, RL_OK, &db, _commit, 1);
+
+	RL_CALL_VERBOSE(rl_pfadd, RL_OK, db, key, keylen, 1, &value, &valuelen, NULL);
+	RL_BALANCED();
+
+	RL_CALL_VERBOSE(rl_pfdebug_encoding, RL_OK, db, key, keylen, &encoding, &encodinglen);
+	const char *expect = "sparse";
+	long expectlen = strlen(expect);
+	EXPECT_BYTES(expect, expectlen, encoding, encodinglen);
+
+	fprintf(stderr, "End basic_test_pfadd_pfdebug_encoding\n");
+	retval = 0;
+cleanup:
+	free(encoding);
+	rl_close(db);
+	return retval;
+}
+
+static int basic_test_pfadd_pfdebug_todense(int _commit)
+{
+	int retval = 0;
+	fprintf(stderr, "Start basic_test_pfadd_pfdebug_todense %d\n", _commit);
+
+	rlite *db = NULL;
+	unsigned char *key = UNSIGN("my key");
+	long keylen = strlen((char *)key);
+	unsigned char *value = UNSIGN("1");
+	long valuelen = 1;
+	unsigned char *encoding = NULL;
+	long encodinglen = 0;
+	int changed;
+
+	RL_CALL_VERBOSE(setup_db, RL_OK, &db, _commit, 1);
+
+	RL_CALL_VERBOSE(rl_pfadd, RL_OK, db, key, keylen, 1, &value, &valuelen, NULL);
+	RL_BALANCED();
+
+	RL_CALL_VERBOSE(rl_pfdebug_todense, RL_OK, db, key, keylen, &changed);
+	EXPECT_LONG(changed, 1);
+
+	RL_CALL_VERBOSE(rl_pfdebug_encoding, RL_OK, db, key, keylen, &encoding, &encodinglen);
+	const char *expect = "dense";
+	long expectlen = strlen(expect);
+	EXPECT_BYTES(expect, expectlen, encoding, encodinglen);
+
+	RL_CALL_VERBOSE(rl_pfdebug_todense, RL_OK, db, key, keylen, &changed);
+	EXPECT_LONG(changed, 0);
+
+	fprintf(stderr, "End basic_test_pfadd_pfdebug_todense\n");
+	retval = 0;
+cleanup:
+	free(encoding);
+	rl_close(db);
+	return retval;
+}
+
 RL_TEST_MAIN_START(type_string_test)
 {
 	int i;
@@ -512,6 +775,13 @@ RL_TEST_MAIN_START(type_string_test)
 		RL_TEST(basic_test_set_bitop, i);
 		RL_TEST(basic_test_set_bitcount, i);
 		RL_TEST(basic_test_set_bitpos, i);
+		RL_TEST(basic_test_pfadd, i);
+		RL_TEST(basic_test_pfadd_pfcount, i);
+		RL_TEST(basic_test_pfadd_pfmerge, i);
+		RL_TEST(basic_test_pfadd_pfdebug_getreg, i);
+		RL_TEST(basic_test_pfadd_pfdebug_decode, i);
+		RL_TEST(basic_test_pfadd_pfdebug_encoding, i);
+		RL_TEST(basic_test_pfadd_pfdebug_todense, i);
 	}
 }
 RL_TEST_MAIN_END

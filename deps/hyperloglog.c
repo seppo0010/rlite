@@ -1418,7 +1418,7 @@ cleanup:
     return retval;
 }
 
-int rl_str_pfdebug_getreg(unsigned char *str, long strlen, int *size, long **elements) {
+int rl_str_pfdebug_getreg(unsigned char *str, long strlen, int *size, long **elements, unsigned char **_str, long *_strlen) {
     struct hllhdr *hdr;
     int j;
 
@@ -1430,11 +1430,12 @@ int rl_str_pfdebug_getreg(unsigned char *str, long strlen, int *size, long **ele
             return -2;
         }
     }
+    hdr = (struct hllhdr *)str;
 
     *size = HLL_REGISTERS;
     *elements = malloc(sizeof(long) * HLL_REGISTERS);
     if (!*elements) {
-        return -1;
+        return -3;
     }
     for (j = 0; j < HLL_REGISTERS; j++) {
         uint8_t val;
@@ -1442,6 +1443,8 @@ int rl_str_pfdebug_getreg(unsigned char *str, long strlen, int *size, long **ele
         HLL_DENSE_GET_REGISTER(val,hdr->registers,j);
         (*elements)[j] = (long)val;
     }
+    *_str = str;
+    *_strlen = strlen;
     return 0;
 }
 
@@ -1455,7 +1458,8 @@ int rl_str_pfdebug_getreg(unsigned char *str, long strlen, int *size, long **ele
         obj = tmp;\
         objalloc *= 2;\
     }\
-    memcpy(&obj[objlen], src, srclen);
+    memcpy(&obj[objlen], src, srclen);\
+    objlen += srclen;
 
 int rl_str_pfdebug_decode(unsigned char *str, long strlen, unsigned char **response, long *responselen) {
     struct hllhdr *hdr;
@@ -1511,12 +1515,13 @@ int rl_str_pfdebug_encoding(unsigned char *str, long strlen, unsigned char **res
 
     char *encodingstr[2] = {"dense","sparse"};
 
-    *response = (unsigned char *)encodingstr[hdr->encoding];
     *responselen = 5 + hdr->encoding;
+    *response = malloc(sizeof(unsigned char) * (*responselen));
+    memcpy(*response, encodingstr[hdr->encoding], *responselen);
     return 0;
 }
 
-int rl_str_pfdebug_todenser(unsigned char *str, long strlen) {
+int rl_str_pfdebug_todense(unsigned char *str, long strlen, unsigned char **_str, long *_strlen) {
     struct hllhdr *hdr;
 
     if (isHLLObject(str, strlen) != 0) return -1;
@@ -1530,5 +1535,7 @@ int rl_str_pfdebug_todenser(unsigned char *str, long strlen) {
         }
         conv = 1;
     }
-    return conv ? 1 : 0;
+    *_str = str;
+    *_strlen = strlen;
+    return conv;
 }

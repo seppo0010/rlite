@@ -178,6 +178,7 @@ int rl_key_expires(struct rlite *db, const unsigned char *key, long keylen, unsi
 	unsigned char type;
 	long string_page, value_page;
 	RL_CALL(rl_key_get, RL_FOUND, db, key, keylen, &type, &string_page, &value_page, NULL);
+	RL_CALL(rl_multi_string_delete, RL_OK, db, string_page);
 	RL_CALL(rl_key_set, RL_OK, db, key, keylen, type, value_page, expires);
 cleanup:
 	return retval;

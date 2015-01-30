@@ -6,6 +6,7 @@
 #include "page_multi_string.h"
 #include "type_string.h"
 #include "util.h"
+#include "../deps/hyperloglog.h"
 
 static int rl_string_get_objects(rlite *db, const unsigned char *key, long keylen, long *_page_number, unsigned long long *expires)
 {
@@ -32,7 +33,6 @@ int rl_set(struct rlite *db, const unsigned char *key, long keylen, unsigned cha
 {
 	int retval;
 	long page_number;
-	int exists;
 	unsigned char type;
 	long value_page;
 	retval = rl_key_get(db, key, keylen, &type, NULL, &value_page, NULL);
@@ -40,10 +40,8 @@ int rl_set(struct rlite *db, const unsigned char *key, long keylen, unsigned cha
 		retval = RL_WRONG_TYPE;
 		goto cleanup;
 	}
-	exists = retval == RL_FOUND;
-	if (exists) {
+	if (retval == RL_FOUND) {
 		if (nx) {
-			retval = RL_FOUND;
 			goto cleanup;
 		}
 		else {
@@ -391,6 +389,206 @@ int rl_bitpos(struct rlite *db, const unsigned char *key, long keylen, int bit, 
 	retval = RL_OK;
 cleanup:
 	rl_free(value);
+	return retval;
+}
+
+int rl_pfadd(struct rlite *db, const unsigned char *key, long keylen, int elementc, unsigned char **elements, long *elementslen, int *updated)
+{
+	int retval;
+	unsigned char *value = NULL;
+	long valuelen = 0;
+	unsigned long long expires = 0;
+
+	RL_CALL2(rl_get, RL_OK, RL_NOT_FOUND, db, key, keylen, &value, &valuelen);
+	if (retval == RL_OK) {
+		RL_CALL(rl_key_get, RL_FOUND, db, key, keylen, NULL, NULL, NULL, &expires);
+	}
+	retval = rl_str_pfadd(value, valuelen, elementc, elements, elementslen, &value, &valuelen);
+	if (retval != 0 && retval != 1) {
+		if (retval == -1) {
+			retval = RL_INVALID_STATE;
+		} else {
+			retval = RL_UNEXPECTED;
+		}
+		goto cleanup;
+	}
+	if (updated) {
+		*updated = retval;
+	}
+	if (retval == 1) { // updated?
+		RL_CALL(rl_set, RL_OK, db, key, keylen, value, valuelen, 0, expires)
+	}
+	retval = RL_OK;
+cleanup:
+	free(value);
+	return retval;
+}
+
+int rl_pfcount(struct rlite *db, int keyc, const unsigned char **keys, long *keyslen, long *count)
+{
+	int retval;
+	unsigned char **argv = NULL;
+	long *argvlen = NULL;
+	long i;
+
+	RL_MALLOC(argvlen, sizeof(unsigned char *) * keyc);
+	RL_MALLOC(argv, sizeof(unsigned char *) * keyc);
+	for (i = 0; i < keyc; i++) {
+		argv[i] = NULL;
+	}
+	for (i = 0; i < keyc; i++) {
+		RL_CALL2(rl_get, RL_OK, RL_NOT_FOUND, db, keys[i], keyslen[i], &argv[i], &argvlen[i]);
+	}
+
+	retval = rl_str_pfcount(keyc, argv, argvlen, count);
+	if (retval != 0) {
+		if (retval == -1) {
+			retval = RL_INVALID_STATE;
+		} else {
+			retval = RL_UNEXPECTED;
+		}
+		goto cleanup;
+	}
+	retval = RL_OK;
+cleanup:
+	for (i = 0; i < keyc; i++) {
+		rl_free(argv[i]);
+	}
+	rl_free(argv);
+	rl_free(argvlen);
+	return retval;
+}
+
+int rl_pfmerge(struct rlite *db, const unsigned char *destkey, long destkeylen, int keyc, const unsigned char **keys, long *keyslen)
+{
+	int retval;
+	unsigned char **argv = NULL, *newvalue = NULL;
+	long *argvlen = NULL, newvaluelen;
+	long i;
+	int argc = keyc + 1;
+	unsigned long long expires = 0;
+
+	RL_MALLOC(argvlen, sizeof(unsigned char *) * argc);
+	RL_MALLOC(argv, sizeof(unsigned char *) * argc);
+	for (i = 0; i < argc; i++) {
+		argv[i] = NULL;
+	}
+	for (i = 0; i < keyc; i++) {
+		RL_CALL2(rl_get, RL_OK, RL_NOT_FOUND, db, keys[i], keyslen[i], &argv[i], &argvlen[i]);
+	}
+	RL_CALL2(rl_get, RL_OK, RL_NOT_FOUND, db, destkey, destkeylen, &argv[keyc], &argvlen[keyc]);
+	retval = rl_str_pfmerge(argc, argv, argvlen, &newvalue, &newvaluelen);
+	if (retval != 0) {
+		if (retval == -1) {
+			retval = RL_INVALID_STATE;
+		} else {
+			retval = RL_UNEXPECTED;
+		}
+		goto cleanup;
+	}
+
+	RL_CALL2(rl_key_get, RL_FOUND, RL_NOT_FOUND, db, destkey, destkeylen, NULL, NULL, NULL, &expires);
+	RL_CALL(rl_set, RL_OK, db, destkey, destkeylen, newvalue, newvaluelen, 0, expires);
+	retval = RL_OK;
+cleanup:
+	for (i = 0; i < argc; i++) {
+		rl_free(argv[i]);
+	}
+	rl_free(argv);
+	rl_free(argvlen);
+	free(newvalue);
+	return retval;
+}
+
+int rl_pfdebug_getreg(struct rlite *db, const unsigned char *key, long keylen, int *size, long **elements)
+{
+	int retval;
+	unsigned char *value = NULL;
+	long valuelen = 0;
+	RL_CALL(rl_get, RL_OK, db, key, keylen, &value, &valuelen);
+	retval = rl_str_pfdebug_getreg(value, valuelen, size, elements, &value, &valuelen);
+	if (retval != 0) {
+		if (retval == -1) {
+			retval = RL_INVALID_STATE;
+		} else if (retval == -3) {
+			retval = RL_OUT_OF_MEMORY;
+		} else {
+			retval = RL_UNEXPECTED;
+		}
+		goto cleanup;
+	}
+	retval = RL_OK;
+cleanup:
+	free(value);
+	return retval;
+}
+
+int rl_pfdebug_decode(struct rlite *db, const unsigned char *key, long keylen, unsigned char **value, long *valuelen)
+{
+	int retval;
+	unsigned char *str = NULL;
+	long strlen;
+	RL_CALL(rl_get, RL_OK, db, key, keylen, &str, &strlen);
+	retval = rl_str_pfdebug_decode(str, strlen, value, valuelen);
+	if (retval != 0) {
+		if (retval == -1 || retval == -2) {
+			retval = RL_INVALID_STATE;
+		} else {
+			retval = RL_UNEXPECTED;
+		}
+		goto cleanup;
+	}
+	retval = RL_OK;
+cleanup:
+	rl_free(str);
+	return retval;
+}
+
+int rl_pfdebug_encoding(struct rlite *db, const unsigned char *key, long keylen, unsigned char **value, long *valuelen)
+{
+	int retval;
+	unsigned char *str = NULL;
+	long strlen;
+	RL_CALL(rl_get, RL_OK, db, key, keylen, &str, &strlen);
+	retval = rl_str_pfdebug_encoding(str, strlen, value, valuelen);
+	if (retval != 0) {
+		if (retval == -1) {
+			retval = RL_INVALID_STATE;
+		} else {
+			retval = RL_UNEXPECTED;
+		}
+		goto cleanup;
+	}
+	retval = RL_OK;
+cleanup:
+	rl_free(str);
+	return retval;
+}
+
+int rl_pfdebug_todense(struct rlite *db, const unsigned char *key, long keylen, int *converted)
+{
+	int retval;
+	unsigned char *str = NULL;
+	long strlen;
+	unsigned long long expires = 0;
+	RL_CALL(rl_get, RL_OK, db, key, keylen, &str, &strlen);
+	retval = rl_str_pfdebug_todense(str, strlen, &str, &strlen);
+	if (retval != 0 && retval != 1) {
+		if (retval == -1) {
+			retval = RL_INVALID_STATE;
+		} else {
+			retval = RL_UNEXPECTED;
+		}
+		goto cleanup;
+	}
+	*converted = retval;
+	if (retval == 1) {
+		RL_CALL2(rl_key_get, RL_FOUND, RL_NOT_FOUND, db, key, keylen, NULL, NULL, NULL, &expires);
+		RL_CALL(rl_set, RL_OK, db, key, keylen, str, strlen, 0, expires);
+	}
+	retval = RL_OK;
+cleanup:
+	rl_free(str);
 	return retval;
 }
 
