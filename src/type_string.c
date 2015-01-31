@@ -430,6 +430,9 @@ int rl_pfcount(struct rlite *db, int keyc, const unsigned char **keys, long *key
 	unsigned char **argv = NULL;
 	long *argvlen = NULL;
 	long i;
+	unsigned char *newvalue = NULL;
+	long newvaluelen;
+	unsigned long long expires = 0;
 
 	RL_MALLOC(argvlen, sizeof(unsigned char *) * keyc);
 	RL_MALLOC(argv, sizeof(unsigned char *) * keyc);
@@ -440,7 +443,7 @@ int rl_pfcount(struct rlite *db, int keyc, const unsigned char **keys, long *key
 		RL_CALL2(rl_get, RL_OK, RL_NOT_FOUND, db, keys[i], keyslen[i], &argv[i], &argvlen[i]);
 	}
 
-	retval = rl_str_pfcount(keyc, argv, argvlen, count);
+	retval = rl_str_pfcount(keyc, argv, argvlen, count, &newvalue, &newvaluelen);
 	if (retval != 0) {
 		if (retval == -1) {
 			retval = RL_INVALID_STATE;
@@ -448,6 +451,10 @@ int rl_pfcount(struct rlite *db, int keyc, const unsigned char **keys, long *key
 			retval = RL_UNEXPECTED;
 		}
 		goto cleanup;
+	}
+	if (newvalue) {
+		RL_CALL2(rl_key_get, RL_FOUND, RL_NOT_FOUND, db, keys[0], keyslen[0], NULL, NULL, NULL, &expires);
+		RL_CALL(rl_set, RL_OK, db, keys[0], keyslen[0], newvalue, newvaluelen, 0, expires);
 	}
 	retval = RL_OK;
 cleanup:

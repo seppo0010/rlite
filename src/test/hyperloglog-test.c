@@ -15,7 +15,7 @@ int test_hyperloglog_add_count()
 	unsigned char *argv[] = {UNSIGN("a"), UNSIGN("b"), UNSIGN("c")};
 	long argvlen[] = {1, 1, 1};
 	RL_CALL_VERBOSE(rl_str_pfadd, 1, NULL, 0, 3, argv, argvlen, &str, &strlen);
-	RL_CALL_VERBOSE(rl_str_pfcount, 0, 1, &str, &strlen, &card);
+	RL_CALL_VERBOSE(rl_str_pfcount, 0, 1, &str, &strlen, &card, NULL, NULL);
 	EXPECT_LONG(card, 3);
 	free(str);
 	retval = 0;
@@ -39,7 +39,7 @@ int test_hyperloglog_add_merge()
 	unsigned char *strs[] = {str, str2};
 	long strslen[] = {strlen, strlen2};
 	RL_CALL_VERBOSE(rl_str_pfmerge, 0, 2, strs, strslen, &str3, &strlen3);
-	RL_CALL_VERBOSE(rl_str_pfcount, 0, 1, &str3, &strlen3, &card);
+	RL_CALL_VERBOSE(rl_str_pfcount, 0, 1, &str3, &strlen3, &card, NULL, NULL);
 	EXPECT_LONG(card, 6);
 	retval = 0;
 	free(str);

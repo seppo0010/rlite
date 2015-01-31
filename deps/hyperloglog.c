@@ -1192,7 +1192,7 @@ int rl_str_pfadd(unsigned char *str, long strlen, int argc, unsigned char **argv
 }
 
 /* PFCOUNT var -> approximated cardinality of set. */
-int rl_str_pfcount(int argc, unsigned char **argv, long *argvlen, long *_card) {
+int rl_str_pfcount(int argc, unsigned char **argv, long *argvlen, long *_card, unsigned char **updatevalue, long *updatevaluelen) {
     struct hllhdr *hdr;
     uint64_t card;
 
@@ -1269,6 +1269,12 @@ int rl_str_pfcount(int argc, unsigned char **argv, long *argvlen, long *_card) {
              * data structure is not modified, since the cached value
              * may be modified and given that the HLL is a Redis string
              * we need to propagate the change. */
+            if (updatevalue) {
+                *updatevalue = (unsigned char *)hdr;
+            }
+            if (updatevalue) {
+                *updatevaluelen = argvlen[0];
+            }
         }
         *_card = card;
     }
