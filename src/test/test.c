@@ -10,6 +10,7 @@
 #include "type_zset-test.h"
 #include "type_hash-test.h"
 #include "key-test.h"
+#include "multi-test.h"
 #include "multi_string-test.h"
 #include "skiplist-test.h"
 #include "long-test.h"

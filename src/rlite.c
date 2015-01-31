@@ -784,7 +784,7 @@ cleanup:
 int rl_commit(struct rlite *db)
 {
 	int retval = RL_UNEXPECTED;
-	long i, page_number;
+	long i, page_number, pos;
 	rl_page *page;
 	size_t written;
 	unsigned char *data;
@@ -845,6 +845,20 @@ int rl_commit(struct rlite *db)
 		rl_discard(db);
 	}
 	else if (db->driver_type == RL_MEMORY_DRIVER) {
+		for (i = 0; i < db->write_pages_len; i++) {
+			page = db->write_pages[i];
+			retval = rl_search_cache(db, NULL, page->page_number, NULL, &pos, db->read_pages, db->read_pages_len);
+			fprintf(stderr, "writing page %ld\n", page->page_number);
+			if (retval == RL_FOUND) {
+				fprintf(stderr, "Unexpectedly found written page %ld in read pages\n", page->page_number);
+				retval = RL_UNEXPECTED;
+				goto cleanup;
+			}
+			memmove(&db->read_pages[pos + 1], &db->read_pages[pos], sizeof(rl_page *) * (db->read_pages_len - pos));
+			db->read_pages[pos] = page;
+			db->read_pages_len++;
+		}
+		db->write_pages_len = 0;
 		retval = RL_OK;
 	}
 	rl_free(data);
