@@ -756,6 +756,31 @@ cleanup:
 	return retval;
 }
 
+static int basic_test_pfadd_empty(int _commit)
+{
+	int retval = 0;
+	fprintf(stderr, "Start basic_test_pfadd_empty %d\n", _commit);
+
+	rlite *db = NULL;
+	RL_CALL_VERBOSE(setup_db, RL_OK, &db, _commit, 1);
+	unsigned char *key = UNSIGN("my key");
+	long keylen = strlen((char *)key);
+	int updated;
+
+	RL_CALL_VERBOSE(rl_pfadd, RL_OK, db, key, keylen, 0, NULL, NULL, &updated);
+	RL_BALANCED();
+
+	EXPECT_LONG(updated, 1);
+
+	RL_CALL_VERBOSE(rl_key_get, RL_FOUND, db, key, keylen, NULL, NULL, NULL, NULL);
+
+	fprintf(stderr, "End basic_test_pfadd_empty\n");
+	retval = 0;
+cleanup:
+	rl_close(db);
+	return retval;
+}
+
 RL_TEST_MAIN_START(type_string_test)
 {
 	int i;
@@ -782,6 +807,7 @@ RL_TEST_MAIN_START(type_string_test)
 		RL_TEST(basic_test_pfadd_pfdebug_decode, i);
 		RL_TEST(basic_test_pfadd_pfdebug_encoding, i);
 		RL_TEST(basic_test_pfadd_pfdebug_todense, i);
+		RL_TEST(basic_test_pfadd_empty, i);
 	}
 }
 RL_TEST_MAIN_END

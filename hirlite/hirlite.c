@@ -2752,19 +2752,21 @@ static void pfaddCommand(rliteClient *c) {
 	long *elementslen = NULL;
 	int i, elementc = c->argc - 2;
 
-	elements = malloc(sizeof(unsigned char *) * elementc);
-	if (!elements) {
-		__rliteSetError(c->context, RLITE_ERR_OOM, "Out of memory");
-		goto cleanup;
-	}
-	elementslen = malloc(sizeof(long) * elementc);
-	if (!elementslen) {
-		__rliteSetError(c->context, RLITE_ERR_OOM, "Out of memory");
-		goto cleanup;
-	}
-	for (i = 0; i < elementc; i++) {
-		elements[i] = UNSIGN(c->argv[i + 2]);
-		elementslen[i] = c->argvlen[i + 2];
+	if (elementc > 0) {
+		elements = malloc(sizeof(unsigned char *) * elementc);
+		if (!elements) {
+			__rliteSetError(c->context, RLITE_ERR_OOM, "Out of memory");
+			goto cleanup;
+		}
+		elementslen = malloc(sizeof(long) * elementc);
+		if (!elementslen) {
+			__rliteSetError(c->context, RLITE_ERR_OOM, "Out of memory");
+			goto cleanup;
+		}
+		for (i = 0; i < elementc; i++) {
+			elements[i] = UNSIGN(c->argv[i + 2]);
+			elementslen[i] = c->argvlen[i + 2];
+		}
 	}
 
 	int retval = rl_pfadd(c->context->db, key, keylen, elementc, elements, elementslen, &updated);
