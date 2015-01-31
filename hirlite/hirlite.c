@@ -11,6 +11,7 @@
 #include <time.h>
 #include <unistd.h>
 
+#include "../deps/hyperloglog.h"
 #include "hirlite.h"
 #include "util.h"
 
@@ -2744,6 +2745,12 @@ cleanup:
 	return;
 }
 
+static void pfselftestCommand(rliteClient *c) {
+	if (rl_str_pfselftest() == 0) {
+		c->reply = createStatusObject(RLITE_STR_OK);
+	}
+}
+
 static void pfaddCommand(rliteClient *c) {
 	unsigned char *key = UNSIGN(c->argv[1]);
 	long keylen = c->argvlen[1];
@@ -3561,7 +3568,7 @@ struct rliteCommand rliteCommandTable[] = {
 	{"bitpos",bitposCommand,-3,"r",0,1,1,1,0,0},
 	// {"wait",waitCommand,3,"rs",0,NULL,0,0,0,0,0},
 	// {"command",commandCommand,0,"rlt",0,NULL,0,0,0,0,0},
-	// {"pfselftest",pfselftestCommand,1,"r",0,NULL,0,0,0,0,0},
+	{"pfselftest",pfselftestCommand,1,"r",0,0,0,0,0,0},
 	{"pfadd",pfaddCommand,-2,"wmF",0,1,1,1,0,0},
 	{"pfcount",pfcountCommand,-2,"w",0,1,1,1,0,0},
 	{"pfmerge",pfmergeCommand,-2,"wm",0,1,-1,1,0,0},
