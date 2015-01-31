@@ -2744,6 +2744,164 @@ cleanup:
 	return;
 }
 
+static void pfaddCommand(rliteClient *c) {
+	unsigned char *key = UNSIGN(c->argv[1]);
+	long keylen = c->argvlen[1];
+	int updated;
+	unsigned char **elements = NULL;
+	long *elementslen = NULL;
+	int i, elementc = c->argc - 2;
+
+	elements = malloc(sizeof(unsigned char *) * elementc);
+	if (!elements) {
+		__rliteSetError(c->context, RLITE_ERR_OOM, "Out of memory");
+		goto cleanup;
+	}
+	elementslen = malloc(sizeof(long) * elementc);
+	if (!elementslen) {
+		__rliteSetError(c->context, RLITE_ERR_OOM, "Out of memory");
+		goto cleanup;
+	}
+	for (i = 0; i < elementc; i++) {
+		elements[i] = UNSIGN(c->argv[i + 2]);
+		elementslen[i] = c->argvlen[i + 2];
+	}
+
+	int retval = rl_pfadd(c->context->db, key, keylen, elementc, elements, elementslen, &updated);
+	RLITE_SERVER_ERR(c, retval);
+	if (retval == RL_OK) {
+		c->reply = createLongLongObject(updated);
+	} else if (retval == RL_INVALID_STATE) {
+		c->reply = createErrorObject("WRONGTYPE Key is not a valid HyperLogLog string value.");
+	}
+cleanup:
+	free(elements);
+	free(elementslen);
+	return;
+}
+
+static void pfcountCommand(rliteClient *c) {
+	long count;
+	const unsigned char **elements = NULL;
+	long *elementslen = NULL;
+	int i, elementc = c->argc - 1;
+
+	elements = malloc(sizeof(unsigned char *) * elementc);
+	if (!elements) {
+		__rliteSetError(c->context, RLITE_ERR_OOM, "Out of memory");
+		goto cleanup;
+	}
+	elementslen = malloc(sizeof(long) * elementc);
+	if (!elementslen) {
+		__rliteSetError(c->context, RLITE_ERR_OOM, "Out of memory");
+		goto cleanup;
+	}
+	for (i = 0; i < elementc; i++) {
+		elements[i] = UNSIGN(c->argv[i + 1]);
+		elementslen[i] = c->argvlen[i + 1];
+	}
+	int retval = rl_pfcount(c->context->db, elementc, elements, elementslen, &count);
+	RLITE_SERVER_ERR(c, retval);
+	if (retval == RL_OK) {
+		c->reply = createLongLongObject(count);
+	} else if (retval == RL_INVALID_STATE) {
+		c->reply = createErrorObject("WRONGTYPE Key is not a valid HyperLogLog string value.");
+	}
+cleanup:
+	free(elements);
+	free(elementslen);
+	return;
+}
+
+static void pfmergeCommand(rliteClient *c) {
+	unsigned char *key = UNSIGN(c->argv[1]);
+	long keylen = c->argvlen[1];
+	const unsigned char **elements = NULL;
+	long *elementslen = NULL;
+	int i, elementc = c->argc - 2;
+
+	elements = malloc(sizeof(unsigned char *) * elementc);
+	if (!elements) {
+		__rliteSetError(c->context, RLITE_ERR_OOM, "Out of memory");
+		goto cleanup;
+	}
+	elementslen = malloc(sizeof(long) * elementc);
+	if (!elementslen) {
+		__rliteSetError(c->context, RLITE_ERR_OOM, "Out of memory");
+		goto cleanup;
+	}
+	for (i = 0; i < elementc; i++) {
+		elements[i] = UNSIGN(c->argv[i + 2]);
+		elementslen[i] = c->argvlen[i + 2];
+	}
+
+	int retval = rl_pfmerge(c->context->db, key, keylen, elementc, elements, elementslen);
+	RLITE_SERVER_ERR(c, retval);
+	if (retval == RL_OK) {
+		c->reply = createStatusObject(RLITE_STR_OK);
+	} else if (retval == RL_INVALID_STATE) {
+		c->reply = createErrorObject("WRONGTYPE Key is not a valid HyperLogLog string value.");
+	}
+cleanup:
+	free(elements);
+	free(elementslen);
+	return;
+}
+
+static void pfdebugCommand(rliteClient *c) {
+	unsigned char *key = UNSIGN(c->argv[2]);
+	long keylen = c->argvlen[2];
+	int retval;
+	int i, size;
+	long *elements = NULL;
+	unsigned char *value = NULL;
+	long valuelen = 0;
+
+	if (!strcasecmp(c->argv[1],"getreg")) {
+		retval = rl_pfdebug_getreg(c->context->db, key, keylen, &size, &elements);
+		RLITE_SERVER_ERR(c, retval);
+		if (retval == RL_OK) {
+			c->reply = createReplyObject(RLITE_REPLY_ARRAY);
+			c->reply->elements = size;
+			c->reply->element = malloc(sizeof(rliteReply*) * c->reply->elements);
+			if (!c->reply->element) {
+				free(c->reply);
+				c->reply = NULL;
+				__rliteSetError(c->context, RLITE_ERR_OOM, "Out of memory");
+				goto cleanup;
+			}
+			for (i = 0; i < size; i++) {
+				c->reply->element[i] = createLongLongObject(elements[i]);
+			}
+		}
+	}
+	else if (!strcasecmp(c->argv[1],"decode")) {
+		retval = rl_pfdebug_decode(c->context->db, key, keylen, &value, &valuelen);
+		RLITE_SERVER_ERR(c, retval);
+		if (retval == RL_OK) {
+			c->reply = createStringObject((char *)value, valuelen);
+		}
+	}
+	else if (!strcasecmp(c->argv[1],"encoding")) {
+		retval = rl_pfdebug_encoding(c->context->db, key, keylen, &value, &valuelen);
+		RLITE_SERVER_ERR(c, retval);
+		if (retval == RL_OK) {
+			c->reply = createStringObject((char *)value, valuelen);
+		}
+	}
+	else if (!strcasecmp(c->argv[1],"todense")) {
+		retval = rl_pfdebug_todense(c->context->db, key, keylen, &size);
+		RLITE_SERVER_ERR(c, retval);
+		if (retval == RL_OK) {
+			c->reply = createLongLongObject(size);
+		}
+	}
+cleanup:
+	free(elements);
+	free(value);
+	return;
+}
+
 static void expireGenericCommand(rliteClient *c, unsigned long long expires) {
 	unsigned char *key = UNSIGN(c->argv[1]);
 	long keylen = c->argvlen[1];
@@ -3402,10 +3560,10 @@ struct rliteCommand rliteCommandTable[] = {
 	// {"wait",waitCommand,3,"rs",0,NULL,0,0,0,0,0},
 	// {"command",commandCommand,0,"rlt",0,NULL,0,0,0,0,0},
 	// {"pfselftest",pfselftestCommand,1,"r",0,NULL,0,0,0,0,0},
-	// {"pfadd",pfaddCommand,-2,"wmF",0,NULL,1,1,1,0,0},
-	// {"pfcount",pfcountCommand,-2,"w",0,NULL,1,1,1,0,0},
-	// {"pfmerge",pfmergeCommand,-2,"wm",0,NULL,1,-1,1,0,0},
-	// {"pfdebug",pfdebugCommand,-3,"w",0,NULL,0,0,0,0,0},
+	{"pfadd",pfaddCommand,-2,"wmF",0,1,1,1,0,0},
+	{"pfcount",pfcountCommand,-2,"w",0,1,1,1,0,0},
+	{"pfmerge",pfmergeCommand,-2,"wm",0,1,-1,1,0,0},
+	{"pfdebug",pfdebugCommand,-3,"w",0,0,0,0,0,0},
 	// {"latency",latencyCommand,-2,"arslt",0,NULL,0,0,0,0,0}
 };
 

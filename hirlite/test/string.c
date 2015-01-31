@@ -960,6 +960,145 @@ static int test_setbit() {
 	return 0;
 }
 
+static int test_pfadd_pfcount() {
+	rliteContext *context = rliteConnect(":memory:", 0);
+
+	rliteReply* reply;
+	size_t argvlen[100];
+
+	{
+		char* argv[100] = {"set", "mykey", "1", NULL};
+		reply = rliteCommandArgv(context, populateArgvlen(argv, argvlen), argv, argvlen);
+		EXPECT_STATUS(reply, "OK", 2);
+		rliteFreeReplyObject(reply);
+	}
+
+	{
+		char* argv[100] = {"pfadd", "mykey", "1", NULL};
+		reply = rliteCommandArgv(context, populateArgvlen(argv, argvlen), argv, argvlen);
+		EXPECT_ERROR(reply);
+		rliteFreeReplyObject(reply);
+	}
+
+	{
+		char* argv[100] = {"pfadd", "mykey2", "1", "2", "3", NULL};
+		reply = rliteCommandArgv(context, populateArgvlen(argv, argvlen), argv, argvlen);
+		EXPECT_INTEGER(reply, 1);
+		rliteFreeReplyObject(reply);
+	}
+
+	{
+		char* argv[100] = {"pfcount", "mykey2", NULL};
+		reply = rliteCommandArgv(context, populateArgvlen(argv, argvlen), argv, argvlen);
+		EXPECT_INTEGER(reply, 3);
+		rliteFreeReplyObject(reply);
+	}
+
+	rliteFree(context);
+	return 0;
+}
+
+static int test_pfadd_pfmerge_pfcount() {
+	rliteContext *context = rliteConnect(":memory:", 0);
+
+	rliteReply* reply;
+	size_t argvlen[100];
+
+	{
+		char* argv[100] = {"pfadd", "mykey", "1", NULL};
+		reply = rliteCommandArgv(context, populateArgvlen(argv, argvlen), argv, argvlen);
+		EXPECT_INTEGER(reply, 1);
+		rliteFreeReplyObject(reply);
+	}
+
+	{
+		char* argv[100] = {"pfadd", "mykey2", "2", "3", NULL};
+		reply = rliteCommandArgv(context, populateArgvlen(argv, argvlen), argv, argvlen);
+		EXPECT_INTEGER(reply, 1);
+		rliteFreeReplyObject(reply);
+	}
+
+	{
+		char* argv[100] = {"pfmerge", "mykey2", "mykey", NULL};
+		reply = rliteCommandArgv(context, populateArgvlen(argv, argvlen), argv, argvlen);
+		EXPECT_STATUS(reply, "OK", 2);
+		rliteFreeReplyObject(reply);
+	}
+
+	{
+		char* argv[100] = {"pfcount", "mykey2", NULL};
+		reply = rliteCommandArgv(context, populateArgvlen(argv, argvlen), argv, argvlen);
+		EXPECT_INTEGER(reply, 3);
+		rliteFreeReplyObject(reply);
+	}
+
+	{
+		char* argv[100] = {"pfcount", "mykey", NULL};
+		reply = rliteCommandArgv(context, populateArgvlen(argv, argvlen), argv, argvlen);
+		EXPECT_INTEGER(reply, 1);
+		rliteFreeReplyObject(reply);
+	}
+
+	rliteFree(context);
+	return 0;
+}
+
+static int test_pfadd_pfdebug() {
+	rliteContext *context = rliteConnect(":memory:", 0);
+
+	rliteReply* reply;
+	size_t argvlen[100];
+	int i;
+
+	{
+		char* argv[100] = {"pfadd", "mykey", "1", NULL};
+		reply = rliteCommandArgv(context, populateArgvlen(argv, argvlen), argv, argvlen);
+		EXPECT_INTEGER(reply, 1);
+		rliteFreeReplyObject(reply);
+	}
+
+	{
+		char* argv[100] = {"pfdebug", "getreg", "mykey", NULL};
+		reply = rliteCommandArgv(context, populateArgvlen(argv, argvlen), argv, argvlen);
+		EXPECT_LEN(reply, 16384);
+		for (i = 0; i < 16384; i++) {
+			EXPECT_INTEGER(reply->element[i], i == 7527 ? 1 : 0);
+		}
+		rliteFreeReplyObject(reply);
+	}
+
+	{
+		char* argv[100] = {"pfdebug", "decode", "mykey", NULL};
+		reply = rliteCommandArgv(context, populateArgvlen(argv, argvlen), argv, argvlen);
+		EXPECT_STR(reply, "Z:7527 v:1,1 Z:8856", 19);
+		rliteFreeReplyObject(reply);
+	}
+
+	{
+		char* argv[100] = {"pfdebug", "encoding", "mykey", NULL};
+		reply = rliteCommandArgv(context, populateArgvlen(argv, argvlen), argv, argvlen);
+		EXPECT_STR(reply, "sparse", 6);
+		rliteFreeReplyObject(reply);
+	}
+
+	{
+		char* argv[100] = {"pfdebug", "todense", "mykey", NULL};
+		reply = rliteCommandArgv(context, populateArgvlen(argv, argvlen), argv, argvlen);
+		EXPECT_INTEGER(reply, 1);
+		rliteFreeReplyObject(reply);
+	}
+
+	{
+		char* argv[100] = {"pfdebug", "encoding", "mykey", NULL};
+		reply = rliteCommandArgv(context, populateArgvlen(argv, argvlen), argv, argvlen);
+		EXPECT_STR(reply, "dense", 5);
+		rliteFreeReplyObject(reply);
+	}
+
+	rliteFree(context);
+	return 0;
+}
+
 int run_string() {
 	if (test_set() != 0) {
 		return 1;
@@ -1031,6 +1170,15 @@ int run_string() {
 		return 1;
 	}
 	if (test_setbit() != 0) {
+		return 1;
+	}
+	if (test_pfadd_pfcount() != 0) {
+		return 1;
+	}
+	if (test_pfadd_pfmerge_pfcount() != 0) {
+		return 1;
+	}
+	if (test_pfadd_pfdebug() != 0) {
 		return 1;
 	}
 	return 0;

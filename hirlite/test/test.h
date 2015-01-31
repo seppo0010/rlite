@@ -32,7 +32,7 @@
 		return 1;\
 	}\
 	if (reply->integer != expectedinteger) {\
-		fprintf(stderr, "Expected reply to be %lld, got %lld instead on %s:%d\n", (long long)expectedinteger, reply->integer, __FILE__, __LINE__);\
+		fprintf(stderr, "Expected reply to be %lld, got %lld instead on %s:%d\n", (long long)(expectedinteger), reply->integer, __FILE__, __LINE__);\
 		return 1;\
 	}
 
