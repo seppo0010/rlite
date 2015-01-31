@@ -1449,8 +1449,8 @@ int rl_btree_iterator_create(rlite *db, rl_btree *btree, rl_btree_iterator **_it
 	long i;
 	void *tmp;
 	rl_btree_iterator *iterator = NULL;
-	if (btree->height == 0) {
-		retval = RL_OK;
+	if (btree->number_of_elements == 0) {
+		retval = RL_NOT_FOUND;
 		goto cleanup;
 	}
 	RL_MALLOC(iterator, sizeof(rl_btree_iterator) + sizeof(struct rl_btree_iterator_nodes) * btree->height);

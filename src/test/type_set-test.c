@@ -487,6 +487,32 @@ cleanup:
 	return retval;
 }
 
+static int basic_test_sadd_sunionstore_empty(int _commit)
+{
+	int retval;
+	fprintf(stderr, "Start basic_test_sadd_sunionstore_empty %d\n", _commit);
+
+	rlite *db = NULL;
+	RL_CALL_VERBOSE(setup_db, RL_OK, &db, _commit, 1);
+	unsigned char *key = UNSIGN("my key");
+	long keylen = strlen((char *)key);
+	unsigned char *key2 = UNSIGN("my key2");
+	long key2len = strlen((char *)key2);
+	long added;
+
+	RL_CALL_VERBOSE(rl_sunionstore, RL_OK, db, key, keylen, 1, &key2, &key2len, &added);
+	RL_BALANCED();
+	EXPECT_LONG(added, 0);
+
+	RL_CALL_VERBOSE(rl_key_get, RL_NOT_FOUND, db, key, keylen, NULL, NULL, NULL, NULL);
+
+	fprintf(stderr, "End basic_test_sadd_sunionstore_empty\n");
+	retval = RL_OK;
+cleanup:
+	rl_close(db);
+	return retval;
+}
+
 static int basic_test_sadd_smove(int _commit)
 {
 	int retval;
@@ -725,6 +751,7 @@ RL_TEST_MAIN_START(type_set_test)
 		RL_TEST(basic_test_sadd_sinterstore, i);
 		RL_TEST(basic_test_sadd_sunion, i);
 		RL_TEST(basic_test_sadd_sunionstore, i);
+		RL_TEST(basic_test_sadd_sunionstore_empty, i);
 		RL_TEST(fuzzy_test_srandmembers_unique, 10, i);
 		RL_TEST(fuzzy_test_srandmembers_unique, 1000, i);
 	}

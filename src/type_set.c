@@ -709,6 +709,9 @@ int rl_sunionstore(struct rlite *db, unsigned char *target, long targetlen, int 
 		}
 	}
 
+	if (count == 0) {
+		RL_CALL(rl_key_delete_with_value, RL_OK, db, target, targetlen);
+	}
 	*added = count;
 	retval = RL_OK;
 cleanup:
@@ -759,16 +762,18 @@ int rl_set_delete(rlite *db, long value_page)
 	void *tmp;
 	RL_CALL(rl_read, RL_FOUND, db, &rl_data_type_btree_hash_sha1_long, value_page, &rl_btree_type_hash_sha1_long, &tmp, 1);
 	hash = tmp;
-	RL_CALL(rl_btree_iterator_create, RL_OK, db, hash, &iterator);
-	while ((retval = rl_btree_iterator_next(iterator, NULL, &tmp)) == RL_OK) {
-		member = *(long *)tmp;
-		rl_multi_string_delete(db, member);
-		rl_free(tmp);
-	}
-	iterator = NULL;
+	RL_CALL2(rl_btree_iterator_create, RL_OK, RL_NOT_FOUND, db, hash, &iterator);
+	if (retval == RL_OK) {
+		while ((retval = rl_btree_iterator_next(iterator, NULL, &tmp)) == RL_OK) {
+			member = *(long *)tmp;
+			rl_multi_string_delete(db, member);
+			rl_free(tmp);
+		}
+		iterator = NULL;
 
-	if (retval != RL_END) {
-		goto cleanup;
+		if (retval != RL_END) {
+			goto cleanup;
+		}
 	}
 
 	RL_CALL(rl_btree_delete, RL_OK, db, hash);
