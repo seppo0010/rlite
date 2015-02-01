@@ -340,7 +340,7 @@ RL_TEST_MAIN_START(list_test)
 		RL_TEST(basic_insert_list_test, i);
 	}
 
-	for (i = 0; i < 2; i++) {
+	for (i = 0; i < 3; i++) {
 		RL_TEST(basic_iterator_list_test, i);
 	}
 
@@ -348,7 +348,7 @@ RL_TEST_MAIN_START(list_test)
 		size = i == 0 ? 100 : 200;
 		for (j = 0; j < 2; j++) {
 			list_node_size = j == 0 ? 2 : 10;
-			for (k = 0; k < 2; k++) {
+			for (k = 0; k < 3; k++) {
 				commit = k;
 				srand(1);
 				RL_TEST(fuzzy_list_test, size, list_node_size, commit);
@@ -378,7 +378,7 @@ RL_TEST_MAIN_START(list_test)
 		size = i == 0 ? 100 : 200;
 		for (j = 0; j < 2; j++) {
 			list_node_size = j == 0 ? 2 : 10;
-			for (k = 0; k < 2; k++) {
+			for (k = 0; k < 3; k++) {
 				commit = k;
 				srand(1);
 				RL_TEST(fuzzy_list_delete_test, size, list_node_size, commit);

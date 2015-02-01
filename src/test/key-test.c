@@ -599,7 +599,7 @@ cleanup:
 RL_TEST_MAIN_START(key_test)
 {
 	long i;
-	for (i = 0; i < 2; i++) {
+	for (i = 0; i < 3; i++) {
 		RL_TEST(basic_test_set_get, i);
 		RL_TEST(basic_test_get_or_create, i);
 		RL_TEST(basic_test_multidb, i);

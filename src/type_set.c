@@ -25,7 +25,9 @@ static int rl_set_read(rlite *db, long set_page_number, rl_btree **btree)
 	void *tmp;
 	int retval;
 	RL_CALL(rl_read, RL_FOUND, db, &rl_data_type_btree_hash_sha1_long, set_page_number, &rl_btree_type_hash_sha1_long, &tmp, 1);
-	*btree = tmp;
+	if (btree) {
+		*btree = tmp;
+	}
 	retval = RL_OK;
 cleanup:
 	return retval;
@@ -182,7 +184,9 @@ int rl_smove(struct rlite *db, const unsigned char *source, long sourcelen, cons
 	long target_page_number, source_page_number, *member_page_number;
 	int retval;
 	unsigned char *digest = NULL;
-	RL_CALL(rl_set_get_objects, RL_OK, db, destination, destinationlen, &target_page_number, &target_hash, 1);
+	// make sure the target key is a set or does not exist
+	RL_CALL2(rl_set_get_objects, RL_OK, RL_NOT_FOUND, db, destination, destinationlen, NULL, NULL, 0);
+
 	RL_MALLOC(digest, sizeof(unsigned char) * 20);
 	RL_CALL(sha1, RL_OK, member, memberlen, digest);
 	RL_CALL(rl_set_get_objects, RL_OK, db, source, sourcelen, &source_page_number, &source_hash, 0);
@@ -200,6 +204,7 @@ int rl_smove(struct rlite *db, const unsigned char *source, long sourcelen, cons
 	else {
 		goto cleanup;
 	}
+	RL_CALL(rl_set_get_objects, RL_OK, db, destination, destinationlen, &target_page_number, &target_hash, 1);
 	RL_MALLOC(member_page_number, sizeof(*member_page_number))
 	RL_CALL(rl_multi_string_set, RL_OK, db, member_page_number, member, memberlen);
 	RL_CALL(rl_btree_add_element, RL_OK, db, target_hash, target_page_number, digest, member_page_number);
@@ -721,7 +726,7 @@ cleanup:
 int rl_set_pages(struct rlite *db, long page, short *pages)
 {
 	rl_btree *btree;
-	rl_btree_iterator *iterator;
+	rl_btree_iterator *iterator = NULL;
 	int retval;
 	void *tmp;
 	long member;

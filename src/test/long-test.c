@@ -32,5 +32,6 @@ RL_TEST_MAIN_START(long_test)
 {
 	RL_TEST(do_long_test, 0);
 	RL_TEST(do_long_test, 1);
+	RL_TEST(do_long_test, 2);
 }
 RL_TEST_MAIN_END

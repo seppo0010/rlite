@@ -66,6 +66,11 @@ typedef struct {
 } rl_file_driver;
 
 typedef struct {
+	char *data;
+	long datalen;
+} rl_memory_driver;
+
+typedef struct {
 	long page_number;
 	rl_data_type *type;
 	void *obj;

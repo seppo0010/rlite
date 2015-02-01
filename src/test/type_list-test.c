@@ -467,7 +467,7 @@ cleanup:
 RL_TEST_MAIN_START(type_list_test)
 {
 	int i;
-	for (i = 0; i < 2; i++) {
+	for (i = 0; i < 3; i++) {
 		RL_TEST(basic_test_lpush_llen, 100, i);
 		RL_TEST(basic_test_lpush_lpop, 100, i);
 		RL_TEST(basic_test_rpush_lpop, 100, i);

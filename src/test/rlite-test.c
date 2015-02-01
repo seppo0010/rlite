@@ -8,6 +8,7 @@
 int test_rlite_page_cache(int UNUSED(_))
 {
 	rlite *db = malloc(sizeof(rlite));
+	db->driver_type = RL_MEMORY_DRIVER;
 	int retval;
 	void *obj;
 

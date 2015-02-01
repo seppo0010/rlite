@@ -265,12 +265,12 @@ RL_TEST_MAIN_START(skiplist_test)
 {
 	int i, j;
 	for (i = -1; i <= 1; i++) {
-		for (j = 0; j < 2; j++) {
+		for (j = 0; j < 3; j++) {
 			RL_TEST(basic_skiplist_test, i, j);
 		}
 	}
 	RL_TEST(basic_skiplist_first_node_test, 0);
-	for (i = 0; i < 2; i++) {
+	for (i = 0; i < 3; i++) {
 		RL_TEST(basic_skiplist_delete_node_test, i);
 		RL_TEST(basic_skiplist_iterator_test, i);
 	}

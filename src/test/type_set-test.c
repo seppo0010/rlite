@@ -737,7 +737,7 @@ cleanup:
 RL_TEST_MAIN_START(type_set_test)
 {
 	int i;
-	for (i = 0; i < 2; i++) {
+	for (i = 0; i < 3; i++) {
 		RL_TEST(basic_test_sadd_sismember, i);
 		RL_TEST(basic_test_sadd_scard, i);
 		RL_TEST(basic_test_sadd_srem, i);

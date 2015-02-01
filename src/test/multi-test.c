@@ -6,9 +6,8 @@
 #include "../rlite.h"
 #include "../type_zset.h"
 
-int basic_multi_test(int UNUSED(_))
+int basic_multi_test(int _commit)
 {
-	int _commit = 1;
 	int retval = 0;
 	fprintf(stderr, "Start basic_multi_test\n");
 
@@ -51,6 +50,7 @@ cleanup:
 
 RL_TEST_MAIN_START(multi_test)
 {
-	RL_TEST(basic_multi_test, 0);
+	RL_TEST(basic_multi_test, 1);
+	RL_TEST(basic_multi_test, 2);
 }
 RL_TEST_MAIN_END

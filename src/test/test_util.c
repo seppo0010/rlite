@@ -8,7 +8,7 @@ int setup_db(rlite **_db, int file, int del)
 		unlink(filepath);
 	}
 	rlite *db;
-	int retval = rl_open(file ? filepath : ":memory:", &db, RLITE_OPEN_READWRITE | RLITE_OPEN_CREATE);
+	int retval = rl_open(file == 1 ? filepath : ":memory:", &db, RLITE_OPEN_READWRITE | RLITE_OPEN_CREATE);
 	if (retval != RL_OK) {
 		fprintf(stderr, "Unable to open rlite\n");
 	} else {

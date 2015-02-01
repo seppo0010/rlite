@@ -1094,7 +1094,7 @@ RL_TEST_MAIN_START(type_zset_test)
 		{RL_ZSET_AGGREGATE_MAX, 5, 1, 1, 5},
 	};
 	int i, j;
-	for (i = 0; i < 2; i++) {
+	for (i = 0; i < 3; i++) {
 		RL_TEST(basic_test_zadd_zscore, i);
 		RL_TEST(basic_test_zadd_zscore2, i);
 		RL_TEST(basic_test_zadd_zrank, i);

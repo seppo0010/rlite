@@ -784,7 +784,7 @@ cleanup:
 RL_TEST_MAIN_START(type_string_test)
 {
 	int i;
-	for (i = 0; i < 2; i++) {
+	for (i = 0; i < 3; i++) {
 		RL_TEST(basic_test_set_get, i);
 		RL_TEST(basic_test_set_delete_get, i);
 		RL_TEST(basic_test_set_set_get, i);

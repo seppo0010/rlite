@@ -237,9 +237,6 @@ int fuzzy_set_test(long size, long btree_node_size, int _commit)
 
 		if (_commit) {
 			RL_CALL_VERBOSE(rl_commit, RL_OK, db);
-			rl_close(db);
-			db = NULL;
-			RL_CALL_VERBOSE(setup_db, RL_OK, &db, _commit, 0);
 		}
 	}
 
@@ -532,7 +529,7 @@ RL_TEST_MAIN_START(btree_test)
 		size = i == 0 ? 100 : 200;
 		for (j = 0; j < 2; j++) {
 			btree_node_size = j == 0 ? 2 : 10;
-			for (k = 0; k < 2; k++) {
+			for (k = 0; k < 3; k++) {
 				commit = k;
 				srand(1);
 				RL_TEST(fuzzy_set_test, size, btree_node_size, commit);
@@ -544,7 +541,7 @@ RL_TEST_MAIN_START(btree_test)
 		size = i == 0 ? 100 : 200;
 		for (j = 0; j < 2; j++) {
 			btree_node_size = j == 0 ? 2 : 10;
-			for (k = 0; k < 2; k++) {
+			for (k = 0; k < 3; k++) {
 				commit = k;
 				srand(1);
 				RL_TEST(fuzzy_set_delete_test, size, btree_node_size, commit);
@@ -555,7 +552,7 @@ RL_TEST_MAIN_START(btree_test)
 		size = i == 0 ? 100 : 200;
 		for (j = 0; j < 2; j++) {
 			btree_node_size = j == 0 ? 2 : 10;
-			for (k = 0; k < 2; k++) {
+			for (k = 0; k < 3; k++) {
 				commit = k;
 				srand(1);
 				RL_TEST(fuzzy_hash_test, size, btree_node_size, commit);

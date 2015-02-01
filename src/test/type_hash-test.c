@@ -576,7 +576,7 @@ cleanup:
 RL_TEST_MAIN_START(type_hash_test)
 {
 	int i;
-	for (i = 0; i < 2; i++) {
+	for (i = 0; i < 3; i++) {
 		RL_TEST(basic_test_hset_hget, i);
 		RL_TEST(basic_test_hset_hexists, i);
 		RL_TEST(basic_test_hset_hdel, i);
