@@ -8,12 +8,12 @@
 #include "util.h"
 #include "../deps/hyperloglog.h"
 
-static int rl_string_get_objects(rlite *db, const unsigned char *key, long keylen, long *_page_number, unsigned long long *expires)
+static int rl_string_get_objects(rlite *db, const unsigned char *key, long keylen, long *_page_number, unsigned long long *expires, long *version)
 {
 	long page_number;
 	int retval;
 	unsigned char type;
-	retval = rl_key_get(db, key, keylen, &type, NULL, &page_number, expires);
+	retval = rl_key_get(db, key, keylen, &type, NULL, &page_number, expires, version);
 	if (retval != RL_FOUND) {
 		goto cleanup;
 	}
@@ -34,8 +34,8 @@ int rl_set(struct rlite *db, const unsigned char *key, long keylen, unsigned cha
 	int retval;
 	long page_number;
 	unsigned char type;
-	long value_page;
-	retval = rl_key_get(db, key, keylen, &type, NULL, &value_page, NULL);
+	long value_page, version;
+	retval = rl_key_get(db, key, keylen, &type, NULL, &value_page, NULL, &version);
 	if (retval == RL_OK && type != RL_TYPE_STRING) {
 		retval = RL_WRONG_TYPE;
 		goto cleanup;
@@ -48,9 +48,11 @@ int rl_set(struct rlite *db, const unsigned char *key, long keylen, unsigned cha
 			RL_CALL(rl_string_delete, RL_OK, db, value_page);
 			RL_CALL(rl_key_delete, RL_OK, db, key, keylen);
 		}
+	} else {
+		version = rand();
 	}
 	RL_CALL(rl_multi_string_set, RL_OK, db, &page_number, value, valuelen);
-	RL_CALL(rl_key_set, RL_OK, db, key, keylen, RL_TYPE_STRING, page_number, expires);
+	RL_CALL(rl_key_set, RL_OK, db, key, keylen, RL_TYPE_STRING, page_number, expires, version + 1);
 	retval = RL_OK;
 cleanup:
 	return retval;
@@ -60,7 +62,7 @@ int rl_get(struct rlite *db, const unsigned char *key, long keylen, unsigned cha
 {
 	long page_number;
 	int retval;
-	RL_CALL(rl_string_get_objects, RL_OK, db, key, keylen, &page_number, NULL);
+	RL_CALL(rl_string_get_objects, RL_OK, db, key, keylen, &page_number, NULL, NULL);
 	if (valuelen) {
 		RL_CALL(rl_multi_string_get, RL_OK, db, page_number, value, valuelen);
 	}
@@ -73,15 +75,18 @@ int rl_append(struct rlite *db, const unsigned char *key, long keylen, unsigned 
 {
 	int retval;
 	long page_number;
-	RL_CALL2(rl_string_get_objects, RL_OK, RL_NOT_FOUND, db, key, keylen, &page_number, NULL);
+	long version;
+	RL_CALL2(rl_string_get_objects, RL_OK, RL_NOT_FOUND, db, key, keylen, &page_number, NULL, &version);
 	if (retval == RL_NOT_FOUND) {
 		RL_CALL(rl_multi_string_set, RL_OK, db, &page_number, value, valuelen);
-		RL_CALL(rl_key_set, RL_OK, db, key, keylen, RL_TYPE_STRING, page_number, 0);
+		version = rand();
+		RL_CALL(rl_key_set, RL_OK, db, key, keylen, RL_TYPE_STRING, page_number, 0, version);
 		if (newlength) {
 			*newlength = valuelen;
 		}
 	}
 	else {
+		RL_CALL(rl_key_set, RL_OK, db, key, keylen, RL_TYPE_STRING, page_number, 0, version + 1);
 		RL_CALL(rl_multi_string_append, RL_OK, db, page_number, value, valuelen, newlength);
 	}
 	retval = RL_OK;
@@ -93,7 +98,7 @@ int rl_getrange(struct rlite *db, const unsigned char *key, long keylen, long st
 {
 	long page_number;
 	int retval;
-	RL_CALL(rl_string_get_objects, RL_OK, db, key, keylen, &page_number, NULL);
+	RL_CALL(rl_string_get_objects, RL_OK, db, key, keylen, &page_number, NULL, NULL);
 	RL_CALL(rl_multi_string_getrange, RL_OK, db, page_number, value, valuelen, start, stop);
 	retval = RL_OK;
 cleanup:
@@ -103,12 +108,14 @@ cleanup:
 int rl_setrange(struct rlite *db, const unsigned char *key, long keylen, long index, unsigned char *value, long valuelen, long *newlength)
 {
 	long page_number;
+	long version;
+	unsigned long long expires;
 	int retval;
 	if (valuelen + index > 512*1024*1024) {
 		retval = RL_INVALID_PARAMETERS;
 		goto cleanup;
 	}
-	RL_CALL2(rl_string_get_objects, RL_OK, RL_NOT_FOUND, db, key, keylen, &page_number, NULL);
+	RL_CALL2(rl_string_get_objects, RL_OK, RL_NOT_FOUND, db, key, keylen, &page_number, &expires, &version);
 	if (retval == RL_NOT_FOUND) {
 		unsigned char *padding;
 		RL_MALLOC(padding, sizeof(unsigned char) * index);
@@ -118,6 +125,7 @@ int rl_setrange(struct rlite *db, const unsigned char *key, long keylen, long in
 		RL_CALL(rl_append, RL_OK, db, key, keylen, value, valuelen, newlength);
 	}
 	else if (retval == RL_OK) {
+		RL_CALL(rl_key_set, RL_OK, db, key, keylen, RL_TYPE_STRING, page_number, expires, version + 1);
 		RL_CALL(rl_multi_string_setrange, RL_OK, db, page_number, value, valuelen, index, newlength);
 	}
 	retval = RL_OK;
@@ -134,7 +142,7 @@ int rl_incr(struct rlite *db, const unsigned char *key, long keylen, long long i
 	long valuelen;
 	long long lvalue;
 	unsigned long long expires;
-	RL_CALL2(rl_string_get_objects, RL_OK, RL_NOT_FOUND, db, key, keylen, &page_number, &expires);
+	RL_CALL2(rl_string_get_objects, RL_OK, RL_NOT_FOUND, db, key, keylen, &page_number, &expires, NULL);
 	if (retval == RL_NOT_FOUND) {
 		RL_MALLOC(value, sizeof(unsigned char) * MAX_LLONG_DIGITS);
 		valuelen = snprintf((char *)value, MAX_LLONG_DIGITS, "%lld", increment);
@@ -183,7 +191,7 @@ int rl_incrbyfloat(struct rlite *db, const unsigned char *key, long keylen, doub
 	long valuelen;
 	double dvalue;
 	unsigned long long expires;
-	RL_CALL2(rl_string_get_objects, RL_OK, RL_NOT_FOUND, db, key, keylen, &page_number, &expires);
+	RL_CALL2(rl_string_get_objects, RL_OK, RL_NOT_FOUND, db, key, keylen, &page_number, &expires, NULL);
 	if (retval == RL_NOT_FOUND) {
 		RL_MALLOC(value, sizeof(unsigned char) * MAX_DOUBLE_DIGITS);
 		valuelen = snprintf((char *)value, MAX_DOUBLE_DIGITS, "%lf", increment);
@@ -401,7 +409,7 @@ int rl_pfadd(struct rlite *db, const unsigned char *key, long keylen, int elemen
 
 	RL_CALL2(rl_get, RL_OK, RL_NOT_FOUND, db, key, keylen, &value, &valuelen);
 	if (retval == RL_OK) {
-		RL_CALL(rl_key_get, RL_FOUND, db, key, keylen, NULL, NULL, NULL, &expires);
+		RL_CALL(rl_key_get, RL_FOUND, db, key, keylen, NULL, NULL, NULL, &expires, NULL);
 	}
 	retval = rl_str_pfadd(value, valuelen, elementc, elements, elementslen, &value, &valuelen);
 	if (retval != 0 && retval != 1) {
@@ -453,7 +461,7 @@ int rl_pfcount(struct rlite *db, int keyc, const unsigned char **keys, long *key
 		goto cleanup;
 	}
 	if (newvalue) {
-		RL_CALL2(rl_key_get, RL_FOUND, RL_NOT_FOUND, db, keys[0], keyslen[0], NULL, NULL, NULL, &expires);
+		RL_CALL2(rl_key_get, RL_FOUND, RL_NOT_FOUND, db, keys[0], keyslen[0], NULL, NULL, NULL, &expires, NULL);
 		RL_CALL(rl_set, RL_OK, db, keys[0], keyslen[0], newvalue, newvaluelen, 0, expires);
 	}
 	retval = RL_OK;
@@ -494,7 +502,7 @@ int rl_pfmerge(struct rlite *db, const unsigned char *destkey, long destkeylen, 
 		goto cleanup;
 	}
 
-	RL_CALL2(rl_key_get, RL_FOUND, RL_NOT_FOUND, db, destkey, destkeylen, NULL, NULL, NULL, &expires);
+	RL_CALL2(rl_key_get, RL_FOUND, RL_NOT_FOUND, db, destkey, destkeylen, NULL, NULL, NULL, &expires, NULL);
 	RL_CALL(rl_set, RL_OK, db, destkey, destkeylen, newvalue, newvaluelen, 0, expires);
 	retval = RL_OK;
 cleanup:
@@ -590,7 +598,7 @@ int rl_pfdebug_todense(struct rlite *db, const unsigned char *key, long keylen, 
 	}
 	*converted = retval;
 	if (retval == 1) {
-		RL_CALL2(rl_key_get, RL_FOUND, RL_NOT_FOUND, db, key, keylen, NULL, NULL, NULL, &expires);
+		RL_CALL2(rl_key_get, RL_FOUND, RL_NOT_FOUND, db, key, keylen, NULL, NULL, NULL, &expires, NULL);
 		RL_CALL(rl_set, RL_OK, db, key, keylen, str, strlen, 0, expires);
 	}
 	retval = RL_OK;

@@ -1,3 +1,4 @@
+#include <arpa/inet.h>
 #include "rlite.h"
 #include "util.h"
 #include "../deps/crc64.h"
@@ -18,7 +19,7 @@ int rl_dump(struct rlite *db, const unsigned char *key, long keylen, unsigned ch
 	double score;
 	char f[40];
 
-	RL_CALL(rl_key_get, RL_FOUND, db, key, keylen, &type, NULL, NULL, NULL);
+	RL_CALL(rl_key_get, RL_FOUND, db, key, keylen, &type, NULL, NULL, NULL, NULL);
 	if (type == RL_TYPE_STRING) {
 		RL_CALL(rl_get, RL_OK, db, key, keylen, &value, &valuelen);
 		RL_MALLOC(buf, sizeof(unsigned char) * (16 + valuelen));

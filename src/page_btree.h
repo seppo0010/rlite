@@ -35,6 +35,7 @@ typedef struct rl_key {
 	long string_page;
 	long value_page;
 	unsigned long long expires;
+	long version;
 } rl_key;
 
 extern rl_btree_type rl_btree_type_set_long;

@@ -491,7 +491,7 @@ int basic_test_zadd_zrem(int _commit)
 	EXPECT_LONG(changed, 1);
 	RL_BALANCED();
 
-	RL_CALL_VERBOSE(rl_key_get, RL_NOT_FOUND, db, key, keylen, NULL, NULL, NULL, NULL);
+	RL_CALL_VERBOSE(rl_key_get, RL_NOT_FOUND, db, key, keylen, NULL, NULL, NULL, NULL, NULL);
 
 	fprintf(stderr, "End basic_test_zadd_zrem\n");
 	retval = RL_OK;

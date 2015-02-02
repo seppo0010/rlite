@@ -105,7 +105,7 @@ static int basic_test_sadd_srem(int _commit)
 	RL_BALANCED();
 	EXPECT_LONG(count, 1);
 
-	RL_CALL_VERBOSE(rl_key_get, RL_NOT_FOUND, db, key, keylen, NULL, NULL, NULL, NULL);
+	RL_CALL_VERBOSE(rl_key_get, RL_NOT_FOUND, db, key, keylen, NULL, NULL, NULL, NULL, NULL);
 
 	fprintf(stderr, "End basic_test_sadd_srem\n");
 	retval = RL_OK;
@@ -150,7 +150,7 @@ static int basic_test_sadd_spop(int _commit)
 	rl_free(datapop);
 	rl_free(datapop2);
 
-	RL_CALL_VERBOSE(rl_key_get, RL_NOT_FOUND, db, key, keylen, NULL, NULL, NULL, NULL);
+	RL_CALL_VERBOSE(rl_key_get, RL_NOT_FOUND, db, key, keylen, NULL, NULL, NULL, NULL, NULL);
 
 	fprintf(stderr, "End basic_test_sadd_spop\n");
 	retval = RL_OK;
@@ -504,7 +504,7 @@ static int basic_test_sadd_sunionstore_empty(int _commit)
 	RL_BALANCED();
 	EXPECT_LONG(added, 0);
 
-	RL_CALL_VERBOSE(rl_key_get, RL_NOT_FOUND, db, key, keylen, NULL, NULL, NULL, NULL);
+	RL_CALL_VERBOSE(rl_key_get, RL_NOT_FOUND, db, key, keylen, NULL, NULL, NULL, NULL, NULL);
 
 	fprintf(stderr, "End basic_test_sadd_sunionstore_empty\n");
 	retval = RL_OK;
@@ -550,7 +550,7 @@ static int basic_test_sadd_smove(int _commit)
 	RL_CALL_VERBOSE(rl_sismember, RL_FOUND, db, key2, key2len, data2, data2len);
 
 	RL_CALL_VERBOSE(rl_smove, RL_NOT_FOUND, db, key, keylen, key2, key2len, data, datalen);
-	RL_CALL_VERBOSE(rl_key_get, RL_NOT_FOUND, db, key, keylen, NULL, NULL, NULL, NULL);
+	RL_CALL_VERBOSE(rl_key_get, RL_NOT_FOUND, db, key, keylen, NULL, NULL, NULL, NULL, NULL);
 
 	fprintf(stderr, "End basic_test_sadd_smove\n");
 	retval = RL_OK;

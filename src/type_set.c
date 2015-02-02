@@ -33,25 +33,27 @@ cleanup:
 	return retval;
 }
 
-int rl_set_get_objects(rlite *db, const unsigned char *key, long keylen, long *_set_page_number, rl_btree **btree, int create)
+int rl_set_get_objects(rlite *db, const unsigned char *key, long keylen, long *_set_page_number, rl_btree **btree, int update_version, int create)
 {
-	long set_page_number;
+	long set_page_number, version;
 	int retval;
+	unsigned long long expires = 0;
 	if (create) {
-		retval = rl_key_get_or_create(db, key, keylen, RL_TYPE_SET, &set_page_number);
+		retval = rl_key_get_or_create(db, key, keylen, RL_TYPE_SET, &set_page_number, &version);
 		if (retval != RL_FOUND && retval != RL_NOT_FOUND) {
 			goto cleanup;
 		}
 		else if (retval == RL_NOT_FOUND) {
 			retval = rl_set_create(db, set_page_number, btree);
+			goto cleanup;
 		}
 		else {
-			retval = rl_set_read(db, set_page_number, btree);
+			RL_CALL(rl_set_read, RL_OK, db, set_page_number, btree);
 		}
 	}
 	else {
 		unsigned char type;
-		retval = rl_key_get(db, key, keylen, &type, NULL, &set_page_number, NULL);
+		retval = rl_key_get(db, key, keylen, &type, NULL, &set_page_number, NULL, &version);
 		if (retval != RL_FOUND) {
 			goto cleanup;
 		}
@@ -59,12 +61,15 @@ int rl_set_get_objects(rlite *db, const unsigned char *key, long keylen, long *_
 			retval = RL_WRONG_TYPE;
 			goto cleanup;
 		}
-		retval = rl_set_read(db, set_page_number, btree);
+		RL_CALL(rl_set_read, RL_OK, db, set_page_number, btree);
 	}
+	if (update_version) {
+		RL_CALL(rl_key_set, RL_OK, db, key, keylen, RL_TYPE_SET, set_page_number, expires, version + 1);
+	}
+cleanup:
 	if (_set_page_number) {
 		*_set_page_number = set_page_number;
 	}
-cleanup:
 	return retval;
 }
 int rl_sadd(struct rlite *db, const unsigned char *key, long keylen, int memberc, unsigned char **members, long *memberslen, long *added)
@@ -76,7 +81,7 @@ int rl_sadd(struct rlite *db, const unsigned char *key, long keylen, int memberc
 	long *member = NULL;
 	long count = 0;
 	void *tmp;
-	RL_CALL(rl_set_get_objects, RL_OK, db, key, keylen, &set_page_number, &set, 1);
+	RL_CALL(rl_set_get_objects, RL_OK, db, key, keylen, &set_page_number, &set, 1, 1);
 
 	for (i = 0; i < memberc; i++) {
 		RL_MALLOC(digest, sizeof(unsigned char) * 20);
@@ -120,7 +125,7 @@ int rl_srem(struct rlite *db, const unsigned char *key, long keylen, int members
 	long deleted = 0;
 	int keydeleted = 0;
 	unsigned char digest[20];
-	RL_CALL(rl_set_get_objects, RL_OK, db, key, keylen, &set_page_number, &set, 0);
+	RL_CALL(rl_set_get_objects, RL_OK, db, key, keylen, &set_page_number, &set, 1, 0);
 
 	for (i = 0; i < membersc; i++) {
 		RL_CALL(sha1, RL_OK, members[i], memberslen[i], digest);
@@ -156,7 +161,7 @@ int rl_sismember(struct rlite *db, const unsigned char *key, long keylen, unsign
 	long set_page_number;
 	rl_btree *set;
 	unsigned char digest[20];
-	RL_CALL(rl_set_get_objects, RL_OK, db, key, keylen, &set_page_number, &set, 0);
+	RL_CALL(rl_set_get_objects, RL_OK, db, key, keylen, &set_page_number, &set, 0, 0);
 
 	RL_CALL(sha1, RL_OK, member, memberlen, digest);
 
@@ -170,7 +175,7 @@ int rl_scard(struct rlite *db, const unsigned char *key, long keylen, long *card
 	int retval;
 	long set_page_number;
 	rl_btree *set;
-	RL_CALL(rl_set_get_objects, RL_OK, db, key, keylen, &set_page_number, &set, 0);
+	RL_CALL(rl_set_get_objects, RL_OK, db, key, keylen, &set_page_number, &set, 0, 0);
 
 	*card = set->number_of_elements;
 cleanup:
@@ -185,11 +190,11 @@ int rl_smove(struct rlite *db, const unsigned char *source, long sourcelen, cons
 	int retval;
 	unsigned char *digest = NULL;
 	// make sure the target key is a set or does not exist
-	RL_CALL2(rl_set_get_objects, RL_OK, RL_NOT_FOUND, db, destination, destinationlen, NULL, NULL, 0);
+	RL_CALL2(rl_set_get_objects, RL_OK, RL_NOT_FOUND, db, destination, destinationlen, NULL, NULL, 0, 0);
 
 	RL_MALLOC(digest, sizeof(unsigned char) * 20);
 	RL_CALL(sha1, RL_OK, member, memberlen, digest);
-	RL_CALL(rl_set_get_objects, RL_OK, db, source, sourcelen, &source_page_number, &source_hash, 0);
+	RL_CALL(rl_set_get_objects, RL_OK, db, source, sourcelen, &source_page_number, &source_hash, 1, 0);
 	retval = rl_btree_find_score(db, source_hash, digest, &tmp, NULL, NULL);
 	if (retval == RL_FOUND) {
 		rl_multi_string_delete(db, *(long *)tmp);
@@ -204,7 +209,7 @@ int rl_smove(struct rlite *db, const unsigned char *source, long sourcelen, cons
 	else {
 		goto cleanup;
 	}
-	RL_CALL(rl_set_get_objects, RL_OK, db, destination, destinationlen, &target_page_number, &target_hash, 1);
+	RL_CALL(rl_set_get_objects, RL_OK, db, destination, destinationlen, &target_page_number, &target_hash, 1, 1);
 	RL_MALLOC(member_page_number, sizeof(*member_page_number))
 	RL_CALL(rl_multi_string_set, RL_OK, db, member_page_number, member, memberlen);
 	RL_CALL(rl_btree_add_element, RL_OK, db, target_hash, target_page_number, digest, member_page_number);
@@ -238,7 +243,7 @@ int rl_smembers(struct rlite *db, rl_set_iterator **iterator, const unsigned cha
 {
 	int retval;
 	rl_btree *set;
-	RL_CALL(rl_set_get_objects, RL_OK, db, key, keylen, NULL, &set, 0);
+	RL_CALL(rl_set_get_objects, RL_OK, db, key, keylen, NULL, &set, 0, 0);
 	RL_CALL(rl_btree_iterator_create, RL_OK, db, set, iterator);
 cleanup:
 	return retval;
@@ -264,7 +269,7 @@ int rl_srandmembers(struct rlite *db, const unsigned char *key, long keylen, int
 	rl_btree *set;
 	unsigned char **members = NULL;
 	long *memberslen = NULL;
-	RL_CALL(rl_set_get_objects, RL_OK, db, key, keylen, NULL, &set, 0);
+	RL_CALL(rl_set_get_objects, RL_OK, db, key, keylen, NULL, &set, 0, 0);
 	if (!repeat) {
 		if (*memberc > set->number_of_elements) {
 			*memberc = set->number_of_elements;
@@ -305,7 +310,7 @@ int rl_spop(struct rlite *db, const unsigned char *key, long keylen, unsigned ch
 	long set_page_number, *member_page;
 	unsigned char *digest;
 	rl_btree *set;
-	RL_CALL(rl_set_get_objects, RL_OK, db, key, keylen, &set_page_number, &set, 0);
+	RL_CALL(rl_set_get_objects, RL_OK, db, key, keylen, &set_page_number, &set, 1, 0);
 	RL_CALL(rl_btree_random_element, RL_OK, db, set, (void **)&digest, (void **)&member_page);
 	RL_CALL(rl_multi_string_get, RL_OK, db, *member_page, member, memberlen);
 	rl_multi_string_delete(db, *member_page);
@@ -337,12 +342,12 @@ int rl_sdiff(struct rlite *db, int keyc, unsigned char **keys, long *keyslen, lo
 		goto cleanup;
 	}
 
-	RL_CALL(rl_set_get_objects, RL_OK, db, keys[0], keyslen[0], NULL, &source, 0);
+	RL_CALL(rl_set_get_objects, RL_OK, db, keys[0], keyslen[0], NULL, &source, 0, 0);
 	RL_MALLOC(members, sizeof(unsigned char *) * source->number_of_elements);
 	RL_MALLOC(memberslen, sizeof(long) * source->number_of_elements);
 	RL_MALLOC(sets, sizeof(rl_btree *) * (keyc - 1));
 	for (i = 1; i < keyc; i++) {
-		retval = rl_set_get_objects(db, keys[i], keyslen[i], NULL, &sets[setsc], 0);
+		retval = rl_set_get_objects(db, keys[i], keyslen[i], NULL, &sets[setsc], 0, 0);
 		if (retval == RL_OK) {
 			setsc++;
 		}
@@ -450,7 +455,7 @@ int rl_sinter(struct rlite *db, int keyc, unsigned char **keys, long *keyslen, l
 
 	RL_MALLOC(sets, sizeof(rl_btree *) * keyc);
 	for (i = 0; i < keyc; i++) {
-		retval = rl_set_get_objects(db, keys[i], keyslen[i], NULL, &sets[i], 0);
+		retval = rl_set_get_objects(db, keys[i], keyslen[i], NULL, &sets[i], 0, 0);
 		if (retval != RL_OK) {
 			goto cleanup;
 		}
@@ -567,7 +572,7 @@ int rl_sunion(struct rlite *db, int keyc, unsigned char **keys, long *keyslen, l
 
 	RL_MALLOC(sets, sizeof(rl_btree *) * keyc);
 	for (i = 0; i < keyc; i++) {
-		retval = rl_set_get_objects(db, keys[i], keyslen[i], NULL, &sets[i], 0);
+		retval = rl_set_get_objects(db, keys[i], keyslen[i], NULL, &sets[i], 0, 0);
 		if (retval == RL_NOT_FOUND) {
 			sets[i] = NULL;
 		}
@@ -670,10 +675,10 @@ int rl_sunionstore(struct rlite *db, unsigned char *target, long targetlen, int 
 		goto cleanup;
 	}
 
-	RL_CALL(rl_set_get_objects, RL_OK, db, target, targetlen, &target_page_number, &target_set, 1);
+	RL_CALL(rl_set_get_objects, RL_OK, db, target, targetlen, &target_page_number, &target_set, 0, 1);
 
 	for (i = 0; i < keyc; i++) {
-		retval = rl_set_get_objects(db, keys[i], keyslen[i], NULL, &set, 0);
+		retval = rl_set_get_objects(db, keys[i], keyslen[i], NULL, &set, 0, 0);
 		if (retval == RL_NOT_FOUND) {
 			continue;
 		}

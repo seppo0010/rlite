@@ -2303,7 +2303,7 @@ static void setGenericCommand(rliteClient *c, int flags, const unsigned char *ke
 	}
 
 	if ((flags & REDIS_SET_NX) || (flags & REDIS_SET_XX)) {
-		retval = rl_key_get(c->context->db, key, keylen, NULL, NULL, NULL, NULL);
+		retval = rl_key_get(c->context->db, key, keylen, NULL, NULL, NULL, NULL, NULL);
 		if (((flags & REDIS_SET_NX) && retval == RL_FOUND) ||
 				((flags & REDIS_SET_XX) && retval == RL_NOT_FOUND)) {
 			c->reply = createReplyObject(RLITE_REPLY_NIL);
@@ -3038,7 +3038,7 @@ static void ttlGenericCommand(rliteClient *c, long divisor) {
 	unsigned char *key = UNSIGN(c->argv[1]);
 	long keylen = c->argvlen[1];
 	unsigned long long expires, now;
-	int retval = rl_key_get(c->context->db, key, keylen, NULL, NULL, NULL, &expires);
+	int retval = rl_key_get(c->context->db, key, keylen, NULL, NULL, NULL, &expires, NULL);
 	RLITE_SERVER_ERR(c, retval);
 	if (retval == RL_NOT_FOUND) {
 		c->reply = createLongLongObject(-2);
@@ -3068,13 +3068,14 @@ static void persistCommand(rliteClient *c) {
 	long page;
 	unsigned char type;
 	unsigned long long expires;
-	int retval = rl_key_get(c->context->db, key, keylen, &type, NULL, &page, &expires);
+	long version = 0;
+	int retval = rl_key_get(c->context->db, key, keylen, &type, NULL, &page, &expires, &version);
 	RLITE_SERVER_ERR(c, retval);
 	if (retval == RL_NOT_FOUND || expires == 0) {
 		c->reply = createLongLongObject(0);
 		goto cleanup;
 	}
-	retval = rl_key_set(c->context->db, key, keylen, type, page, 0);
+	retval = rl_key_set(c->context->db, key, keylen, type, page, 0, version + 1);
 	RLITE_SERVER_ERR(c, retval);
 	c->reply = createLongLongObject(1);
 cleanup:
@@ -3150,13 +3151,13 @@ cleanup:
 }
 
 static void existsCommand(rliteClient *c) {
-	int retval = rl_key_get(c->context->db, UNSIGN(c->argv[1]), c->argvlen[1], NULL, NULL, NULL, NULL);
+	int retval = rl_key_get(c->context->db, UNSIGN(c->argv[1]), c->argvlen[1], NULL, NULL, NULL, NULL, NULL);
 	c->reply = createLongLongObject(retval == RL_FOUND ? 1 : 0);
 }
 
 static void typeCommand(rliteClient *c) {
 	unsigned char type;
-	int retval = rl_key_get(c->context->db, UNSIGN(c->argv[1]), c->argvlen[1], &type, NULL, NULL, NULL);
+	int retval = rl_key_get(c->context->db, UNSIGN(c->argv[1]), c->argvlen[1], &type, NULL, NULL, NULL, NULL);
 	RLITE_SERVER_ERR(c, retval);
 	if (retval == RL_NOT_FOUND) {
 		c->reply = createStringObject("none", 4);
@@ -3186,7 +3187,7 @@ static void getKeyEncoding(rliteClient *c, char *encoding, unsigned char *key, l
 {
 	unsigned char type;
 	encoding[0] = 0;
-	if (rl_key_get(c->context->db, UNSIGN(key), keylen, &type, NULL, NULL, NULL)) {
+	if (rl_key_get(c->context->db, UNSIGN(key), keylen, &type, NULL, NULL, NULL, NULL)) {
 		if (type == RL_TYPE_STRING) {
 			const char *enc = "int";
 			memcpy(encoding, enc, (strlen(enc) + 1) * sizeof(char));
@@ -3303,7 +3304,7 @@ static void debugCommand(rliteClient *c) {
 		c->reply = createStatusObject(RLITE_STR_OK);
 	} else if (!strcasecmp(c->argv[1],"object") && c->argc == 3) {
 		char encoding[100];
-		if (rl_key_get(c->context->db, UNSIGN(c->argv[2]), c->argvlen[2], NULL, NULL, NULL, NULL)) {
+		if (rl_key_get(c->context->db, UNSIGN(c->argv[2]), c->argvlen[2], NULL, NULL, NULL, NULL, NULL)) {
 			getKeyEncoding(c, encoding, UNSIGN(c->argv[2]), c->argvlen[2]);
 			addReplyStatusFormat(c->context,
 				"Value at:0xfaceadd refcount:1 "

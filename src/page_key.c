@@ -50,11 +50,13 @@ static int get_type(char identifier, rl_type **type)
 	return RL_UNEXPECTED;
 }
 
-int rl_key_set(rlite *db, const unsigned char *key, long keylen, unsigned char type, long value_page, unsigned long long expires)
+int rl_key_set(rlite *db, const unsigned char *key, long keylen, unsigned char type, long value_page, unsigned long long expires, long version)
 {
 	int retval;
+
 	rl_key *key_obj = NULL;
-	unsigned char *digest;
+	unsigned char *digest = NULL;
+	RL_CALL2(rl_key_delete, RL_OK, RL_NOT_FOUND, db, key, keylen);
 	RL_MALLOC(digest, sizeof(unsigned char) * 20);
 	RL_CALL(sha1, RL_OK, key, keylen, digest);
 	rl_btree *btree;
@@ -64,17 +66,9 @@ int rl_key_set(rlite *db, const unsigned char *key, long keylen, unsigned char t
 	key_obj->type = type;
 	key_obj->value_page = value_page;
 	key_obj->expires = expires;
+	key_obj->version = version;
 
-	retval = rl_btree_update_element(db, btree, digest, key_obj);
-	if (retval == RL_NOT_FOUND) {
-		RL_CALL(rl_btree_add_element, RL_OK, db, btree, db->databases[db->selected_database], digest, key_obj);
-	}
-	else if (retval == RL_OK) {
-		rl_free(digest);
-	}
-	else {
-		goto cleanup;
-	}
+	RL_CALL(rl_btree_add_element, RL_OK, db, btree, db->databases[db->selected_database], digest, key_obj);
 	retval = RL_OK;
 cleanup:
 	if (retval != RL_OK) {
@@ -84,7 +78,7 @@ cleanup:
 	return retval;
 }
 
-static int rl_key_get_ignore_expire(struct rlite *db, const unsigned char *key, long keylen, unsigned char *type, long *string_page, long *value_page, unsigned long long *expires, int ignore_expire)
+static int rl_key_get_ignore_expire(struct rlite *db, const unsigned char *key, long keylen, unsigned char *type, long *string_page, long *value_page, unsigned long long *expires, long *version, int ignore_expire)
 {
 	unsigned char digest[20];
 	int retval;
@@ -92,7 +86,7 @@ static int rl_key_get_ignore_expire(struct rlite *db, const unsigned char *key, 
 	rl_btree *btree;
 	rl_key *key_obj;
 	RL_CALL(rl_get_key_btree, RL_OK, db, &btree, 0);
-	void *tmp;
+	void *tmp = NULL;
 	retval = rl_btree_find_score(db, btree, digest, &tmp, NULL, NULL);
 	if (retval == RL_FOUND) {
 		key_obj = tmp;
@@ -114,31 +108,38 @@ static int rl_key_get_ignore_expire(struct rlite *db, const unsigned char *key, 
 			if (expires) {
 				*expires = key_obj->expires;
 			}
+			if (version) {
+				*version = key_obj->version;
+			}
 		}
 	}
 cleanup:
 	return retval;
 }
 
-int rl_key_get(struct rlite *db, const unsigned char *key, long keylen, unsigned char *type, long *string_page, long *value_page, unsigned long long *expires)
+int rl_key_get(struct rlite *db, const unsigned char *key, long keylen, unsigned char *type, long *string_page, long *value_page, unsigned long long *expires, long *version)
 {
-	return rl_key_get_ignore_expire(db, key, keylen, type, string_page, value_page, expires, 0);
+	return rl_key_get_ignore_expire(db, key, keylen, type, string_page, value_page, expires, version, 0);
 }
 
-int rl_key_get_or_create(struct rlite *db, const unsigned char *key, long keylen, unsigned char type, long *page)
+int rl_key_get_or_create(struct rlite *db, const unsigned char *key, long keylen, unsigned char type, long *page, long *version)
 {
 	unsigned char existing_type;
-	int retval = rl_key_get(db, key, keylen, &existing_type, NULL, page, NULL);
+	int retval = rl_key_get(db, key, keylen, &existing_type, NULL, page, NULL, version);
+	long _version;
 	if (retval == RL_FOUND) {
 		if (existing_type != type) {
 			return RL_WRONG_TYPE;
 		}
 	}
 	else if (retval == RL_NOT_FOUND) {
+		_version = rand();
+		if (version) {
+			*version = _version;
+		}
 		rl_alloc_page_number(db, page);
-		RL_CALL(rl_key_set, RL_OK, db, key, keylen, type, *page, 0);
+		RL_CALL(rl_key_set, RL_OK, db, key, keylen, type, *page, 0, _version);
 		retval = RL_NOT_FOUND;
-
 	}
 cleanup:
 	return retval;
@@ -176,10 +177,9 @@ int rl_key_expires(struct rlite *db, const unsigned char *key, long keylen, unsi
 {
 	int retval;
 	unsigned char type;
-	long string_page, value_page;
-	RL_CALL(rl_key_get, RL_FOUND, db, key, keylen, &type, &string_page, &value_page, NULL);
-	RL_CALL(rl_multi_string_delete, RL_OK, db, string_page);
-	RL_CALL(rl_key_set, RL_OK, db, key, keylen, type, value_page, expires);
+	long string_page, value_page, version;
+	RL_CALL(rl_key_get, RL_FOUND, db, key, keylen, &type, &string_page, &value_page, NULL, &version);
+	RL_CALL(rl_key_set, RL_OK, db, key, keylen, type, value_page, expires, version + 1);
 cleanup:
 	return retval;
 }
@@ -201,7 +201,7 @@ int rl_key_delete_with_value(struct rlite *db, const unsigned char *key, long ke
 	unsigned char identifier;
 	long value_page;
 	unsigned long long expires;
-	RL_CALL(rl_key_get_ignore_expire, RL_FOUND, db, key, keylen, &identifier, NULL, &value_page, &expires, 1);
+	RL_CALL(rl_key_get_ignore_expire, RL_FOUND, db, key, keylen, &identifier, NULL, &value_page, &expires, NULL, 1);
 	RL_CALL(rl_key_delete_value, RL_OK, db, identifier, value_page);
 	RL_CALL(rl_key_delete, RL_OK, db, key, keylen);
 	retval = expires != 0 && expires <= rl_mstime() ? RL_NOT_FOUND : RL_OK;

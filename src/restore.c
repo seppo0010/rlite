@@ -1,3 +1,4 @@
+#include <arpa/inet.h>
 #include "page_key.h"
 #include "rlite.h"
 #include "util.h"
@@ -229,7 +230,7 @@ int rl_restore(struct rlite *db, const unsigned char *key, long keylen, unsigned
 	char f[40];
 	double d;
 
-	RL_CALL(rl_key_get, RL_NOT_FOUND, db, key, keylen, NULL, NULL, NULL, NULL);
+	RL_CALL(rl_key_get, RL_NOT_FOUND, db, key, keylen, NULL, NULL, NULL, NULL, NULL);
 	RL_CALL(verify, RL_OK, data, datalen);
 
 	type = data[0];

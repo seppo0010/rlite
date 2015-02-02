@@ -11,7 +11,7 @@ static int expect_key(rlite *db, unsigned char *key, long keylen, char type, lon
 	unsigned char type2;
 	long page2;
 	int retval;
-	RL_CALL_VERBOSE(rl_key_get, RL_FOUND, db, key, keylen, &type2, NULL, &page2, NULL);
+	RL_CALL_VERBOSE(rl_key_get, RL_FOUND, db, key, keylen, &type2, NULL, &page2, NULL, NULL);
 	EXPECT_INT(type, type2);
 	EXPECT_LONG(page, page2);
 	retval = 0;
@@ -30,7 +30,7 @@ int basic_test_set_get(int _commit)
 	long keylen = strlen((char *)key);
 	unsigned char type = 'A';
 	long page = 23;
-	RL_CALL_VERBOSE(rl_key_set, RL_OK, db, key, keylen, type, page, 0);
+	RL_CALL_VERBOSE(rl_key_set, RL_OK, db, key, keylen, type, page, 0, 0);
 	RL_COMMIT();
 	RL_CALL_VERBOSE(expect_key, RL_OK, db, key, keylen, type, page);
 	fprintf(stderr, "End basic_test_set_get\n");
@@ -50,7 +50,7 @@ int basic_test_get_unexisting(int UNUSED(_))
 
 	unsigned char *key = (unsigned char *)"my key";
 	long keylen = strlen((char *)key);
-	RL_CALL_VERBOSE(rl_key_get, RL_NOT_FOUND, db, key, keylen, NULL, NULL, NULL, NULL);
+	RL_CALL_VERBOSE(rl_key_get, RL_NOT_FOUND, db, key, keylen, NULL, NULL, NULL, NULL, NULL);
 	fprintf(stderr, "End basic_test_get_unexisting\n");
 	retval = RL_OK;
 cleanup:
@@ -70,9 +70,9 @@ int basic_test_set_delete(int UNUSED(_))
 	long keylen = strlen((char *)key);
 	unsigned char type = 'A';
 	long page = 23;
-	RL_CALL_VERBOSE(rl_key_set, RL_OK, db, key, keylen, type, page, 0);
+	RL_CALL_VERBOSE(rl_key_set, RL_OK, db, key, keylen, type, page, 0, 0);
 	RL_CALL_VERBOSE(rl_key_delete, RL_OK, db, key, keylen);
-	RL_CALL_VERBOSE(rl_key_get, RL_NOT_FOUND, db, key, keylen, NULL, NULL, NULL, NULL);
+	RL_CALL_VERBOSE(rl_key_get, RL_NOT_FOUND, db, key, keylen, NULL, NULL, NULL, NULL, NULL);
 
 	fprintf(stderr, "End basic_test_set_delete\n");
 	retval = RL_OK;
@@ -92,13 +92,14 @@ int basic_test_get_or_create(int _commit)
 	long keylen = strlen((char *)key);
 	unsigned char type = 'A';
 	long page = 100, page2 = 200; // set dummy values for != assert
-	RL_CALL_VERBOSE(rl_key_get_or_create, RL_NOT_FOUND, db, key, keylen, type, &page);
+	long version;
+	RL_CALL_VERBOSE(rl_key_get_or_create, RL_NOT_FOUND, db, key, keylen, type, &page, &version);
 	RL_COMMIT();
 
-	RL_CALL_VERBOSE(rl_key_get_or_create, RL_FOUND, db, key, keylen, type, &page2);
+	RL_CALL_VERBOSE(rl_key_get_or_create, RL_FOUND, db, key, keylen, type, &page2, &version);
 	RL_COMMIT();
 	EXPECT_LONG(page, page2);
-	RL_CALL_VERBOSE(rl_key_get_or_create, RL_WRONG_TYPE, db, key, keylen, type + 1, &page2);
+	RL_CALL_VERBOSE(rl_key_get_or_create, RL_WRONG_TYPE, db, key, keylen, type + 1, &page2, &version);
 
 	fprintf(stderr, "End basic_test_get_or_create\n");
 	retval = RL_OK;
@@ -119,14 +120,14 @@ int basic_test_multidb(int _commit)
 	unsigned char type = 'A';
 	long page = 100, page2 = 200, pagetest; // set dummy values for != assert
 
-	RL_CALL_VERBOSE(rl_key_get_or_create, RL_NOT_FOUND, db, key, keylen, type, &page);
+	RL_CALL_VERBOSE(rl_key_get_or_create, RL_NOT_FOUND, db, key, keylen, type, &page, NULL);
 	RL_COMMIT();
 	RL_CALL_VERBOSE(rl_select, RL_OK, db, 1);
-	RL_CALL_VERBOSE(rl_key_get_or_create, RL_NOT_FOUND, db, key, keylen, type, &page2);
+	RL_CALL_VERBOSE(rl_key_get_or_create, RL_NOT_FOUND, db, key, keylen, type, &page2, NULL);
 	RL_COMMIT();
-	RL_CALL_VERBOSE(rl_key_get_or_create, RL_FOUND, db, key, keylen, type, &pagetest);
+	RL_CALL_VERBOSE(rl_key_get_or_create, RL_FOUND, db, key, keylen, type, &pagetest, NULL);
 	EXPECT_LONG(pagetest, page2);
-	RL_CALL_VERBOSE(rl_key_get_or_create, RL_FOUND, db, key, keylen, type, &pagetest);
+	RL_CALL_VERBOSE(rl_key_get_or_create, RL_FOUND, db, key, keylen, type, &pagetest, NULL);
 	if (pagetest == page) {
 		fprintf(stderr, "Expected pagetest %ld to mismatch page %ld\n", pagetest, page);
 		retval = RL_UNEXPECTED;
@@ -134,7 +135,7 @@ int basic_test_multidb(int _commit)
 	}
 
 	RL_CALL_VERBOSE(rl_select, RL_OK, db, 0);
-	RL_CALL_VERBOSE(rl_key_get_or_create, RL_FOUND, db, key, keylen, type, &pagetest);
+	RL_CALL_VERBOSE(rl_key_get_or_create, RL_FOUND, db, key, keylen, type, &pagetest, NULL);
 	EXPECT_LONG(pagetest, page);
 
 	fprintf(stderr, "End basic_test_multidb\n");
@@ -156,13 +157,13 @@ int basic_test_move(int _commit)
 	unsigned char type = 'A';
 	long page = 100, pagetest; // set dummy values for != assert
 
-	RL_CALL_VERBOSE(rl_key_get_or_create, RL_NOT_FOUND, db, key, keylen, type, &page);
+	RL_CALL_VERBOSE(rl_key_get_or_create, RL_NOT_FOUND, db, key, keylen, type, &page, NULL);
 	RL_COMMIT();
 
 	RL_CALL_VERBOSE(rl_move, RL_OK, db, key, keylen, 1);
-	RL_CALL_VERBOSE(rl_key_get, RL_NOT_FOUND, db, key, keylen, NULL, NULL, NULL, NULL);
+	RL_CALL_VERBOSE(rl_key_get, RL_NOT_FOUND, db, key, keylen, NULL, NULL, NULL, NULL, NULL);
 	RL_CALL_VERBOSE(rl_select, RL_OK, db, 1);
-	RL_CALL_VERBOSE(rl_key_get_or_create, RL_FOUND, db, key, keylen, type, &pagetest);
+	RL_CALL_VERBOSE(rl_key_get_or_create, RL_FOUND, db, key, keylen, type, &pagetest, NULL);
 	EXPECT_LONG(pagetest, page);
 	fprintf(stderr, "End basic_test_move\n");
 	retval = RL_OK;
@@ -184,19 +185,19 @@ int existing_test_move(int _commit)
 	long page = 100, page2 = 101, pagetest; // set dummy values for != assert
 
 	RL_CALL_VERBOSE(rl_select, RL_OK, db, 1);
-	RL_CALL_VERBOSE(rl_key_get_or_create, RL_NOT_FOUND, db, key, keylen, type, &page);
+	RL_CALL_VERBOSE(rl_key_get_or_create, RL_NOT_FOUND, db, key, keylen, type, &page, NULL);
 	RL_COMMIT();
 
 	RL_CALL_VERBOSE(rl_select, RL_OK, db, 0);
-	RL_CALL_VERBOSE(rl_key_get_or_create, RL_NOT_FOUND, db, key, keylen, type, &page2);
+	RL_CALL_VERBOSE(rl_key_get_or_create, RL_NOT_FOUND, db, key, keylen, type, &page2, NULL);
 	RL_COMMIT();
 
 	RL_CALL_VERBOSE(rl_move, RL_FOUND, db, key, keylen, 1);
-	RL_CALL_VERBOSE(rl_key_get, RL_FOUND, db, key, keylen, NULL, NULL, &pagetest, NULL);
+	RL_CALL_VERBOSE(rl_key_get, RL_FOUND, db, key, keylen, NULL, NULL, &pagetest, NULL, NULL);
 	EXPECT_LONG(pagetest, page2)
 
 	RL_CALL_VERBOSE(rl_select, RL_OK, db, 1);
-	RL_CALL_VERBOSE(rl_key_get_or_create, RL_FOUND, db, key, keylen, type, &pagetest);
+	RL_CALL_VERBOSE(rl_key_get_or_create, RL_FOUND, db, key, keylen, type, &pagetest, NULL);
 	EXPECT_LONG(pagetest, page);
 	fprintf(stderr, "End existing_test_move\n");
 	retval = RL_OK;
@@ -217,14 +218,14 @@ int basic_test_expires(int _commit)
 	unsigned char type = 'A';
 	long page = 100;
 
-	RL_CALL_VERBOSE(rl_key_set, RL_OK, db, key, keylen, type, page, rl_mstime() - 1);
+	RL_CALL_VERBOSE(rl_key_set, RL_OK, db, key, keylen, type, page, rl_mstime() - 1, 0);
 	RL_COMMIT();
 
-	RL_CALL_VERBOSE(rl_key_get, RL_NOT_FOUND, db, key, keylen, NULL, NULL, NULL, NULL);
-	RL_CALL_VERBOSE(rl_key_set, RL_OK, db, key, keylen, type, page, 10000 + rl_mstime());
+	RL_CALL_VERBOSE(rl_key_get, RL_NOT_FOUND, db, key, keylen, NULL, NULL, NULL, NULL, NULL);
+	RL_CALL_VERBOSE(rl_key_set, RL_OK, db, key, keylen, type, page, 10000 + rl_mstime(), 0);
 	RL_COMMIT();
 
-	RL_CALL_VERBOSE(rl_key_get, RL_FOUND, db, key, keylen, NULL, NULL, NULL, NULL);
+	RL_CALL_VERBOSE(rl_key_get, RL_FOUND, db, key, keylen, NULL, NULL, NULL, NULL, NULL);
 
 	fprintf(stderr, "End basic_test_expires\n");
 	retval = 0;
@@ -246,19 +247,19 @@ int basic_test_change_expiration(int _commit)
 	long page = 100;
 	unsigned long long expiration = rl_mstime() + 1000, expirationtest;
 
-	RL_CALL_VERBOSE(rl_key_set, RL_OK, db, key, keylen, type, page, expiration);
+	RL_CALL_VERBOSE(rl_key_set, RL_OK, db, key, keylen, type, page, expiration, 0);
 	RL_COMMIT();
 
-	RL_CALL_VERBOSE(rl_key_get, RL_FOUND, db, key, keylen, NULL, NULL, NULL, &expirationtest);
+	RL_CALL_VERBOSE(rl_key_get, RL_FOUND, db, key, keylen, NULL, NULL, NULL, &expirationtest, NULL);
 	EXPECT_LLU(expirationtest, expiration);
 	RL_CALL_VERBOSE(rl_key_expires, RL_OK, db, key, keylen, expiration + 1000);
 	RL_COMMIT();
 
-	RL_CALL_VERBOSE(rl_key_get, RL_FOUND, db, key, keylen, NULL, NULL, NULL, NULL);
+	RL_CALL_VERBOSE(rl_key_get, RL_FOUND, db, key, keylen, NULL, NULL, NULL, NULL, NULL);
 	RL_CALL_VERBOSE(rl_key_expires, RL_OK, db, key, keylen, expiration - 10000);
 	RL_COMMIT();
 
-	RL_CALL_VERBOSE(rl_key_get, RL_NOT_FOUND, db, key, keylen, NULL, NULL, NULL, NULL);
+	RL_CALL_VERBOSE(rl_key_get, RL_NOT_FOUND, db, key, keylen, NULL, NULL, NULL, NULL, NULL);
 
 	fprintf(stderr, "End basic_test_change_expiration\n");
 	retval = RL_OK;
@@ -596,6 +597,174 @@ cleanup:
 	return retval;
 }
 
+static int string_version_test(int _commit) {
+	int retval = 0;
+	fprintf(stderr, "Start string_version_test %d\n", _commit);
+
+	rlite *db;
+	RL_CALL_VERBOSE(setup_db, RL_OK, &db, _commit, 1);
+	unsigned char *key = (unsigned char *)"my key";
+	long keylen = strlen((char *)key);
+	unsigned char *data = (unsigned char *)"asd";
+	long datalen = strlen((char *)data);
+	unsigned char type = 'A';
+	long page = 23, version = -1, version2 = -2, version3 = -3;
+	RL_CALL_VERBOSE(rl_set, RL_OK, db, key, keylen, data, datalen, 0, 0);
+	RL_CALL_VERBOSE(rl_key_get, RL_FOUND, db, key, keylen, &type, NULL, &page, NULL, &version);
+	RL_CALL_VERBOSE(rl_set, RL_OK, db, key, keylen, data, datalen, 0, 0);
+	RL_CALL_VERBOSE(rl_key_get, RL_FOUND, db, key, keylen, &type, NULL, &page, NULL, &version2);
+	EXPECT_LONG(version + 1, version2);
+	RL_CALL_VERBOSE(rl_key_delete_with_value, RL_OK, db, key, keylen);
+	RL_CALL_VERBOSE(rl_set, RL_OK, db, key, keylen, data, datalen, 0, 0);
+	RL_CALL_VERBOSE(rl_key_get, RL_FOUND, db, key, keylen, &type, NULL, &page, NULL, &version3);
+	if (version3 == version || version2 == version) {
+		fprintf(stderr, "Expected version after delete not to match with previous ones\n");
+		retval = 1;
+		goto cleanup;
+	}
+	retval = 0;
+	fprintf(stderr, "End string_version_test %d\n", _commit);
+cleanup:
+	rl_close(db);
+	return retval;
+}
+
+static int list_version_test(int _commit) {
+	int retval = 0;
+	fprintf(stderr, "Start list_version_test %d\n", _commit);
+
+	rlite *db;
+	RL_CALL_VERBOSE(setup_db, RL_OK, &db, _commit, 1);
+	unsigned char *key = (unsigned char *)"my key";
+	long keylen = strlen((char *)key);
+	unsigned char *data = (unsigned char *)"asd";
+	long datalen = strlen((char *)data);
+	unsigned char type = 'A';
+	long page = 23, version = -1, version2 = -2, version3 = -3;
+	RL_CALL_VERBOSE(rl_push, RL_OK, db, key, keylen, 1, 1, 1, &data, &datalen, NULL);
+	RL_CALL_VERBOSE(rl_key_get, RL_FOUND, db, key, keylen, &type, NULL, &page, NULL, &version);
+	RL_CALL_VERBOSE(rl_push, RL_OK, db, key, keylen, 1, 1, 1, &data, &datalen, NULL);
+	RL_CALL_VERBOSE(rl_key_get, RL_FOUND, db, key, keylen, &type, NULL, &page, NULL, &version2);
+	EXPECT_LONG(version + 1, version2);
+	RL_CALL_VERBOSE(rl_key_delete_with_value, RL_OK, db, key, keylen);
+	RL_CALL_VERBOSE(rl_push, RL_OK, db, key, keylen, 1, 1, 1, &data, &datalen, NULL);
+	RL_CALL_VERBOSE(rl_key_get, RL_FOUND, db, key, keylen, &type, NULL, &page, NULL, &version3);
+	if (version3 == version || version2 == version) {
+		fprintf(stderr, "Expected version after delete not to match with previous ones\n");
+		retval = 1;
+		goto cleanup;
+	}
+	retval = 0;
+	fprintf(stderr, "End list_version_test %d\n", _commit);
+cleanup:
+	rl_close(db);
+	return retval;
+}
+
+static int set_version_test(int _commit) {
+	int retval = 0;
+	fprintf(stderr, "Start set_version_test %d\n", _commit);
+
+	rlite *db;
+	RL_CALL_VERBOSE(setup_db, RL_OK, &db, _commit, 1);
+	unsigned char *key = (unsigned char *)"my key";
+	long keylen = strlen((char *)key);
+	unsigned char *data = (unsigned char *)"asd";
+	long datalen = strlen((char *)data);
+	unsigned char *data2 = (unsigned char *)"asd2";
+	long data2len = strlen((char *)data2);
+	unsigned char type = 'A';
+	long page = 23, version = -1, version2 = -2, version3 = -3;
+	RL_CALL_VERBOSE(rl_sadd, RL_OK, db, key, keylen, 1, &data, &datalen, NULL);
+	RL_CALL_VERBOSE(rl_key_get, RL_FOUND, db, key, keylen, &type, NULL, &page, NULL, &version);
+	RL_CALL_VERBOSE(rl_sadd, RL_OK, db, key, keylen, 1, &data2, &data2len, NULL);
+	RL_CALL_VERBOSE(rl_key_get, RL_FOUND, db, key, keylen, &type, NULL, &page, NULL, &version2);
+	EXPECT_LONG(version + 1, version2);
+	RL_CALL_VERBOSE(rl_key_delete_with_value, RL_OK, db, key, keylen);
+	RL_CALL_VERBOSE(rl_sadd, RL_OK, db, key, keylen, 1, &data, &datalen, NULL);
+	RL_CALL_VERBOSE(rl_key_get, RL_FOUND, db, key, keylen, &type, NULL, &page, NULL, &version3);
+	if (version3 == version || version2 == version) {
+		fprintf(stderr, "Expected version after delete not to match with previous ones\n");
+		retval = 1;
+		goto cleanup;
+	}
+	retval = 0;
+	fprintf(stderr, "End set_version_test %d\n", _commit);
+cleanup:
+	rl_close(db);
+	return retval;
+}
+
+static int zset_version_test(int _commit) {
+	int retval = 0;
+	fprintf(stderr, "Start zset_version_test %d\n", _commit);
+
+	rlite *db;
+	RL_CALL_VERBOSE(setup_db, RL_OK, &db, _commit, 1);
+	unsigned char *key = (unsigned char *)"my key";
+	long keylen = strlen((char *)key);
+	unsigned char *data = (unsigned char *)"asd";
+	long datalen = strlen((char *)data);
+	unsigned char *data2 = (unsigned char *)"asd2";
+	long data2len = strlen((char *)data2);
+	unsigned char type = 'A';
+	long page = 23, version = -1, version2 = -2, version3 = -3;
+	RL_CALL_VERBOSE(rl_zadd, RL_OK, db, key, keylen, 0.0, data, datalen);
+	RL_CALL_VERBOSE(rl_key_get, RL_FOUND, db, key, keylen, &type, NULL, &page, NULL, &version);
+	RL_CALL_VERBOSE(rl_zadd, RL_OK, db, key, keylen, 0.0, data2, data2len);
+	RL_CALL_VERBOSE(rl_key_get, RL_FOUND, db, key, keylen, &type, NULL, &page, NULL, &version2);
+	EXPECT_LONG(version + 1, version2);
+	RL_CALL_VERBOSE(rl_key_delete_with_value, RL_OK, db, key, keylen);
+	RL_CALL_VERBOSE(rl_zadd, RL_OK, db, key, keylen, 0.0, data, datalen);
+	RL_CALL_VERBOSE(rl_key_get, RL_FOUND, db, key, keylen, &type, NULL, &page, NULL, &version3);
+	if (version3 == version || version2 == version) {
+		fprintf(stderr, "Expected version after delete not to match with previous ones\n");
+		retval = 1;
+		goto cleanup;
+	}
+	retval = 0;
+	fprintf(stderr, "End zset_version_test %d\n", _commit);
+cleanup:
+	rl_close(db);
+	return retval;
+}
+
+static int hash_version_test(int _commit) {
+	int retval = 0;
+	fprintf(stderr, "Start hash_version_test %d\n", _commit);
+
+	rlite *db;
+	RL_CALL_VERBOSE(setup_db, RL_OK, &db, _commit, 1);
+	unsigned char *key = (unsigned char *)"my key";
+	long keylen = strlen((char *)key);
+	unsigned char *field = (unsigned char *)"field";
+	long fieldlen = strlen((char *)field);
+	unsigned char *data = (unsigned char *)"asd";
+	long datalen = strlen((char *)data);
+	unsigned char *data2 = (unsigned char *)"asd2";
+	long data2len = strlen((char *)data2);
+	unsigned char type = 'A';
+	long page = 23, version = -1, version2 = -2, version3 = -3;
+	RL_CALL_VERBOSE(rl_hset, RL_OK, db, key, keylen, field, fieldlen, data, datalen, NULL, 1);
+	RL_CALL_VERBOSE(rl_key_get, RL_FOUND, db, key, keylen, &type, NULL, &page, NULL, &version);
+	RL_CALL_VERBOSE(rl_hset, RL_OK, db, key, keylen, field, fieldlen, data2, data2len, NULL, 1);
+	RL_CALL_VERBOSE(rl_key_get, RL_FOUND, db, key, keylen, &type, NULL, &page, NULL, &version2);
+	EXPECT_LONG(version + 1, version2);
+	RL_CALL_VERBOSE(rl_key_delete_with_value, RL_OK, db, key, keylen);
+	RL_CALL_VERBOSE(rl_hset, RL_OK, db, key, keylen, field, fieldlen, data, datalen, NULL, 1);
+	RL_CALL_VERBOSE(rl_key_get, RL_FOUND, db, key, keylen, &type, NULL, &page, NULL, &version3);
+	if (version3 == version || version2 == version) {
+		fprintf(stderr, "Expected version after delete not to match with previous ones\n");
+		retval = 1;
+		goto cleanup;
+	}
+	retval = 0;
+	fprintf(stderr, "End hash_version_test %d\n", _commit);
+cleanup:
+	rl_close(db);
+	return retval;
+}
+
 RL_TEST_MAIN_START(key_test)
 {
 	long i;
@@ -615,6 +784,11 @@ RL_TEST_MAIN_START(key_test)
 		RL_TEST(test_keys, i);
 		RL_TEST(test_randomkey, i);
 		RL_TEST(test_flushdb, i);
+		RL_TEST(string_version_test, i);
+		RL_TEST(list_version_test, i);
+		RL_TEST(set_version_test, i);
+		RL_TEST(zset_version_test, i);
+		RL_TEST(hash_version_test, i);
 	}
 	RL_TEST(basic_test_get_unexisting, 0);
 	RL_TEST(basic_test_set_delete, 0);

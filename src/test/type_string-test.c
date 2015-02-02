@@ -233,7 +233,7 @@ static int basic_test_set_expiration(int _commit)
 	RL_CALL_VERBOSE(rl_set, RL_OK, db, key, keylen, value, valuelen, 0, expiration);
 	RL_BALANCED();
 
-	RL_CALL_VERBOSE(rl_key_get, RL_FOUND, db, key, keylen, NULL, NULL, NULL, &testexpiration);
+	RL_CALL_VERBOSE(rl_key_get, RL_FOUND, db, key, keylen, NULL, NULL, NULL, &testexpiration, NULL);
 	EXPECT_LLU(expiration, testexpiration);
 
 	fprintf(stderr, "End basic_test_set_expiration\n");
@@ -529,7 +529,7 @@ static int basic_test_pfadd(int _commit)
 	RL_BALANCED();
 
 	EXPECT_LONG(updated, 1);
-	RL_CALL_VERBOSE(rl_key_get, RL_FOUND, db, key, keylen, NULL, NULL, NULL, &testexpires);
+	RL_CALL_VERBOSE(rl_key_get, RL_FOUND, db, key, keylen, NULL, NULL, NULL, &testexpires, NULL);
 
 	EXPECT_LONG(expires, testexpires);
 
@@ -772,7 +772,7 @@ static int basic_test_pfadd_empty(int _commit)
 
 	EXPECT_LONG(updated, 1);
 
-	RL_CALL_VERBOSE(rl_key_get, RL_FOUND, db, key, keylen, NULL, NULL, NULL, NULL);
+	RL_CALL_VERBOSE(rl_key_get, RL_FOUND, db, key, keylen, NULL, NULL, NULL, NULL, NULL);
 
 	fprintf(stderr, "End basic_test_pfadd_empty\n");
 	retval = 0;

@@ -52,9 +52,9 @@ int test_has_key(int UNUSED(_))
 	const unsigned char *key = (unsigned char *)"random key";
 	long keylen = strlen((char *) key);
 	long value = 529, value2;
-	RL_CALL_VERBOSE(rl_key_get, RL_NOT_FOUND, db, key, keylen, NULL, NULL, NULL, NULL);
-	RL_CALL_VERBOSE(rl_key_set, RL_OK, db, key, keylen, type, value, 0);
-	RL_CALL_VERBOSE(rl_key_get, RL_FOUND, db, key, keylen, &type2, NULL, &value2, NULL);
+	RL_CALL_VERBOSE(rl_key_get, RL_NOT_FOUND, db, key, keylen, NULL, NULL, NULL, NULL, NULL);
+	RL_CALL_VERBOSE(rl_key_set, RL_OK, db, key, keylen, type, value, 0, 0);
+	RL_CALL_VERBOSE(rl_key_get, RL_FOUND, db, key, keylen, &type2, NULL, &value2, NULL, NULL);
 	EXPECT_LONG(value, value2);
 	EXPECT_INT(type, type2);
 	retval = RL_OK;

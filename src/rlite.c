@@ -1072,13 +1072,13 @@ int rl_move(struct rlite *db, unsigned char *key, long keylen, int database)
 	unsigned long long expires;
 	long value_page;
 	// this could be more efficient, if we don't delete the value page
-	RL_CALL(rl_key_get, RL_FOUND, db, key, keylen, &type, NULL, &value_page, &expires);
+	RL_CALL(rl_key_get, RL_FOUND, db, key, keylen, &type, NULL, &value_page, &expires, NULL);
 	RL_CALL(rl_select, RL_OK, db, database);
-	RL_CALL(rl_key_get, RL_NOT_FOUND, db, key, keylen, NULL, NULL, NULL, NULL);
+	RL_CALL(rl_key_get, RL_NOT_FOUND, db, key, keylen, NULL, NULL, NULL, NULL, NULL);
 	RL_CALL(rl_select, RL_OK, db, olddb);
 	RL_CALL(rl_key_delete, RL_OK, db, key, keylen);
 	RL_CALL(rl_select, RL_OK, db, database);
-	RL_CALL(rl_key_set, RL_OK, db, key, keylen, type, value_page, expires);
+	RL_CALL(rl_key_set, RL_OK, db, key, keylen, type, value_page, expires, 0);
 	retval = RL_OK;
 cleanup:
 	rl_select(db, olddb);
@@ -1091,16 +1091,21 @@ int rl_rename(struct rlite *db, const unsigned char *src, long srclen, const uns
 	unsigned char type;
 	unsigned long long expires;
 	long value_page;
+	long version = 0;
 	if (overwrite) {
-		RL_CALL2(rl_key_delete_with_value, RL_OK, RL_NOT_FOUND, db, target, targetlen);
+		RL_CALL2(rl_key_get, RL_FOUND, RL_NOT_FOUND, db, target, targetlen, NULL, NULL, NULL, NULL, &version);
+		if (retval == RL_FOUND) {
+			RL_CALL(rl_key_delete_with_value, RL_OK, db, target, targetlen);
+			version++;
+		}
 	}
 	else {
-		RL_CALL(rl_key_get, RL_NOT_FOUND, db, target, targetlen, NULL, NULL, NULL, NULL);
+		RL_CALL(rl_key_get, RL_NOT_FOUND, db, target, targetlen, NULL, NULL, NULL, NULL, NULL);
 	}
 	// this could be more efficient, if we don't delete the value page
-	RL_CALL(rl_key_get, RL_FOUND, db, src, srclen, &type, NULL, &value_page, &expires);
+	RL_CALL(rl_key_get, RL_FOUND, db, src, srclen, &type, NULL, &value_page, &expires, NULL);
 	RL_CALL(rl_key_delete, RL_OK, db, src, srclen);
-	RL_CALL(rl_key_set, RL_OK, db, target, targetlen, type, value_page, expires);
+	RL_CALL(rl_key_set, RL_OK, db, target, targetlen, type, value_page, expires, version);
 	retval = RL_OK;
 cleanup:
 	return retval;

@@ -35,25 +35,27 @@ cleanup:
 	return retval;
 }
 
-static int rl_hash_get_objects(rlite *db, const unsigned char *key, long keylen, long *_hash_page_number, rl_btree **btree, int create)
+static int rl_hash_get_objects(rlite *db, const unsigned char *key, long keylen, long *_hash_page_number, rl_btree **btree, int update_version, int create)
 {
-	long hash_page_number;
+	long hash_page_number = 0, version = 0;
 	int retval;
+	unsigned long long expires = 0;
 	if (create) {
-		retval = rl_key_get_or_create(db, key, keylen, RL_TYPE_HASH, &hash_page_number);
+		retval = rl_key_get_or_create(db, key, keylen, RL_TYPE_HASH, &hash_page_number, &version);
 		if (retval != RL_FOUND && retval != RL_NOT_FOUND) {
 			goto cleanup;
 		}
 		else if (retval == RL_NOT_FOUND) {
 			retval = rl_hash_create(db, hash_page_number, btree);
+			goto cleanup;
 		}
 		else {
-			retval = rl_hash_read(db, hash_page_number, btree);
+			RL_CALL(rl_hash_read, RL_OK, db, hash_page_number, btree);
 		}
 	}
 	else {
 		unsigned char type;
-		retval = rl_key_get(db, key, keylen, &type, NULL, &hash_page_number, NULL);
+		retval = rl_key_get(db, key, keylen, &type, NULL, &hash_page_number, &expires, &version);
 		if (retval != RL_FOUND) {
 			goto cleanup;
 		}
@@ -61,12 +63,15 @@ static int rl_hash_get_objects(rlite *db, const unsigned char *key, long keylen,
 			retval = RL_WRONG_TYPE;
 			goto cleanup;
 		}
-		retval = rl_hash_read(db, hash_page_number, btree);
+		RL_CALL(rl_hash_read, RL_OK, db, hash_page_number, btree);
 	}
+	if (update_version) {
+		RL_CALL(rl_key_set, RL_OK, db, key, keylen, RL_TYPE_HASH, hash_page_number, expires, version + 1);
+	}
+cleanup:
 	if (_hash_page_number) {
 		*_hash_page_number = hash_page_number;
 	}
-cleanup:
 	return retval;
 }
 
@@ -79,7 +84,7 @@ int rl_hset(struct rlite *db, const unsigned char *key, long keylen, unsigned ch
 	rl_hashkey *hashkey = NULL;
 	long add = 1;
 	void *tmp;
-	RL_CALL(rl_hash_get_objects, RL_OK, db, key, keylen, &hash_page_number, &hash, 1);
+	RL_CALL(rl_hash_get_objects, RL_OK, db, key, keylen, &hash_page_number, &hash, 1, 1);
 
 	RL_MALLOC(digest, sizeof(unsigned char) * 20);
 	RL_CALL(sha1, RL_OK, field, fieldlen, digest);
@@ -138,7 +143,7 @@ int rl_hget(struct rlite *db, const unsigned char *key, long keylen, unsigned ch
 	void *tmp;
 	unsigned char *digest = NULL;
 	rl_hashkey *hashkey;
-	RL_CALL(rl_hash_get_objects, RL_OK, db, key, keylen, &hash_page_number, &hash, 0);
+	RL_CALL(rl_hash_get_objects, RL_OK, db, key, keylen, &hash_page_number, &hash, 0, 0);
 
 	RL_MALLOC(digest, sizeof(unsigned char) * 20);
 	RL_CALL(sha1, RL_OK, field, fieldlen, digest);
@@ -166,7 +171,7 @@ int rl_hmget(struct rlite *db, const unsigned char *key, long keylen, int fieldc
 
 	unsigned char **data = malloc(sizeof(unsigned char *) * fieldc);
 	long *datalen = malloc(sizeof(long) * fieldc);
-	RL_CALL(rl_hash_get_objects, RL_OK, db, key, keylen, &hash_page_number, &hash, 0);
+	RL_CALL(rl_hash_get_objects, RL_OK, db, key, keylen, &hash_page_number, &hash, 0, 0);
 
 	RL_MALLOC(digest, sizeof(unsigned char) * 20);
 	int i;
@@ -206,7 +211,7 @@ int rl_hmset(struct rlite *db, const unsigned char *key, long keylen, int fieldc
 	unsigned char *digest = NULL;
 	rl_hashkey *hashkey = NULL;
 	void *tmp;
-	RL_CALL(rl_hash_get_objects, RL_OK, db, key, keylen, &hash_page_number, &hash, 1);
+	RL_CALL(rl_hash_get_objects, RL_OK, db, key, keylen, &hash_page_number, &hash, 1, 1);
 
 	for (i = 0; i < fieldc; i++) {
 		RL_MALLOC(digest, sizeof(unsigned char) * 20);
@@ -252,7 +257,7 @@ int rl_hexists(struct rlite *db, const unsigned char *key, long keylen, unsigned
 	long hash_page_number;
 	rl_btree *hash;
 	unsigned char *digest = NULL;
-	RL_CALL(rl_hash_get_objects, RL_OK, db, key, keylen, &hash_page_number, &hash, 0);
+	RL_CALL(rl_hash_get_objects, RL_OK, db, key, keylen, &hash_page_number, &hash, 0, 0);
 
 	RL_MALLOC(digest, sizeof(unsigned char) * 20);
 	RL_CALL(sha1, RL_OK, field, fieldlen, digest);
@@ -274,7 +279,7 @@ int rl_hdel(struct rlite *db, const unsigned char *key, long keylen, long fields
 	long deleted = 0;
 	int keydeleted = 0;
 	unsigned char *digest = NULL;
-	RL_CALL(rl_hash_get_objects, RL_OK, db, key, keylen, &hash_page_number, &hash, 0);
+	RL_CALL(rl_hash_get_objects, RL_OK, db, key, keylen, &hash_page_number, &hash, 1, 0);
 	RL_MALLOC(digest, sizeof(unsigned char) * 20);
 
 	for (i = 0; i < fieldsc; i++) {
@@ -311,7 +316,7 @@ int rl_hgetall(struct rlite *db, rl_hash_iterator **iterator, const unsigned cha
 {
 	int retval;
 	rl_btree *hash;
-	RL_CALL(rl_hash_get_objects, RL_OK, db, key, keylen, NULL, &hash, 0);
+	RL_CALL(rl_hash_get_objects, RL_OK, db, key, keylen, NULL, &hash, 0, 0);
 	RL_CALL(rl_btree_iterator_create, RL_OK, db, hash, iterator);
 cleanup:
 	return retval;
@@ -321,7 +326,7 @@ int rl_hlen(struct rlite *db, const unsigned char *key, long keylen, long *len)
 {
 	int retval;
 	rl_btree *hash;
-	RL_CALL(rl_hash_get_objects, RL_OK, db, key, keylen, NULL, &hash, 0);
+	RL_CALL(rl_hash_get_objects, RL_OK, db, key, keylen, NULL, &hash, 0, 0);
 	*len = hash->number_of_elements;
 	retval = RL_OK;
 cleanup:
@@ -339,7 +344,7 @@ int rl_hincrby(struct rlite *db, const unsigned char *key, long keylen, unsigned
 	long long value;
 	rl_hashkey *hashkey;
 
-	RL_CALL(rl_hash_get_objects, RL_OK, db, key, keylen, &hash_page_number, &hash, 1);
+	RL_CALL(rl_hash_get_objects, RL_OK, db, key, keylen, &hash_page_number, &hash, 1, 1);
 
 	RL_MALLOC(digest, sizeof(unsigned char) * 20);
 	RL_CALL(sha1, RL_OK, field, fieldlen, digest);
@@ -423,7 +428,7 @@ int rl_hincrbyfloat(struct rlite *db, const unsigned char *key, long keylen, uns
 	double value;
 	rl_hashkey *hashkey;
 
-	RL_CALL(rl_hash_get_objects, RL_OK, db, key, keylen, &hash_page_number, &hash, 1);
+	RL_CALL(rl_hash_get_objects, RL_OK, db, key, keylen, &hash_page_number, &hash, 1, 1);
 
 	RL_MALLOC(digest, sizeof(unsigned char) * 20);
 	RL_CALL(sha1, RL_OK, field, fieldlen, digest);
