@@ -273,7 +273,7 @@ static int basic_test_hset_hmget(int _commit)
 	EXPECT_LONG(added, 1);
 	RL_BALANCED();
 
-	RL_CALL_VERBOSE(rl_hmget, RL_FOUND, db, key, keylen, 3, fields, fieldslen, &datas, &dataslen);
+	RL_CALL_VERBOSE(rl_hmget, RL_OK, db, key, keylen, 3, fields, fieldslen, &datas, &dataslen);
 	EXPECT_BYTES(data, datalen, datas[0], dataslen[0]);
 
 	EXPECT_LONG(dataslen[1], -1);
@@ -326,7 +326,7 @@ static int basic_test_hmset_hmget(int _commit)
 	RL_CALL_VERBOSE(rl_hmset, RL_OK, db, key, keylen, 2, fieldsset, fieldslenset, datasset, dataslenset);
 	RL_BALANCED();
 
-	RL_CALL_VERBOSE(rl_hmget, RL_FOUND, db, key, keylen, 3, fields, fieldslen, &datas, &dataslen);
+	RL_CALL_VERBOSE(rl_hmget, RL_OK, db, key, keylen, 3, fields, fieldslen, &datas, &dataslen);
 	EXPECT_BYTES(data, datalen, datas[0], dataslen[0]);
 	EXPECT_LONG(dataslen[1], -1);
 	EXPECT_PTR(datas[1], NULL);
@@ -344,7 +344,7 @@ static int basic_test_hmset_hmget(int _commit)
 	RL_CALL_VERBOSE(rl_hmset, RL_OK, db, key, keylen, 2, fieldsset2, fieldslenset2, datasset, dataslenset);
 	RL_BALANCED();
 
-	RL_CALL_VERBOSE(rl_hmget, RL_FOUND, db, key, keylen, 3, fields, fieldslen, &datas, &dataslen);
+	RL_CALL_VERBOSE(rl_hmget, RL_OK, db, key, keylen, 3, fields, fieldslen, &datas, &dataslen);
 	EXPECT_BYTES(data2, data2len, datas[0], dataslen[0]);
 	EXPECT_LONG(dataslen[1], -1);
 	EXPECT_PTR(datas[1], NULL);
