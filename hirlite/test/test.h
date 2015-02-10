@@ -31,7 +31,7 @@
 		fprintf(stderr, "Expected reply to be INTEGER, got %d instead on %s:%d\n", reply->type, __FILE__, __LINE__);\
 		return 1;\
 	}\
-	if (reply->integer != expectedinteger) {\
+	if (reply->integer != (expectedinteger)) {\
 		fprintf(stderr, "Expected reply to be %lld, got %lld instead on %s:%d\n", (long long)(expectedinteger), reply->integer, __FILE__, __LINE__);\
 		return 1;\
 	}
