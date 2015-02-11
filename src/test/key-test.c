@@ -765,6 +765,35 @@ cleanup:
 	return retval;
 }
 
+
+static int watch_test(int _commit) {
+	int retval = 0;
+	fprintf(stderr, "Start watch_test %d\n", _commit);
+
+	rlite *db;
+	RL_CALL_VERBOSE(setup_db, RL_OK, &db, _commit, 1);
+	unsigned char *key = (unsigned char *)"my key";
+	long keylen = strlen((char *)key);
+	unsigned char *data = (unsigned char *)"asd";
+	long datalen = strlen((char *)data);
+
+	struct watched_key *wkey;
+
+	RL_CALL_VERBOSE(rl_watch, RL_OK, db, &wkey, key, keylen);
+	RL_CALL_VERBOSE(rl_set, RL_OK, db, key, keylen, data, datalen, 0, 0);
+	RL_CALL_VERBOSE(rl_check_watched_keys, RL_OUTDATED, db, 1, &wkey);
+	rl_free(wkey);
+
+	RL_CALL_VERBOSE(rl_watch, RL_OK, db, &wkey, key, keylen);
+	RL_CALL_VERBOSE(rl_check_watched_keys, RL_OK, db, 1, &wkey);
+	rl_free(wkey);
+
+	retval = 0;
+	fprintf(stderr, "End watch_test %d\n", _commit);
+cleanup:
+	rl_close(db);
+	return retval;
+}
 RL_TEST_MAIN_START(key_test)
 {
 	long i;
@@ -789,6 +818,7 @@ RL_TEST_MAIN_START(key_test)
 		RL_TEST(set_version_test, i);
 		RL_TEST(zset_version_test, i);
 		RL_TEST(hash_version_test, i);
+		RL_TEST(watch_test, i);
 	}
 	RL_TEST(basic_test_get_unexisting, 0);
 	RL_TEST(basic_test_set_delete, 0);

@@ -80,6 +80,13 @@ typedef struct {
 } rl_page;
 
 typedef struct rlite {
+	// these four properties can change during a transaction
+	// we need to record their original values to use when
+	// checking watched keys
+	long initial_number_of_pages;
+	int initial_number_of_databases;
+	long *initial_databases;
+
 	long number_of_pages;
 	long next_empty_page;
 	long page_size;
@@ -95,6 +102,12 @@ typedef struct rlite {
 	long write_pages_len;
 	rl_page **write_pages;
 } rlite;
+
+typedef struct watched_key {
+	unsigned char digest[20];
+	long version;
+	int database;
+} watched_key;
 
 int rl_open(const char *filename, rlite **db, int flags);
 int rl_close(rlite *db);

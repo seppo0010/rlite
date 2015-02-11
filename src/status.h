@@ -14,6 +14,6 @@
 #define RL_DELETED 10
 #define RL_NAN 11
 #define RL_OVERFLOW 12
-
+#define RL_OUTDATED 13
 
 #endif

@@ -1,3 +1,4 @@
+#include <sys/file.h>
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
@@ -218,12 +219,16 @@ int rl_header_deserialize(struct rlite *db, void **UNUSED(obj), void *UNUSED(con
 	}
 	db->page_size = get_4bytes(&data[identifier_len]);
 	db->next_empty_page = get_4bytes(&data[identifier_len + 4]);
+	db->initial_number_of_pages =
 	db->number_of_pages = get_4bytes(&data[identifier_len + 8]);
+	db->initial_number_of_databases =
 	db->number_of_databases = get_4bytes(&data[identifier_len + 12]);
 	RL_MALLOC(db->databases, sizeof(long) * db->number_of_databases);
+	RL_MALLOC(db->initial_databases, sizeof(long) * db->number_of_databases);
 
 	long i, pos = identifier_len + 16;
 	for (i = 0; i < db->number_of_databases; i++) {
+		db->initial_databases[i] =
 		db->databases[i] = get_4bytes(&data[pos]);
 		pos += 4;
 	}
@@ -343,6 +348,7 @@ int rl_close(rlite *db)
 	rl_free(db->read_pages);
 	rl_free(db->write_pages);
 	rl_free(db->databases);
+	rl_free(db->initial_databases);
 	rl_free(db);
 	return RL_OK;
 }
@@ -364,11 +370,15 @@ int rl_create_db(rlite *db)
 	int retval, i;
 	RL_CALL(rl_ensure_pages, RL_OK, db);
 	db->next_empty_page = 1;
+	db->initial_number_of_pages =
 	db->number_of_pages = 1;
 	db->selected_database = 0;
+	db->initial_number_of_databases =
 	db->number_of_databases = 16;
 	RL_MALLOC(db->databases, sizeof(long) * db->number_of_databases);
+	RL_MALLOC(db->initial_databases, sizeof(long) * db->number_of_databases);
 	for (i = 0; i < db->number_of_databases; i++) {
+		db->initial_databases[i] =
 		db->databases[i] = 0;
 	}
 cleanup:
@@ -569,7 +579,7 @@ int rl_read(rlite *db, rl_data_type *type, long page, void *context, void **obj,
 #ifdef DEBUG
 				print_cache(db);
 #endif
-				fprintf(stderr, "Unable to read page %ld: ", page);
+				fprintf(stderr, "Unable to read page %ld on line %d\n", page, __LINE__);
 				perror(NULL);
 			}
 			retval = RL_NOT_FOUND;
@@ -579,7 +589,7 @@ int rl_read(rlite *db, rl_data_type *type, long page, void *context, void **obj,
 	else if (db->driver_type == RL_MEMORY_DRIVER) {
 		rl_memory_driver *driver = db->driver;
 		if ((page + 1) * db->page_size > driver->datalen) {
-			fprintf(stderr, "Unable to read page %ld: ", page);
+			fprintf(stderr, "Unable to read page %ld on line %d\n", page, __LINE__);
 			retval = RL_NOT_FOUND;
 			goto cleanup;
 		}
@@ -839,10 +849,7 @@ int rl_commit(struct rlite *db)
 			fclose(driver->fp);
 			driver->fp = NULL;
 		}
-		retval = file_driver_fp(db, 0);
-		if (retval != RL_OK) {
-			goto cleanup;
-		}
+		RL_CALL(file_driver_fp, RL_OK, db, 0);
 		for (i = 0; i < db->write_pages_len; i++) {
 			page = db->write_pages[i];
 			page_number = page->page_number;
@@ -885,6 +892,11 @@ int rl_commit(struct rlite *db)
 			memcpy(&driver->data[page_number * db->page_size], data, db->page_size);
 		}
 	}
+	db->initial_number_of_pages = db->number_of_pages;
+	db->initial_number_of_databases = db->number_of_databases;
+	rl_free(db->initial_databases);
+	RL_MALLOC(db->initial_databases, sizeof(long) * db->number_of_databases);
+	memcpy(db->initial_databases, db->databases, sizeof(long) * db->number_of_databases);
 	rl_discard(db);
 	rl_free(data);
 cleanup:
@@ -897,6 +909,11 @@ int rl_discard(struct rlite *db)
 	void *tmp;
 	int retval = RL_OK;
 
+	db->number_of_pages = db->initial_number_of_pages;
+	db->number_of_databases = db->initial_number_of_databases;
+	rl_free(db->databases);
+	RL_MALLOC(db->databases, sizeof(long) * db->number_of_databases);
+	memcpy(db->databases, db->initial_databases, sizeof(long) * db->number_of_databases);
 	rl_page *page;
 	for (i = 0; i < db->read_pages_len; i++) {
 		page = db->read_pages[i];

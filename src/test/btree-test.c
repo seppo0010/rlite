@@ -235,9 +235,7 @@ int fuzzy_set_test(long size, long btree_node_size, int _commit)
 			}
 		}
 
-		if (_commit) {
-			RL_CALL_VERBOSE(rl_commit, RL_OK, db);
-		}
+		RL_COMMIT();
 	}
 
 	for (i = 0; i < size; i++) {

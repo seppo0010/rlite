@@ -66,6 +66,10 @@ int rl_key_set(rlite *db, const unsigned char *key, long keylen, unsigned char t
 	key_obj->type = type;
 	key_obj->value_page = value_page;
 	key_obj->expires = expires;
+	// reserving version=0 for non existent keys
+	if (version == 0) {
+		version = 1;
+	}
 	key_obj->version = version;
 
 	RL_CALL(rl_btree_add_element, RL_OK, db, btree, db->databases[db->selected_database], digest, key_obj);
@@ -78,11 +82,9 @@ cleanup:
 	return retval;
 }
 
-static int rl_key_get_ignore_expire(struct rlite *db, const unsigned char *key, long keylen, unsigned char *type, long *string_page, long *value_page, unsigned long long *expires, long *version, int ignore_expire)
+static int rl_key_get_hash_ignore_expire(struct rlite *db, unsigned char digest[20], unsigned char *type, long *string_page, long *value_page, unsigned long long *expires, long *version, int ignore_expire)
 {
-	unsigned char digest[20];
 	int retval;
-	RL_CALL(sha1, RL_OK, key, keylen, digest);
 	rl_btree *btree;
 	rl_key *key_obj;
 	RL_CALL(rl_get_key_btree, RL_OK, db, &btree, 0);
@@ -91,8 +93,7 @@ static int rl_key_get_ignore_expire(struct rlite *db, const unsigned char *key, 
 	if (retval == RL_FOUND) {
 		key_obj = tmp;
 		if (ignore_expire == 0 && key_obj->expires != 0 && key_obj->expires <= rl_mstime()) {
-			rl_key_delete_with_value(db, key, keylen);
-			retval = RL_NOT_FOUND;
+			retval = RL_DELETED;
 			goto cleanup;
 		}
 		else {
@@ -114,6 +115,78 @@ static int rl_key_get_ignore_expire(struct rlite *db, const unsigned char *key, 
 		}
 	}
 cleanup:
+	return retval;
+}
+
+static int rl_key_get_ignore_expire(struct rlite *db, const unsigned char *key, long keylen, unsigned char *type, long *string_page, long *value_page, unsigned long long *expires, long *version, int ignore_expire)
+{
+	unsigned char digest[20];
+	int retval;
+	RL_CALL(sha1, RL_OK, key, keylen, digest);
+	RL_CALL2(rl_key_get_hash_ignore_expire, RL_FOUND, RL_DELETED, db, digest, type, string_page, value_page, expires, version, ignore_expire);
+	if (retval == RL_DELETED) {
+		rl_key_delete_with_value(db, key, keylen);
+		if (version) {
+			*version = 0;
+		}
+		retval = RL_NOT_FOUND;
+	}
+cleanup:
+	return retval;
+}
+
+static int rl_key_sha_check_version(struct rlite *db, struct watched_key* key) {
+	int retval;
+	long version;
+	int selected_database = db->selected_database;
+	// if the key has expired, the version is still valid, according to
+	// https://code.google.com/p/redis/issues/detail?id=270
+	// it seems to be relevant to redis being stateful and single process
+	// I don't think it is possible to replicate exactly the behavior, but
+	// this is pretty close.
+	RL_CALL2(rl_key_get_hash_ignore_expire, RL_FOUND, RL_NOT_FOUND, db, key->digest, NULL, NULL, NULL, NULL, &version, 1);
+	if (retval == RL_NOT_FOUND) {
+		version = 0;
+	}
+	if (version != key->version) {
+		retval = RL_OUTDATED;
+	} else {
+		retval = RL_OK;
+	}
+cleanup:
+	db->selected_database = selected_database;
+	return retval;
+}
+
+int rl_check_watched_keys(struct rlite *db, int watched_count, struct watched_key** keys)
+{
+	int i, retval = RL_OK;
+
+	for (i = 0; i < watched_count; i++) {
+		RL_CALL(rl_key_sha_check_version, RL_OK, db, keys[i]);
+	}
+cleanup:
+	return retval;
+}
+
+int rl_watch(struct rlite *db, struct watched_key** _watched_key, const unsigned char *key, long keylen) {
+	int retval;
+	struct watched_key* wkey = NULL;
+	RL_MALLOC(wkey, sizeof(struct watched_key));
+	wkey->database = db->selected_database;
+
+	RL_CALL(sha1, RL_OK, key, keylen, wkey->digest);
+	RL_CALL2(rl_key_get_hash_ignore_expire, RL_FOUND, RL_NOT_FOUND, db, wkey->digest, NULL, NULL, NULL, NULL, &wkey->version, 1);
+	if (retval == RL_NOT_FOUND) {
+		wkey->version = 0;
+	}
+
+	*_watched_key = wkey;
+	retval = RL_OK;
+cleanup:
+	if (retval != RL_OK) {
+		rl_free(wkey);
+	}
 	return retval;
 }
 
