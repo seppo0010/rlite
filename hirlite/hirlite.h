@@ -85,6 +85,8 @@ int rlitevFormatCommand(struct rliteClient *client, const char *format, va_list 
 int rliteFormatCommand(struct rliteClient *client, const char *format, ...);
 int rliteFormatCommandArgv(struct rliteClient *client, int argc, char **argv, size_t *argvlen);
 
+struct rliteClient;
+
 /* Context for a connection to Redis */
 typedef struct rliteContext {
 	int err; /* Error flags, 0 when there is no error */
@@ -97,6 +99,14 @@ typedef struct rliteContext {
 	int debugSkiplist;
 	size_t hashtableLimitEntries;
 	size_t hashtableLimitValue;
+
+	short inTransaction;
+	size_t watchedKeysAlloc;
+	size_t watchedKeysLength;
+	struct watched_key **watchedKeys;
+	size_t enqueuedCommandsAlloc;
+	size_t enqueuedCommandsLength;
+	struct rliteClient **enqueuedCommands;
 } rliteContext;
 
 rliteContext *rliteConnect(const char *ip, int port);

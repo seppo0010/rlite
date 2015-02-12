@@ -601,6 +601,11 @@ static rliteContext *_rliteConnect(const char *path) {
 		context = NULL;
 		goto cleanup;
 	}
+	context->inTransaction = 0;
+	context->watchedKeysLength = context->enqueuedCommandsLength = 0;
+	context->watchedKeysAlloc = context->enqueuedCommandsAlloc = 0;
+	context->watchedKeys = NULL;
+	context->enqueuedCommands = NULL;
 cleanup:
 	return context;
 }
@@ -665,6 +670,143 @@ int rliteBufferWrite(rliteContext *UNUSED(c), int *UNUSED(done)) {
 	return 0;
 }
 
+static void multiCommand(rliteClient *c) {
+	if (c->context->inTransaction) {
+		c->reply = createErrorObject("ERR MULTI calls can not be nested");
+		return;
+	}
+	c->context->inTransaction = 1;
+	c->reply = createStatusObject(RLITE_STR_OK);
+}
+
+static void discard(rliteClient *c) {
+	size_t i;
+	int j;
+	for (i = 0; i < c->context->watchedKeysLength; i++) {
+		rl_free(c->context->watchedKeys[i]);
+	}
+	free(c->context->watchedKeys);
+	c->context->watchedKeys = NULL;
+	c->context->watchedKeysLength = 0;
+	c->context->watchedKeysAlloc = 0;
+
+	for (i = 0; i < c->context->enqueuedCommandsLength; i++) {
+		for (j = 0; j < c->context->enqueuedCommands[i]->argc; j++) {
+			free(c->context->enqueuedCommands[i]->argv[j]);
+		}
+		free(c->context->enqueuedCommands[i]->argv);
+		free(c->context->enqueuedCommands[i]->argvlen);
+		free(c->context->enqueuedCommands[i]);
+	}
+	free(c->context->enqueuedCommands);
+	c->context->enqueuedCommands = NULL;
+	c->context->enqueuedCommandsLength = 0;
+	c->context->enqueuedCommandsAlloc = 0;
+
+	c->context->inTransaction = 0;
+}
+
+static void discardCommand(rliteClient *c) {
+	discard(c);
+	c->reply = createStatusObject(RLITE_STR_OK);
+}
+
+static void execCommand(rliteClient *c) {
+	int retval;
+	size_t i;
+	if (!c->context->inTransaction) {
+		c->reply = createErrorObject("ERR EXEC without MULTI");
+		return;
+	}
+	retval = rl_check_watched_keys(c->context->db, c->context->watchedKeysLength, c->context->watchedKeys);
+	RLITE_SERVER_ERR(c, retval);
+	if (retval != RL_OK) {
+		c->reply = createReplyObject(RLITE_REPLY_NIL);
+		goto cleanup;
+	}
+
+	c->reply = createReplyObject(RLITE_REPLY_ARRAY);
+	if (retval == RL_NOT_FOUND) {
+		c->reply->elements = 0;
+		return;
+	}
+	c->reply->elements = c->context->enqueuedCommandsLength;
+	c->reply->element = malloc(sizeof(rliteReply*) * c->reply->elements);
+	rliteClient *client;
+	struct rliteCommand *command;
+	for (i = 0; i < c->reply->elements; i++) {
+		client = c->context->enqueuedCommands[i];
+		client->reply = NULL;
+		command = lookupCommand(client->argv[0], client->argvlen[0]);
+		command->proc(client);
+		c->reply->element[i] = client->reply;
+	}
+
+	retval = rl_commit(c->context->db);
+	RLITE_SERVER_ERR(c, retval);
+	if (retval != RL_OK) {
+		goto cleanup;
+	}
+cleanup:
+	discard(c);
+	return;
+}
+
+static void watchCommand(rliteClient *c) {
+	int retval;
+	void *tmp;
+	size_t newAlloc;
+	size_t i, watchc = c->argc - 1;
+	if (c->context->inTransaction) {
+		c->reply = createErrorObject("ERR WATCH inside MULTI is not allowed");
+		return;
+	}
+	if (watchc + c->context->watchedKeysLength > c->context->watchedKeysAlloc) {
+		newAlloc = c->context->watchedKeysAlloc ? c->context->watchedKeysAlloc : 4;
+		while (newAlloc < watchc + c->context->watchedKeysLength) {
+			newAlloc *= 2;
+		}
+		tmp = realloc(c->context->watchedKeys, sizeof(struct watched_key*) * newAlloc);
+		if (tmp == NULL) {
+			c->reply = NULL;
+			__rliteSetError(c->context, RLITE_ERR_OOM, "Out of memory");
+			return;
+		}
+		c->context->watchedKeysAlloc = newAlloc;
+		c->context->watchedKeys = tmp;
+	}
+	for (i = 0; i < watchc; i++) {
+		retval = rl_watch(c->context->db, &c->context->watchedKeys[c->context->watchedKeysLength++], (unsigned char *)c->argv[1 + i], c->argvlen[1 + i]);
+		RLITE_SERVER_ERR(c, retval);
+		if (retval != RL_OK) {
+			goto cleanup;
+		}
+	}
+	retval = RL_OK;
+	c->reply = createStatusObject(RLITE_STR_OK);
+cleanup:
+	if (retval != RL_OK) {
+		for (; ; i--) {
+			rl_free(c->context->watchedKeys[--c->context->watchedKeysLength]);
+			if (i == 0) {
+				break;
+			}
+		}
+	}
+}
+
+static void unwatchCommand(rliteClient *c) {
+	size_t i;
+	for (i = 0; i < c->context->watchedKeysLength; i++) {
+		rl_free(c->context->watchedKeys[i]);
+	}
+	free(c->context->watchedKeys);
+	c->context->watchedKeys = NULL;
+	c->context->watchedKeysLength = 0;
+	c->context->watchedKeysAlloc = 0;
+	c->reply = createStatusObject(RLITE_STR_OK);
+}
+
 static void *_popReply(rliteContext *c) {
 	if (c->replyPosition < c->replyLength) {
 		void *ret;
@@ -689,21 +831,63 @@ static int __rliteAppendCommandClient(rliteClient *client) {
 		return RLITE_ERR;
 	}
 
+	void *tmp;
+	size_t newAlloc;
 	struct rliteCommand *command = lookupCommand(client->argv[0], client->argvlen[0]);
-	int retval = RLITE_OK;
+	int i, retval = RLITE_OK;
 	if (!command) {
 		retval = addReplyErrorFormat(client->context, "unknown command '%s'", (char*)client->argv[0]);
 	} else if ((command->arity > 0 && command->arity != client->argc) ||
 		(client->argc < -command->arity)) {
 		retval = addReplyErrorFormat(client->context, "wrong number of arguments for '%s' command", command->name);
 	} else {
-		client->reply = NULL;
-		command->proc(client);
-		if (client->reply) {
+		if (client->context->inTransaction && (command->proc != execCommand && command->proc != discardCommand &&
+					command->proc != multiCommand && command->proc != watchCommand)) {
+			if (client->context->enqueuedCommandsLength == client->context->enqueuedCommandsAlloc) {
+				newAlloc = client->context->enqueuedCommandsAlloc * 2;
+				if (newAlloc == 0) {
+					newAlloc = 4;
+				}
+				tmp = realloc(client->context->enqueuedCommands, sizeof(rliteClient *) * newAlloc);
+				if (!tmp) {
+					retval = RL_OUT_OF_MEMORY;
+					__rliteSetError(client->context, RLITE_ERR_OOM, "Out of memory");
+					goto cleanup;
+				}
+				client->context->enqueuedCommands = tmp;
+				client->context->enqueuedCommandsAlloc = newAlloc;
+			}
+			client->context->enqueuedCommands[client->context->enqueuedCommandsLength] = malloc(sizeof(rliteClient));
+			if (!client->context->enqueuedCommands[client->context->enqueuedCommandsLength]) {
+				retval = RL_OUT_OF_MEMORY;
+				__rliteSetError(client->context, RLITE_ERR_OOM, "Out of memory");
+				goto cleanup;
+			}
+#define COMMAND client->context->enqueuedCommands[client->context->enqueuedCommandsLength]
+			COMMAND->argc = client->argc;
+			COMMAND->argvlen = malloc(sizeof(size_t) * client->argc);
+			COMMAND->argv = malloc(sizeof(char *) * client->argc);
+			for (i = 0; i < client->argc; i++) {
+				COMMAND->argvlen[i] = client->argvlen[i];
+				COMMAND->argv[i] = malloc(sizeof(char) * (client->argvlen[i] + 1));
+				memcpy(COMMAND->argv[i], client->argv[i], client->argvlen[i]);
+				COMMAND->argv[i][client->argvlen[i]] = 0;
+			}
+
+			client->context->enqueuedCommands[client->context->enqueuedCommandsLength]->context = client->context;
+			client->context->enqueuedCommandsLength++;
+			client->reply = createStatusObject(RLITE_QUEUED);
 			retval = addReply(client->context, client->reply);
+		} else {
+			client->reply = NULL;
+			command->proc(client);
+			if (client->reply) {
+				retval = addReply(client->context, client->reply);
+			}
+			rl_commit(client->context->db);
 		}
-		rl_commit(client->context->db);
 	}
+cleanup:
 	return retval;
 }
 
@@ -3523,9 +3707,9 @@ struct rliteCommand rliteCommandTable[] = {
 	// {"shutdown",shutdownCommand,-1,"arlt",0,NULL,0,0,0,0,0},
 	// {"lastsave",lastsaveCommand,1,"rRF",0,NULL,0,0,0,0,0},
 	{"type",typeCommand,2,"rF",0,1,1,1,0,0},
-	// {"multi",multiCommand,1,"rsF",0,NULL,0,0,0,0,0},
-	// {"exec",execCommand,1,"sM",0,NULL,0,0,0,0,0},
-	// {"discard",discardCommand,1,"rsF",0,NULL,0,0,0,0,0},
+	{"multi",multiCommand,1,"rsF",0,0,0,0,0,0},
+	{"exec",execCommand,1,"sM",0,0,0,0,0,0},
+	{"discard",discardCommand,1,"rsF",0,0,0,0,0,0},
 	// {"sync",syncCommand,1,"ars",0,NULL,0,0,0,0,0},
 	// {"psync",syncCommand,3,"ars",0,NULL,0,0,0,0,0},
 	// {"replconf",replconfCommand,-1,"arslt",0,NULL,0,0,0,0,0},
@@ -3547,8 +3731,8 @@ struct rliteCommand rliteCommandTable[] = {
 	// {"punsubscribe",punsubscribeCommand,-1,"rpslt",0,NULL,0,0,0,0,0},
 	// {"publish",publishCommand,3,"pltrF",0,NULL,0,0,0,0,0},
 	// {"pubsub",pubsubCommand,-2,"pltrR",0,NULL,0,0,0,0,0},
-	// {"watch",watchCommand,-2,"rsF",0,NULL,1,-1,1,0,0},
-	// {"unwatch",unwatchCommand,1,"rsF",0,NULL,0,0,0,0,0},
+	{"watch",watchCommand,-2,"rsF",0,1,-1,1,0,0},
+	{"unwatch",unwatchCommand,1,"rsF",0,0,0,0,0,0},
 	// {"cluster",clusterCommand,-2,"ar",0,NULL,0,0,0,0,0},
 	{"restore",restoreCommand,-4,"awm",0,1,1,1,0,0},
 	// {"restore-asking",restoreCommand,-4,"awmk",0,NULL,1,1,1,0,0},
