@@ -962,7 +962,11 @@ static void echoCommand(rliteClient *c)
 
 static void pingCommand(rliteClient *c)
 {
-	c->reply = createStringObject("PONG", 4);
+	if (c->argc == 2) {
+		c->reply = createStringTypeObject(RLITE_REPLY_STATUS, c->argv[1], c->argvlen[1]);
+	} else {
+		c->reply = createStatusObject("PONG");
+	}
 }
 
 static void zaddGenericCommand(rliteClient *c, int incr) {
