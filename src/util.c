@@ -316,3 +316,19 @@ unsigned long long rl_mstime()
 	gettimeofday(&tp, NULL);
 	return tp.tv_sec * 1000 + tp.tv_usec / 1000;
 }
+
+double rl_strtod(unsigned char *_str, long strlen, unsigned char **_eptr) {
+	double d;
+	char str[40];
+	char *eptr;
+	if (strlen > 39) {
+		strlen = 39;
+	}
+	memcpy(str, _str, strlen);
+	str[strlen] = 0;
+	d = strtod(str, &eptr);
+	if (_eptr) {
+		*_eptr = _str + (eptr - str);
+	}
+	return d;
+}

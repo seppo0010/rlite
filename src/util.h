@@ -66,5 +66,6 @@ double get_double(const unsigned char *p);
 void put_double(unsigned char *p, double v);
 int sha1(const unsigned char *data, long datalen, unsigned char digest[20]);
 unsigned long long rl_mstime();
+double rl_strtod(unsigned char *str, long strlen, unsigned char **eptr);
 
 #endif

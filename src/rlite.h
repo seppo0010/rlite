@@ -10,6 +10,7 @@
 #include "type_set.h"
 #include "type_list.h"
 #include "type_string.h"
+#include "sort.h"
 #include "restore.h"
 #include "dump.h"
 #include "util.h"
