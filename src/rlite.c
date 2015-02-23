@@ -1257,3 +1257,17 @@ int rl_flushdb(struct rlite *db)
 cleanup:
 	return retval;
 }
+
+int rl_flushall(struct rlite *db)
+{
+	int retval, i;
+	int selected_database = db->selected_database;
+
+	for (i = 0; i < db->number_of_databases; i++) {
+		db->selected_database = i;
+		RL_CALL(rl_flushdb, RL_OK, db);
+	}
+	db->selected_database = selected_database;
+cleanup:
+	return retval;
+}

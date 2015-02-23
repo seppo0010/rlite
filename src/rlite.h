@@ -129,6 +129,7 @@ int rl_rename(struct rlite *db, const unsigned char *src, long srclen, const uns
 int rl_dbsize(struct rlite *db, long *size);
 int rl_keys(struct rlite *db, unsigned char *pattern, long patternlen, long *size, unsigned char ***result, long **resultlen);
 int rl_randomkey(struct rlite *db, unsigned char **key, long *keylen);
+int rl_flushall(struct rlite *db);
 int rl_flushdb(struct rlite *db);
 
 extern rl_data_type rl_data_type_header;
