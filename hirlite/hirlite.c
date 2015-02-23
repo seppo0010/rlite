@@ -603,6 +603,7 @@ static rliteContext *_rliteConnect(const char *path) {
 		goto cleanup;
 	}
 	context->inTransaction = 0;
+	context->transactionFailed = 0;
 	context->watchedKeysLength = context->enqueuedCommandsLength = 0;
 	context->watchedKeysAlloc = context->enqueuedCommandsAlloc = 0;
 	context->watchedKeys = NULL;
@@ -677,6 +678,7 @@ static void multiCommand(rliteClient *c) {
 		return;
 	}
 	c->context->inTransaction = 1;
+	c->context->transactionFailed = 0;
 	c->reply = createStatusObject(RLITE_STR_OK);
 }
 
@@ -705,6 +707,7 @@ static void discard(rliteClient *c) {
 	c->context->enqueuedCommandsAlloc = 0;
 
 	c->context->inTransaction = 0;
+	c->context->transactionFailed = 0;
 }
 
 static void discardCommand(rliteClient *c) {
@@ -718,6 +721,10 @@ static void execCommand(rliteClient *c) {
 	if (!c->context->inTransaction) {
 		c->reply = createErrorObject("ERR EXEC without MULTI");
 		return;
+	}
+	if (c->context->transactionFailed) {
+		c->reply = createErrorObject("EXECABORT Transaction discarded because of previous errors.");
+		goto cleanup;
 	}
 	retval = rl_check_watched_keys(c->context->db, c->context->watchedKeysLength, c->context->watchedKeys);
 	RLITE_SERVER_ERR(c, retval);
@@ -827,6 +834,12 @@ int rliteGetReply(rliteContext *c, void **reply) {
 	return RLITE_OK;
 }
 
+static void flagTransactions(rliteClient *c) {
+	if (c->context->inTransaction) {
+		c->context->transactionFailed = 1;
+	}
+}
+
 static int __rliteAppendCommandClient(rliteClient *client) {
 	if (client->argc == 0) {
 		return RLITE_ERR;
@@ -838,9 +851,11 @@ static int __rliteAppendCommandClient(rliteClient *client) {
 	int i, retval = RLITE_OK;
 	if (!command) {
 		retval = addReplyErrorFormat(client->context, "unknown command '%s'", (char*)client->argv[0]);
+		flagTransactions(client);
 	} else if ((command->arity > 0 && command->arity != client->argc) ||
 		(client->argc < -command->arity)) {
 		retval = addReplyErrorFormat(client->context, "wrong number of arguments for '%s' command", command->name);
+		flagTransactions(client);
 	} else {
 		if (client->context->inTransaction && (command->proc != execCommand && command->proc != discardCommand &&
 					command->proc != multiCommand && command->proc != watchCommand)) {

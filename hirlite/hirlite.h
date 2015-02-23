@@ -102,6 +102,7 @@ typedef struct rliteContext {
 	size_t hashtableLimitValue;
 
 	short inTransaction;
+	short transactionFailed;
 	size_t watchedKeysAlloc;
 	size_t watchedKeysLength;
 	struct watched_key **watchedKeys;
