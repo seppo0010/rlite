@@ -97,6 +97,7 @@ typedef struct rliteContext {
 	int replyAlloc;
 	rlite *db;
 	int debugSkiplist;
+	int cluster_enabled;
 	size_t hashtableLimitEntries;
 	size_t hashtableLimitValue;
 

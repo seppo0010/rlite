@@ -1,10 +1,10 @@
+#include <stdio.h>
 #include "constants.h"
 #include <assert.h>
 #include <errno.h>
 #include <ctype.h>
 #include <math.h>
 #include <stdlib.h>
-#include <stdio.h>
 #include <string.h>
 #include <strings.h>
 #include <sys/time.h>
@@ -594,6 +594,7 @@ static rliteContext *_rliteConnect(const char *path) {
 	context->replyAlloc = DEFAULT_REPLIES_SIZE;
 	context->debugSkiplist = 0;
 	context->hashtableLimitEntries = 0;
+	context->cluster_enabled = 0;
 	context->hashtableLimitValue = 0;
 	int retval = rl_open(path, &context->db, RLITE_OPEN_READWRITE | RLITE_OPEN_CREATE);
 	if (retval != RL_OK) {
@@ -3599,6 +3600,115 @@ static void objectCommand(rliteClient *c) {
 	}
 }
 
+static void sortCommand(rliteClient *c) {
+	int retval;
+	int j, desc = 0, alpha = 0;
+	long limit_start = 0, limit_count = -1;
+	int syntax_error = 0;
+	unsigned char *storekey = NULL, *sortby = NULL;
+	long storekeylen, sortbylen;
+	int dontsort = 0;
+	int getc = 0;
+	// allocing the maximum number possible
+	// this is wasteful, but no need to worry about realloc
+	// and it is not that many probably anyway... hopefully
+	unsigned char **getv = malloc(sizeof(unsigned char *) * c->argc);
+	long *getvlen = malloc(sizeof(long) * c->argc);
+	long i, objc;
+	unsigned char **objv;
+	long *objvlen;
+
+	/* The SORT command has an SQL-alike syntax, parse it */
+	j = 2;
+	while(j < c->argc) {
+		int leftargs = c->argc-j-1;
+		if (!strcasecmp(c->argv[j],"asc")) {
+			desc = 0;
+		} else if (!strcasecmp(c->argv[j],"desc")) {
+			desc = 1;
+		} else if (!strcasecmp(c->argv[j],"alpha")) {
+			alpha = 1;
+		} else if (!strcasecmp(c->argv[j],"limit") && leftargs >= 2) {
+			if ((getLongFromObjectOrReply(c, c->argv[j+1], &limit_start, NULL)
+				 != RL_OK) ||
+				(getLongFromObjectOrReply(c, c->argv[j+2], &limit_count, NULL)
+				 != RL_OK))
+			{
+				syntax_error++;
+				break;
+			}
+			j+=2;
+		} else if (!strcasecmp(c->argv[j],"store") && leftargs >= 1) {
+			storekey = (unsigned char*)c->argv[j+1];
+			storekeylen = c->argvlen[j+1];
+			j++;
+		} else if (!strcasecmp(c->argv[j],"by") && leftargs >= 1) {
+			sortby = (unsigned char *)c->argv[j+1];
+			sortbylen = c->argvlen[j+1];
+			/* If the BY pattern does not contain '*', i.e. it is constant,
+			 * we don't need to sort nor to lookup the weight keys. */
+			if (strchr(c->argv[j+1],'*') == NULL) {
+				dontsort = 1;
+			} else {
+				/* If BY is specified with a real patter, we can't accept
+				 * it in cluster mode. */
+				if (c->context->cluster_enabled) {
+					c->reply = createErrorObject("ERR BY option of SORT denied in Cluster mode.");
+					syntax_error++;
+					break;
+				}
+			}
+			j++;
+		} else if (!strcasecmp(c->argv[j],"get") && leftargs >= 1) {
+			if (c->context->cluster_enabled) {
+				c->reply = createErrorObject("ERR GET option of SORT denied in Cluster mode.");
+				syntax_error++;
+				break;
+			}
+			getv[getc] = (unsigned char *)c->argv[j+1];
+			getvlen[getc++] = c->argvlen[j+1];
+			j++;
+		} else {
+			syntax_error++;
+			break;
+		}
+		j++;
+	}
+
+	/* Handle syntax errors set during options parsing. */
+	if (syntax_error) {
+		c->reply = createErrorObject(RLITE_SYNTAXERR);
+		goto cleanup;
+	}
+	retval = rl_sort(c->context->db, (unsigned char *)c->argv[1], c->argvlen[1], sortby, sortbylen, dontsort, alpha, desc, limit_start, limit_count, getc, getv, getvlen, storekey, storekeylen, &objc, &objv, &objvlen);
+	if (retval == RL_NAN) {
+		c->reply = createErrorObject("ERR One or more scores can't be converted into double");
+		goto cleanup;
+	}
+	RLITE_SERVER_ERR(c, retval);
+	if (storekey) {
+		c->reply = createLongLongObject(objc);
+	} else {
+		if (retval == RL_OK) {
+			c->reply = createReplyObject(RLITE_REPLY_ARRAY);
+			c->reply->elements = objc;
+			c->reply->element = malloc(sizeof(rliteReply*) * c->reply->elements);
+			for (i = 0; i < objc; i++) {
+				c->reply->element[i] = createStringObject((char *)objv[i], objvlen[i]);
+				rl_free(objv[i]);
+			}
+			rl_free(objv);
+			rl_free(objvlen);
+		} else {
+			c->reply = createReplyObject(RLITE_REPLY_ARRAY);
+			c->reply->elements = 0;
+		}
+	}
+cleanup:
+	free(getv);
+	free(getvlen);
+}
+
 struct rliteCommand rliteCommandTable[] = {
 	{"get",getCommand,2,"rF",0,1,1,1,0,0},
 	{"set",setCommand,-3,"wm",0,1,1,1,0,0},
@@ -3719,7 +3829,7 @@ struct rliteCommand rliteCommandTable[] = {
 	// {"replconf",replconfCommand,-1,"arslt",0,NULL,0,0,0,0,0},
 	{"flushdb",flushdbCommand,1,"w",0,0,0,0,0,0},
 	// {"flushall",flushallCommand,1,"w",0,NULL,0,0,0,0,0},
-	// {"sort",sortCommand,-2,"wm",0,sortGetKeys,1,1,1,0,0},
+	{"sort",sortCommand,-2,"wm",0,1,1,1,0,0},
 	// {"info",infoCommand,-1,"rlt",0,NULL,0,0,0,0,0},
 	// {"monitor",monitorCommand,1,"ars",0,NULL,0,0,0,0,0},
 	{"ttl",ttlCommand,2,"rF",0,1,1,1,0,0},
