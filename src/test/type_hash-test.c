@@ -573,6 +573,38 @@ cleanup:
 	rl_close(db);
 	return retval;
 }
+
+static int hiterator_destroy(int _commit)
+{
+	int retval;
+	fprintf(stderr, "Start hiterator_destroy %d\n", _commit);
+
+	rlite *db = NULL;
+	unsigned char *key = UNSIGN("my key");
+	long keylen = strlen((char *)key);
+	unsigned char *field = UNSIGN("my field");
+	long fieldlen = strlen((char *)field);
+	unsigned char *data = UNSIGN("my data");
+	long datalen = strlen((char *)data);
+	rl_hash_iterator *iterator;
+	RL_CALL_VERBOSE(setup_db, RL_OK, &db, _commit, 1);
+
+	RL_CALL_VERBOSE(rl_hset, RL_OK, db, key, keylen, field, fieldlen, data, datalen, NULL, 0);
+	RL_CALL_VERBOSE(rl_hset, RL_OK, db, key, keylen, field, fieldlen - 1, data, datalen - 1, NULL, 0);
+	RL_BALANCED();
+
+	RL_CALL_VERBOSE(rl_hgetall, RL_OK, db, &iterator, key, keylen);
+	RL_CALL_VERBOSE(rl_hash_iterator_next, RL_OK, iterator, NULL, NULL, NULL, NULL);
+	RL_CALL_VERBOSE(rl_hash_iterator_destroy, RL_OK, iterator);
+	RL_BALANCED();
+
+	fprintf(stderr, "End hiterator_destroy\n");
+	retval = RL_OK;
+cleanup:
+	rl_close(db);
+	return retval;
+}
+
 RL_TEST_MAIN_START(type_hash_test)
 {
 	int i;
@@ -592,5 +624,6 @@ RL_TEST_MAIN_START(type_hash_test)
 		RL_TEST(basic_test_hincrbyfloat_invalid, i);
 		RL_TEST(basic_test_hset_del, i);
 	}
+	RL_TEST(hiterator_destroy, 0);
 }
 RL_TEST_MAIN_END

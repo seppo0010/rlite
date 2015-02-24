@@ -1544,6 +1544,11 @@ cleanup:
 
 int rl_btree_iterator_destroy(rl_btree_iterator *iterator)
 {
+	int retval = RL_OK;
+	while (--iterator->position >= 0) {
+		RL_CALL(rl_btree_node_nocache_destroy, RL_OK, iterator->db, iterator->nodes[iterator->position].node);
+	}
+cleanup:
 	rl_free(iterator);
-	return RL_OK;
+	return retval;
 }
