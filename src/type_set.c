@@ -772,17 +772,19 @@ int rl_set_delete(rlite *db, long value_page)
 	void *tmp;
 	RL_CALL(rl_read, RL_FOUND, db, &rl_data_type_btree_hash_sha1_long, value_page, &rl_btree_type_hash_sha1_long, &tmp, 1);
 	hash = tmp;
-	RL_CALL2(rl_btree_iterator_create, RL_OK, RL_NOT_FOUND, db, hash, &iterator);
-	if (retval == RL_OK) {
-		while ((retval = rl_btree_iterator_next(iterator, NULL, &tmp)) == RL_OK) {
-			member = *(long *)tmp;
-			rl_multi_string_delete(db, member);
-			rl_free(tmp);
-		}
-		iterator = NULL;
+	if (hash->number_of_elements) {
+		RL_CALL2(rl_btree_iterator_create, RL_OK, RL_NOT_FOUND, db, hash, &iterator);
+		if (retval == RL_OK) {
+			while ((retval = rl_btree_iterator_next(iterator, NULL, &tmp)) == RL_OK) {
+				member = *(long *)tmp;
+				rl_multi_string_delete(db, member);
+				rl_free(tmp);
+			}
+			iterator = NULL;
 
-		if (retval != RL_END) {
-			goto cleanup;
+			if (retval != RL_END) {
+				goto cleanup;
+			}
 		}
 	}
 
