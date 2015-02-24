@@ -1730,7 +1730,7 @@ cleanup:
 static void hdelCommand(rliteClient *c) {
 	unsigned char *key = UNSIGN(c->argv[1]);
 	size_t keylen = c->argvlen[1];
-	long delcount;
+	long delcount = 0;
 
 	int j, retval;
 	// memberslen needs long, we have size_t (unsigned long)
