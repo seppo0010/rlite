@@ -1038,8 +1038,10 @@ static void pingCommand(rliteClient *c)
 {
 	if (c->argc == 2) {
 		c->reply = createStringTypeObject(RLITE_REPLY_STATUS, c->argv[1], c->argvlen[1]);
-	} else {
+	} else if (c->argc == 1) {
 		c->reply = createStatusObject("PONG");
+	} else {
+		addReplyErrorFormat(c->context, RLITE_WRONGNUMBEROFARGUMENTS, c->argv[0]);
 	}
 }
 
