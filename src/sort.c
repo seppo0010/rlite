@@ -451,6 +451,7 @@ int rl_sort(struct rlite *db, unsigned char *key, long keylen, unsigned char *so
 		if (sortby && alpha) {
 			for (j = 0; j < vectorlen; j++) {
 				rl_free(vector[j].u.cmpobj.obj);
+				vector[j].u.cmpobj.obj = NULL;
 			}
 		}
 	}
