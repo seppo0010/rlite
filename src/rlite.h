@@ -120,6 +120,7 @@ int rl_alloc_page_number(rlite *db, long *page_number);
 int rl_write(struct rlite *db, rl_data_type *type, long page, void *obj);
 int rl_purge_cache(struct rlite *db, long page);
 int rl_delete(struct rlite *db, long page);
+int rl_dirty_hash(struct rlite *db, unsigned char **hash);
 int rl_commit(struct rlite *db);
 int rl_discard(struct rlite *db);
 int rl_is_balanced(struct rlite *db);

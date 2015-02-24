@@ -589,6 +589,7 @@ static rliteContext *_rliteConnect(const char *path) {
 		context = NULL;
 		goto cleanup;
 	}
+	context->writeCommand = NULL;
 	context->replyPosition = 0;
 	context->replyLength = 0;
 	context->replyAlloc = DEFAULT_REPLIES_SIZE;
@@ -716,8 +717,10 @@ static void discardCommand(rliteClient *c) {
 }
 
 static void execCommand(rliteClient *c) {
+	short written = 0;
 	int retval;
 	size_t i;
+	unsigned char *oldhash = NULL, *newhash = NULL;
 	if (!c->context->inTransaction) {
 		c->reply = createErrorObject("ERR EXEC without MULTI");
 		return;
@@ -746,8 +749,45 @@ static void execCommand(rliteClient *c) {
 		client = c->context->enqueuedCommands[i];
 		client->reply = NULL;
 		command = lookupCommand(client->argv[0], client->argvlen[0]);
+
+		if (client->context->writeCommand) {
+			RL_CALL(rl_dirty_hash, RL_OK, client->context->db, &oldhash);
+		}
+
 		command->proc(client);
 		c->reply->element[i] = client->reply;
+
+		if (client->context->writeCommand) {
+			if (!written) {
+				// ugly code warning!
+				// redis replication writes the multi/exec command when there
+				// is a write command, regardless any data is changed
+				int i;
+				for (i = strlen(command->sflags) - 1; i >= 0; i--) {
+					if (command->sflags[i] == 'w') {
+						char *argv[] = {"multi"};
+						size_t argvlen[] = {5};
+						c->context->writeCommand(c->context->db->selected_database, 1, argv, argvlen);
+						written = 1;
+						break;
+					}
+				}
+			}
+			RL_CALL(rl_dirty_hash, RL_OK, client->context->db, &newhash);
+			if (newhash && (!oldhash || memcmp(newhash, oldhash, 20) != 0)) {
+				client->context->writeCommand(client->context->db->selected_database, client->argc, client->argv, client->argvlen);
+			}
+		}
+		rl_free(oldhash);
+		rl_free(newhash);
+		oldhash = NULL;
+		newhash = NULL;
+	}
+
+	if (written) {
+		char *argv[] = {"exec"};
+		size_t argvlen[] = {4};
+		c->context->writeCommand(c->context->db->selected_database, 1, argv, argvlen);
 	}
 
 	retval = rl_commit(c->context->db);
@@ -755,7 +795,10 @@ static void execCommand(rliteClient *c) {
 	if (retval != RL_OK) {
 		goto cleanup;
 	}
+
 cleanup:
+	rl_free(oldhash);
+	rl_free(newhash);
 	discard(c);
 	return;
 }
@@ -845,6 +888,7 @@ static int __rliteAppendCommandClient(rliteClient *client) {
 		return RLITE_ERR;
 	}
 
+	unsigned char *oldhash = NULL, *newhash = NULL;
 	void *tmp;
 	size_t newAlloc;
 	struct rliteCommand *command = lookupCommand(client->argv[0], client->argvlen[0]);
@@ -896,14 +940,28 @@ static int __rliteAppendCommandClient(rliteClient *client) {
 			retval = addReply(client->context, client->reply);
 		} else {
 			client->reply = NULL;
+
+			if (client->context->writeCommand) {
+				RL_CALL(rl_dirty_hash, RL_OK, client->context->db, &oldhash);
+			}
+
 			command->proc(client);
 			if (client->reply) {
 				retval = addReply(client->context, client->reply);
 			}
-			rl_commit(client->context->db);
+
+			if (client->context->writeCommand) {
+				RL_CALL(rl_dirty_hash, RL_OK, client->context->db, &newhash);
+				if (newhash && (!oldhash || memcmp(newhash, oldhash, 20) != 0)) {
+					client->context->writeCommand(client->context->db->selected_database, client->argc, client->argv, client->argvlen);
+				}
+			}
+			RL_CALL(rl_commit, RL_OK, client->context->db);
 		}
 	}
 cleanup:
+	rl_free(oldhash);
+	rl_free(newhash);
 	return retval;
 }
 

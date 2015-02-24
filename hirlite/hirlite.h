@@ -100,6 +100,7 @@ typedef struct rliteContext {
 	int cluster_enabled;
 	size_t hashtableLimitEntries;
 	size_t hashtableLimitValue;
+	void (*writeCommand)(int dbid, int argc, char **argv, size_t *argvlen);
 
 	short inTransaction;
 	short transactionFailed;

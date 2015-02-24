@@ -14,6 +14,7 @@
 #include "type_hash.h"
 #include "rlite.h"
 #include "util.h"
+#include "../deps/sha1.h"
 #ifdef DEBUG
 #include <valgrind/valgrind.h>
 #endif
@@ -806,6 +807,40 @@ int rl_delete(struct rlite *db, long page_number)
 	RL_CALL(rl_long_set, RL_OK, db, db->next_empty_page, page_number);
 	db->next_empty_page = page_number;
 cleanup:
+	return retval;
+}
+
+int rl_dirty_hash(struct rlite *db, unsigned char **hash)
+{
+	long i;
+	int retval = RL_OK;
+	rl_page *page;
+	SHA1_CTX sha;
+	unsigned char *data = NULL;
+
+	if (db->write_pages_len == 0) {
+		*hash = NULL;
+		goto cleanup;
+	}
+
+	RL_MALLOC(data, db->page_size * sizeof(unsigned char));
+	RL_MALLOC(*hash, sizeof(unsigned char) * 20);
+	SHA1Init(&sha);
+	for (i = 0; i < db->write_pages_len; i++) {
+		page = db->write_pages[i];
+		memset(data, 0, db->page_size);
+		if (page->type) {
+			retval = page->type->serialize(db, page->obj, data);
+		}
+		SHA1Update(&sha, data, db->page_size);
+	}
+	SHA1Final(*hash, &sha);
+cleanup:
+	rl_free(data);
+	if (retval != RL_OK) {
+		rl_free(*hash);
+		*hash = NULL;
+	}
 	return retval;
 }
 
