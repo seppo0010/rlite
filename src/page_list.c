@@ -387,11 +387,13 @@ int rl_list_remove_element(rlite *db, rl_list *list, long list_page, long positi
 			RL_CALL(rl_read, RL_FOUND, db, list->type->list_node_type, node->left, list, &_node, 1);
 			sibling_node = _node;
 			sibling_node->right = node->right;
+			RL_CALL(rl_write, RL_OK, db, list->type->list_node_type, node->left, sibling_node);
 		}
 		if (node->right) {
 			RL_CALL(rl_read, RL_FOUND, db, list->type->list_node_type, node->right, list, &_node, 1);
 			sibling_node = _node;
 			sibling_node->left = node->left;
+			RL_CALL(rl_write, RL_OK, db, list->type->list_node_type, node->right, sibling_node);
 		}
 		RL_CALL(rl_delete, RL_OK, db, number);
 	}

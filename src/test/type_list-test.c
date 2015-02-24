@@ -471,7 +471,7 @@ RL_TEST_MAIN_START(type_list_test)
 		RL_TEST(basic_test_lpush_llen, 100, i);
 		RL_TEST(basic_test_lpush_lpop, 100, i);
 		RL_TEST(basic_test_rpush_lpop, 100, i);
-		RL_TEST(basic_test_lpush_rpop, 100, i);
+		RL_TEST(basic_test_lpush_rpop, 500, i);
 		RL_TEST(basic_test_lpush_lindex, 100, i);
 		RL_TEST(basic_test_lpush_linsert, i);
 		RL_TEST(basic_test_lpushx, i);
