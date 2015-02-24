@@ -36,17 +36,12 @@ int rl_set(struct rlite *db, const unsigned char *key, long keylen, unsigned cha
 	unsigned char type;
 	long value_page, version;
 	retval = rl_key_get(db, key, keylen, &type, NULL, &value_page, NULL, &version);
-	if (retval == RL_OK && type != RL_TYPE_STRING) {
-		retval = RL_WRONG_TYPE;
-		goto cleanup;
-	}
 	if (retval == RL_FOUND) {
 		if (nx) {
 			goto cleanup;
 		}
 		else {
-			RL_CALL(rl_string_delete, RL_OK, db, value_page);
-			RL_CALL(rl_key_delete, RL_OK, db, key, keylen);
+			RL_CALL(rl_key_delete_with_value, RL_OK, db, key, keylen);
 		}
 	} else {
 		version = rand();
