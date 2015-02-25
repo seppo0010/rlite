@@ -2910,6 +2910,10 @@ static void incrGenericCommand(rliteClient *c, long long increment) {
 	long long newvalue;
 
 	int retval = rl_incr(c->context->db, key, keylen, increment, &newvalue);
+	if (retval == RL_NAN) {
+		c->reply = createErrorObject("ERR value is not an integer or out of range");
+		goto cleanup;
+	}
 	RLITE_SERVER_ERR(c, retval);
 	if (retval == RL_OK) {
 		c->reply = createLongLongObject(newvalue);
