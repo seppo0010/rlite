@@ -1,3 +1,0 @@
-[submodule "deps/rlite"]
-	path = deps/rlite
-	url = git@bitbucket.org:seppo0010/rlite.git
