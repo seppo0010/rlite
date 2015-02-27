@@ -263,6 +263,7 @@ int rl_open(const char *filename, rlite **_db, int flags)
 	rlite *db;
 	RL_MALLOC(db, sizeof(*db));
 
+	db->selected_database = 0;
 	db->page_size = DEFAULT_PAGE_SIZE;
 	db->read_pages = db->write_pages = NULL;
 	db->read_pages_alloc = db->read_pages_len = db->write_pages_len = db->write_pages_alloc = 0;
