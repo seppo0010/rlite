@@ -9,8 +9,10 @@ else
   DEBUG?=-g -ggdb
 endif
 
+CFLAGS +=  -I./
+
 DEBUG.gcc += -rdynamic
-CFLAGS.gcc += -std=c99 -I./
+CFLAGS.gcc += -std=c99
 
 ifeq ($(shell $(CC) -v 2>&1 | grep -c "clang version"), 1)
 DEBUG += ${DEBUG.clang}
