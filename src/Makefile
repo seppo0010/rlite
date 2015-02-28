@@ -68,6 +68,7 @@ hirlitetest: buildhirlitetest
 	./hirlite-test
 
 test: rlitetest hirlitetest
+	echo
 
 vrlitetest: buildtest
 	valgrind --track-origins=yes --leak-check=full --show-reachable=yes ./rlite-test
@@ -76,6 +77,7 @@ vhirlitetest: buildhirlitetest
 	valgrind --track-origins=yes --leak-check=full --show-reachable=yes ./hirlite-test
 
 vtest: vrlitetest vhirlitetest
+	echo
 
 clean:
 	rm -rf *-test *.o *.a *.dSYM *.gcda *.gcno lcov
