@@ -589,6 +589,7 @@ static rliteContext *_rliteConnect(const char *path) {
 		context = NULL;
 		goto cleanup;
 	}
+	context->err = 0;
 	context->writeCommand = NULL;
 	context->replyPosition = 0;
 	context->replyLength = 0;
