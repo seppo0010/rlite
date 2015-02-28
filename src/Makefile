@@ -2,10 +2,10 @@ OPTIMIZATION?=-O2
 
 ifeq ($(uname_S),SunOS)
   # make isinf() available
-  CFLAGS?= -pedantic $(OPTIMIZATION) -Wall -W -D__EXTENSIONS__ -D_XPG6
+  CFLAGS?= -pedantic $(OPTIMIZATION) -Wall -W -D__EXTENSIONS__ -D_XPG6 -fPIC
   DEBUG?=-g -ggdb
 else
-  CFLAGS?= -pedantic $(OPTIMIZATION) -Wall -W $(ARCH) $(PROF)
+  CFLAGS?= -pedantic $(OPTIMIZATION) -Wall -W $(ARCH) $(PROF) -fPIC
   DEBUG?=-g -ggdb
 endif
 
