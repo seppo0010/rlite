@@ -3799,7 +3799,7 @@ cleanup:
 	free(getvlen);
 }
 
-struct rliteCommand rliteCommandTable[] = {
+static struct rliteCommand rliteCommandTable[] = {
 	{"get",getCommand,2,"rF",0,1,1,1,0,0},
 	{"set",setCommand,-3,"wm",0,1,1,1,0,0},
 	{"setnx",setnxCommand,3,"wmF",0,1,1,1,0,0},
