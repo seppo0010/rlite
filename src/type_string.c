@@ -6,7 +6,7 @@
 #include "page_multi_string.h"
 #include "type_string.h"
 #include "util.h"
-#include "../deps/hyperloglog.h"
+#include "hyperloglog.h"
 
 static int rl_string_get_objects(rlite *db, const unsigned char *key, long keylen, long *_page_number, unsigned long long *expires, long *version)
 {

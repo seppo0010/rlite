@@ -11,7 +11,7 @@
 #include <time.h>
 #include <unistd.h>
 
-#include "../deps/hyperloglog.h"
+#include "hyperloglog.h"
 #include "hirlite.h"
 #include "util.h"
 
@@ -29,7 +29,9 @@
 	if (retval == RL_NAN) {\
 		c->reply = createErrorObject("ERR resulting score is not a number (NaN)");\
 		goto cleanup;\
-	}\
+	}
+
+int strerror_r(int, char *, size_t);
 
 static struct rliteCommand *lookupCommand(const char *name, size_t UNUSED(len));
 static void __rliteSetError(rliteContext *c, int type, const char *str);

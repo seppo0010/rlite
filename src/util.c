@@ -2,7 +2,7 @@
 #include <string.h>
 #include <stdio.h>
 #include <math.h>
-#include "../deps/sha1.h"
+#include "sha1.h"
 #ifdef RL_DEBUG
 #include <unistd.h>
 #include <sys/stat.h>

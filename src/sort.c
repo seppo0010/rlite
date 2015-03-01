@@ -35,6 +35,8 @@
 #include <math.h> /* isnan() */
 #include <errno.h>
 
+int strcoll(const char *, const char *);
+
 static int sort_desc = 0;
 static int sort_alpha = 0;
 static int sort_bypattern = 0;

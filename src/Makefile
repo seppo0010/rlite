@@ -52,7 +52,7 @@ clang-analyzer:
 libhirlite.a: hirlite.o librlite.a
 	ar -cq libhirlite.a rlite.o page_skiplist.o page_string.o page_list.o page_btree.o page_key.o type_string.o type_list.o type_set.o type_zset.o type_hash.o page_long.o page_multi_string.o util.o utilfromredis.o hyperloglog.o sha1.o crc64.o restore.o dump.o lzf_c.o lzf_d.o sort.o pqsort.o hirlite.o
 
-librlite.a: rlite.o page_skiplist.o page_string.o page_list.o page_btree.o page_key.o page_multi_string.o page_long.o type_string.o type_list.o type_set.o type_zset.o type_hash.o util.o restore.o dump.o sort.o pqsort.o ../deps/utilfromredis.o ../deps/hyperloglog.o ../deps/sha1.o ../deps/crc64.o ../deps/lzf_c.o ../deps/lzf_d.o
+librlite.a: rlite.o page_skiplist.o page_string.o page_list.o page_btree.o page_key.o page_multi_string.o page_long.o type_string.o type_list.o type_set.o type_zset.o type_hash.o util.o restore.o dump.o sort.o pqsort.o utilfromredis.o hyperloglog.o sha1.o crc64.o lzf_c.o lzf_d.o
 	ar -cq librlite.a rlite.o page_skiplist.o page_string.o page_list.o page_btree.o page_key.o type_string.o type_list.o type_set.o type_zset.o type_hash.o page_long.o page_multi_string.o util.o utilfromredis.o hyperloglog.o sha1.o crc64.o lzf_c.o lzf_d.o restore.o dump.o sort.o pqsort.o
 
 buildtest: librlite.a test/rlite-test.o test/btree-test.o test/list-test.o test/string-test.o test/multi_string-test.o test/multi-test.o test/key-test.o test/type_string-test.o test/type_list-test.o test/type_set-test.o test/type_zset-test.o test/type_hash-test.o test/skiplist-test.o test/long-test.o test/restore-test.o test/hyperloglog-test.o test/dump-test.o test/sort-test.o test/test_util.o test/test.o

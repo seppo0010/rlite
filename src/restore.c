@@ -2,9 +2,9 @@
 #include "page_key.h"
 #include "rlite.h"
 #include "util.h"
-#include "../deps/crc64.h"
-#include "../deps/endianconv.h"
-#include "../deps/lzf.h"
+#include "crc64.h"
+#include "endianconv.h"
+#include "lzf.h"
 
 static int verify(unsigned char *data, long datalen) {
 	unsigned char *footer;

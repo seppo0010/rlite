@@ -1,4 +1,4 @@
-#include "../../deps/hyperloglog.h"
+#include "../hyperloglog.h"
 #include "test_util.h"
 #include "../rlite.h"
 

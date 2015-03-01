@@ -5,7 +5,7 @@
 #include <ctype.h>
 #include <string.h>
 #include <limits.h>
-#include "../deps/utilfromredis.h"
+#include "utilfromredis.h"
 
 // http://stackoverflow.com/questions/1701055/what-is-the-maximum-length-in-chars-needed-to-represent-any-double-value
 #define MAX_DOUBLE_DIGITS (3 + DBL_MANT_DIG - DBL_MIN_EXP)

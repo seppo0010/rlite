@@ -1,5 +1,5 @@
-#include "../../deps/crc64.h"
-#include "../../deps/endianconv.h"
+#include "../crc64.h"
+#include "../endianconv.h"
 
 #include <stdlib.h>
 #include <stdio.h>

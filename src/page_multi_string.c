@@ -1,6 +1,6 @@
 #include <stdlib.h>
 #include <string.h>
-#include "../deps/sha1.h"
+#include "sha1.h"
 #include "rlite.h"
 #include "page_list.h"
 #include "page_string.h"

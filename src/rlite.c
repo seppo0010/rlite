@@ -14,7 +14,7 @@
 #include "type_hash.h"
 #include "rlite.h"
 #include "util.h"
-#include "../deps/sha1.h"
+#include "sha1.h"
 #ifdef RL_DEBUG
 #include <valgrind/valgrind.h>
 #endif
