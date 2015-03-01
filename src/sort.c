@@ -213,7 +213,7 @@ static int sortCompare(const void *s1, const void *s2) {
 	return sort_desc ? -cmp : cmp;
 }
 
-int rl_sort(struct rlite *db, unsigned char *key, long keylen, unsigned char *sortby, long sortbylen, int dontsort, int alpha, int desc, long limit_start, long limit_count, int getc, unsigned char **getv, long *getvlen, unsigned char *storekey, long storekeylen, long *retobjc, unsigned char ***retobjv, long **retobjvlen) {
+int rl_sort(struct rlite *db, unsigned char *key, long keylen, unsigned char *sortby, long sortbylen, int dontsort, int inLuaScript, int alpha, int desc, long limit_start, long limit_count, int getc, unsigned char **getv, long *getvlen, unsigned char *storekey, long storekeylen, long *retobjc, unsigned char ***retobjv, long **retobjvlen) {
 	int i, j, k, retval;
 	long vectorlen, start, end;
 	long size;
@@ -247,7 +247,7 @@ int rl_sort(struct rlite *db, unsigned char *key, long keylen, unsigned char *so
 	 * scripting and replication. */
 	if (dontsort &&
 		type == RL_TYPE_SET &&
-		storekey)
+		(storekey || inLuaScript))
 	{
 		/* Force ALPHA sorting */
 		dontsort = 0;

@@ -598,6 +598,7 @@ static rliteContext *_rliteConnect(const char *path) {
 	context->hashtableLimitEntries = 0;
 	context->cluster_enabled = 0;
 	context->hashtableLimitValue = 0;
+	context->inLuaScript = 0;
 	int retval = rl_open(path, &context->db, RLITE_OPEN_READWRITE | RLITE_OPEN_CREATE);
 	if (retval != RL_OK) {
 		free(context);
@@ -3770,7 +3771,7 @@ static void sortCommand(rliteClient *c) {
 		c->reply = createErrorObject(RLITE_SYNTAXERR);
 		goto cleanup;
 	}
-	retval = rl_sort(c->context->db, (unsigned char *)c->argv[1], c->argvlen[1], sortby, sortbylen, dontsort, alpha, desc, limit_start, limit_count, getc, getv, getvlen, storekey, storekeylen, &objc, &objv, &objvlen);
+	retval = rl_sort(c->context->db, (unsigned char *)c->argv[1], c->argvlen[1], sortby, sortbylen, dontsort, c->context->inLuaScript, alpha, desc, limit_start, limit_count, getc, getv, getvlen, storekey, storekeylen, &objc, &objv, &objvlen);
 	if (retval == RL_NAN) {
 		c->reply = createErrorObject("ERR One or more scores can't be converted into double");
 		goto cleanup;

@@ -14,5 +14,5 @@ typedef struct rliteSortObject {
 	} u;
 } rliteSortObject;
 
-int rl_sort(struct rlite *db, unsigned char *key, long keylen, unsigned char *sortby, long sortbylen, int dontsort, int alpha, int desc, long limit_start, long limit_count, int getc, unsigned char **getv, long *getvlen, unsigned char *storekey, long storekeylen, long *retobjc, unsigned char ***retobjv, long **retobjvlen);
+int rl_sort(struct rlite *db, unsigned char *key, long keylen, unsigned char *sortby, long sortbylen, int dontsort, int inLuaScript, int alpha, int desc, long limit_start, long limit_count, int getc, unsigned char **getv, long *getvlen, unsigned char *storekey, long storekeylen, long *retobjc, unsigned char ***retobjv, long **retobjvlen);
 #endif
