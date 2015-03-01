@@ -15,13 +15,13 @@ typedef struct {
 	int score_size;
 	int value_size;
 	int (*cmp)(void *v1, void *v2);
-#ifdef DEBUG
+#ifdef RL_DEBUG
 	int (*formatter)(void *v, char **str, int *size);
 #endif
 } rl_btree_type;
 
 int sha1_cmp(void *v1, void *v2);
-#ifdef DEBUG
+#ifdef RL_DEBUG
 int sha1_formatter(void *v, char **str, int *size);
 #endif
 

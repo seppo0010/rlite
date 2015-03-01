@@ -81,7 +81,7 @@ int setup_db(struct rlite **db, int file, int del);
 
 #define EXPECT_STR(s1, s2, l2) EXPECT_BYTES(s1, strlen((char *)s1), s2, l2)
 
-#ifdef DEBUG
+#ifdef RL_DEBUG
 #define RL_TEST(func, ...)\
 	if (*passed_tests >= *skip_tests) {\
 		had_oom = expect_fail();\

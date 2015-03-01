@@ -3,7 +3,7 @@
 #include <stdio.h>
 #include <math.h>
 #include "../deps/sha1.h"
-#ifdef DEBUG
+#ifdef RL_DEBUG
 #include <unistd.h>
 #include <sys/stat.h>
 #include <execinfo.h>
@@ -24,7 +24,7 @@ int _sha1_formatter(unsigned char *data, char formatted[40])
 	return RL_OK;
 }
 
-#ifdef DEBUG
+#ifdef RL_DEBUG
 
 int test_mode = 0;
 int failed = 0;
@@ -159,7 +159,7 @@ int sha1_cmp(void *v1, void *v2)
 	return memcmp(v1, v2, sizeof(unsigned char) * 20);
 }
 
-#ifdef DEBUG
+#ifdef RL_DEBUG
 int long_formatter(void *v2, char **formatted, int *size)
 {
 	*formatted = rl_malloc(sizeof(char) * 22);

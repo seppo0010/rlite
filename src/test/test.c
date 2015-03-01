@@ -20,7 +20,7 @@
 #include "sort-test.h"
 #include "../util.h"
 
-#ifdef DEBUG
+#ifdef RL_DEBUG
 int main(int argc, char *argv[]) {
 	int skip_tests = 0, passed_tests = 0;
 	if (argc >= 2) {

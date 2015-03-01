@@ -13,7 +13,7 @@ typedef struct {
 	struct rl_data_type *list_node_type;
 	int element_size;
 	int (*cmp)(void *v1, void *v2);
-#ifdef DEBUG
+#ifdef RL_DEBUG
 	int (*formatter)(void *v, char **str, int *size);
 #endif
 } rl_list_type;

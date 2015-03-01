@@ -75,7 +75,7 @@ typedef struct {
 	long page_number;
 	rl_data_type *type;
 	void *obj;
-#ifdef DEBUG
+#ifdef RL_DEBUG
 	unsigned char *serialized_data;
 #endif
 } rl_page;

@@ -13,7 +13,7 @@ rl_btree_type rl_btree_type_hash_sha1_key = {
 	sizeof(unsigned char) * 20,
 	sizeof(rl_key),
 	sha1_cmp,
-#ifdef DEBUG
+#ifdef RL_DEBUG
 	sha1_formatter,
 #endif
 };
@@ -24,7 +24,7 @@ rl_btree_type rl_btree_type_hash_sha1_hashkey = {
 	sizeof(unsigned char) * 20,
 	sizeof(rl_hashkey),
 	sha1_cmp,
-#ifdef DEBUG
+#ifdef RL_DEBUG
 	sha1_formatter,
 #endif
 };
@@ -35,7 +35,7 @@ rl_btree_type rl_btree_type_set_long = {
 	sizeof(long),
 	0,
 	long_cmp,
-#ifdef DEBUG
+#ifdef RL_DEBUG
 	long_formatter,
 #endif
 };
@@ -46,7 +46,7 @@ rl_btree_type rl_btree_type_hash_long_long = {
 	sizeof(long),
 	sizeof(long),
 	long_cmp,
-#ifdef DEBUG
+#ifdef RL_DEBUG
 	long_formatter,
 #endif
 };
@@ -57,7 +57,7 @@ rl_btree_type rl_btree_type_hash_sha1_double = {
 	sizeof(unsigned char) * 20,
 	sizeof(double),
 	sha1_cmp,
-#ifdef DEBUG
+#ifdef RL_DEBUG
 	sha1_formatter,
 #endif
 };
@@ -68,7 +68,7 @@ rl_btree_type rl_btree_type_hash_sha1_long = {
 	sizeof(unsigned char) * 20,
 	sizeof(long),
 	sha1_cmp,
-#ifdef DEBUG
+#ifdef RL_DEBUG
 	sha1_formatter,
 #endif
 };
@@ -116,7 +116,7 @@ cleanup:
 	return retval;
 }
 
-#ifdef DEBUG
+#ifdef RL_DEBUG
 int rl_print_btree_node(rlite *UNUSED(db), rl_btree *btree, rl_btree_node *node, long level);
 #endif
 
@@ -924,13 +924,13 @@ int rl_btree_is_balanced(rlite *db, rl_btree *btree)
 	for (i = 0; i < size; i++) {
 		for (j = i + 1; j < size; j++) {
 			if (btree->type->cmp(scores[i], scores[j]) >= 0) {
-#ifdef DEBUG
+#ifdef RL_DEBUG
 				rl_print_btree(db, btree);
 #endif
 				fprintf(stderr, "btree is not sorted");
 				char *str;
 				RL_MALLOC(str, sizeof(char) * 100);
-#ifdef DEBUG
+#ifdef RL_DEBUG
 				fprintf(stderr, " (");
 				int strlen;
 				btree->type->formatter(scores[i], &str, &strlen);
@@ -952,7 +952,7 @@ cleanup:
 	return retval;
 }
 
-#ifdef DEBUG
+#ifdef RL_DEBUG
 int rl_print_btree_node(rlite *db, rl_btree *btree, rl_btree_node *node, long level)
 {
 	int retval = RL_OK;

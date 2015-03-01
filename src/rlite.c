@@ -15,7 +15,7 @@
 #include "rlite.h"
 #include "util.h"
 #include "../deps/sha1.h"
-#ifdef DEBUG
+#ifdef RL_DEBUG
 #include <valgrind/valgrind.h>
 #endif
 
@@ -431,7 +431,7 @@ cleanup:
 	return retval;
 }
 
-#ifdef DEBUG
+#ifdef RL_DEBUG
 void print_cache(rlite *db)
 {
 	printf("Cache read pages:");
@@ -450,7 +450,7 @@ void print_cache(rlite *db)
 }
 #endif
 
-#ifdef DEBUG
+#ifdef RL_DEBUG
 static int rl_search_cache(rlite *db, rl_data_type *type, long page_number, void **obj, long *position, rl_page **pages, long page_len)
 #else
 static int rl_search_cache(rlite *UNUSED(db), rl_data_type *UNUSED(type), long page_number, void **obj, long *position, rl_page **pages, long page_len)
@@ -463,7 +463,7 @@ static int rl_search_cache(rlite *UNUSED(db), rl_data_type *UNUSED(type), long p
 			pos = min + (max - min) / 2;
 			page = pages[pos];
 			if (page->page_number == page_number) {
-#ifdef DEBUG
+#ifdef RL_DEBUG
 				if (page->type != &rl_data_type_long && type != &rl_data_type_long && type != NULL && page->type != type) {
 					fprintf(stderr, "Type of page in cache (%s) doesn't match the asked one (%s)\n", page->type->name, type->name);
 					return RL_UNEXPECTED;
@@ -492,7 +492,7 @@ static int rl_search_cache(rlite *UNUSED(db), rl_data_type *UNUSED(type), long p
 			if (pages[pos]->page_number < page_number && pos < page_len) {
 				pos++;
 			}
-#ifdef DEBUG
+#ifdef RL_DEBUG
 			long i, prev;
 			rl_page *p;
 			for (i = 0; i < db->read_pages_len; i++) {
@@ -541,7 +541,7 @@ int rl_read_from_cache(rlite *db, rl_data_type *type, long page_number, void **o
 int rl_read(rlite *db, rl_data_type *type, long page, void *context, void **obj, int cache)
 {
 	// fprintf(stderr, "r %ld %s\n", page, type->name);
-#ifdef DEBUG
+#ifdef RL_DEBUG
 	int keep = 0;
 	long initial_page_size = db->page_size;
 	if (page == 0 && type != &rl_data_type_header) {
@@ -578,7 +578,7 @@ int rl_read(rlite *db, rl_data_type *type, long page, void *context, void **obj,
 		size_t read = fread(data, sizeof(unsigned char), db->page_size, driver->fp);
 		if (read != (size_t)db->page_size) {
 			if (page > 0) {
-#ifdef DEBUG
+#ifdef RL_DEBUG
 				print_cache(db);
 #endif
 				fprintf(stderr, "Unable to read page %ld on line %d\n", page, __LINE__);
@@ -633,7 +633,7 @@ int rl_read(rlite *db, rl_data_type *type, long page, void *context, void **obj,
 		page_obj->page_number = page;
 		page_obj->type = type;
 		page_obj->obj = obj ? *obj : NULL;
-#ifdef DEBUG
+#ifdef RL_DEBUG
 		keep = 1;
 		if (initial_page_size != db->page_size) {
 			page_obj->serialized_data = realloc(data, db->page_size * sizeof(unsigned char));
@@ -677,12 +677,12 @@ int rl_read(rlite *db, rl_data_type *type, long page, void *context, void **obj,
 		retval = RL_FOUND;
 	}
 cleanup:
-#ifdef DEBUG
+#ifdef RL_DEBUG
 	if (!keep) {
 		rl_free(data);
 	}
 #endif
-#ifndef DEBUG
+#ifndef RL_DEBUG
 	rl_free(data);
 #endif
 	return retval;
@@ -735,7 +735,7 @@ int rl_write(struct rlite *db, rl_data_type *type, long page_number, void *obj)
 	else if (retval == RL_NOT_FOUND) {
 		rl_ensure_pages(db);
 		RL_MALLOC(page, sizeof(*page));
-#ifdef DEBUG
+#ifdef RL_DEBUG
 		page->serialized_data = NULL;
 #endif
 		page->page_number = page_number;
@@ -749,7 +749,7 @@ int rl_write(struct rlite *db, rl_data_type *type, long page_number, void *obj)
 
 		retval = rl_search_cache(db, type, page_number, NULL, &pos, db->read_pages, db->read_pages_len);
 		if (retval == RL_FOUND) {
-#ifdef DEBUG
+#ifdef RL_DEBUG
 			rl_free(db->read_pages[pos]->serialized_data);
 #endif
 			if (db->read_pages[pos]->obj != obj) {
@@ -853,7 +853,7 @@ int rl_commit(struct rlite *db)
 	size_t written;
 	unsigned char *data;
 	RL_MALLOC(data, db->page_size * sizeof(unsigned char));
-#ifdef DEBUG
+#ifdef RL_DEBUG
 	for (i = 0; i < db->read_pages_len; i++) {
 		page = db->read_pages[i];
 		memset(data, 0, db->page_size);
@@ -896,7 +896,7 @@ int rl_commit(struct rlite *db)
 			fseek(driver->fp, page_number * db->page_size, SEEK_SET);
 			written = fwrite(data, sizeof(unsigned char), db->page_size, driver->fp);
 			if ((size_t)db->page_size != written) {
-#ifdef DEBUG
+#ifdef RL_DEBUG
 				print_cache(db);
 #endif
 				retval = RL_UNEXPECTED;
@@ -956,7 +956,7 @@ int rl_discard(struct rlite *db)
 		if (page->type->destroy && page->obj) {
 			page->type->destroy(db, page->obj);
 		}
-#ifdef DEBUG
+#ifdef RL_DEBUG
 		rl_free(page->serialized_data);
 #endif
 		rl_free(page);
@@ -966,7 +966,7 @@ int rl_discard(struct rlite *db)
 		if (page->type && page->type->destroy && page->obj) {
 			page->type->destroy(db, page->obj);
 		}
-#ifdef DEBUG
+#ifdef RL_DEBUG
 		rl_free(page->serialized_data);
 #endif
 		rl_free(page);

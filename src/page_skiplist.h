@@ -54,7 +54,7 @@ int rl_skiplist_delete(struct rlite *db, rl_skiplist *skiplist, long skiplist_pa
 int rl_skiplist_delete_all(struct rlite *db, rl_skiplist *skiplist);
 
 int rl_skiplist_is_balanced(struct rlite *db, rl_skiplist *skiplist);
-#ifdef DEBUG
+#ifdef RL_DEBUG
 int rl_skiplist_print(struct rlite *db, rl_skiplist *skiplist);
 #endif
 

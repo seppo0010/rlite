@@ -436,7 +436,7 @@ cleanup:
 	return retval;
 }
 
-#ifdef DEBUG
+#ifdef RL_DEBUG
 int rl_skiplist_print(rlite *db, rl_skiplist *skiplist)
 {
 	printf("left: %ld, right: %ld, size: %ld, level: %ld\n", skiplist->left, skiplist->right, skiplist->size, skiplist->level);

@@ -8,7 +8,7 @@
 #include "page_string.h"
 #include "util.h"
 
-#ifdef DEBUG
+#ifdef RL_DEBUG
 int rl_print_list_node(rl_list *list, rl_list_node *node);
 #endif
 int rl_list_node_create(rlite *db, rl_list *list, rl_list_node **node);
@@ -18,7 +18,7 @@ rl_list_type rl_list_type_long = {
 	0,
 	sizeof(long),
 	long_cmp,
-#ifdef DEBUG
+#ifdef RL_DEBUG
 	long_formatter,
 #endif
 };
@@ -553,7 +553,7 @@ cleanup:
 	return retval;
 }
 
-#ifdef DEBUG
+#ifdef RL_DEBUG
 int rl_print_list(rlite *db, rl_list *list)
 {
 	if (!list->type->formatter) {

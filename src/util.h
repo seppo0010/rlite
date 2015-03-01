@@ -11,7 +11,7 @@
 #define MAX_DOUBLE_DIGITS (3 + DBL_MANT_DIG - DBL_MIN_EXP)
 #define MAX_LLONG_DIGITS 22
 
-#ifdef DEBUG
+#ifdef RL_DEBUG
 int expect_fail();
 extern int test_mode;
 void *rl_malloc(size_t size);
@@ -57,7 +57,7 @@ void put_8bytes(unsigned char *p, unsigned long long v);
 int long_cmp(void *v1, void *v2);
 int sha1_cmp(void *v1, void *v2);
 int double_cmp(void *v1, void *v2);
-#ifdef DEBUG
+#ifdef RL_DEBUG
 int long_formatter(void *v2, char **formatted, int *size);
 int sha1_formatter(void *v2, char **formatted, int *size);
 int double_formatter(void *v2, char **formatted, int *size);
