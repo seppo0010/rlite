@@ -47,9 +47,17 @@ Current Status and Roadmap
 - [ ] multi thread safe
 - [ ] write ahead log
 - [x] python bindings
-- [ ] ruby bindings
+- [x] ruby bindings
+- [x] objective-c bindings
 
 Installation
 ------------
 
 rlite has no dependencies, just run `make all`.
+
+Bindings
+-------
+
+- [rlite-py](https://github.com/seppo0010/rlite-py)
+- [rlite-rb](https://github.com/seppo0010/rlite-rb)
+- [objc-rlite](https://github.com/seppo0010/objc-rlite)
