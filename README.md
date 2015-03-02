@@ -15,6 +15,7 @@ p redis.get 'key' # value
 ```
 
 [Ruby](https://github.com/seppo0010/rlite-rb#usage) bindings example. See
+[node.js](//github.com/seppo0010/rlite-js#usage),
 [Python](https://github.com/seppo0010/rlite-py#usage) and
 [Objective-C](https://github.com/seppo0010/objc-rlite#api)
 
@@ -73,6 +74,7 @@ rlite has no dependencies, just run `make all`.
 
 - [rlite-py](https://github.com/seppo0010/rlite-py)
 - [rlite-rb](https://github.com/seppo0010/rlite-rb)
+- [rlite-js](https://github.com/seppo0010/rlite-js)
 - [objc-rlite](https://github.com/seppo0010/objc-rlite)
 
 ## License
