@@ -9,3 +9,4 @@
 /src/lcov/html
 /src/malloc-debug
 *.dylib
+*.so

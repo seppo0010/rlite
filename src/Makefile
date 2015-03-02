@@ -53,6 +53,8 @@ clang-analyzer:
 libhirlite.dylib: libhirlite.a
 	 g++ -dynamiclib -undefined suppress -flat_namespace $(LIBHIRLITE_FILES) -o libhirlite.dylib
 
+libhirlite.so: libhirlite.a
+	 gcc -shared -o libhirlite.so $(LIBHIRLITE_FILES)
 
 libhirlite.a: hirlite.o librlite.a
 	ar -cq libhirlite.a $(LIBHIRLITE_FILES)
