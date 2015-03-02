@@ -22,6 +22,7 @@ DEBUG += ${DEBUG.gcc}
 CFLAGS += ${CFLAGS.gcc}
 endif
 
+LIBHIRLITE_FILES=rlite.o page_skiplist.o page_string.o page_list.o page_btree.o page_key.o type_string.o type_list.o type_set.o type_zset.o type_hash.o page_long.o page_multi_string.o util.o utilfromredis.o hyperloglog.o sha1.o crc64.o restore.o dump.o lzf_c.o lzf_d.o sort.o pqsort.o hirlite.o
 LIBS=-lm
 
 all: buildtest buildhirlitetest
@@ -49,8 +50,12 @@ clang-analyzer:
 .c.o:
 	$(CC) $(ARCH) $(DEBUG) $(CFLAGS) -c $<
 
+libhirlite.dylib: libhirlite.a
+	 g++ -dynamiclib -undefined suppress -flat_namespace $(LIBHIRLITE_FILES) -o libhirlite.dylib
+
+
 libhirlite.a: hirlite.o librlite.a
-	ar -cq libhirlite.a rlite.o page_skiplist.o page_string.o page_list.o page_btree.o page_key.o type_string.o type_list.o type_set.o type_zset.o type_hash.o page_long.o page_multi_string.o util.o utilfromredis.o hyperloglog.o sha1.o crc64.o restore.o dump.o lzf_c.o lzf_d.o sort.o pqsort.o hirlite.o
+	ar -cq libhirlite.a $(LIBHIRLITE_FILES)
 
 librlite.a: rlite.o page_skiplist.o page_string.o page_list.o page_btree.o page_key.o page_multi_string.o page_long.o type_string.o type_list.o type_set.o type_zset.o type_hash.o util.o restore.o dump.o sort.o pqsort.o utilfromredis.o hyperloglog.o sha1.o crc64.o lzf_c.o lzf_d.o
 	ar -cq librlite.a rlite.o page_skiplist.o page_string.o page_list.o page_btree.o page_key.o type_string.o type_list.o type_set.o type_zset.o type_hash.o page_long.o page_multi_string.o util.o utilfromredis.o hyperloglog.o sha1.o crc64.o lzf_c.o lzf_d.o restore.o dump.o sort.o pqsort.o
@@ -80,4 +85,4 @@ vtest: vrlitetest vhirlitetest
 	echo
 
 clean:
-	rm -rf *-test *.o *.a *.dSYM *.gcda *.gcno lcov
+	rm -rf *-test *.o *.a *.dSYM *.gcda *.gcno lcov *.dylib
