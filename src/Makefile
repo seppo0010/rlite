@@ -25,7 +25,7 @@ endif
 LIBHIRLITE_FILES=rlite.o page_skiplist.o page_string.o page_list.o page_btree.o page_key.o type_string.o type_list.o type_set.o type_zset.o type_hash.o page_long.o page_multi_string.o util.o utilfromredis.o hyperloglog.o sha1.o crc64.o restore.o dump.o lzf_c.o lzf_d.o sort.o pqsort.o hirlite.o
 LIBS=-lm
 
-ifeq "$(OS)" "Darwin"
+ifeq ($(shell uname -s),Darwin)
 	DYLIB_FILENAME = libhirlite.dylib
 else
 	DYLIB_FILENAME = libhirlite.so
