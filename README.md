@@ -42,8 +42,8 @@ Current Status and Roadmap
 - [ ] rlite-server pass all Redis tests
   - [ ] unit/scan
   - [ ] integration/replication
-  - [ ] unit/scripting
-  - [ ] unit/introspection
+  - [x] unit/scripting
+  - [x] unit/introspection
 - [ ] pubsub
 - [ ] brpop/brpoplpush
 - [ ] multi process safe
