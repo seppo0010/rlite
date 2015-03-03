@@ -10,3 +10,4 @@
 /src/malloc-debug
 *.dylib
 *.so
+*.pc
