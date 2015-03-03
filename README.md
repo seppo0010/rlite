@@ -7,11 +7,15 @@ self-contained, serverless, zero-configuration, transactional Redis-compatible d
 ## Example
 
 ```ruby
-require('redis')
-require('hirlite/connection')
-redis = Redis.new(:host => ":memory:", :driver => Rlite::Connection::Hirlite)
-redis.set 'key', 'value'
-p redis.get 'key' # value
+require "redis"
+require "hirlite/connection"
+
+redis = Redis.new(host: ":memory:", driver: Rlite::Connection::Hirlite)
+
+redis.set "key", "value"
+
+puts redis.get "key"
+# => "value"
 ```
 
 [Ruby](https://github.com/seppo0010/rlite-rb#usage) bindings example. See
