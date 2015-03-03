@@ -65,6 +65,7 @@ sqlite, command line or simple applications can store its data using rlite.
 - [x] python bindings
 - [x] ruby bindings
 - [x] objective-c bindings
+- [x] Node.js bindings
 
 ## Installation
 
