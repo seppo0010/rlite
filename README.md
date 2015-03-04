@@ -19,9 +19,10 @@ puts redis.get "key"
 ```
 
 [Ruby](https://github.com/seppo0010/rlite-rb#usage) bindings example. See
-[node.js](//github.com/seppo0010/rlite-js#usage),
-[Python](https://github.com/seppo0010/rlite-py#usage) and
-[Objective-C](https://github.com/seppo0010/objc-rlite#api)
+[Node.js](//github.com/seppo0010/rlite-js#usage),
+[Python](https://github.com/seppo0010/rlite-py#usage),
+[Objective-C](https://github.com/seppo0010/objc-rlite#api) and
+[PHP](https://github.com/seppo0010/rlite-php#usage).
 
 ## Use Cases
 
@@ -66,10 +67,6 @@ sqlite, command line or simple applications can store its data using rlite.
 - [ ] multi process safe
 - [ ] multi thread safe
 - [ ] write ahead log
-- [x] python bindings
-- [x] ruby bindings
-- [x] objective-c bindings
-- [x] Node.js bindings
 
 ## Installation
 
@@ -81,6 +78,7 @@ rlite has no dependencies, just run `make all`.
 - [rlite-rb](https://github.com/seppo0010/rlite-rb)
 - [rlite-js](https://github.com/seppo0010/rlite-js)
 - [objc-rlite](https://github.com/seppo0010/objc-rlite)
+- [rlite-php](https://github.com/seppo0010/rlite-php)
 
 ## License
 
