@@ -94,6 +94,35 @@ int test_echo_wrong_arity() {
 	return 0;
 }
 
+int test_not_null_terminated_long() {
+	size_t argvlen[4];
+	char* argv[4];
+	rliteReply* reply;
+	argvlen[0] = 6;
+	argv[0] = "lrange";
+	argvlen[1] = 3;
+	argv[1] = "key";
+	argvlen[2] = 1;
+	argv[2] = "0";
+	argvlen[3] = 2;
+	argv[3] = malloc(sizeof(char) * 4);
+	argv[3][0] = '-';
+	argv[3][1] = '1';
+	argv[3][2] = 'z';
+
+	rliteContext *context = rliteConnect(":memory:", 0);
+	reply = rliteCommandArgv(context, 4, argv, argvlen);
+	if (reply->type != RLITE_REPLY_ARRAY) {
+		fprintf(stderr, "Expected reply to be ARRAY, got %d instead on line %d\n", reply->type, __LINE__);
+		return 1;
+	}
+
+	rliteFreeReplyObject(reply);
+	rliteFree(context);
+	free(argv[3]);
+	return 0;
+}
+
 int run_echo() {
 	if (test_ping() != 0) {
 		return 1;
@@ -105,6 +134,9 @@ int run_echo() {
 		return 1;
 	}
 	if (test_echo_wrong_arity() != 0) {
+		return 1;
+	}
+	if (test_not_null_terminated_long() != 0) {
 		return 1;
 	}
 	return 0;

@@ -261,13 +261,20 @@ static int getDoubleFromObjectOrReply(rliteClient *c, const char *o, long olen, 
 	return RLITE_OK;
 }
 
-static int getLongLongFromObject(const char *o, long long *target) {
+static int getLongLongFromObject(const char *_o, size_t len, long long *target) {
 	long long value;
 	char *eptr;
 
-	if (o == NULL) {
+	if (_o == NULL) {
 		value = 0;
 	} else {
+		if (len > 38) {
+			return RLITE_ERR;
+		}
+		char o[40];
+		memcpy(o, _o, len);
+		o[len] = 0;
+
 		errno = 0;
 		value = strtoll(o, &eptr, 10);
 		if (isspace(((char*)o)[0]) || eptr[0] != '\0' || errno == ERANGE) {
@@ -278,9 +285,9 @@ static int getLongLongFromObject(const char *o, long long *target) {
 	return RLITE_OK;
 }
 
-static int getLongLongFromObjectOrReply(rliteClient *c, const char *o, long long *target, const char *msg) {
+static int getLongLongFromObjectOrReply(rliteClient *c, const char *o, size_t len, long long *target, const char *msg) {
 	long long value;
-	if (getLongLongFromObject(o, &value) != RLITE_OK) {
+	if (getLongLongFromObject(o, len, &value) != RLITE_OK) {
 		if (msg != NULL) {
 			c->reply = createErrorObject(msg);
 		} else {
@@ -292,10 +299,10 @@ static int getLongLongFromObjectOrReply(rliteClient *c, const char *o, long long
 	return RLITE_OK;
 }
 
-static int getLongFromObjectOrReply(rliteClient *c, const char *o, long *target, const char *msg) {
+static int getLongFromObjectOrReply(rliteClient *c, const char *o, size_t len, long *target, const char *msg) {
 	long long value;
 
-	if (getLongLongFromObjectOrReply(c, o, &value, msg) != RLITE_OK) return RLITE_ERR;
+	if (getLongLongFromObjectOrReply(c, o, len, &value, msg) != RLITE_OK) return RLITE_ERR;
 	if (value < LONG_MIN || value > LONG_MAX) {
 		if (msg != NULL) {
 			c->reply = createErrorObject(msg);
@@ -1107,8 +1114,8 @@ static void zrangeGenericCommand(rliteClient *c, int reverse) {
 	long start;
 	long end;
 
-	if ((getLongFromObjectOrReply(c, c->argv[2], &start, NULL) != RLITE_OK) ||
-		(getLongFromObjectOrReply(c, c->argv[3], &end, NULL) != RLITE_OK)) return;
+	if ((getLongFromObjectOrReply(c, c->argv[2], c->argvlen[2], &start, NULL) != RLITE_OK) ||
+		(getLongFromObjectOrReply(c, c->argv[3], c->argvlen[3], &end, NULL) != RLITE_OK)) return;
 
 	if (c->argc == 5 && !strcasecmp(c->argv[4], "withscores")) {
 		withscores = 1;
@@ -1194,8 +1201,8 @@ static void zremrangeGenericCommand(rliteClient *c, int rangetype) {
 
 	/* Step 1: Parse the range. */
 	if (rangetype == ZRANGE_RANK) {
-		if ((getLongFromObjectOrReply(c,c->argv[2],&start,NULL) != RLITE_OK) ||
-			(getLongFromObjectOrReply(c,c->argv[3],&end,NULL) != RLITE_OK))
+		if ((getLongFromObjectOrReply(c,c->argv[2],c->argvlen[2],&start,NULL) != RLITE_OK) ||
+			(getLongFromObjectOrReply(c,c->argv[3],c->argvlen[3],&end,NULL) != RLITE_OK))
 			return;
 		retval = rl_zremrangebyrank(c->context->db, UNSIGN(c->argv[1]), c->argvlen[1], start, end, &deleted);
 	} else if (rangetype == ZRANGE_SCORE) {
@@ -1250,7 +1257,7 @@ static void zunionInterGenericCommand(rliteClient *c, int op) {
 	double *weights = NULL;
 
 	/* expect setnum input keys to be given */
-	if ((getLongFromObjectOrReply(c, c->argv[2], &setnum, NULL) != RLITE_OK))
+	if ((getLongFromObjectOrReply(c, c->argv[2], c->argvlen[2], &setnum, NULL) != RLITE_OK))
 		return;
 
 	if (setnum < 1) {
@@ -1360,8 +1367,8 @@ static void genericZrangebyscoreCommand(rliteClient *c, int reverse) {
 				pos++; remaining--;
 				withscores = 1;
 			} else if (remaining >= 3 && !strcasecmp(c->argv[pos],"limit")) {
-				if ((getLongFromObjectOrReply(c, c->argv[pos+1], &offset, NULL) != RLITE_OK) ||
-					(getLongFromObjectOrReply(c, c->argv[pos+2], &limit, NULL) != RLITE_OK)) return;
+				if ((getLongFromObjectOrReply(c, c->argv[pos+1], c->argvlen[pos+1], &offset, NULL) != RLITE_OK) ||
+					(getLongFromObjectOrReply(c, c->argv[pos+2], c->argvlen[pos+2], &limit, NULL) != RLITE_OK)) return;
 				pos += 3; remaining -= 3;
 			} else {
 				c->reply = createErrorObject(RLITE_SYNTAXERR);
@@ -1407,8 +1414,8 @@ static void genericZrangebylexCommand(rliteClient *c, int reverse) {
 
 		while (remaining) {
 			if (remaining >= 3 && !strcasecmp(c->argv[pos],"limit")) {
-				if ((getLongFromObjectOrReply(c, c->argv[pos+1], &offset, NULL) != RLITE_OK) ||
-					(getLongFromObjectOrReply(c, c->argv[pos+2], &limit, NULL) != RLITE_OK)) return;
+				if ((getLongFromObjectOrReply(c, c->argv[pos+1], c->argvlen[pos+1], &offset, NULL) != RLITE_OK) ||
+					(getLongFromObjectOrReply(c, c->argv[pos+2], c->argvlen[pos+2], &limit, NULL) != RLITE_OK)) return;
 				pos += 3; remaining -= 3;
 			} else {
 				c->reply = createErrorObject(RLITE_SYNTAXERR);
@@ -1620,8 +1627,8 @@ static void bitcountCommand(rliteClient *c) {
 	}
 
 	if (c->argc == 4) {
-		if (getLongFromObjectOrReply(c, c->argv[2], &start, NULL) != RLITE_OK ||
-				getLongFromObjectOrReply(c, c->argv[3], &stop, NULL) != RLITE_OK)
+		if (getLongFromObjectOrReply(c, c->argv[2], c->argvlen[2], &start, NULL) != RLITE_OK ||
+				getLongFromObjectOrReply(c, c->argv[3], c->argvlen[3], &stop, NULL) != RLITE_OK)
 			return;
 	}
 
@@ -1705,14 +1712,14 @@ static void bitposCommand(rliteClient *c) {
 	bit = c->argv[2][0] == '0' ? 0 : 1;
 
 	if (c->argc >= 4) {
-		if (getLongFromObjectOrReply(c, c->argv[3], &start, NULL) != RLITE_OK)
+		if (getLongFromObjectOrReply(c, c->argv[3], c->argvlen[3], &start, NULL) != RLITE_OK)
 			return;
 	}
 
 	int end_given = 0;
 	if (c->argc == 5) {
 		end_given = 1;
-		if (getLongFromObjectOrReply(c, c->argv[4], &stop, NULL) != RLITE_OK)
+		if (getLongFromObjectOrReply(c, c->argv[4], c->argvlen[4], &stop, NULL) != RLITE_OK)
 			return;
 	}
 
@@ -1774,7 +1781,7 @@ static void hincrbyCommand(rliteClient *c) {
 	int retval;
 	long increment, newvalue;
 
-	if ((getLongFromObjectOrReply(c, c->argv[3], &increment, NULL) != RLITE_OK)) return;
+	if ((getLongFromObjectOrReply(c, c->argv[3], c->argvlen[3], &increment, NULL) != RLITE_OK)) return;
 
 	retval = rl_hincrby(c->context->db, key, keylen, UNSIGN(c->argv[2]), c->argvlen[2], increment, &newvalue);
 	if (retval == RL_NAN) {
@@ -2017,7 +2024,7 @@ static void srandmemberCommand(rliteClient *c) {
 		count = 1;
 		repeat = 0;
 	} else {
-		if ((getLongFromObjectOrReply(c, c->argv[2], &count, NULL) != RLITE_OK)) return;
+		if ((getLongFromObjectOrReply(c, c->argv[2], c->argvlen[2], &count, NULL) != RLITE_OK)) return;
 		repeat = count < 0 ? 1 : 0;
 		count = count >= 0 ? count : -count;
 	}
@@ -2400,7 +2407,7 @@ static void lindexCommand(rliteClient *c) {
 	unsigned char *value;
 	long valuelen;
 
-	if ((getLongFromObjectOrReply(c, c->argv[2], &index, NULL) != RLITE_OK))
+	if ((getLongFromObjectOrReply(c, c->argv[2], c->argvlen[2], &index, NULL) != RLITE_OK))
 		return;
 
 	int retval = rl_lindex(c->context->db, UNSIGN(c->argv[1]), c->argvlen[1], index, &value, &valuelen);
@@ -2450,8 +2457,8 @@ static void lrangeCommand(rliteClient *c) {
 
 	long start, stop, i;
 
-	if ((getLongFromObjectOrReply(c, c->argv[2], &start, NULL) != RLITE_OK) ||
-		(getLongFromObjectOrReply(c, c->argv[3], &stop, NULL) != RLITE_OK)) return;
+	if ((getLongFromObjectOrReply(c, c->argv[2], c->argvlen[2], &start, NULL) != RLITE_OK) ||
+		(getLongFromObjectOrReply(c, c->argv[3], c->argvlen[3], &stop, NULL) != RLITE_OK)) return;
 
 	int retval = rl_lrange(c->context->db, key, keylen, start, stop, &size, &values, &valueslen);
 	RLITE_SERVER_ERR(c, retval);
@@ -2481,7 +2488,7 @@ static void lremCommand(rliteClient *c) {
 	long count, maxcount, resultcount;
 	int direction;
 
-	if ((getLongFromObjectOrReply(c, c->argv[2], &count, NULL) != RLITE_OK)) return;
+	if ((getLongFromObjectOrReply(c, c->argv[2], c->argvlen[2], &count, NULL) != RLITE_OK)) return;
 
 	if (count >= 0) {
 		direction = 1;
@@ -2502,7 +2509,7 @@ static void lsetCommand(rliteClient *c) {
 	size_t keylen = c->argvlen[1];
 	long index;
 
-	if ((getLongFromObjectOrReply(c, c->argv[2], &index, NULL) != RLITE_OK)) return;
+	if ((getLongFromObjectOrReply(c, c->argv[2], c->argvlen[2], &index, NULL) != RLITE_OK)) return;
 
 	int retval = rl_lset(c->context->db, key, keylen, index, UNSIGN(c->argv[3]), c->argvlen[3]);
 	RLITE_SERVER_ERR(c, retval);
@@ -2522,8 +2529,8 @@ static void ltrimCommand(rliteClient *c) {
 	size_t keylen = c->argvlen[1];
 	long start, stop;
 
-	if ((getLongFromObjectOrReply(c, c->argv[2], &start, NULL) != RLITE_OK) ||
-		(getLongFromObjectOrReply(c, c->argv[3], &stop, NULL) != RLITE_OK)) return;
+	if ((getLongFromObjectOrReply(c, c->argv[2], c->argvlen[2], &start, NULL) != RLITE_OK) ||
+		(getLongFromObjectOrReply(c, c->argv[3], c->argvlen[3], &stop, NULL) != RLITE_OK)) return;
 
 	int retval = rl_ltrim(c->context->db, key, keylen, start, stop);
 	RLITE_SERVER_ERR(c, retval);
@@ -2598,7 +2605,7 @@ static void setCommand(rliteClient *c) {
 		char *a = c->argv[j];
 
 		next = 0;
-		if (j < c->argc - 1 && getLongLongFromObject(c->argv[j + 1], &next) != RLITE_OK) {
+		if (j < c->argc - 1 && getLongLongFromObject(c->argv[j + 1], c->argvlen[j + 1], &next) != RLITE_OK) {
 			next = 0;
 		}
 
@@ -2639,7 +2646,7 @@ static void setnxCommand(rliteClient *c) {
 
 static void setexCommand(rliteClient *c) {
 	long long expire;
-	if (getLongLongFromObject(c->argv[2], &expire) != RLITE_OK) {
+	if (getLongLongFromObject(c->argv[2], c->argvlen[2], &expire) != RLITE_OK) {
 		c->reply = createErrorObject(RLITE_SYNTAXERR);
 		return;
 	}
@@ -2648,7 +2655,7 @@ static void setexCommand(rliteClient *c) {
 
 static void psetexCommand(rliteClient *c) {
 	long long expire;
-	if (getLongLongFromObject(c->argv[2], &expire) != RLITE_OK) {
+	if (getLongLongFromObject(c->argv[2], c->argvlen[2], &expire) != RLITE_OK) {
 		c->reply = createErrorObject(RLITE_SYNTAXERR);
 		return;
 	}
@@ -2832,8 +2839,8 @@ static void getrangeCommand(rliteClient *c) {
 	long valuelen;
 	long long start, stop;
 
-	if (getLongLongFromObject(c->argv[2], &start) != RLITE_OK ||
-			getLongLongFromObject(c->argv[3], &stop) != RLITE_OK) {
+	if (getLongLongFromObject(c->argv[2], c->argvlen[2], &start) != RLITE_OK ||
+			getLongLongFromObject(c->argv[3], c->argvlen[3], &stop) != RLITE_OK) {
 		c->reply = createErrorObject(RLITE_SYNTAXERR);
 		return;
 	}
@@ -2861,7 +2868,7 @@ static void setrangeCommand(rliteClient *c) {
 	long newlength;
 	int retval;
 
-	if (getLongLongFromObject(c->argv[2], &offset) != RLITE_OK) {
+	if (getLongLongFromObject(c->argv[2], c->argvlen[2], &offset) != RLITE_OK) {
 		c->reply = createErrorObject(RLITE_SYNTAXERR);
 		return;
 	}
@@ -2936,7 +2943,7 @@ static void decrCommand(rliteClient *c) {
 
 static void incrbyCommand(rliteClient *c) {
 	long long increment;
-	if (getLongLongFromObjectOrReply(c, c->argv[2], &increment, RLITE_SYNTAXERR) != RLITE_OK) {
+	if (getLongLongFromObjectOrReply(c, c->argv[2], c->argvlen[2], &increment, RLITE_SYNTAXERR) != RLITE_OK) {
 		return;
 	}
 	incrGenericCommand(c, increment);
@@ -2944,7 +2951,7 @@ static void incrbyCommand(rliteClient *c) {
 
 static void decrbyCommand(rliteClient *c) {
 	long long decrement;
-	if (getLongLongFromObjectOrReply(c, c->argv[2], &decrement, RLITE_SYNTAXERR) != RLITE_OK) {
+	if (getLongLongFromObjectOrReply(c, c->argv[2], c->argvlen[2], &decrement, RLITE_SYNTAXERR) != RLITE_OK) {
 		return;
 	}
 	incrGenericCommand(c, -decrement);
@@ -2977,7 +2984,7 @@ static void getbitCommand(rliteClient *c) {
 	long long offset;
 	int value;
 
-	if (getLongLongFromObjectOrReply(c, c->argv[2], &offset, RLITE_SYNTAXERR) != RLITE_OK) {
+	if (getLongLongFromObjectOrReply(c, c->argv[2], c->argvlen[2], &offset, RLITE_SYNTAXERR) != RLITE_OK) {
 		return;
 	}
 	int retval = rl_getbit(c->context->db, key, keylen, offset, &value);
@@ -2996,7 +3003,7 @@ static void setbitCommand(rliteClient *c) {
 	int previousvalue;
 	int bit;
 
-	if (getLongLongFromObjectOrReply(c, c->argv[2], &offset, RLITE_SYNTAXERR) != RLITE_OK) {
+	if (getLongLongFromObjectOrReply(c, c->argv[2], c->argvlen[2], &offset, RLITE_SYNTAXERR) != RLITE_OK) {
 		return;
 	}
 
@@ -3200,7 +3207,7 @@ cleanup:
 static void expireCommand(rliteClient *c) {
 	unsigned long long now = rl_mstime();
 	long long arg;
-	if (getLongLongFromObjectOrReply(c, c->argv[2], &arg, RLITE_SYNTAXERR) != RLITE_OK) {
+	if (getLongLongFromObjectOrReply(c, c->argv[2], c->argvlen[2], &arg, RLITE_SYNTAXERR) != RLITE_OK) {
 		return;
 	}
 	expireGenericCommand(c, now + arg * 1000);
@@ -3208,7 +3215,7 @@ static void expireCommand(rliteClient *c) {
 
 static void expireatCommand(rliteClient *c) {
 	long long arg;
-	if (getLongLongFromObjectOrReply(c, c->argv[2], &arg, RLITE_SYNTAXERR) != RLITE_OK) {
+	if (getLongLongFromObjectOrReply(c, c->argv[2], c->argvlen[2], &arg, RLITE_SYNTAXERR) != RLITE_OK) {
 		return;
 	}
 	expireGenericCommand(c, arg * 1000);
@@ -3217,7 +3224,7 @@ static void expireatCommand(rliteClient *c) {
 static void pexpireCommand(rliteClient *c) {
 	unsigned long long now = rl_mstime();
 	long long arg;
-	if (getLongLongFromObjectOrReply(c, c->argv[2], &arg, RLITE_SYNTAXERR) != RLITE_OK) {
+	if (getLongLongFromObjectOrReply(c, c->argv[2], c->argvlen[2], &arg, RLITE_SYNTAXERR) != RLITE_OK) {
 		return;
 	}
 	expireGenericCommand(c, now + arg);
@@ -3225,7 +3232,7 @@ static void pexpireCommand(rliteClient *c) {
 
 static void pexpireatCommand(rliteClient *c) {
 	long long arg;
-	if (getLongLongFromObjectOrReply(c, c->argv[2], &arg, RLITE_SYNTAXERR) != RLITE_OK) {
+	if (getLongLongFromObjectOrReply(c, c->argv[2], c->argvlen[2], &arg, RLITE_SYNTAXERR) != RLITE_OK) {
 		return;
 	}
 	expireGenericCommand(c, arg);
@@ -3233,7 +3240,7 @@ static void pexpireatCommand(rliteClient *c) {
 
 static void selectCommand(rliteClient *c) {
 	long long db;
-	if (getLongLongFromObjectOrReply(c, c->argv[1], &db, RLITE_SYNTAXERR) != RLITE_OK) {
+	if (getLongLongFromObjectOrReply(c, c->argv[1], c->argvlen[1], &db, RLITE_SYNTAXERR) != RLITE_OK) {
 		return;
 	}
 	int retval = rl_select(c->context->db, db);
@@ -3253,7 +3260,7 @@ static void moveCommand(rliteClient *c) {
 	unsigned char *key = UNSIGN(c->argv[1]);
 	long keylen = c->argvlen[1];
 	long long db;
-	if (getLongLongFromObjectOrReply(c, c->argv[2], &db, "ERR index out of range") != RLITE_OK) {
+	if (getLongLongFromObjectOrReply(c, c->argv[2], c->argvlen[2], &db, "ERR index out of range") != RLITE_OK) {
 		return;
 	}
 	int retval = rl_move(c->context->db, key, keylen, db);
@@ -3514,20 +3521,10 @@ static void getKeyEncoding(rliteClient *c, char *encoding, unsigned char *key, l
 			RLITE_SERVER_ERR(c, retval);
 			int hashtable = 512 < (size_t)len;
 			if (!hashtable) {
-				char o[40];
 				int retval = rl_smembers(c->context->db, &iterator, key, keylen);
 				RLITE_SERVER_ERR(c, retval);
 				while ((retval = rl_set_iterator_next(iterator, &value, &valuelen)) == RL_OK) {
-					if (valuelen > 38) {
-						hashtable = 1;
-						rl_free(value);
-						rl_set_iterator_destroy(iterator);
-						retval = RL_END;
-						break;
-					}
-					memcpy(o, value, sizeof(char) * valuelen);
-					o[valuelen] = 0;
-					if (getLongLongFromObject(o, NULL) != RLITE_OK) {
+					if (getLongLongFromObject((char *)value, valuelen, NULL) != RLITE_OK) {
 						hashtable = 1;
 						rl_free(value);
 						rl_set_iterator_destroy(iterator);
@@ -3647,7 +3644,7 @@ static void restoreCommand(rliteClient *c) {
 	unsigned char *payload = UNSIGN(c->argv[3]);
 	long payloadlen = c->argvlen[3];
 	long long expires = 0;
-	if (getLongLongFromObjectOrReply(c, c->argv[2], &expires, RLITE_SYNTAXERR) != RLITE_OK) {
+	if (getLongLongFromObjectOrReply(c, c->argv[2], c->argvlen[2], &expires, RLITE_SYNTAXERR) != RLITE_OK) {
 		return;
 	}
 	if (expires != 0) {
@@ -3722,9 +3719,9 @@ static void sortCommand(rliteClient *c) {
 		} else if (!strcasecmp(c->argv[j],"alpha")) {
 			alpha = 1;
 		} else if (!strcasecmp(c->argv[j],"limit") && leftargs >= 2) {
-			if ((getLongFromObjectOrReply(c, c->argv[j+1], &limit_start, NULL)
+			if ((getLongFromObjectOrReply(c, c->argv[j+1], c->argvlen[j+1], &limit_start, NULL)
 				 != RL_OK) ||
-				(getLongFromObjectOrReply(c, c->argv[j+2], &limit_count, NULL)
+				(getLongFromObjectOrReply(c, c->argv[j+2], c->argvlen[j+2], &limit_count, NULL)
 				 != RL_OK))
 			{
 				syntax_error++;
