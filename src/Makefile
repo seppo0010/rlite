@@ -6,6 +6,8 @@
 # Partially based on hiredis's Makefile
 # https://github.com/redis/hiredis/blob/master/Makefile
 
+uname_S:= $(shell sh -c 'uname -s 2>/dev/null || echo not')
+
 OBJ=rlite.o page_skiplist.o page_string.o page_list.o page_btree.o page_key.o page_multi_string.o page_long.o type_string.o type_list.o type_set.o type_zset.o type_hash.o util.o restore.o dump.o sort.o pqsort.o utilfromredis.o hyperloglog.o sha1.o crc64.o lzf_c.o lzf_d.o hirlite.o
 LIBNAME=libhirlite
 PKGCONFNAME=hirlite.pc
@@ -16,7 +18,6 @@ HIRLITE_PATCH=$(shell grep HIRLITE_PATCH hirlite.h | awk '{print $$3}')
 
 OPTIMIZATION?=-O2
 ifeq ($(uname_S),SunOS)
-  # make isinf() available
   CFLAGS?= -pedantic $(OPTIMIZATION) -Wall -W -D__EXTENSIONS__ -D_XPG6 -fPIC
   DEBUG?=-g -ggdb
 else
@@ -78,6 +79,18 @@ builddebug: clean buildtest
 
 debug: builddebug vtest
 
+ifeq ($(uname_S),SunOS)
+	# Make isinf() available
+	LUA_CFLAGS= -D__C99FEATURES__=1
+endif
+LUA_CFLAGS+= -O2 -Wall -DENABLE_CJSON_GLOBAL $(CFLAGS)
+LUA_LDFLAGS+= $(LDFLAGS)
+AR=ar
+ARFLAGS=rcu
+
+lua:
+	cd ../deps/lua && $(MAKE) ansi CFLAGS="$(LUA_CFLAGS)" MYLDFLAGS="$(LUA_LDFLAGS)" AR="$(AR) $(ARFLAGS)"
+
 lcov: gcov
 	mkdir -p lcov
 	lcov --directory . --capture --output-file lcov/app.info
@@ -88,7 +101,7 @@ full-lcov: clean buildtest
 
 clang-analyzer:
 	rm -rf analyzer
-	scan-build -o analyzer make
+	scan-build -o analyzer $(MAKE)
 
 .c.o:
 	$(CC) $(ARCH) $(DEBUG) $(CFLAGS) -c $<

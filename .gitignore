@@ -11,3 +11,5 @@
 *.dylib
 *.so
 *.pc
+deps/lua/src/luac
+deps/lua/src/lua
