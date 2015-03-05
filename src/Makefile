@@ -8,7 +8,7 @@
 
 uname_S:= $(shell sh -c 'uname -s 2>/dev/null || echo not')
 
-OBJ=rlite.o page_skiplist.o page_string.o page_list.o page_btree.o page_key.o page_multi_string.o page_long.o type_string.o type_list.o type_set.o type_zset.o type_hash.o util.o restore.o dump.o sort.o pqsort.o utilfromredis.o hyperloglog.o sha1.o crc64.o lzf_c.o lzf_d.o hirlite.o
+OBJ=rlite.o page_skiplist.o page_string.o page_list.o page_btree.o page_key.o page_multi_string.o page_long.o type_string.o type_list.o type_set.o type_zset.o type_hash.o util.o restore.o dump.o sort.o pqsort.o utilfromredis.o hyperloglog.o sha1.o crc64.o lzf_c.o lzf_d.o scripting.o rand.o hirlite.o
 LIBNAME=libhirlite
 PKGCONFNAME=hirlite.pc
 
@@ -25,7 +25,7 @@ else
   DEBUG?=-g -ggdb
 endif
 
-CFLAGS +=  -I./
+CFLAGS +=  -I./ -I../deps/lua/src/
 
 DEBUG.gcc += -rdynamic
 CFLAGS.gcc += -std=c99
@@ -38,7 +38,6 @@ DEBUG += ${DEBUG.gcc}
 CFLAGS += ${CFLAGS.gcc}
 endif
 
-LIBHIRLITE_FILES=rlite.o page_skiplist.o page_string.o page_list.o page_btree.o page_key.o type_string.o type_list.o type_set.o type_zset.o type_hash.o page_long.o page_multi_string.o util.o utilfromredis.o hyperloglog.o sha1.o crc64.o restore.o dump.o lzf_c.o lzf_d.o sort.o pqsort.o hirlite.o
 LIBS=-lm
 
 INSTALL?= cp -a
@@ -85,6 +84,7 @@ ifeq ($(uname_S),SunOS)
 endif
 LUA_CFLAGS+= -O2 -Wall -DENABLE_CJSON_GLOBAL $(CFLAGS)
 LUA_LDFLAGS+= $(LDFLAGS)
+LUA_STLIB=../deps/lua/src/liblua.a
 AR=ar
 ARFLAGS=rcu
 
@@ -106,15 +106,15 @@ clang-analyzer:
 .c.o:
 	$(CC) $(ARCH) $(DEBUG) $(CFLAGS) -c $<
 
-$(DYLIBNAME): $(OBJ)
-	$(DYLIB_MAKE_CMD) $(OBJ)
+$(DYLIBNAME): $(OBJ) lua
+	$(DYLIB_MAKE_CMD) $(LUA_STLIB) $(OBJ)
 
 $(STLIBNAME): $(OBJ)
-	ar -cq libhirlite.a $(LIBHIRLITE_FILES)
+	ar -cq libhirlite.a $(OBJ)
 
-buildtest: $(STLIBNAME) test/rlite-test.o test/btree-test.o test/list-test.o test/string-test.o test/multi_string-test.o test/multi-test.o test/key-test.o test/type_string-test.o test/type_list-test.o test/type_set-test.o test/type_zset-test.o test/type_hash-test.o test/skiplist-test.o test/long-test.o test/restore-test.o test/hyperloglog-test.o test/dump-test.o test/sort-test.o test/test_util.o test/test.o test/echo.o test/hash.o test/list.o test/parser.o test/set.o test/string.o test/test_hirlite.o test/zset.o test/db.o test/multi.o test/hsort.o
+buildtest: $(STLIBNAME) test/rlite-test.o test/btree-test.o test/list-test.o test/string-test.o test/multi_string-test.o test/multi-test.o test/key-test.o test/type_string-test.o test/type_list-test.o test/type_set-test.o test/type_zset-test.o test/type_hash-test.o test/skiplist-test.o test/long-test.o test/restore-test.o test/hyperloglog-test.o test/dump-test.o test/sort-test.o test/test_util.o test/test.o test/echo.o test/hash.o test/list.o test/parser.o test/set.o test/string.o test/test_hirlite.o test/zset.o test/db.o test/multi.o test/hsort.o test/scripting-test.o
 	$(CC) $(DEBUG) $(CFLAGS) -o rlite-test test.o rlite-test.o btree-test.o list-test.o string-test.o multi_string-test.o multi-test.o key-test.o type_string-test.o type_list-test.o type_set-test.o type_zset-test.o type_hash-test.o skiplist-test.o long-test.o restore-test.o hyperloglog-test.o dump-test.o sort-test.o test_util.o $(STLIBNAME) $(LIBS)
-	$(CC) $(DEBUG) $(CFLAGS) -o hirlite-test echo.o hash.o list.o parser.o set.o string.o test_hirlite.o zset.o db.o multi.o hsort.o $(STLIBNAME) $(LIBS)
+	$(CC) $(DEBUG) $(CFLAGS) -o hirlite-test echo.o hash.o list.o parser.o set.o string.o test_hirlite.o zset.o db.o multi.o hsort.o scripting-test.o $(STLIBNAME) $(LUA_STLIB) $(LIBS)
 
 test: buildtest
 	./rlite-test

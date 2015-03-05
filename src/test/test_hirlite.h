@@ -19,6 +19,8 @@
 
 #define EXPECT_STATUS(reply, string, strlen) EXPECT_OBJ(RLITE_REPLY_STATUS, reply, string, strlen)
 #define EXPECT_STR(reply, string, strlen) EXPECT_OBJ(RLITE_REPLY_STRING, reply, string, strlen)
+#define EXPECT_ERROR_STR(reply, string, strlen) EXPECT_OBJ(RLITE_REPLY_ERROR, reply, string, strlen)
+
 #define EXPECT_ERROR(reply)\
 	if (reply->type != RLITE_REPLY_ERROR) {\
 		fprintf(stderr, "Expected error got %d instead on %s:%d\n", reply->type, __FILE__, __LINE__);\

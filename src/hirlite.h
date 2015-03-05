@@ -30,6 +30,7 @@
 /* Connection may be disconnected before being free'd. The second bit
  * in the flags field is set when the context is connected. */
 #define RLITE_CONNECTED 0x2
+#define RLITE_LUA_CLIENT (1<<8) /* This is a non connected client used by Lua */
 
 /* The async API might try to disconnect cleanly and flush the output
  * buffer and read all subsequent replies before disconnecting.
@@ -60,6 +61,21 @@
 #define RLITE_READER_MAX_BUF (1024*16)  /* Default max unused reader buffer. */
 
 #define RLITE_KEEPALIVE_INTERVAL 15 /* seconds */
+
+#define RLITE_CMD_WRITE 1                   /* "w" flag */
+#define RLITE_CMD_READONLY 2                /* "r" flag */
+#define RLITE_CMD_DENYOOM 4                 /* "m" flag */
+#define RLITE_CMD_NOT_USED_1 8              /* no longer used flag */
+#define RLITE_CMD_ADMIN 16                  /* "a" flag */
+#define RLITE_CMD_PUBSUB 32                 /* "p" flag */
+#define RLITE_CMD_NOSCRIPT  64              /* "s" flag */
+#define RLITE_CMD_RANDOM 128                /* "R" flag */
+#define RLITE_CMD_SORT_FOR_SCRIPT 256       /* "S" flag */
+#define RLITE_CMD_LOADING 512               /* "l" flag */
+#define RLITE_CMD_STALE 1024                /* "t" flag */
+#define RLITE_CMD_SKIP_MONITOR 2048         /* "M" flag */
+#define RLITE_CMD_ASKING 4096               /* "k" flag */
+#define RLITE_CMD_FAST 8192                 /* "F" flag */
 
 #ifdef __cplusplus
 extern "C" {
@@ -144,6 +160,7 @@ int rliteAppendFormattedCommand(rliteContext *c, const char *cmd, size_t len);
 int rlitevAppendCommand(rliteContext *c, const char *format, va_list ap);
 int rliteAppendCommand(rliteContext *c, const char *format, ...);
 int rliteAppendCommandArgv(rliteContext *c, int argc, char **argv, size_t *argvlen);
+int rliteAppendCommandClient(struct rliteClient *client);
 
 /* Issue a command to Redis. In a blocking context, it is identical to calling
  * rliteAppendCommand, followed by rliteGetReply. The function will return
@@ -154,12 +171,27 @@ void *rlitevCommand(rliteContext *c, const char *format, va_list ap);
 void *rliteCommand(rliteContext *c, const char *format, ...);
 void *rliteCommandArgv(rliteContext *c, int argc, char **argv, size_t *argvlen);
 
+struct rliteCommand *rliteLookupCommand(const char *name, size_t len);
+int rliteCommandHasFlag(struct rliteCommand *cmd, int flag);
+
+int getLongLongFromObjectOrReply(struct rliteClient *c, const char *o, size_t len, long long *target, const char *msg);
+rliteReply *createArrayObject(size_t size);
+rliteReply *createStringTypeObject(int type, const char *str, const int len);
+rliteReply *createStringObject(const char *str, const int len);
+rliteReply *createCStringObject(const char *str);
+rliteReply *createErrorObject(const char *str);
+rliteReply *createStatusObject(const char *str);
+rliteReply *createDoubleObject(double d);
+rliteReply *createLongLongObject(long long value);
+rliteReply *createNullReplyObject();
+
 typedef struct rliteClient {
 	int argc;
 	char **argv;
 	size_t *argvlen;
 	rliteReply *reply;
 	rliteContext *context;
+	int flags;
 } rliteClient;
 
 typedef void rliteCommandProc(rliteClient *c);

@@ -13,6 +13,7 @@
 
 #include "hyperloglog.h"
 #include "hirlite.h"
+#include "scripting.h"
 #include "util.h"
 
 #define UNSIGN(val) ((unsigned char *)val)
@@ -33,7 +34,7 @@
 
 int strerror_r(int, char *, size_t);
 
-static struct rliteCommand *lookupCommand(const char *name, size_t UNUSED(len));
+struct rliteCommand *rliteLookupCommand(const char *name, size_t UNUSED(len));
 static void __rliteSetError(rliteContext *c, int type, const char *str);
 
 static int catvprintf(char** s, size_t *slen, const char *fmt, va_list ap) {
@@ -74,7 +75,25 @@ static rliteReply *createReplyObject(int type) {
 	return r;
 }
 
-static rliteReply *createStringTypeObject(int type, const char *str, const int len) {
+rliteReply *createArrayObject(size_t size) {
+	rliteReply* reply = createReplyObject(RLITE_REPLY_ARRAY);
+	if (!reply) {
+		return NULL;
+	}
+	reply->elements = size;
+	reply->element = malloc(sizeof(rliteReply*) * size);
+	if (!reply->element) {
+		free(reply);
+		return NULL;
+	}
+	return reply;
+}
+
+rliteReply *createNullReplyObject() {
+	return createReplyObject(RLITE_REPLY_NIL);
+}
+
+rliteReply *createStringTypeObject(int type, const char *str, const int len) {
 	rliteReply *reply = createReplyObject(type);
 	reply->str = malloc(sizeof(char) * (len + 1));
 	if (!reply->str) {
@@ -87,23 +106,23 @@ static rliteReply *createStringTypeObject(int type, const char *str, const int l
 	return reply;
 }
 
-static rliteReply *createStringObject(const char *str, const int len) {
+rliteReply *createStringObject(const char *str, const int len) {
 	return createStringTypeObject(RLITE_REPLY_STRING, str, len);
 }
 
-static rliteReply *createCStringObject(const char *str) {
+rliteReply *createCStringObject(const char *str) {
 	return createStringObject(str, strlen(str));
 }
 
-static rliteReply *createErrorObject(const char *str) {
+rliteReply *createErrorObject(const char *str) {
 	return createStringTypeObject(RLITE_REPLY_ERROR, str, strlen((char *)str));
 }
 
-static rliteReply *createStatusObject(const char *str) {
+rliteReply *createStatusObject(const char *str) {
 	return createStringTypeObject(RLITE_REPLY_STATUS, str, strlen((char *)str));
 }
 
-static rliteReply *createDoubleObject(double d) {
+rliteReply *createDoubleObject(double d) {
 	char dbuf[128];
 	int dlen;
 	if (isinf(d)) {
@@ -116,7 +135,7 @@ static rliteReply *createDoubleObject(double d) {
 	}
 }
 
-static rliteReply *createLongLongObject(long long value) {
+rliteReply *createLongLongObject(long long value) {
 	rliteReply *reply = createReplyObject(RLITE_REPLY_INTEGER);
 	reply->integer = value;
 	return reply;
@@ -285,7 +304,7 @@ static int getLongLongFromObject(const char *_o, size_t len, long long *target) 
 	return RLITE_OK;
 }
 
-static int getLongLongFromObjectOrReply(rliteClient *c, const char *o, size_t len, long long *target, const char *msg) {
+int getLongLongFromObjectOrReply(rliteClient *c, const char *o, size_t len, long long *target, const char *msg) {
 	long long value;
 	if (getLongLongFromObject(o, len, &value) != RLITE_OK) {
 		if (msg != NULL) {
@@ -759,7 +778,7 @@ static void execCommand(rliteClient *c) {
 	for (i = 0; i < c->reply->elements; i++) {
 		client = c->context->enqueuedCommands[i];
 		client->reply = NULL;
-		command = lookupCommand(client->argv[0], client->argvlen[0]);
+		command = rliteLookupCommand(client->argv[0], client->argvlen[0]);
 
 		if (client->context->writeCommand) {
 			RL_CALL(rl_dirty_hash, RL_OK, client->context->db, &oldhash);
@@ -894,7 +913,7 @@ static void flagTransactions(rliteClient *c) {
 	}
 }
 
-static int __rliteAppendCommandClient(rliteClient *client) {
+int rliteAppendCommandClient(rliteClient *client) {
 	if (client->argc == 0) {
 		return RLITE_ERR;
 	}
@@ -902,7 +921,7 @@ static int __rliteAppendCommandClient(rliteClient *client) {
 	unsigned char *oldhash = NULL, *newhash = NULL;
 	void *tmp;
 	size_t newAlloc;
-	struct rliteCommand *command = lookupCommand(client->argv[0], client->argvlen[0]);
+	struct rliteCommand *command = rliteLookupCommand(client->argv[0], client->argvlen[0]);
 	int i, retval = RLITE_OK;
 	if (!command) {
 		retval = addReplyErrorFormat(client->context, "unknown command '%s'", (char*)client->argv[0]);
@@ -929,6 +948,7 @@ static int __rliteAppendCommandClient(rliteClient *client) {
 				client->context->enqueuedCommandsAlloc = newAlloc;
 			}
 			client->context->enqueuedCommands[client->context->enqueuedCommandsLength] = malloc(sizeof(rliteClient));
+			client->context->enqueuedCommands[client->context->enqueuedCommandsLength]->flags = 0;
 			if (!client->context->enqueuedCommands[client->context->enqueuedCommandsLength]) {
 				retval = RL_OUT_OF_MEMORY;
 				__rliteSetError(client->context, RLITE_ERR_OOM, "Out of memory");
@@ -989,7 +1009,7 @@ int rlitevAppendCommand(rliteContext *c, const char *format, va_list ap) {
 		return RLITE_ERR;
 	}
 
-	int retval = __rliteAppendCommandClient(&client);
+	int retval = rliteAppendCommandClient(&client);
 	int i;
 	for (i = 0; i < client.argc; i++) {
 		free(client.argv[i]);
@@ -1016,7 +1036,7 @@ int rliteAppendCommandArgv(rliteContext *c, int argc, char **argv, size_t *argvl
 	client.argv = argv;
 	client.argvlen = argvlen;
 
-	return __rliteAppendCommandClient(&client);
+	return rliteAppendCommandClient(&client);
 }
 
 void *rlitevCommand(rliteContext *c, const char *format, va_list ap) {
@@ -2560,9 +2580,9 @@ cleanup:
 	return;
 }
 
-#define REDIS_SET_NO_FLAGS 0
-#define REDIS_SET_NX (1<<0)	 /* Set if key not exists. */
-#define REDIS_SET_XX (1<<1)	 /* Set if key exists. */
+#define RLITE_SET_NO_FLAGS 0
+#define RLITE_SET_NX (1<<0)	 /* Set if key not exists. */
+#define RLITE_SET_XX (1<<1)	 /* Set if key exists. */
 
 static void setGenericCommand(rliteClient *c, int flags, const unsigned char *key, long keylen, unsigned char *value, long valuelen, long long expire) {
 	int retval;
@@ -2577,10 +2597,10 @@ static void setGenericCommand(rliteClient *c, int flags, const unsigned char *ke
 		milliseconds = rl_mstime() + expire;
 	}
 
-	if ((flags & REDIS_SET_NX) || (flags & REDIS_SET_XX)) {
+	if ((flags & RLITE_SET_NX) || (flags & RLITE_SET_XX)) {
 		retval = rl_key_get(c->context->db, key, keylen, NULL, NULL, NULL, NULL, NULL);
-		if (((flags & REDIS_SET_NX) && retval == RL_FOUND) ||
-				((flags & REDIS_SET_XX) && retval == RL_NOT_FOUND)) {
+		if (((flags & RLITE_SET_NX) && retval == RL_FOUND) ||
+				((flags & RLITE_SET_XX) && retval == RL_NOT_FOUND)) {
 			c->reply = createReplyObject(RLITE_REPLY_NIL);
 			return;
 		}
@@ -2599,7 +2619,7 @@ static void setCommand(rliteClient *c) {
 	size_t keylen = c->argvlen[1];
 	int j;
 	long long expire = 0, next;
-	int flags = REDIS_SET_NO_FLAGS;
+	int flags = RLITE_SET_NO_FLAGS;
 
 	for (j = 3; j < c->argc; j++) {
 		char *a = c->argv[j];
@@ -2611,10 +2631,10 @@ static void setCommand(rliteClient *c) {
 
 		if ((a[0] == 'n' || a[0] == 'N') &&
 			(a[1] == 'x' || a[1] == 'X') && a[2] == '\0') {
-			flags |= REDIS_SET_NX;
+			flags |= RLITE_SET_NX;
 		} else if ((a[0] == 'x' || a[0] == 'X') &&
 				   (a[1] == 'x' || a[1] == 'X') && a[2] == '\0') {
-			flags |= REDIS_SET_XX;
+			flags |= RLITE_SET_XX;
 		} else if ((a[0] == 'e' || a[0] == 'E') &&
 				   (a[1] == 'x' || a[1] == 'X') && a[2] == '\0' && next) {
 			expire = next * 1000;
@@ -2634,7 +2654,7 @@ static void setCommand(rliteClient *c) {
 
 static void setnxCommand(rliteClient *c) {
 	rliteReply *reply;
-	setGenericCommand(c, REDIS_SET_NX, UNSIGN(c->argv[1]), c->argvlen[1], UNSIGN(c->argv[2]), c->argvlen[2], 0);
+	setGenericCommand(c, RLITE_SET_NX, UNSIGN(c->argv[1]), c->argvlen[1], UNSIGN(c->argv[2]), c->argvlen[2], 0);
 	reply = c->reply;
 	if (reply->type == RLITE_REPLY_NIL) {
 		c->reply = createLongLongObject(0);
@@ -2650,7 +2670,7 @@ static void setexCommand(rliteClient *c) {
 		c->reply = createErrorObject(RLITE_SYNTAXERR);
 		return;
 	}
-	setGenericCommand(c, REDIS_SET_NO_FLAGS, UNSIGN(c->argv[1]), c->argvlen[1], UNSIGN(c->argv[3]), c->argvlen[3], expire * 1000);
+	setGenericCommand(c, RLITE_SET_NO_FLAGS, UNSIGN(c->argv[1]), c->argvlen[1], UNSIGN(c->argv[3]), c->argvlen[3], expire * 1000);
 }
 
 static void psetexCommand(rliteClient *c) {
@@ -2659,7 +2679,7 @@ static void psetexCommand(rliteClient *c) {
 		c->reply = createErrorObject(RLITE_SYNTAXERR);
 		return;
 	}
-	setGenericCommand(c, REDIS_SET_NO_FLAGS, UNSIGN(c->argv[1]), c->argvlen[1], UNSIGN(c->argv[3]), c->argvlen[3], expire);
+	setGenericCommand(c, RLITE_SET_NO_FLAGS, UNSIGN(c->argv[1]), c->argvlen[1], UNSIGN(c->argv[3]), c->argvlen[3], expire);
 }
 
 static void getCommand(rliteClient *c) {
@@ -3947,8 +3967,8 @@ static struct rliteCommand rliteCommandTable[] = {
 	{"dump",dumpCommand,2,"ar",0,1,1,1,0,0},
 	{"object",objectCommand,3,"r",0,2,2,2,0,0},
 	// {"client",clientCommand,-2,"ars",0,NULL,0,0,0,0,0},
-	// {"eval",evalCommand,-3,"s",0,evalGetKeys,0,0,0,0,0},
-	// {"evalsha",evalShaCommand,-3,"s",0,evalGetKeys,0,0,0,0,0},
+	{"eval",evalCommand,-3,"s",0,0,0,0,0,0},
+	{"evalsha",evalShaCommand,-3,"s",0,0,0,0,0,0},
 	// {"slowlog",slowlogCommand,-2,"r",0,NULL,0,0,0,0,0},
 	// {"script",scriptCommand,-2,"ras",0,NULL,0,0,0,0,0},
 	// {"time",timeCommand,1,"rRF",0,NULL,0,0,0,0,0},
@@ -3965,7 +3985,31 @@ static struct rliteCommand rliteCommandTable[] = {
 	// {"latency",latencyCommand,-2,"arslt",0,NULL,0,0,0,0,0}
 };
 
-static struct rliteCommand *lookupCommand(const char *name, size_t len) {
+int rliteCommandHasFlag(struct rliteCommand *c, int flags) {
+	char *f = c->sflags;
+
+	while(*f != '\0') {
+		switch(*f) {
+			case 'w': c->flags |= RLITE_CMD_WRITE; break;
+			case 'r': c->flags |= RLITE_CMD_READONLY; break;
+			case 'm': c->flags |= RLITE_CMD_DENYOOM; break;
+			case 'a': c->flags |= RLITE_CMD_ADMIN; break;
+			case 'p': c->flags |= RLITE_CMD_PUBSUB; break;
+			case 's': c->flags |= RLITE_CMD_NOSCRIPT; break;
+			case 'R': c->flags |= RLITE_CMD_RANDOM; break;
+			case 'S': c->flags |= RLITE_CMD_SORT_FOR_SCRIPT; break;
+			case 'l': c->flags |= RLITE_CMD_LOADING; break;
+			case 't': c->flags |= RLITE_CMD_STALE; break;
+			case 'M': c->flags |= RLITE_CMD_SKIP_MONITOR; break;
+			case 'k': c->flags |= RLITE_CMD_ASKING; break;
+			case 'F': c->flags |= RLITE_CMD_FAST; break;
+		}
+		f++;
+	}
+	return flags == 0;
+}
+
+struct rliteCommand *rliteLookupCommand(const char *name, size_t len) {
 	char _name[100];
 	if (len >= 100) {
 		return NULL;
