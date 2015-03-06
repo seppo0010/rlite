@@ -22,6 +22,7 @@ The first page contains general information about the database.
 00 00 00 00                   # metadata of the second database
 ...
 00 00 00 00                   # metadata of the Nth database
+00 00 00 00                   # metadata of the scripts database
 ...                           # padding
 ```
 
@@ -32,6 +33,10 @@ already recycled, this value matches the "number of pages in the database".
 The "number of databases in the file" enumerates the number of integers that
 follow. Each of those is 0 if the database contains no key, or an integer
 where to go to look for the key btree metadata.
+
+The "scripts" database is a database formatted like the others but where the
+user has no access. It is used internally to save the lua scripts.
+The key of the lua scripts is the sha1 of the hex digest sha1 of the script.
 
 ## Key btree metadata page
 

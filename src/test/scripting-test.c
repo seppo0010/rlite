@@ -174,6 +174,36 @@ static int test_call_err()
 	return 0;
 }
 
+static int test_script_evalsha()
+{
+	rliteContext *context = rliteConnect(":memory:", 0);
+	char *sha = "30dc9ef2a8d563dced9a243ecd0cc449c2ea0144";
+	char *invalidSha = "30dc9ef2a8d563dced9a243ecd0cc449c2ea0145";
+
+	rliteReply* reply;
+	size_t argvlen[100];
+	{
+		char* argv[100] = {"script", "load", "return 123", NULL};
+		reply = rliteCommandArgv(context, populateArgvlen(argv, argvlen), argv, argvlen);
+		EXPECT_STR(reply, sha, 40);
+		rliteFreeReplyObject(reply);
+	}
+	{
+		char* argv[100] = {"evalsha", sha, "0", NULL};
+		reply = rliteCommandArgv(context, populateArgvlen(argv, argvlen), argv, argvlen);
+		EXPECT_INTEGER(reply, 123);
+		rliteFreeReplyObject(reply);
+	}
+	{
+		char* argv[100] = {"evalsha", invalidSha, "0", NULL};
+		reply = rliteCommandArgv(context, populateArgvlen(argv, argvlen), argv, argvlen);
+		EXPECT_ERROR(reply);
+		rliteFreeReplyObject(reply);
+	}
+	rliteFree(context);
+	return 0;
+}
+
 int run_scripting_test()
 {
 	if (test_types()) {
@@ -183,6 +213,9 @@ int run_scripting_test()
 		return 1;
 	}
 	if (test_call_err()) {
+		return 1;
+	}
+	if (test_script_evalsha()) {
 		return 1;
 	}
 	return 0;

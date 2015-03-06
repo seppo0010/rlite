@@ -47,6 +47,33 @@
 #define RLITE_LOG_RAW (1<<10) /* Modifier to log without timestamp */
 #define RLITE_DEFAULT_VERBOSITY RLITE_NOTICE
 
+void sha1hex(char *digest, char *script, size_t len);
+static int setScript(rliteClient *c, char *script, long scriptlen) {
+	int retval;
+	char hash[40];
+	sha1hex(hash, script, scriptlen);
+	int selected_database = c->context->db->selected_database;
+	c->context->db->selected_database = c->context->db->number_of_databases;
+
+	RL_CALL(rl_set, RL_OK, c->context->db, (unsigned char *)hash, 40, (unsigned char *)script, scriptlen, 0, 0);
+
+cleanup:
+	c->context->db->selected_database = selected_database;
+	return retval;
+}
+
+static int getScript(rliteClient *c, char hash[40], char **script, long *scriptlen) {
+	int retval;
+	int selected_database = c->context->db->selected_database;
+	c->context->db->selected_database = c->context->db->number_of_databases;
+
+	RL_CALL(rl_get, RL_OK, c->context->db, (unsigned char *)hash, 40, (unsigned char **)script, scriptlen);
+
+cleanup:
+	c->context->db->selected_database = selected_database;
+	return retval;
+}
+
 void rliteLogRaw(int UNUSED(level), const char *UNUSED(fmt), ...) {
 	// TODO
 }
@@ -60,7 +87,6 @@ void rliteToLuaType_Error(lua_State *lua, rliteReply *reply);
 void rliteToLuaType_MultiBulk(lua_State *lua, rliteReply *reply);
 int rlite_math_random (lua_State *L);
 int rlite_math_randomseed (lua_State *L);
-void sha1hex(char *digest, char *script, size_t len);
 
 /* Take a Redis reply in the Redis protocol format and convert it into a
  * Lua type. Thanks to this function, and the introduction of not connected
@@ -549,7 +575,6 @@ void scriptingInit(void) {
 	/* Initialize a dictionary we use to map SHAs to scripts.
 	 * This is useful for replication, as we need to replicate EVALSHA
 	 * as EVAL, so we need to remember the associated script. */
-	// TODO: store lua_scripts in their database
 
 	/* Register the rlite commands table and fields */
 	lua_newtable(lua);
@@ -859,7 +884,10 @@ int luaCreateFunction(rliteClient *c, lua_State *lua, char *funcname, char *body
 	 * so that we can replicate / write in the AOF all the
 	 * EVALSHA commands as EVAL using the original script. */
 	{
-		// TODO: save into lua_scripts
+		int retval = setScript(c, body, bodylen);
+		if (retval != RL_OK) {
+			return retval;
+		}
 	}
 	return RLITE_OK;
 }
@@ -916,6 +944,16 @@ void evalGenericCommand(rliteClient *c, int evalsha) {
 			funcname[j+2] = (sha[j] >= 'A' && sha[j] <= 'Z') ?
 				sha[j]+('a'-'A') : sha[j];
 		funcname[42] = '\0';
+
+		char *body;
+		long bodylen;
+		int retval = getScript(c, funcname + 2, &body, &bodylen);
+		if (retval != RL_OK) {
+			c->reply = createErrorObject(RLITE_NOSCRIPTERR);
+			return;
+		}
+		luaCreateFunction(c, lua, funcname, body, bodylen);
+		rl_free(body);
 	}
 
 	/* Push the pcall error handler function on the stack. */
@@ -1077,23 +1115,14 @@ void scriptCommand(rliteClient *c) {
 
 		c->reply = createArrayObject(c->argc - 2);
 		for (j = 2; j < c->argc; j++) {
-			// TODO: exists in lua_scripts ? 1 : 0
-			c->reply->element[j - 2] = createLongLongObject(0);
+			c->reply->element[j - 2] = createLongLongObject(getScript(c, c->argv[j], NULL, NULL) == RL_OK ? 1 : 0);
 		}
 	} else if (c->argc == 3 && !strcasecmp(c->argv[1],"load")) {
-		char funcname[43];
 		char sha[41];
 
-		funcname[0] = 'f';
-		funcname[1] = '_';
-		sha1hex(funcname+2,c->argv[2],c->argvlen[2]);
-		memcpy(sha, funcname+2, 40);
-		// TODO: check if the function already exists
-		if (luaCreateFunction(c,lua,funcname,c->argv[2], c->argvlen[2])
-				== RLITE_ERR) {
-			return;
-		}
-		c->reply = createStringObject(funcname+2,40);
+		sha1hex(sha,c->argv[2],c->argvlen[2]);
+		setScript(c, c->argv[2], c->argvlen[2]);
+		c->reply = createStringObject(sha,40);
 	} else if (c->argc == 2 && !strcasecmp(c->argv[1],"kill")) {
 		if (lua_caller == NULL) {
 			c->reply = createCStringObject("NOTBUSY No scripts in execution right now.\r\n");
