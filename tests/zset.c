@@ -1,6 +1,6 @@
 #include <string.h>
 #include "hirlite.h"
-#include "test/test_hirlite.h"
+#include "test_hirlite.h"
 
 static int _zadd(rliteContext *context) {
 	size_t argvlen[6];

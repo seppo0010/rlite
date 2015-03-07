@@ -1,6 +1,6 @@
-#include "../hyperloglog.h"
+#include "../src/hyperloglog.h"
 #include "test_util.h"
-#include "../rlite.h"
+#include "../src/rlite.h"
 
 int test_hyperloglog_selftest()
 {

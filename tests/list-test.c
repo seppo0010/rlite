@@ -3,9 +3,9 @@
 #include <stdio.h>
 #include <string.h>
 #include "test_util.h"
-#include "../rlite.h"
-#include "../status.h"
-#include "../page_list.h"
+#include "../src/rlite.h"
+#include "../src/status.h"
+#include "../src/page_list.h"
 
 int basic_insert_list_test(int options)
 {

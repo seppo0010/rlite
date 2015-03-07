@@ -1,9 +1,9 @@
 #include <stdlib.h>
 #include <string.h>
 #include <limits.h>
-#include "../rlite.h"
-#include "../page_multi_string.h"
-#include "../util.h"
+#include "../src/rlite.h"
+#include "../src/page_multi_string.h"
+#include "../src/util.h"
 #include "test_util.h"
 
 int basic_set_get(int UNUSED(_))

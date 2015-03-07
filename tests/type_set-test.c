@@ -2,8 +2,8 @@
 #include <string.h>
 #include <limits.h>
 #include <math.h>
-#include "../rlite.h"
-#include "../type_set.h"
+#include "../src/rlite.h"
+#include "../src/type_set.h"
 #include "test_util.h"
 
 #define IS_EQUAL(s1, l1, s2, l2)\

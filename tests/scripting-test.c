@@ -1,9 +1,7 @@
-// eval 'return {"1","2"}' 0'
-// eval 'return 1' 0
 #include <string.h>
 #include <unistd.h>
 #include "hirlite.h"
-#include "test/test_hirlite.h"
+#include "test_hirlite.h"
 
 static int populateArgvlen(char *argv[], size_t argvlen[]) {
 	int i;

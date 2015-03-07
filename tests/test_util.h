@@ -1,7 +1,7 @@
 #ifndef _RL_TEST_UTIL_H
 #define _RL_TEST_UTIL_H
 
-#include "../util.h"
+#include "../src/util.h"
 struct rlite;
 
 int setup_db(struct rlite **db, int file, int del);

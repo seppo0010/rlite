@@ -3,7 +3,7 @@
 #include <string.h>
 #include <stdlib.h>
 #include "test_util.h"
-#include "../rlite.h"
+#include "../src/rlite.h"
 
 int test_rlite_page_cache(int UNUSED(_))
 {

@@ -2,8 +2,8 @@
 #include <string.h>
 #include <limits.h>
 #include <math.h>
-#include "../rlite.h"
-#include "../type_string.h"
+#include "../src/rlite.h"
+#include "../src/type_string.h"
 #include "test_util.h"
 
 static int basic_test_set_get(int _commit)

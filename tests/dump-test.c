@@ -1,10 +1,10 @@
-#include "../crc64.h"
-#include "../endianconv.h"
+#include "../src/crc64.h"
+#include "../src/endianconv.h"
 
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
-#include "../rlite.h"
+#include "../src/rlite.h"
 #include "test_util.h"
 
 #define PRINT(str, strlen)\

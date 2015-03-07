@@ -2,9 +2,9 @@
 #include <stdio.h>
 #include <string.h>
 #include "test_util.h"
-#include "../rlite.h"
-#include "../page_skiplist.h"
-#include "../page_multi_string.h"
+#include "../src/rlite.h"
+#include "../src/page_skiplist.h"
+#include "../src/page_multi_string.h"
 
 #define TEST_SIZE 100
 

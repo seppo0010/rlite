@@ -2,8 +2,8 @@
 #include <string.h>
 #include <limits.h>
 #include <math.h>
-#include "../rlite.h"
-#include "../type_hash.h"
+#include "../src/rlite.h"
+#include "../src/type_hash.h"
 #include "test_util.h"
 
 #define UNSIGN(str) ((unsigned char *)(str))

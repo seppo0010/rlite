@@ -2,9 +2,9 @@
 #include <stdio.h>
 #include <string.h>
 #include "test_util.h"
-#include "../rlite.h"
-#include "../status.h"
-#include "../page_long.h"
+#include "../src/rlite.h"
+#include "../src/status.h"
+#include "../src/page_long.h"
 
 static int do_long_test(int _commit)
 {

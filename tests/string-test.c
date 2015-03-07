@@ -3,9 +3,9 @@
 #include <string.h>
 #include <limits.h>
 #include "test_util.h"
-#include "../rlite.h"
-#include "../status.h"
-#include "../page_string.h"
+#include "../src/rlite.h"
+#include "../src/status.h"
+#include "../src/page_string.h"
 
 static int do_string_test(int UNUSED(_))
 {

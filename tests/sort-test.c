@@ -2,9 +2,9 @@
 #include <stdio.h>
 #include <string.h>
 #include "test_util.h"
-#include "../rlite.h"
-#include "../status.h"
-#include "../sort.h"
+#include "../src/rlite.h"
+#include "../src/status.h"
+#include "../src/sort.h"
 
 static int sort_nosort_list_test(int _commit) {
 	fprintf(stderr, "Start sort_nosort_list_test %d\n", _commit);

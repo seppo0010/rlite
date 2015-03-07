@@ -2,9 +2,9 @@
 #include <string.h>
 #include <limits.h>
 #include <math.h>
-#include "../rlite.h"
-#include "../type_zset.h"
-#include "../page_key.h"
+#include "../src/rlite.h"
+#include "../src/type_zset.h"
+#include "../src/page_key.h"
 #include "test_util.h"
 
 int basic_test_zadd_zscore(int _commit)

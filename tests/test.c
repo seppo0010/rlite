@@ -18,7 +18,7 @@
 #include "dump-test.h"
 #include "hyperloglog-test.h"
 #include "sort-test.h"
-#include "../util.h"
+#include "../src/util.h"
 
 #ifdef RL_DEBUG
 int main(int argc, char *argv[]) {

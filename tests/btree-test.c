@@ -2,9 +2,9 @@
 #include <stdio.h>
 #include <string.h>
 #include "test_util.h"
-#include "../rlite.h"
-#include "../page_btree.h"
-#include "../status.h"
+#include "../src/rlite.h"
+#include "../src/page_btree.h"
+#include "../src/status.h"
 
 int basic_insert_set_test(int UNUSED(_))
 {
