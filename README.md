@@ -56,7 +56,7 @@ sqlite, command line or simple applications can store its data using rlite.
 - [x] hash (hset, hdel...)
 - [x] key management (del, exists...)
 - [x] transactions (multi, exec...)
-- [ ] lua scripting (eval, evalsha, ...)
+- [x] lua scripting (eval, evalsha, ...)
 - [ ] rlite-server pass all Redis tests
   - [ ] unit/scan
   - [ ] integration/replication
