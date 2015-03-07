@@ -9,6 +9,7 @@
 uname_S:= $(shell sh -c 'uname -s 2>/dev/null || echo not')
 
 OBJ=rlite.o page_skiplist.o page_string.o page_list.o page_btree.o page_key.o page_multi_string.o page_long.o type_string.o type_list.o type_set.o type_zset.o type_hash.o util.o restore.o dump.o sort.o pqsort.o utilfromredis.o hyperloglog.o sha1.o crc64.o lzf_c.o lzf_d.o scripting.o rand.o hirlite.o
+LUA_OBJ=../deps/lua/src/lapi.o ../deps/lua/src/lcode.o ../deps/lua/src/ldebug.o ../deps/lua/src/ldo.o ../deps/lua/src/ldump.o ../deps/lua/src/lfunc.o ../deps/lua/src/lgc.o ../deps/lua/src/llex.o ../deps/lua/src/lmem.o ../deps/lua/src/lobject.o ../deps/lua/src/lopcodes.o ../deps/lua/src/lparser.o ../deps/lua/src/lstate.o  ../deps/lua/src/lstring.o ../deps/lua/src/ltable.o ../deps/lua/src/ltm.o ../deps/lua/src/lundump.o ../deps/lua/src/lvm.o ../deps/lua/src/lzio.o ../deps/lua/src/strbuf.o ../deps/lua/src/fpconv.o ../deps/lua/src/lauxlib.o ../deps/lua/src/lbaselib.o ../deps/lua/src/ldblib.o ../deps/lua/src/liolib.o ../deps/lua/src/lmathlib.o ../deps/lua/src/loslib.o ../deps/lua/src/ltablib.o ../deps/lua/src/lstrlib.o ../deps/lua/src/loadlib.o ../deps/lua/src/linit.o ../deps/lua/src/lua_cjson.o ../deps/lua/src/lua_struct.o ../deps/lua/src/lua_cmsgpack.o ../deps/lua/src/lua_bit.o
 LIBNAME=libhirlite
 PKGCONFNAME=hirlite.pc
 
@@ -82,7 +83,7 @@ ifeq ($(uname_S),SunOS)
 	# Make isinf() available
 	LUA_CFLAGS= -D__C99FEATURES__=1
 endif
-LUA_CFLAGS+= -O2 -Wall -DENABLE_CJSON_GLOBAL $(CFLAGS)
+LUA_CFLAGS+= -O2 -Wall -DENABLE_CJSON_GLOBAL -fPIC $(CFLAGS)
 LUA_LDFLAGS+= $(LDFLAGS)
 LUA_STLIB=../deps/lua/src/liblua.a
 AR=ar
@@ -107,7 +108,7 @@ clang-analyzer:
 	$(CC) $(ARCH) $(DEBUG) $(CFLAGS) -c $<
 
 $(DYLIBNAME): $(OBJ) lua
-	$(DYLIB_MAKE_CMD) $(LUA_STLIB) $(OBJ)
+	$(DYLIB_MAKE_CMD) $(LUA_OBJ) $(OBJ)
 
 $(STLIBNAME): $(OBJ)
 	ar -cq libhirlite.a $(OBJ)
