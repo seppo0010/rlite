@@ -148,4 +148,4 @@ install: $(DYLIBNAME) $(STLIBNAME) $(PKGCONFNAME)
 	$(INSTALL) $(PKGCONFNAME) $(INSTALL_PKGCONF_PATH)
 
 clean:
-	rm -rf *-test *.o *.a *.dSYM *.gcda *.gcno lcov *.dylib
+	rm -rf *-test *.o *.a *.dSYM *.gcda *.gcno lcov *.dylib ./deps/lua/src/*.a
