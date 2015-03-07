@@ -24,6 +24,31 @@ puts redis.get "key"
 [Objective-C](https://github.com/seppo0010/objc-rlite#api) and
 [PHP](https://github.com/seppo0010/rlite-php#usage).
 
+### Example in C
+```c
+#include <hirlite.h>
+
+// ...
+
+rliteContext *context = rliteConnect(":memory:", 0);
+
+rliteReply* reply;
+int argc_set = 3;
+char *argv_set[] = {"SET", "key", "value"};
+size_t argvlen_set[] = {3, 3, 5};
+reply = rliteCommandArgv(context, argc_set, argv_set, argvlen_set);
+rliteFreeReplyObject(reply);
+
+int argc_get = 3;
+char *argv_get[] = {"SET", "key", "value"};
+size_t argvlen_get[] = {3, 3, 5};
+reply = rliteCommandArgv(context, argc_get, argv_get, argvlen_get);
+if (reply->type == RLITE_REPLY_STRING) {
+	// reply->str is "value", reply->len is 5
+}
+rliteFreeReplyObject(reply);
+```
+
 ## Use Cases
 
 This is a list of possible use cases where you might want to use rlite.
@@ -46,6 +71,17 @@ snapshot and append-only file.
 
 - **Store client-side application data**. Alternatively to a propetary format or
 sqlite, command line or simple applications can store its data using rlite.
+
+## Storage
+
+All rlite data is stored in a single file using its own format. The format is
+not rdb or aof since those are optimized for fast reading the whole content
+and not for random access.
+
+If file system persistence is no needed, use the magic file path ":memory:".
+
+For more information about the file format check out
+[its documentation](doc/rld-format.md).
 
 ## Current Status and Roadmap
 
