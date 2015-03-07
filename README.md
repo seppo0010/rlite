@@ -116,6 +116,10 @@ rlite has no dependencies, just run `make all`.
 - [objc-rlite](https://github.com/seppo0010/objc-rlite)
 - [rlite-php](https://github.com/seppo0010/rlite-php)
 
+### Command-line interface
+
+- [rlite-cli](https://github.com/seppo0010/rlite-cli)
+
 ## License
 
 Copyright (c) 2014, Sebastian Waisbrot
