@@ -22,7 +22,8 @@ puts redis.get "key"
 [Node.js](//github.com/seppo0010/rlite-js#usage),
 [Python](https://github.com/seppo0010/rlite-py#usage),
 [Objective-C](https://github.com/seppo0010/objc-rlite#api),
-[Java](https://github.com/seppo0010/rlite-java#usage), and
+[Java](https://github.com/seppo0010/rlite-java#usage),
+[golang](https://github.com/seppo0010/rlite-go#usage), and
 [PHP](https://github.com/seppo0010/rlite-php#usage).
 
 ### Example in C
@@ -117,6 +118,7 @@ rlite has no dependencies, just run `make all`.
 - [objc-rlite](https://github.com/seppo0010/objc-rlite)
 - [rlite-php](https://github.com/seppo0010/rlite-php)
 - [rlite-java](https://github.com/seppo0010/rlite-java)
+- [rlite-go](https://github.com/seppo0010/rlite-go#usage)
 
 ### Command-line interface
 
