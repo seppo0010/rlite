@@ -19,12 +19,13 @@ puts redis.get "key"
 ```
 
 [Ruby](https://github.com/seppo0010/rlite-rb#usage) bindings example. See
-[Node.js](//github.com/seppo0010/rlite-js#usage),
-[Python](https://github.com/seppo0010/rlite-py#usage),
-[Objective-C](https://github.com/seppo0010/objc-rlite#api),
+[golang](https://github.com/seppo0010/rlite-go#usage),
 [Java](https://github.com/seppo0010/rlite-java#usage),
-[golang](https://github.com/seppo0010/rlite-go#usage), and
-[PHP](https://github.com/seppo0010/rlite-php#usage).
+[Node.js](//github.com/seppo0010/rlite-js#usage),
+[Objective-C](https://github.com/seppo0010/objc-rlite#api),
+[PHP](https://github.com/seppo0010/rlite-php#usage),
+[Python](https://github.com/seppo0010/rlite-py#usage), and
+[R](https://github.com/richfitz/rrlite#usage).
 
 ### Example in C
 ```c
@@ -112,13 +113,14 @@ rlite has no dependencies, just run `make all`.
 
 ## Bindings
 
+- [objc-rlite](https://github.com/seppo0010/objc-rlite)
+- [rlite-go](https://github.com/seppo0010/rlite-go#usage)
+- [rlite-java](https://github.com/seppo0010/rlite-java)
+- [rlite-js](https://github.com/seppo0010/rlite-js)
+- [rlite-php](https://github.com/seppo0010/rlite-php)
 - [rlite-py](https://github.com/seppo0010/rlite-py)
 - [rlite-rb](https://github.com/seppo0010/rlite-rb)
-- [rlite-js](https://github.com/seppo0010/rlite-js)
-- [objc-rlite](https://github.com/seppo0010/objc-rlite)
-- [rlite-php](https://github.com/seppo0010/rlite-php)
-- [rlite-java](https://github.com/seppo0010/rlite-java)
-- [rlite-go](https://github.com/seppo0010/rlite-go#usage)
+- [rrlite](https://github.com/richfitz/rrlite) (thanks [richfitz](https://github.com/richfitz)!)
 
 ### Command-line interface
 
