@@ -111,6 +111,7 @@ typedef struct watched_key {
 } watched_key;
 
 int rl_open(const char *filename, rlite **db, int flags);
+int rl_refresh(rlite *db);
 int rl_close(rlite *db);
 
 int rl_read_header(rlite *db);

@@ -605,6 +605,10 @@ int rliteFormatCommandArgv(rliteClient *client, int argc, char **argv, size_t *a
 	return RLITE_OK;
 }
 
+static int refresh_rlite_fp(rliteContext* context) {
+	return rl_refresh(context->db);
+}
+
 #define DEFAULT_REPLIES_SIZE 16
 static rliteContext *_rliteConnect(const char *path) {
 	rliteContext *context = malloc(sizeof(*context));
@@ -617,6 +621,15 @@ static rliteContext *_rliteConnect(const char *path) {
 		context = NULL;
 		goto cleanup;
 	}
+	size_t pathlen = 1 + strlen(path);
+	context->path = malloc(sizeof(char) * pathlen);
+	if (!context->path) {
+		free(context->replies);
+		free(context);
+		context = NULL;
+		goto cleanup;
+	}
+	memcpy(context->path, path, pathlen);
 	context->err = 0;
 	context->writeCommand = NULL;
 	context->replyPosition = 0;
@@ -627,18 +640,21 @@ static rliteContext *_rliteConnect(const char *path) {
 	context->cluster_enabled = 0;
 	context->hashtableLimitValue = 0;
 	context->inLuaScript = 0;
-	int retval = rl_open(path, &context->db, RLITE_OPEN_READWRITE | RLITE_OPEN_CREATE);
-	if (retval != RL_OK) {
-		free(context);
-		context = NULL;
-		goto cleanup;
-	}
 	context->inTransaction = 0;
 	context->transactionFailed = 0;
 	context->watchedKeysLength = context->enqueuedCommandsLength = 0;
 	context->watchedKeysAlloc = context->enqueuedCommandsAlloc = 0;
 	context->watchedKeys = NULL;
 	context->enqueuedCommands = NULL;
+	context->db = NULL;
+	int retval = rl_open(context->path, &context->db, RLITE_OPEN_READWRITE | RLITE_OPEN_CREATE);;
+	if (retval != RL_OK) {
+		free(context->path);
+		free(context->replies);
+		free(context);
+		context = NULL;
+		goto cleanup;
+	}
 cleanup:
 	return context;
 }
@@ -682,12 +698,15 @@ int rliteEnableKeepAlive(rliteContext *UNUSED(c)) {
 	return 0;
 }
 void rliteFree(rliteContext *c) {
-	rl_close(c->db);
+	if (c->db) {
+		rl_close(c->db);
+	}
 	int i;
 	for (i = c->replyPosition; i < c->replyLength; i++) {
 		rliteFreeReplyObject(c->replies[i]);
 	}
 	free(c->replies);
+	free(c->path);
 	free(c);
 }
 
@@ -759,6 +778,7 @@ static void execCommand(rliteClient *c) {
 		c->reply = createErrorObject("EXECABORT Transaction discarded because of previous errors.");
 		goto cleanup;
 	}
+	RL_CALL(refresh_rlite_fp, RL_OK, c->context);
 	retval = rl_check_watched_keys(c->context->db, c->context->watchedKeysLength, c->context->watchedKeys);
 	RLITE_SERVER_ERR(c, retval);
 	if (retval != RL_OK) {
@@ -931,6 +951,8 @@ int rliteAppendCommandClient(rliteClient *client) {
 		retval = addReplyErrorFormat(client->context, "wrong number of arguments for '%s' command", command->name);
 		flagTransactions(client);
 	} else {
+		RL_CALL(refresh_rlite_fp, RL_OK, client->context);
+
 		if (client->context->inTransaction && (command->proc != execCommand && command->proc != discardCommand &&
 					command->proc != multiCommand && command->proc != watchCommand)) {
 			if (client->context->enqueuedCommandsLength == client->context->enqueuedCommandsAlloc) {

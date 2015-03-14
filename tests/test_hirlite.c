@@ -9,6 +9,7 @@
 #include "zset.h"
 #include "hsort.h"
 #include "scripting-test.h"
+#include "concurrency-test.h"
 
 int main() {
 	if (run_echo() != 0) { return 1; }
@@ -22,5 +23,6 @@ int main() {
 	if (run_hash() != 0) { return 1; }
 	if (run_sort() != 0) { return 1; }
 	if (run_scripting_test() != 0) { return 1; }
+	if (run_concurrency() != 0) { return 1; }
 	return 0;
 }

@@ -107,6 +107,7 @@ struct rliteClient;
 typedef struct rliteContext {
 	int err; /* Error flags, 0 when there is no error */
 	char errstr[128]; /* String representation of error when applicable */
+	char *path;
 	rliteReply **replies;
 	int replyPosition; // avoid reallocing the pointer after removing an element, keep a reference of the next position
 	int replyLength;

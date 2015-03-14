@@ -113,9 +113,9 @@ $(DYLIBNAME): $(OBJ) lua
 $(STLIBNAME): $(OBJ)
 	ar -cq libhirlite.a $(OBJ)
 
-buildtest: $(STLIBNAME) ../tests/rlite-test.o ../tests/btree-test.o ../tests/list-test.o ../tests/string-test.o ../tests/multi_string-test.o ../tests/multi-test.o ../tests/key-test.o ../tests/type_string-test.o ../tests/type_list-test.o ../tests/type_set-test.o ../tests/type_zset-test.o ../tests/type_hash-test.o ../tests/skiplist-test.o ../tests/long-test.o ../tests/restore-test.o ../tests/hyperloglog-test.o ../tests/dump-test.o ../tests/sort-test.o ../tests/test_util.o ../tests/test.o ../tests/echo.o ../tests/hash.o ../tests/list.o ../tests/parser.o ../tests/set.o ../tests/string.o ../tests/test_hirlite.o ../tests/zset.o ../tests/db.o ../tests/multi.o ../tests/hsort.o ../tests/scripting-test.o
+buildtest: $(STLIBNAME) ../tests/rlite-test.o ../tests/btree-test.o ../tests/list-test.o ../tests/string-test.o ../tests/multi_string-test.o ../tests/multi-test.o ../tests/key-test.o ../tests/type_string-test.o ../tests/type_list-test.o ../tests/type_set-test.o ../tests/type_zset-test.o ../tests/type_hash-test.o ../tests/skiplist-test.o ../tests/long-test.o ../tests/restore-test.o ../tests/hyperloglog-test.o ../tests/dump-test.o ../tests/sort-test.o ../tests/test_util.o ../tests/test.o ../tests/echo.o ../tests/hash.o ../tests/list.o ../tests/parser.o ../tests/set.o ../tests/string.o ../tests/test_hirlite.o ../tests/zset.o ../tests/db.o ../tests/multi.o ../tests/hsort.o ../tests/scripting-test.o ../tests/concurrency-test.o
 	$(CC) $(DEBUG) $(CFLAGS) -o rlite-test test.o rlite-test.o btree-test.o list-test.o string-test.o multi_string-test.o multi-test.o key-test.o type_string-test.o type_list-test.o type_set-test.o type_zset-test.o type_hash-test.o skiplist-test.o long-test.o restore-test.o hyperloglog-test.o dump-test.o sort-test.o test_util.o $(STLIBNAME) $(LIBS)
-	$(CC) $(DEBUG) $(CFLAGS) -o hirlite-test echo.o hash.o list.o parser.o set.o string.o test_hirlite.o zset.o db.o multi.o hsort.o scripting-test.o $(STLIBNAME) $(LUA_STLIB) $(LIBS)
+	$(CC) $(DEBUG) $(CFLAGS) -o hirlite-test echo.o hash.o list.o parser.o set.o string.o test_hirlite.o zset.o db.o multi.o hsort.o scripting-test.o concurrency-test.o $(STLIBNAME) $(LUA_STLIB) $(LIBS)
 
 test: buildtest
 	./rlite-test

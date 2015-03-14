@@ -328,6 +328,19 @@ cleanup:
 	return retval;
 }
 
+int rl_refresh(rlite *db)
+{
+	int retval = RL_OK;
+	if (db->driver_type == RL_FILE_DRIVER) {
+		RL_CALL(rl_discard, RL_OK, db);
+		rl_free(db->databases);
+		rl_free(db->initial_databases);
+		RL_CALL(rl_read_header, RL_OK, db);
+	}
+cleanup:
+	return retval;
+}
+
 int rl_close(rlite *db)
 {
 	if (!db) {
@@ -902,6 +915,9 @@ int rl_commit(struct rlite *db)
 				retval = RL_UNEXPECTED;
 				goto cleanup;
 			}
+		}
+		if (db->write_pages_len > 0) {
+			fflush(driver->fp);
 		}
 	}
 	else if (db->driver_type == RL_MEMORY_DRIVER) {
