@@ -50,6 +50,10 @@
 #define RLITE_OPEN_READWRITE 0x00000002
 #define RLITE_OPEN_CREATE    0x00000004
 
+#define RLITE_FLOCK_SH 1
+#define RLITE_FLOCK_EX 2
+#define RLITE_FLOCK_UN 3
+
 struct rlite;
 struct rl_btree;
 

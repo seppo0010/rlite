@@ -655,6 +655,16 @@ static rliteContext *_rliteConnect(const char *path) {
 		context = NULL;
 		goto cleanup;
 	}
+	// if created, need to release locks
+	retval = rl_commit(context->db);
+	if (retval != RL_OK) {
+		rl_close(context->db);
+		free(context->path);
+		free(context->replies);
+		free(context);
+		context = NULL;
+		goto cleanup;
+	}
 cleanup:
 	return context;
 }

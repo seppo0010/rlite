@@ -15,6 +15,7 @@
 #include "rlite.h"
 #include "util.h"
 #include "sha1.h"
+#include "flock.h"
 #ifdef RL_DEBUG
 #include <valgrind/valgrind.h>
 #endif
@@ -346,6 +347,9 @@ int rl_close(rlite *db)
 	if (!db) {
 		return RL_OK;
 	}
+
+	// discard before removing the driver, since we need to release locks
+	rl_discard(db);
 	if (db->driver_type == RL_FILE_DRIVER) {
 		rl_file_driver *driver = db->driver;
 		if (driver->fp) {
@@ -359,7 +363,6 @@ int rl_close(rlite *db)
 		rl_free(driver->data);
 		rl_free(driver);
 	}
-	rl_discard(db);
 	rl_free(db->read_pages);
 	rl_free(db->write_pages);
 	rl_free(db->databases);
@@ -585,8 +588,9 @@ int rl_read(rlite *db, rl_data_type *type, long page, void *context, void **obj,
 	}
 	RL_MALLOC(data, db->page_size * sizeof(unsigned char));
 	if (db->driver_type == RL_FILE_DRIVER) {
-		RL_CALL(file_driver_fp, RL_OK, db, 1);
 		rl_file_driver *driver = db->driver;
+		RL_CALL(file_driver_fp, RL_OK, db, driver->mode & RLITE_OPEN_READONLY ? 1 : 0);
+		RL_CALL(rl_flock, RL_OK, driver->fp, page * db->page_size, db->page_size, RLITE_FLOCK_SH);
 		fseek(driver->fp, page * db->page_size, SEEK_SET);
 		size_t read = fread(data, sizeof(unsigned char), db->page_size, driver->fp);
 		if (read != (size_t)db->page_size) {
@@ -746,6 +750,11 @@ int rl_write(struct rlite *db, rl_data_type *type, long page_number, void *obj)
 		retval = RL_OK;
 	}
 	else if (retval == RL_NOT_FOUND) {
+		if (db->driver_type == RL_FILE_DRIVER) {
+			rl_file_driver *driver = db->driver;
+			RL_CALL(file_driver_fp, RL_OK, db, driver->mode & RLITE_OPEN_READONLY ? 1 : 0);
+			RL_CALL(rl_flock, RL_OK, driver->fp, page_number * db->page_size, db->page_size, RLITE_FLOCK_EX);
+		}
 		rl_ensure_pages(db);
 		RL_MALLOC(page, sizeof(*page));
 #ifdef RL_DEBUG
@@ -894,11 +903,6 @@ int rl_commit(struct rlite *db)
 #endif
 	if (db->driver_type == RL_FILE_DRIVER) {
 		rl_file_driver *driver = db->driver;
-		if (driver->fp) {
-			fclose(driver->fp);
-			driver->fp = NULL;
-		}
-		RL_CALL(file_driver_fp, RL_OK, db, 0);
 		for (i = 0; i < db->write_pages_len; i++) {
 			page = db->write_pages[i];
 			page_number = page->page_number;
@@ -967,6 +971,29 @@ int rl_discard(struct rlite *db)
 	RL_MALLOC(db->databases, sizeof(long) * (db->number_of_databases + 1));
 	memcpy(db->databases, db->initial_databases, sizeof(long) *  (db->number_of_databases + 1));
 	rl_page *page;
+
+	if (db->driver_type == RL_FILE_DRIVER) {
+		rl_file_driver *driver = db->driver;
+		if (driver->fp) {
+			/*
+			 * Ideally the commented code would be the code to write here.
+			 * But it seems to be necessary to close the FILE* in order to
+			 * release the cache of the read blocks, at least in Linux.
+			 * fclose() will release the lock for us instead.
+			for (i = 0; i < db->read_pages_len; i++) {
+				page = db->read_pages[i];
+				RL_CALL(rl_flock, RL_OK, driver->fp, page->page_number * db->page_size, db->page_size, RLITE_FLOCK_UN);
+			}
+			for (i = 0; i < db->write_pages_len; i++) {
+				page = db->write_pages[i];
+				RL_CALL(rl_flock, RL_OK, driver->fp, page->page_number * db->page_size, db->page_size, RLITE_FLOCK_UN);
+			}
+			 */
+			fclose(driver->fp);
+			driver->fp = NULL;
+		}
+	}
+
 	for (i = 0; i < db->read_pages_len; i++) {
 		page = db->read_pages[i];
 		if (page->type->destroy && page->obj) {

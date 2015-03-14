@@ -1,7 +1,11 @@
 #include <string.h>
 #include <unistd.h>
+#include <pthread.h>
 #include "hirlite.h"
 #include "test_hirlite.h"
+
+#define FILEPATH "rlite-test.rld"
+#define INCREMENT_LIMIT 1000
 
 static int populateArgvlen(char *argv[], size_t argvlen[]) {
 	int i;
@@ -11,13 +15,38 @@ static int populateArgvlen(char *argv[], size_t argvlen[]) {
 	return i;
 }
 
-int test_simple_concurrency() {
-	const char *filepath = "rlite-test.rld";
-	if (access(filepath, F_OK) == 0) {
-		unlink(filepath);
+static void *increment(void *UNUSED(arg)) {
+	rliteContext *context = rliteConnect(FILEPATH, 0);
+	rliteReply* reply;
+	size_t argvlen[100];
+	char* argv[100] = {"INCR", "key", NULL};
+	int argc = populateArgvlen(argv, argvlen);
+	long long val = 0;
+	do {
+		reply = rliteCommandArgv(context, argc, argv, argvlen);
+		if (reply->type != RLITE_REPLY_INTEGER || reply->integer < val) {
+			fprintf(stderr, "Expected incremented value to be an integer greater than %lld, got %d (%lld) instead\n", val, reply->type, reply->integer);
+			val = INCREMENT_LIMIT; // break after free
+		} else {
+			val = reply->integer;
+		}
+		rliteFreeReplyObject(reply);
+	} while (val < INCREMENT_LIMIT);
+	rliteFree(context);
+	return NULL;
+}
+
+static void delete_file() {
+	if (access(FILEPATH, F_OK) == 0) {
+		unlink(FILEPATH);
 	}
-	rliteContext *context1 = rliteConnect(filepath, 0);
-	rliteContext *context2 = rliteConnect(filepath, 0);
+}
+
+int test_simple_concurrency() {
+	fprintf(stderr, "starting simple concurrency test\n");
+	delete_file();
+	rliteContext *context1 = rliteConnect(FILEPATH, 0);
+	rliteContext *context2 = rliteConnect(FILEPATH, 0);
 
 	rliteReply* reply;
 	size_t argvlen[100];
@@ -44,12 +73,52 @@ int test_simple_concurrency() {
 
 	rliteFree(context1);
 	rliteFree(context2);
-	unlink(filepath);
+	unlink(FILEPATH);
+	fprintf(stderr, "end simple concurrency test\n");
+	return 0;
+}
+
+int test_threads_concurrency() {
+	fprintf(stderr, "starting threads concurrency test\n");
+	delete_file();
+	rliteContext *context = rliteConnect(FILEPATH, 0);
+
+	pthread_t thread;
+	pthread_create(&thread, NULL, increment, NULL);
+
+	rliteReply* reply;
+	size_t argvlen[100];
+	char* argv[100] = {"GET", "key", NULL};
+	int argc = populateArgvlen(argv, argvlen);
+	long long val;
+	char tmp[40];
+
+	do {
+		reply = rliteCommandArgv(context, argc, argv, argvlen);
+		if (reply->type == RLITE_REPLY_NIL) {
+			val = 0;
+		} else  if (reply->type != RLITE_REPLY_STRING) {
+			fprintf(stderr, "Expected incremented value to be a string, got %d instead on line %d\n", reply->type, __LINE__);
+			rliteFreeReplyObject(reply);
+			break;
+		} else {
+			memcpy(tmp, reply->str, reply->len);
+			tmp[reply->len] = 0;
+			val = strtoll(tmp, NULL, 10);
+		}
+		rliteFreeReplyObject(reply);
+	} while (val < INCREMENT_LIMIT);
+
+	rliteFree(context);
+	fprintf(stderr, "end threads concurrency test\n");
 	return 0;
 }
 
 int run_concurrency() {
 	if (test_simple_concurrency() != 0) {
+		return 1;
+	}
+	if (test_threads_concurrency() != 0) {
 		return 1;
 	}
 	return 0;
