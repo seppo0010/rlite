@@ -42,9 +42,9 @@ size_t argvlen_set[] = {3, 3, 5};
 reply = rliteCommandArgv(context, argc_set, argv_set, argvlen_set);
 rliteFreeReplyObject(reply);
 
-int argc_get = 3;
-char *argv_get[] = {"SET", "key", "value"};
-size_t argvlen_get[] = {3, 3, 5};
+int argc_get = 2;
+char *argv_get[] = {"GET", "key"};
+size_t argvlen_get[] = {3, 3};
 reply = rliteCommandArgv(context, argc_get, argv_get, argvlen_get);
 if (reply->type == RLITE_REPLY_STRING) {
 	// reply->str is "value", reply->len is 5
