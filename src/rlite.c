@@ -205,7 +205,9 @@ int rl_header_serialize(struct rlite *db, void *UNUSED(obj), unsigned char *data
 	put_4bytes(&data[identifier_len + 12], db->number_of_databases);
 	long i, pos = identifier_len + 16;
 	for (i = 0; i < db->number_of_databases + 1; i++) {
-		put_4bytes(&data[pos], db->databases[i]);
+		if (db->databases[i] != 0) {
+			put_4bytes(&data[pos], db->databases[i]);
+		}
 		pos += 4;
 	}
 	return RL_OK;
