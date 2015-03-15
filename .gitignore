@@ -13,4 +13,5 @@
 *.pc
 deps/lua/src/luac
 deps/lua/src/lua
-rlite-test.rld
+*.rld
+.*.rld.wal

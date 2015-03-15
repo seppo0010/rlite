@@ -118,7 +118,9 @@ int rl_open(const char *filename, rlite **db, int flags);
 int rl_refresh(rlite *db);
 int rl_close(rlite *db);
 
+int rl_ensure_pages(rlite *db);
 int rl_read_header(rlite *db);
+int rl_header_deserialize(struct rlite *db, void **obj, void *context, unsigned char *data);
 int rl_read(struct rlite *db, rl_data_type *type, long page, void *context, void **obj, int cache);
 int rl_get_key_btree(rlite *db, struct rl_btree **btree, int create);
 int rl_alloc_page_number(rlite *db, long *page_number);

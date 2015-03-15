@@ -18,6 +18,7 @@
 #include "dump-test.h"
 #include "hyperloglog-test.h"
 #include "sort-test.h"
+#include "wal-test.h"
 #include "../src/util.h"
 
 #ifdef RL_DEBUG
@@ -56,5 +57,6 @@ int main() {
 	RUN_TEST(dump_test);
 	RUN_TEST(hyperloglog_test);
 	RUN_TEST(sort_test);
+	RUN_TEST(wal_test);
 	return retval;
 }
