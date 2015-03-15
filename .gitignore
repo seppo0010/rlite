@@ -1,7 +1,7 @@
 *.o
 *.a
-/src/*-test
-/src/rlite-test.rld
+/*/*-test
+/*/rlite-test.rld
 *.gcov
 *.gcda
 *.gcno
