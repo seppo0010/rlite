@@ -1,17 +1,9 @@
 #include <string.h>
 #include <unistd.h>
 #include "hirlite.h"
-#include "test_util.h"
+#include "util.h"
 
-static int populateArgvlen(char *argv[], size_t argvlen[]) {
-	int i;
-	for (i = 0; argv[i] != NULL; i++) {
-		argvlen[i] = strlen(argv[i]);
-	}
-	return i;
-}
-
-int test_multi_nowatch() {
+TEST test_multi_nowatch() {
 	rliteContext *context = rliteConnect(":memory:", 0);
 
 	rliteReply* reply;
@@ -55,10 +47,10 @@ int test_multi_nowatch() {
 	}
 
 	rliteFree(context);
-	return 0;
+	PASS();
 }
 
-int test_multi_watch_nonexistent_ok() {
+TEST test_multi_watch_nonexistent_ok() {
 	rliteContext *context = rliteConnect(":memory:", 0);
 
 	rliteReply* reply;
@@ -101,10 +93,10 @@ int test_multi_watch_nonexistent_ok() {
 	}
 
 	rliteFree(context);
-	return 0;
+	PASS();
 }
 
-int test_multi_watch_existent_ok() {
+TEST test_multi_watch_existent_ok() {
 	rliteContext *context = rliteConnect(":memory:", 0);
 
 	rliteReply* reply;
@@ -154,10 +146,10 @@ int test_multi_watch_existent_ok() {
 	}
 
 	rliteFree(context);
-	return 0;
+	PASS();
 }
 
-int test_multi_watch_changed() {
+TEST test_multi_watch_changed() {
 	rliteContext *context = rliteConnect(":memory:", 0);
 
 	rliteReply* reply;
@@ -199,10 +191,10 @@ int test_multi_watch_changed() {
 	}
 
 	rliteFree(context);
-	return 0;
+	PASS();
 }
 
-int test_multi_unwatch_changed() {
+TEST test_multi_unwatch_changed() {
 	rliteContext *context = rliteConnect(":memory:", 0);
 
 	rliteReply* reply;
@@ -252,10 +244,10 @@ int test_multi_unwatch_changed() {
 	}
 
 	rliteFree(context);
-	return 0;
+	PASS();
 }
 
-int test_multi_discard() {
+TEST test_multi_discard() {
 	rliteContext *context = rliteConnect(":memory:", 0);
 
 	rliteReply* reply;
@@ -304,27 +296,15 @@ int test_multi_discard() {
 	}
 
 	rliteFree(context);
-	return 0;
+	PASS();
 }
 
-int run_multi() {
-	if (test_multi_nowatch() != 0) {
-		return 1;
-	}
-	if (test_multi_watch_nonexistent_ok() != 0) {
-		return 1;
-	}
-	if (test_multi_watch_existent_ok() != 0) {
-		return 1;
-	}
-	if (test_multi_watch_changed() != 0) {
-		return 1;
-	}
-	if (test_multi_unwatch_changed() != 0) {
-		return 1;
-	}
-	if (test_multi_discard() != 0) {
-		return 1;
-	}
-	return 0;
+SUITE(hmulti_test)
+{
+	RUN_TEST(test_multi_nowatch);
+	RUN_TEST(test_multi_watch_nonexistent_ok);
+	RUN_TEST(test_multi_watch_existent_ok);
+	RUN_TEST(test_multi_watch_changed);
+	RUN_TEST(test_multi_unwatch_changed);
+	RUN_TEST(test_multi_discard);
 }

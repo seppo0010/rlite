@@ -1,14 +1,14 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
-#include "test_util.h"
+#include "greatest.h"
+#include "util.h"
 #include "../src/rlite.h"
 #include "../src/page_btree.h"
 #include "../src/status.h"
 
-int basic_insert_set_test(int UNUSED(_))
+TEST basic_insert_set_test()
 {
-	fprintf(stderr, "Start basic_insert_set_test\n");
 	rl_btree *btree = NULL;
 	long **vals = malloc(sizeof(long *) * 7);
 
@@ -35,17 +35,15 @@ int basic_insert_set_test(int UNUSED(_))
 	for (i = 0; i < 2; i++) {
 		RL_CALL_VERBOSE(rl_btree_find_score, RL_NOT_FOUND, db, btree, &nonexistent_vals[i], NULL, NULL, NULL);
 	}
-	fprintf(stderr, "End basic_insert_set_test\n");
 	retval = 0;
 cleanup:
 	free(vals);
 	rl_close(db);
-	return retval;
+	if (retval == 0) { PASS(); } else { FAIL(); }
 }
 
-int basic_insert_hash_test(int UNUSED(_))
+TEST basic_insert_hash_test()
 {
-	fprintf(stderr, "Start basic_insert_hash_test\n");
 	long **keys = malloc(sizeof(long *) * 7);
 	long **vals = malloc(sizeof(long *) * 7);
 
@@ -76,19 +74,16 @@ int basic_insert_hash_test(int UNUSED(_))
 	for (i = 0; i < 2; i++) {
 		RL_CALL_VERBOSE(rl_btree_find_score, RL_NOT_FOUND, db, btree, &nonexistent_vals[i], NULL, NULL, NULL);
 	}
-	fprintf(stderr, "End basic_insert_set_test\n");
 	retval = 0;
 cleanup:
 	free(vals);
 	free(keys);
 	rl_close(db);
-	return retval;
+	if (retval == 0) { PASS(); } else { FAIL(); }
 }
 
-int basic_delete_set_test(long elements, long element_to_remove, char *name)
+TEST basic_delete_set_test(long elements, long element_to_remove, char *name)
 {
-	fprintf(stderr, "Start basic_delete_set_test (%ld, %ld) (%s)\n", elements, element_to_remove, name);
-
 	int retval;
 	rlite *db = NULL;
 	rl_btree *btree = NULL;
@@ -126,17 +121,15 @@ int basic_delete_set_test(long elements, long element_to_remove, char *name)
 		RL_CALL_VERBOSE(rl_btree_find_score, expected, db, btree, score, NULL, NULL, NULL);
 	}
 
-	fprintf(stderr, "End basic_delete_set_test (%ld, %ld)\n", elements, element_to_remove);
 	retval = 0;
 cleanup:
 	free(vals);
 	rl_close(db);
-	return retval;
+	if (retval == 0) { PASS(); } else { FAIL(); }
 }
 
-int random_hash_test(long size, long btree_node_size)
+TEST random_hash_test(long size, long btree_node_size)
 {
-	fprintf(stderr, "Start random_hash_test %ld %ld\n", size, btree_node_size);
 	long *key, *val;
 	int *results = malloc(sizeof(int) * size);
 
@@ -172,12 +165,11 @@ int random_hash_test(long size, long btree_node_size)
 		}
 	}
 
-	fprintf(stderr, "End random_hash_test\n");
 	retval = 0;
 cleanup:
 	free(results);
 	rl_close(db);
-	return retval;
+	if (retval == 0) { PASS(); } else { FAIL(); }
 }
 
 static int contains_element(long element, long *elements, long size)
@@ -191,9 +183,8 @@ static int contains_element(long element, long *elements, long size)
 	return 0;
 }
 
-int fuzzy_set_test(long size, long btree_node_size, int _commit)
+TEST fuzzy_set_test(long size, long btree_node_size, int _commit)
 {
-	fprintf(stderr, "Start fuzzy_set_test %ld %ld %d\n", size, btree_node_size, _commit);
 	int retval;
 	rlite *db = NULL;
 	rl_btree *btree = NULL;
@@ -255,7 +246,6 @@ int fuzzy_set_test(long size, long btree_node_size, int _commit)
 		RL_CALL_VERBOSE(rl_btree_find_score, RL_FOUND, db, btree, &elements[i], NULL, NULL, NULL);
 		RL_CALL_VERBOSE(rl_btree_find_score, RL_NOT_FOUND, db, btree, &nonelements[i], NULL, NULL, NULL);
 	}
-	fprintf(stderr, "End fuzzy_set_test\n");
 
 	retval = 0;
 cleanup:
@@ -263,12 +253,11 @@ cleanup:
 	rl_free(nonelements);
 	rl_free(flatten_scores);
 	rl_close(db);
-	return retval;
+	if (retval == 0) { PASS(); } else { FAIL(); }
 }
 
-int fuzzy_hash_test(long size, long btree_node_size, int _commit)
+TEST fuzzy_hash_test(long size, long btree_node_size, int _commit)
 {
-	fprintf(stderr, "Start fuzzy_hash_test %ld %ld %d\n", size, btree_node_size, _commit);
 	int retval;
 	rlite *db = NULL;
 	rl_btree *btree = NULL;
@@ -337,7 +326,6 @@ int fuzzy_hash_test(long size, long btree_node_size, int _commit)
 		EXPECT_LONG(*(long *)val, values[i]);
 		RL_CALL_VERBOSE(rl_btree_find_score, RL_NOT_FOUND, db, btree, &nonelements[i], NULL, NULL, NULL);
 	}
-	fprintf(stderr, "End fuzzy_hash_test\n");
 
 	retval = 0;
 cleanup:
@@ -346,12 +334,11 @@ cleanup:
 	free(nonelements);
 	free(flatten_scores);
 	rl_close(db);
-	return retval;
+	if (retval == 0) { PASS(); } else { FAIL(); }
 }
 
-int fuzzy_hash_test_iterator(long size, long btree_node_size, int _commit)
+TEST fuzzy_hash_test_iterator(long size, long btree_node_size, int _commit)
 {
-	fprintf(stderr, "Start fuzzy_hash_test_iterator %ld %ld %d\n", size, btree_node_size, _commit);
 	int retval;
 	rlite *db = NULL;
 	rl_btree *btree = NULL;
@@ -422,7 +409,6 @@ int fuzzy_hash_test_iterator(long size, long btree_node_size, int _commit)
 		}
 	}
 
-	fprintf(stderr, "End fuzzy_hash_test_iterator\n");
 
 	rl_btree_iterator_destroy(iterator);
 	retval = 0;
@@ -431,13 +417,12 @@ cleanup:
 	free(elements);
 	free(nonelements);
 	rl_close(db);
-	return retval;
+	if (retval == 0) { PASS(); } else { FAIL(); }
 }
 
 
-int fuzzy_set_delete_test(long size, long btree_node_size, int _commit)
+TEST fuzzy_set_delete_test(long size, long btree_node_size, int _commit)
 {
-	fprintf(stderr, "Start fuzzy_set_delete_test %ld %ld %d\n", size, btree_node_size, _commit);
 	int retval;
 	void *tmp;
 	rlite *db = NULL;
@@ -480,26 +465,25 @@ int fuzzy_set_delete_test(long size, long btree_node_size, int _commit)
 			RL_CALL_VERBOSE(rl_btree_is_balanced, RL_OK, db, btree);
 		}
 	}
-	fprintf(stderr, "End fuzzy_set_delete_test\n");
 
 	retval = 0;
 cleanup:
 	free(elements);
 	rl_close(db);
-	return retval;
+	if (retval == 0) { PASS(); } else { FAIL(); }
 }
 
 #define DELETE_TESTS_COUNT 7
 
-RL_TEST_MAIN_START(btree_test)
+SUITE(btree_test)
 {
 	int i, j, k;
 	long size, btree_node_size;
 	int commit;
-	RL_TEST(basic_insert_set_test, 0);
-	RL_TEST(basic_insert_hash_test, 0);
-	RL_TEST(random_hash_test, 10, 2);
-	RL_TEST(random_hash_test, 100, 10);
+	RUN_TEST(basic_insert_set_test);
+	RUN_TEST(basic_insert_hash_test);
+	RUN_TESTp(random_hash_test, 10, 2);
+	RUN_TESTp(random_hash_test, 100, 10);
 
 	long delete_tests[DELETE_TESTS_COUNT][2] = {
 		{8, 8},
@@ -520,7 +504,7 @@ RL_TEST_MAIN_START(btree_test)
 		"delete internal node, rebalance two levels",
 	};
 	for (i = 0; i < DELETE_TESTS_COUNT; i++) {
-		RL_TEST(basic_delete_set_test, delete_tests[i][0], delete_tests[i][1], delete_tests_name[i]);
+		RUN_TESTp(basic_delete_set_test, delete_tests[i][0], delete_tests[i][1], delete_tests_name[i]);
 	}
 
 	for (i = 0; i < 2; i++) {
@@ -530,7 +514,7 @@ RL_TEST_MAIN_START(btree_test)
 			for (k = 0; k < 3; k++) {
 				commit = k;
 				srand(1);
-				RL_TEST(fuzzy_set_test, size, btree_node_size, commit);
+				RUN_TESTp(fuzzy_set_test, size, btree_node_size, commit);
 			}
 		}
 	}
@@ -542,7 +526,7 @@ RL_TEST_MAIN_START(btree_test)
 			for (k = 0; k < 3; k++) {
 				commit = k;
 				srand(1);
-				RL_TEST(fuzzy_set_delete_test, size, btree_node_size, commit);
+				RUN_TESTp(fuzzy_set_delete_test, size, btree_node_size, commit);
 			}
 		}
 	}
@@ -553,10 +537,9 @@ RL_TEST_MAIN_START(btree_test)
 			for (k = 0; k < 3; k++) {
 				commit = k;
 				srand(1);
-				RL_TEST(fuzzy_hash_test, size, btree_node_size, commit);
-				RL_TEST(fuzzy_hash_test_iterator, size, btree_node_size, commit);
+				RUN_TESTp(fuzzy_hash_test, size, btree_node_size, commit);
+				RUN_TESTp(fuzzy_hash_test_iterator, size, btree_node_size, commit);
 			}
 		}
 	}
 }
-RL_TEST_MAIN_END

@@ -4,12 +4,11 @@
 #include <math.h>
 #include "../src/rlite.h"
 #include "../src/type_string.h"
-#include "test_util.h"
+#include "util.h"
 
-static int basic_test_set_get(int _commit)
+TEST basic_test_set_get(int _commit)
 {
-	int retval = 0;
-	fprintf(stderr, "Start basic_test_set_get %d\n", _commit);
+	int retval;
 
 	rlite *db = NULL;
 	RL_CALL_VERBOSE(setup_db, RL_OK, &db, _commit, 1);
@@ -25,17 +24,13 @@ static int basic_test_set_get(int _commit)
 	EXPECT_BYTES(value, valuelen, testvalue, testvaluelen);
 	rl_free(testvalue);
 
-	fprintf(stderr, "End basic_test_set_get\n");
-	retval = 0;
-cleanup:
 	rl_close(db);
-	return retval;
+	PASS();
 }
 
-static int basic_test_set_delete_get(int _commit)
+TEST basic_test_set_delete_get(int _commit)
 {
-	int retval = 0;
-	fprintf(stderr, "Start basic_test_set_delete_get %d\n", _commit);
+	int retval;
 
 	rlite *db = NULL;
 	RL_CALL_VERBOSE(setup_db, RL_OK, &db, _commit, 1);
@@ -52,17 +47,13 @@ static int basic_test_set_delete_get(int _commit)
 
 	RL_CALL_VERBOSE(rl_get, RL_NOT_FOUND, db, key, keylen, NULL, NULL);
 
-	fprintf(stderr, "End basic_test_set_delete_get\n");
-	retval = 0;
-cleanup:
 	rl_close(db);
-	return retval;
+	PASS();
 }
 
-static int basic_test_set_set_get(int _commit)
+TEST basic_test_set_set_get(int _commit)
 {
-	int retval = 0;
-	fprintf(stderr, "Start basic_test_set_set_get %d\n", _commit);
+	int retval;
 
 	rlite *db = NULL;
 	RL_CALL_VERBOSE(setup_db, RL_OK, &db, _commit, 1);
@@ -85,17 +76,13 @@ static int basic_test_set_set_get(int _commit)
 	EXPECT_BYTES(value2, value2len, testvalue, testvaluelen);
 	rl_free(testvalue);
 
-	fprintf(stderr, "End basic_test_set_set_get\n");
-	retval = 0;
-cleanup:
 	rl_close(db);
-	return retval;
+	PASS();
 }
 
-static int basic_test_set_getrange(int _commit)
+TEST basic_test_set_getrange(int _commit)
 {
-	int retval = 0;
-	fprintf(stderr, "Start basic_test_set_getrange %d\n", _commit);
+	int retval;
 
 	rlite *db = NULL;
 	RL_CALL_VERBOSE(setup_db, RL_OK, &db, _commit, 1);
@@ -111,17 +98,13 @@ static int basic_test_set_getrange(int _commit)
 	EXPECT_BYTES(&value[2], 4, testvalue, testvaluelen);
 	rl_free(testvalue);
 
-	fprintf(stderr, "End basic_test_set_getrange\n");
-	retval = 0;
-cleanup:
 	rl_close(db);
-	return retval;
+	PASS();
 }
 
-static int basic_test_set_setrange(int _commit)
+TEST basic_test_set_setrange(int _commit)
 {
-	int retval = 0;
-	fprintf(stderr, "Start basic_test_set_setrange %d\n", _commit);
+	int retval;
 
 	rlite *db = NULL;
 	RL_CALL_VERBOSE(setup_db, RL_OK, &db, _commit, 1);
@@ -145,17 +128,13 @@ static int basic_test_set_setrange(int _commit)
 	EXPECT_BYTES(testvalue, testvaluelen, expectedvalue, expectedvaluelen);
 	rl_free(testvalue);
 
-	fprintf(stderr, "End basic_test_set_setrange\n");
-	retval = 0;
-cleanup:
 	rl_close(db);
-	return retval;
+	PASS();
 }
 
-static int basic_test_append(int _commit)
+TEST basic_test_append(int _commit)
 {
-	int retval = 0;
-	fprintf(stderr, "Start basic_test_append %d\n", _commit);
+	int retval;
 
 	rlite *db = NULL;
 	RL_CALL_VERBOSE(setup_db, RL_OK, &db, _commit, 1);
@@ -177,17 +156,13 @@ static int basic_test_append(int _commit)
 	EXPECT_BYTES(value, valuelen, testvalue, testvaluelen);
 	rl_free(testvalue);
 
-	fprintf(stderr, "End basic_test_append\n");
-	retval = 0;
-cleanup:
 	rl_close(db);
-	return retval;
+	PASS();
 }
 
-static int basic_test_setnx_setnx_get(int _commit)
+TEST basic_test_setnx_setnx_get(int _commit)
 {
-	int retval = 0;
-	fprintf(stderr, "Start basic_test_setnx_setnx_get %d\n", _commit);
+	int retval;
 
 	rlite *db = NULL;
 	RL_CALL_VERBOSE(setup_db, RL_OK, &db, _commit, 1);
@@ -210,17 +185,13 @@ static int basic_test_setnx_setnx_get(int _commit)
 	EXPECT_BYTES(value, valuelen, testvalue, testvaluelen);
 	rl_free(testvalue);
 
-	fprintf(stderr, "End basic_test_setnx_setnx_get\n");
-	retval = 0;
-cleanup:
 	rl_close(db);
-	return retval;
+	PASS();
 }
 
-static int basic_test_set_expiration(int _commit)
+TEST basic_test_set_expiration(int _commit)
 {
-	int retval = 0;
-	fprintf(stderr, "Start basic_test_set_expiration %d\n", _commit);
+	int retval;
 
 	rlite *db = NULL;
 	RL_CALL_VERBOSE(setup_db, RL_OK, &db, _commit, 1);
@@ -236,17 +207,13 @@ static int basic_test_set_expiration(int _commit)
 	RL_CALL_VERBOSE(rl_key_get, RL_FOUND, db, key, keylen, NULL, NULL, NULL, &testexpiration, NULL);
 	EXPECT_LLU(expiration, testexpiration);
 
-	fprintf(stderr, "End basic_test_set_expiration\n");
-	retval = 0;
-cleanup:
 	rl_close(db);
-	return retval;
+	PASS();
 }
 
-static int basic_test_set_strlen(int _commit)
+TEST basic_test_set_strlen(int _commit)
 {
-	int retval = 0;
-	fprintf(stderr, "Start basic_test_set_strlen %d\n", _commit);
+	int retval;
 
 	rlite *db = NULL;
 	RL_CALL_VERBOSE(setup_db, RL_OK, &db, _commit, 1);
@@ -261,17 +228,13 @@ static int basic_test_set_strlen(int _commit)
 	RL_CALL_VERBOSE(rl_get, RL_OK, db, key, keylen, NULL, &testvaluelen);
 	EXPECT_LONG(valuelen, testvaluelen);
 
-	fprintf(stderr, "End basic_test_set_strlen\n");
-	retval = 0;
-cleanup:
 	rl_close(db);
-	return retval;
+	PASS();
 }
 
-static int basic_test_set_incr(int _commit)
+TEST basic_test_set_incr(int _commit)
 {
-	int retval = 0;
-	fprintf(stderr, "Start basic_test_set_incr %d\n", _commit);
+	int retval;
 
 	rlite *db = NULL;
 	RL_CALL_VERBOSE(setup_db, RL_OK, &db, _commit, 1);
@@ -296,17 +259,13 @@ static int basic_test_set_incr(int _commit)
 	EXPECT_LONG(testvaluelen, expectedvaluelen);
 	rl_free(testvalue);
 
-	fprintf(stderr, "End basic_test_set_incr\n");
-	retval = 0;
-cleanup:
 	rl_close(db);
-	return retval;
+	PASS();
 }
 
-static int basic_test_set_incrbyfloat(int _commit)
+TEST basic_test_set_incrbyfloat(int _commit)
 {
-	int retval = 0;
-	fprintf(stderr, "Start basic_test_set_incrbyfloat %d\n", _commit);
+	int retval;
 
 	rlite *db = NULL;
 	unsigned char *key = UNSIGN("my key");
@@ -335,18 +294,14 @@ static int basic_test_set_incrbyfloat(int _commit)
 	EXPECT_DOUBLE(testnewvalue, expectednewvalue);
 	rl_free(testvalue);
 
-	fprintf(stderr, "End basic_test_set_incrbyfloat\n");
-	retval = 0;
-cleanup:
 	free(testvalue2);
 	rl_close(db);
-	return retval;
+	PASS();
 }
 
-static int basic_test_set_getbit(int _commit)
+TEST basic_test_set_getbit(int _commit)
 {
-	int retval = 0;
-	fprintf(stderr, "Start basic_test_set_getbit %d\n", _commit);
+	int retval;
 
 	rlite *db = NULL;
 	RL_CALL_VERBOSE(setup_db, RL_OK, &db, _commit, 1);
@@ -367,17 +322,13 @@ static int basic_test_set_getbit(int _commit)
 		EXPECT_INT(bitvalue, bits[i]);
 	}
 
-	fprintf(stderr, "End basic_test_set_getbit\n");
-	retval = 0;
-cleanup:
 	rl_close(db);
-	return retval;
+	PASS();
 }
 
-static int basic_test_set_bitop(int _commit)
+TEST basic_test_set_bitop(int _commit)
 {
-	int retval = 0;
-	fprintf(stderr, "Start basic_test_set_bitop %d\n", _commit);
+	int retval;
 
 	rlite *db = NULL;
 	unsigned char *k1 = UNSIGN("key 1");
@@ -406,17 +357,13 @@ static int basic_test_set_bitop(int _commit)
     EXPECT_BYTES(testvalue, testvaluelen, expected, expectedlen);
     rl_free(testvalue);
 
-	fprintf(stderr, "End basic_test_set_bitop\n");
-	retval = 0;
-cleanup:
 	rl_close(db);
-	return retval;
+	PASS();
 }
 
-static int basic_test_set_bitcount(int _commit)
+TEST basic_test_set_bitcount(int _commit)
 {
-	int retval = 0;
-	fprintf(stderr, "Start basic_test_set_bitcount %d\n", _commit);
+	int retval;
 
 	rlite *db = NULL;
 	RL_CALL_VERBOSE(setup_db, RL_OK, &db, _commit, 1);
@@ -437,11 +384,8 @@ static int basic_test_set_bitcount(int _commit)
 	RL_CALL_VERBOSE(rl_bitcount, RL_OK, db, key, keylen, 1, 1, &bitcount);
 	EXPECT_LONG(bitcount, 6);
 
-	fprintf(stderr, "End basic_test_set_bitcount\n");
-	retval = 0;
-cleanup:
 	rl_close(db);
-	return retval;
+	PASS();
 }
 /*
 redis> SET mykey "\xff\xf0\x00"
@@ -456,10 +400,9 @@ redis> BITPOS mykey 1 2
 (integer) 16
  */
 
-static int basic_test_set_bitpos(int _commit)
+TEST basic_test_set_bitpos(int _commit)
 {
-	int retval = 0;
-	fprintf(stderr, "Start basic_test_set_bitpos %d\n", _commit);
+	int retval;
 
 	rlite *db = NULL;
 	RL_CALL_VERBOSE(setup_db, RL_OK, &db, _commit, 1);
@@ -486,17 +429,13 @@ static int basic_test_set_bitpos(int _commit)
 	RL_CALL_VERBOSE(rl_bitpos, RL_OK, db, key, keylen, 1, 2, -1, 1, &bitpos);
 	EXPECT_LONG(bitpos, 16);
 
-	fprintf(stderr, "End basic_test_set_bitpos\n");
-	retval = 0;
-cleanup:
 	rl_close(db);
-	return retval;
+	PASS();
 }
 
-static int basic_test_pfadd(int _commit)
+TEST basic_test_pfadd(int _commit)
 {
-	int retval = 0;
-	fprintf(stderr, "Start basic_test_pfadd %d\n", _commit);
+	int retval;
 
 	rlite *db = NULL;
 	RL_CALL_VERBOSE(setup_db, RL_OK, &db, _commit, 1);
@@ -524,7 +463,7 @@ static int basic_test_pfadd(int _commit)
 
 	EXPECT_LONG(updated, 0);
 
-	RL_CALL(rl_key_expires, RL_OK, db, key, keylen, expires);
+	RL_CALL_VERBOSE(rl_key_expires, RL_OK, db, key, keylen, expires);
 	RL_CALL_VERBOSE(rl_pfadd, RL_OK, db, key, keylen, 1, &value3, &value3len, &updated);
 	RL_BALANCED();
 
@@ -536,17 +475,13 @@ static int basic_test_pfadd(int _commit)
 	RL_CALL_VERBOSE(rl_set, RL_OK, db, key, keylen, value, valuelen, 0, 0);
 	RL_CALL_VERBOSE(rl_pfadd, RL_INVALID_STATE, db, key, keylen, 1, &value3, &value3len, &updated);
 
-	fprintf(stderr, "End basic_test_pfadd\n");
-	retval = 0;
-cleanup:
 	rl_close(db);
-	return retval;
+	PASS();
 }
 
-static int basic_test_pfadd_pfcount(int _commit)
+TEST basic_test_pfadd_pfcount(int _commit)
 {
-	int retval = 0;
-	fprintf(stderr, "Start basic_test_pfadd_pfcount %d\n", _commit);
+	int retval;
 
 	rlite *db = NULL;
 	RL_CALL_VERBOSE(setup_db, RL_OK, &db, _commit, 1);
@@ -579,17 +514,13 @@ static int basic_test_pfadd_pfcount(int _commit)
 	RL_CALL_VERBOSE(rl_pfcount, RL_OK, db, 2, (const unsigned char **)keys, keyslen, &count);
 	EXPECT_LONG(count, 3);
 
-	fprintf(stderr, "End basic_test_pfadd_pfcount\n");
-	retval = 0;
-cleanup:
 	rl_close(db);
-	return retval;
+	PASS();
 }
 
-static int basic_test_pfadd_pfmerge(int _commit)
+TEST basic_test_pfadd_pfmerge(int _commit)
 {
-	int retval = 0;
-	fprintf(stderr, "Start basic_test_pfadd_pfmerge %d\n", _commit);
+	int retval;
 
 	rlite *db = NULL;
 	RL_CALL_VERBOSE(setup_db, RL_OK, &db, _commit, 1);
@@ -619,17 +550,13 @@ static int basic_test_pfadd_pfmerge(int _commit)
 	RL_CALL_VERBOSE(rl_pfcount, RL_OK, db, 1, (const unsigned char **)&key2, &key2len, &count);
 	EXPECT_LONG(count, 3);
 
-	fprintf(stderr, "End basic_test_pfadd_pfmerge\n");
-	retval = 0;
-cleanup:
 	rl_close(db);
-	return retval;
+	PASS();
 }
 
-static int basic_test_pfadd_pfdebug_getreg(int _commit)
+TEST basic_test_pfadd_pfdebug_getreg(int _commit)
 {
-	int retval = 0;
-	fprintf(stderr, "Start basic_test_pfadd_pfdebug_getreg %d\n", _commit);
+	int retval;
 
 	rlite *db = NULL;
 	unsigned char *key = UNSIGN("my key");
@@ -650,18 +577,14 @@ static int basic_test_pfadd_pfdebug_getreg(int _commit)
 		EXPECT_LONG(elements[i], i == 7527 ? 1 : 0);
 	}
 
-	fprintf(stderr, "End basic_test_pfadd_pfdebug_getreg\n");
-	retval = 0;
-cleanup:
 	free(elements);
 	rl_close(db);
-	return retval;
+	PASS();
 }
 
-static int basic_test_pfadd_pfdebug_decode(int _commit)
+TEST basic_test_pfadd_pfdebug_decode(int _commit)
 {
-	int retval = 0;
-	fprintf(stderr, "Start basic_test_pfadd_pfdebug_decode %d\n", _commit);
+	int retval;
 
 	rlite *db = NULL;
 	unsigned char *key = UNSIGN("my key");
@@ -680,18 +603,14 @@ static int basic_test_pfadd_pfdebug_decode(int _commit)
 	long expectlen = strlen(expect);
 	EXPECT_BYTES(expect, expectlen, decode, decodelen);
 
-	fprintf(stderr, "End basic_test_pfadd_pfdebug_decode\n");
-	retval = 0;
-cleanup:
 	free(decode);
 	rl_close(db);
-	return retval;
+	PASS();
 }
 
-static int basic_test_pfadd_pfdebug_encoding(int _commit)
+TEST basic_test_pfadd_pfdebug_encoding(int _commit)
 {
-	int retval = 0;
-	fprintf(stderr, "Start basic_test_pfadd_pfdebug_encoding %d\n", _commit);
+	int retval;
 
 	rlite *db = NULL;
 	unsigned char *key = UNSIGN("my key");
@@ -710,18 +629,14 @@ static int basic_test_pfadd_pfdebug_encoding(int _commit)
 	long expectlen = strlen(expect);
 	EXPECT_BYTES(expect, expectlen, encoding, encodinglen);
 
-	fprintf(stderr, "End basic_test_pfadd_pfdebug_encoding\n");
-	retval = 0;
-cleanup:
 	free(encoding);
 	rl_close(db);
-	return retval;
+	PASS();
 }
 
-static int basic_test_pfadd_pfdebug_todense(int _commit)
+TEST basic_test_pfadd_pfdebug_todense(int _commit)
 {
-	int retval = 0;
-	fprintf(stderr, "Start basic_test_pfadd_pfdebug_todense %d\n", _commit);
+	int retval;
 
 	rlite *db = NULL;
 	unsigned char *key = UNSIGN("my key");
@@ -748,18 +663,14 @@ static int basic_test_pfadd_pfdebug_todense(int _commit)
 	RL_CALL_VERBOSE(rl_pfdebug_todense, RL_OK, db, key, keylen, &changed);
 	EXPECT_LONG(changed, 0);
 
-	fprintf(stderr, "End basic_test_pfadd_pfdebug_todense\n");
-	retval = 0;
-cleanup:
 	free(encoding);
 	rl_close(db);
-	return retval;
+	PASS();
 }
 
-static int basic_test_pfadd_empty(int _commit)
+TEST basic_test_pfadd_empty(int _commit)
 {
-	int retval = 0;
-	fprintf(stderr, "Start basic_test_pfadd_empty %d\n", _commit);
+	int retval;
 
 	rlite *db = NULL;
 	RL_CALL_VERBOSE(setup_db, RL_OK, &db, _commit, 1);
@@ -774,40 +685,36 @@ static int basic_test_pfadd_empty(int _commit)
 
 	RL_CALL_VERBOSE(rl_key_get, RL_FOUND, db, key, keylen, NULL, NULL, NULL, NULL, NULL);
 
-	fprintf(stderr, "End basic_test_pfadd_empty\n");
-	retval = 0;
-cleanup:
 	rl_close(db);
-	return retval;
+	PASS();
 }
 
-RL_TEST_MAIN_START(type_string_test)
+SUITE(type_string_test)
 {
 	int i;
 	for (i = 0; i < 3; i++) {
-		RL_TEST(basic_test_set_get, i);
-		RL_TEST(basic_test_set_delete_get, i);
-		RL_TEST(basic_test_set_set_get, i);
-		RL_TEST(basic_test_set_getrange, i);
-		RL_TEST(basic_test_set_setrange, i);
-		RL_TEST(basic_test_append, i);
-		RL_TEST(basic_test_setnx_setnx_get, i);
-		RL_TEST(basic_test_set_expiration, i);
-		RL_TEST(basic_test_set_strlen, i);
-		RL_TEST(basic_test_set_incr, i);
-		RL_TEST(basic_test_set_incrbyfloat, i);
-		RL_TEST(basic_test_set_getbit, i);
-		RL_TEST(basic_test_set_bitop, i);
-		RL_TEST(basic_test_set_bitcount, i);
-		RL_TEST(basic_test_set_bitpos, i);
-		RL_TEST(basic_test_pfadd, i);
-		RL_TEST(basic_test_pfadd_pfcount, i);
-		RL_TEST(basic_test_pfadd_pfmerge, i);
-		RL_TEST(basic_test_pfadd_pfdebug_getreg, i);
-		RL_TEST(basic_test_pfadd_pfdebug_decode, i);
-		RL_TEST(basic_test_pfadd_pfdebug_encoding, i);
-		RL_TEST(basic_test_pfadd_pfdebug_todense, i);
-		RL_TEST(basic_test_pfadd_empty, i);
+		RUN_TEST1(basic_test_set_get, i);
+		RUN_TEST1(basic_test_set_delete_get, i);
+		RUN_TEST1(basic_test_set_set_get, i);
+		RUN_TEST1(basic_test_set_getrange, i);
+		RUN_TEST1(basic_test_set_setrange, i);
+		RUN_TEST1(basic_test_append, i);
+		RUN_TEST1(basic_test_setnx_setnx_get, i);
+		RUN_TEST1(basic_test_set_expiration, i);
+		RUN_TEST1(basic_test_set_strlen, i);
+		RUN_TEST1(basic_test_set_incr, i);
+		RUN_TEST1(basic_test_set_incrbyfloat, i);
+		RUN_TEST1(basic_test_set_getbit, i);
+		RUN_TEST1(basic_test_set_bitop, i);
+		RUN_TEST1(basic_test_set_bitcount, i);
+		RUN_TEST1(basic_test_set_bitpos, i);
+		RUN_TEST1(basic_test_pfadd, i);
+		RUN_TEST1(basic_test_pfadd_pfcount, i);
+		RUN_TEST1(basic_test_pfadd_pfmerge, i);
+		RUN_TEST1(basic_test_pfadd_pfdebug_getreg, i);
+		RUN_TEST1(basic_test_pfadd_pfdebug_decode, i);
+		RUN_TEST1(basic_test_pfadd_pfdebug_encoding, i);
+		RUN_TEST1(basic_test_pfadd_pfdebug_todense, i);
+		RUN_TEST1(basic_test_pfadd_empty, i);
 	}
 }
-RL_TEST_MAIN_END

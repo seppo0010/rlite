@@ -4,14 +4,13 @@
 #include <math.h>
 #include "../src/rlite.h"
 #include "../src/type_hash.h"
-#include "test_util.h"
+#include "util.h"
 
 #define UNSIGN(str) ((unsigned char *)(str))
 
-static int basic_test_hset_hget(int _commit)
+TEST basic_test_hset_hget(int _commit)
 {
 	int retval;
-	fprintf(stderr, "Start basic_test_hset_hget %d\n", _commit);
 
 	rlite *db = NULL;
 	unsigned char *key = UNSIGN("my key");
@@ -31,18 +30,14 @@ static int basic_test_hset_hget(int _commit)
 
 	EXPECT_BYTES(data, datalen, data2, data2len);
 
-	fprintf(stderr, "End basic_test_hset_hget\n");
-	retval = RL_OK;
-cleanup:
 	rl_free(data2);
 	rl_close(db);
-	return retval;
+	PASS();
 }
 
-static int basic_test_hset_hexists(int _commit)
+TEST basic_test_hset_hexists(int _commit)
 {
 	int retval;
-	fprintf(stderr, "Start basic_test_hset_hexists %d\n", _commit);
 
 	rlite *db = NULL;
 	RL_CALL_VERBOSE(setup_db, RL_OK, &db, _commit, 1);
@@ -61,17 +56,13 @@ static int basic_test_hset_hexists(int _commit)
 	RL_CALL_VERBOSE(rl_hexists, RL_FOUND, db, key, keylen, field, fieldlen);
 	RL_CALL_VERBOSE(rl_hexists, RL_NOT_FOUND, db, key, keylen, field2, field2len);
 
-	fprintf(stderr, "End basic_test_hset_hexists\n");
-	retval = RL_OK;
-cleanup:
 	rl_close(db);
-	return retval;
+	PASS();
 }
 
-static int basic_test_hset_hdel(int _commit)
+TEST basic_test_hset_hdel(int _commit)
 {
 	int retval;
-	fprintf(stderr, "Start basic_test_hset_hdel %d\n", _commit);
 
 	rlite *db = NULL;
 	RL_CALL_VERBOSE(setup_db, RL_OK, &db, _commit, 1);
@@ -102,17 +93,13 @@ static int basic_test_hset_hdel(int _commit)
 
 	RL_CALL_VERBOSE(rl_key_get, RL_NOT_FOUND, db, key, keylen, NULL, NULL, NULL, NULL, NULL);
 
-	fprintf(stderr, "End basic_test_hset_hdel\n");
-	retval = RL_OK;
-cleanup:
 	rl_close(db);
-	return retval;
+	PASS();
 }
 
-static int basic_test_hset_hgetall(int _commit)
+TEST basic_test_hset_hgetall(int _commit)
 {
 	int retval;
-	fprintf(stderr, "Start basic_test_hset_hgetall %d\n", _commit);
 
 	rlite *db = NULL;
 	RL_CALL_VERBOSE(setup_db, RL_OK, &db, _commit, 1);
@@ -154,18 +141,14 @@ static int basic_test_hset_hgetall(int _commit)
 	EXPECT_INT(retval, RL_END);
 	EXPECT_LONG(i, 2);
 
-	fprintf(stderr, "End basic_test_hset_hgetall\n");
-	retval = RL_OK;
-cleanup:
 	rl_close(db);
-	return retval;
+	PASS();
 }
 
-static int basic_test_hset_hlen(int _commit)
+TEST basic_test_hset_hlen(int _commit)
 {
 	int retval;
 	long len;
-	fprintf(stderr, "Start basic_test_hset_hlen %d\n", _commit);
 
 	rlite *db = NULL;
 	RL_CALL_VERBOSE(setup_db, RL_OK, &db, _commit, 1);
@@ -189,18 +172,14 @@ static int basic_test_hset_hlen(int _commit)
 	RL_CALL_VERBOSE(rl_hlen, RL_OK, db, key, keylen, &len);
 	EXPECT_LONG(len, 2);
 
-	fprintf(stderr, "End basic_test_hset_hlen\n");
-	retval = RL_OK;
-cleanup:
 	rl_close(db);
-	return retval;
+	PASS();
 }
 
-static int basic_test_hsetnx(int _commit)
+TEST basic_test_hsetnx(int _commit)
 {
 	int retval;
 	long added;
-	fprintf(stderr, "Start basic_test_hsetnx %d\n", _commit);
 
 	rlite *db = NULL;
 	RL_CALL_VERBOSE(setup_db, RL_OK, &db, _commit, 1);
@@ -235,18 +214,14 @@ static int basic_test_hsetnx(int _commit)
 	EXPECT_BYTES(data2, data2len, data3, data3len);
 	rl_free(data3);
 
-	fprintf(stderr, "End basic_test_hsetnx\n");
-	retval = RL_OK;
-cleanup:
 	rl_close(db);
-	return retval;
+	PASS();
 }
 
-static int basic_test_hset_hmget(int _commit)
+TEST basic_test_hset_hmget(int _commit)
 {
 	int retval;
 	long added;
-	fprintf(stderr, "Start basic_test_hset_hmget %d\n", _commit);
 
 	rlite *db = NULL;
 	unsigned char *key = UNSIGN("my key");
@@ -281,9 +256,6 @@ static int basic_test_hset_hmget(int _commit)
 
 	EXPECT_BYTES(data2, data2len, datas[2], dataslen[2]);
 
-	fprintf(stderr, "End basic_test_hset_hmget\n");
-	retval = RL_OK;
-cleanup:
 	if (datas) {
 		for (added = 0; added < 3; added++) {
 			rl_free(datas[added]);
@@ -292,13 +264,12 @@ cleanup:
 	}
 	rl_free(dataslen);
 	rl_close(db);
-	return retval;
+	PASS();
 }
 
-static int basic_test_hmset_hmget(int _commit)
+TEST basic_test_hmset_hmget(int _commit)
 {
 	int i, retval;
-	fprintf(stderr, "Start basic_test_hmset_hmget %d\n", _commit);
 
 	rlite *db = NULL;
 	unsigned char *key = UNSIGN("my key");
@@ -350,9 +321,6 @@ static int basic_test_hmset_hmget(int _commit)
 	EXPECT_PTR(datas[1], NULL);
 	EXPECT_BYTES(data, datalen, datas[2], dataslen[2]);
 
-	fprintf(stderr, "End basic_test_hmset_hmget\n");
-	retval = RL_OK;
-cleanup:
 	if (datas) {
 		for (i = 0; i < 3; i++) {
 			rl_free(datas[i]);
@@ -361,14 +329,13 @@ cleanup:
 	}
 	rl_free(dataslen);
 	rl_close(db);
-	return retval;
+	PASS();
 }
 
-static int basic_test_hincrby_hget(int _commit)
+TEST basic_test_hincrby_hget(int _commit)
 {
 	int retval;
 	long value;
-	fprintf(stderr, "Start basic_test_hincrby_hget %d\n", _commit);
 
 	rlite *db = NULL;
 	unsigned char *key = UNSIGN("my key");
@@ -398,18 +365,14 @@ static int basic_test_hincrby_hget(int _commit)
 	rl_free(data);
 	data = NULL;
 
-	fprintf(stderr, "End basic_test_hincrby_hget\n");
-	retval = RL_OK;
-cleanup:
 	rl_free(data);
 	rl_close(db);
-	return retval;
+	PASS();
 }
 
-static int basic_test_hincrby_invalid(int _commit)
+TEST basic_test_hincrby_invalid(int _commit)
 {
 	int retval;
-	fprintf(stderr, "Start basic_test_hincrby_invalid %d\n", _commit);
 
 	rlite *db = NULL;
 	unsigned char *key = UNSIGN("my key");
@@ -426,17 +389,13 @@ static int basic_test_hincrby_invalid(int _commit)
 	RL_CALL_VERBOSE(rl_hincrby, RL_NAN, db, key, keylen, field, fieldlen, 100, NULL);
 	RL_BALANCED();
 
-	fprintf(stderr, "End basic_test_hincrby_invalid %d\n", _commit);
-	retval = RL_OK;
-cleanup:
 	rl_close(db);
-	return retval;
+	PASS();
 }
 
-static int basic_test_hincrby_overflow(int _commit)
+TEST basic_test_hincrby_overflow(int _commit)
 {
 	int retval;
-	fprintf(stderr, "Start basic_test_hincrby_overflow %d\n", _commit);
 
 	rlite *db = NULL;
 	unsigned char *key = UNSIGN("my key");
@@ -462,18 +421,14 @@ static int basic_test_hincrby_overflow(int _commit)
 	RL_CALL_VERBOSE(rl_hincrby, RL_OVERFLOW, db, key, keylen, field, fieldlen, -10000, NULL);
 	RL_BALANCED();
 
-	fprintf(stderr, "End basic_test_hincrby_overflow %d\n", _commit);
-	retval = RL_OK;
-cleanup:
 	rl_close(db);
-	return retval;
+	PASS();
 }
 
-static int basic_test_hincrbyfloat_hget(int _commit)
+TEST basic_test_hincrbyfloat_hget(int _commit)
 {
 	int retval;
 	double value;
-	fprintf(stderr, "Start basic_test_hincrbyfloat_hget %d\n", _commit);
 
 	rlite *db = NULL;
 	unsigned char *key = UNSIGN("my key");
@@ -510,18 +465,14 @@ static int basic_test_hincrbyfloat_hget(int _commit)
 	rl_free(data);
 	data = NULL;
 
-	fprintf(stderr, "End basic_test_hincrbyfloat_hget\n");
-	retval = RL_OK;
-cleanup:
 	rl_free(data);
 	rl_close(db);
-	return retval;
+	PASS();
 }
 
-static int basic_test_hincrbyfloat_invalid(int _commit)
+TEST basic_test_hincrbyfloat_invalid(int _commit)
 {
 	int retval;
-	fprintf(stderr, "Start basic_test_hincrbyfloat_invalid %d\n", _commit);
 
 	rlite *db = NULL;
 	unsigned char *key = UNSIGN("my key");
@@ -538,17 +489,13 @@ static int basic_test_hincrbyfloat_invalid(int _commit)
 	RL_CALL_VERBOSE(rl_hincrbyfloat, RL_NAN, db, key, keylen, field, fieldlen, 100, NULL);
 	RL_BALANCED();
 
-	fprintf(stderr, "End basic_test_hincrbyfloat_invalid %d\n", _commit);
-	retval = RL_OK;
-cleanup:
 	rl_close(db);
-	return retval;
+	PASS();
 }
 
-static int basic_test_hset_del(int _commit)
+TEST basic_test_hset_del(int _commit)
 {
 	int retval;
-	fprintf(stderr, "Start basic_test_hset_del %d\n", _commit);
 
 	rlite *db = NULL;
 	unsigned char *key = UNSIGN("my key");
@@ -567,17 +514,14 @@ static int basic_test_hset_del(int _commit)
 
 	RL_CALL_VERBOSE(rl_hget, RL_NOT_FOUND, db, key, keylen, field, fieldlen, NULL, NULL);
 
-	fprintf(stderr, "End basic_test_hset_del\n");
-	retval = RL_OK;
-cleanup:
 	rl_close(db);
-	return retval;
+	PASS();
 }
 
-static int hiterator_destroy(int _commit)
+TEST hiterator_destroy()
 {
+	int _commit = 0;
 	int retval;
-	fprintf(stderr, "Start hiterator_destroy %d\n", _commit);
 
 	rlite *db = NULL;
 	unsigned char *key = UNSIGN("my key");
@@ -587,7 +531,7 @@ static int hiterator_destroy(int _commit)
 	unsigned char *data = UNSIGN("my data");
 	long datalen = strlen((char *)data);
 	rl_hash_iterator *iterator;
-	RL_CALL_VERBOSE(setup_db, RL_OK, &db, _commit, 1);
+	RL_CALL_VERBOSE(setup_db, RL_OK, &db, 0, 1);
 
 	RL_CALL_VERBOSE(rl_hset, RL_OK, db, key, keylen, field, fieldlen, data, datalen, NULL, 0);
 	RL_CALL_VERBOSE(rl_hset, RL_OK, db, key, keylen, field, fieldlen - 1, data, datalen - 1, NULL, 0);
@@ -598,32 +542,28 @@ static int hiterator_destroy(int _commit)
 	RL_CALL_VERBOSE(rl_hash_iterator_destroy, RL_OK, iterator);
 	RL_BALANCED();
 
-	fprintf(stderr, "End hiterator_destroy\n");
-	retval = RL_OK;
-cleanup:
 	rl_close(db);
-	return retval;
+	PASS();
 }
 
-RL_TEST_MAIN_START(type_hash_test)
+SUITE(type_hash_test)
 {
 	int i;
 	for (i = 0; i < 3; i++) {
-		RL_TEST(basic_test_hset_hget, i);
-		RL_TEST(basic_test_hset_hexists, i);
-		RL_TEST(basic_test_hset_hdel, i);
-		RL_TEST(basic_test_hset_hgetall, i);
-		RL_TEST(basic_test_hset_hlen, i);
-		RL_TEST(basic_test_hsetnx, i);
-		RL_TEST(basic_test_hset_hmget, i);
-		RL_TEST(basic_test_hmset_hmget, i);
-		RL_TEST(basic_test_hincrby_hget, i);
-		RL_TEST(basic_test_hincrby_invalid, i);
-		RL_TEST(basic_test_hincrby_overflow, i);
-		RL_TEST(basic_test_hincrbyfloat_hget, i);
-		RL_TEST(basic_test_hincrbyfloat_invalid, i);
-		RL_TEST(basic_test_hset_del, i);
+		RUN_TEST1(basic_test_hset_hget, i);
+		RUN_TEST1(basic_test_hset_hexists, i);
+		RUN_TEST1(basic_test_hset_hdel, i);
+		RUN_TEST1(basic_test_hset_hgetall, i);
+		RUN_TEST1(basic_test_hset_hlen, i);
+		RUN_TEST1(basic_test_hsetnx, i);
+		RUN_TEST1(basic_test_hset_hmget, i);
+		RUN_TEST1(basic_test_hmset_hmget, i);
+		RUN_TEST1(basic_test_hincrby_hget, i);
+		RUN_TEST1(basic_test_hincrby_invalid, i);
+		RUN_TEST1(basic_test_hincrby_overflow, i);
+		RUN_TEST1(basic_test_hincrbyfloat_hget, i);
+		RUN_TEST1(basic_test_hincrbyfloat_invalid, i);
+		RUN_TEST1(basic_test_hset_del, i);
 	}
-	RL_TEST(hiterator_destroy, 0);
+	RUN_TEST(hiterator_destroy);
 }
-RL_TEST_MAIN_END

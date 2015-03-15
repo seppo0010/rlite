@@ -1,17 +1,9 @@
 #include <string.h>
 #include <unistd.h>
 #include "hirlite.h"
-#include "test_util.h"
+#include "util.h"
 
-static int populateArgvlen(char *argv[], size_t argvlen[]) {
-	int i;
-	for (i = 0; argv[i] != NULL; i++) {
-		argvlen[i] = strlen(argv[i]);
-	}
-	return i;
-}
-
-int test_set() {
+TEST test_set() {
 	rliteContext *context = rliteConnect(":memory:", 0);
 
 	rliteReply* reply;
@@ -53,10 +45,10 @@ int test_set() {
 	}
 
 	rliteFree(context);
-	return 0;
+	PASS();
 }
 
-int test_setnx() {
+TEST test_setnx() {
 	rliteContext *context = rliteConnect(":memory:", 0);
 
 	rliteReply* reply;
@@ -76,10 +68,10 @@ int test_setnx() {
 		rliteFreeReplyObject(reply);
 	}
 	rliteFree(context);
-	return 0;
+	PASS();
 }
 
-int test_setex() {
+TEST test_setex() {
 	rliteContext *context = rliteConnect(":memory:", 0);
 
 	rliteReply* reply;
@@ -109,10 +101,10 @@ int test_setex() {
 	}
 
 	rliteFree(context);
-	return 0;
+	PASS();
 }
 
-int test_psetex() {
+TEST test_psetex() {
 	rliteContext *context = rliteConnect(":memory:", 0);
 
 	rliteReply* reply;
@@ -142,10 +134,10 @@ int test_psetex() {
 	}
 
 	rliteFree(context);
-	return 0;
+	PASS();
 }
 
-int test_get() {
+TEST test_get() {
 	rliteContext *context = rliteConnect(":memory:", 0);
 
 	rliteReply* reply;
@@ -173,10 +165,10 @@ int test_get() {
 	}
 
 	rliteFree(context);
-	return 0;
+	PASS();
 }
 
-int test_append() {
+TEST test_append() {
 	rliteContext *context = rliteConnect(":memory:", 0);
 
 	rliteReply* reply;
@@ -205,10 +197,10 @@ int test_append() {
 	}
 
 	rliteFree(context);
-	return 0;
+	PASS();
 }
 
-int test_getset() {
+TEST test_getset() {
 	rliteContext *context = rliteConnect(":memory:", 0);
 
 	rliteReply* reply;
@@ -237,10 +229,10 @@ int test_getset() {
 	}
 
 	rliteFree(context);
-	return 0;
+	PASS();
 }
 
-int test_mget() {
+TEST test_mget() {
 	rliteContext *context = rliteConnect(":memory:", 0);
 
 	rliteReply* reply;
@@ -288,10 +280,10 @@ int test_mget() {
 	}
 
 	rliteFree(context);
-	return 0;
+	PASS();
 }
 
-int test_mset() {
+TEST test_mset() {
 	rliteContext *context = rliteConnect(":memory:", 0);
 
 	rliteReply* reply;
@@ -321,10 +313,10 @@ int test_mset() {
 	}
 
 	rliteFree(context);
-	return 0;
+	PASS();
 }
 
-int test_msetnx() {
+TEST test_msetnx() {
 	rliteContext *context = rliteConnect(":memory:", 0);
 
 	rliteReply* reply;
@@ -362,10 +354,10 @@ int test_msetnx() {
 	}
 
 	rliteFree(context);
-	return 0;
+	PASS();
 }
 
-int test_getrange() {
+TEST test_getrange() {
 	rliteContext *context = rliteConnect(":memory:", 0);
 
 	rliteReply* reply;
@@ -393,10 +385,10 @@ int test_getrange() {
 	}
 
 	rliteFree(context);
-	return 0;
+	PASS();
 }
 
-int test_setrange() {
+TEST test_setrange() {
 	rliteContext *context = rliteConnect(":memory:", 0);
 
 	rliteReply* reply;
@@ -438,10 +430,10 @@ int test_setrange() {
 	}
 
 	rliteFree(context);
-	return 0;
+	PASS();
 }
 
-int test_strlen() {
+TEST test_strlen() {
 	rliteContext *context = rliteConnect(":memory:", 0);
 
 	rliteReply* reply;
@@ -469,10 +461,10 @@ int test_strlen() {
 	}
 
 	rliteFree(context);
-	return 0;
+	PASS();
 }
 
-int test_incr() {
+TEST test_incr() {
 	rliteContext *context = rliteConnect(":memory:", 0);
 
 	rliteReply* reply;
@@ -520,10 +512,10 @@ int test_incr() {
 	}
 
 	rliteFree(context);
-	return 0;
+	PASS();
 }
 
-int test_incrbyfloat() {
+TEST test_incrbyfloat() {
 	rliteContext *context = rliteConnect(":memory:", 0);
 
 	rliteReply* reply;
@@ -551,10 +543,10 @@ int test_incrbyfloat() {
 	}
 
 	rliteFree(context);
-	return 0;
+	PASS();
 }
 
-int test_bitcount() {
+TEST test_bitcount() {
 	rliteContext *context = rliteConnect(":memory:", 0);
 
 	rliteReply* reply;
@@ -596,10 +588,10 @@ int test_bitcount() {
 	}
 
 	rliteFree(context);
-	return 0;
+	PASS();
 }
 
-int test_bitopand() {
+TEST test_bitopand() {
 	rliteContext *context = rliteConnect(":memory:", 0);
 
 	rliteReply* reply;
@@ -634,10 +626,10 @@ int test_bitopand() {
 	}
 
 	rliteFree(context);
-	return 0;
+	PASS();
 }
 
-int test_bitopor() {
+TEST test_bitopor() {
 	rliteContext *context = rliteConnect(":memory:", 0);
 
 	rliteReply* reply;
@@ -672,10 +664,10 @@ int test_bitopor() {
 	}
 
 	rliteFree(context);
-	return 0;
+	PASS();
 }
 
-int test_bitopxor() {
+TEST test_bitopxor() {
 	rliteContext *context = rliteConnect(":memory:", 0);
 
 	rliteReply* reply;
@@ -710,10 +702,10 @@ int test_bitopxor() {
 	}
 
 	rliteFree(context);
-	return 0;
+	PASS();
 }
 
-int test_bitopnot() {
+TEST test_bitopnot() {
 	rliteContext *context = rliteConnect(":memory:", 0);
 
 	rliteReply* reply;
@@ -741,10 +733,10 @@ int test_bitopnot() {
 	}
 
 	rliteFree(context);
-	return 0;
+	PASS();
 }
 
-int test_bitopwrongtype() {
+TEST test_bitopwrongtype() {
 	rliteContext *context = rliteConnect(":memory:", 0);
 
 	rliteReply* reply;
@@ -786,10 +778,10 @@ int test_bitopwrongtype() {
 	}
 
 	rliteFree(context);
-	return 0;
+	PASS();
 }
 
-int test_bitpos() {
+TEST test_bitpos() {
 	rliteContext *context = rliteConnect(":memory:", 0);
 
 	rliteReply* reply;
@@ -888,10 +880,10 @@ int test_bitpos() {
 	}
 
 	rliteFree(context);
-	return 0;
+	PASS();
 }
 
-static int test_getbit() {
+TEST test_getbit() {
 	rliteContext *context = rliteConnect(":memory:", 0);
 
 	rliteReply* reply;
@@ -926,10 +918,10 @@ static int test_getbit() {
 	}
 
 	rliteFree(context);
-	return 0;
+	PASS();
 }
 
-static int test_setbit() {
+TEST test_setbit() {
 	rliteContext *context = rliteConnect(":memory:", 0);
 
 	rliteReply* reply;
@@ -957,10 +949,10 @@ static int test_setbit() {
 	}
 
 	rliteFree(context);
-	return 0;
+	PASS();
 }
 
-static int test_pfadd_pfcount() {
+TEST test_pfadd_pfcount() {
 	rliteContext *context = rliteConnect(":memory:", 0);
 
 	rliteReply* reply;
@@ -995,10 +987,10 @@ static int test_pfadd_pfcount() {
 	}
 
 	rliteFree(context);
-	return 0;
+	PASS();
 }
 
-static int test_pfadd_pfmerge_pfcount() {
+TEST test_pfadd_pfmerge_pfcount() {
 	rliteContext *context = rliteConnect(":memory:", 0);
 
 	rliteReply* reply;
@@ -1040,10 +1032,10 @@ static int test_pfadd_pfmerge_pfcount() {
 	}
 
 	rliteFree(context);
-	return 0;
+	PASS();
 }
 
-static int test_pfadd_pfdebug() {
+TEST test_pfadd_pfdebug() {
 	rliteContext *context = rliteConnect(":memory:", 0);
 
 	rliteReply* reply;
@@ -1096,10 +1088,10 @@ static int test_pfadd_pfdebug() {
 	}
 
 	rliteFree(context);
-	return 0;
+	PASS();
 }
 
-static int test_pfadd_empty() {
+TEST test_pfadd_empty() {
 	rliteContext *context = rliteConnect(":memory:", 0);
 
 	rliteReply* reply;
@@ -1120,93 +1112,37 @@ static int test_pfadd_empty() {
 	}
 
 	rliteFree(context);
-	return 0;
+	PASS();
 }
 
-int run_string() {
-	if (test_set() != 0) {
-		return 1;
-	}
-	if (test_setnx() != 0) {
-		return 1;
-	}
-	if (test_setex() != 0) {
-		return 1;
-	}
-	if (test_psetex() != 0) {
-		return 1;
-	}
-	if (test_get() != 0) {
-		return 1;
-	}
-	if (test_append() != 0) {
-		return 1;
-	}
-	if (test_getset() != 0) {
-		return 1;
-	}
-	if (test_mget() != 0) {
-		return 1;
-	}
-	if (test_mset() != 0) {
-		return 1;
-	}
-	if (test_msetnx() != 0) {
-		return 1;
-	}
-	if (test_getrange() != 0) {
-		return 1;
-	}
-	if (test_setrange() != 0) {
-		return 1;
-	}
-	if (test_strlen() != 0) {
-		return 1;
-	}
-	if (test_incr() != 0) {
-		return 1;
-	}
-	if (test_incrbyfloat() != 0) {
-		return 1;
-	}
-	if (test_bitcount() != 0) {
-		return 1;
-	}
-	if (test_bitopand() != 0) {
-		return 1;
-	}
-	if (test_bitopor() != 0) {
-		return 1;
-	}
-	if (test_bitopxor() != 0) {
-		return 1;
-	}
-	if (test_bitopnot() != 0) {
-		return 1;
-	}
-	if (test_bitopwrongtype() != 0) {
-		return 1;
-	}
-	if (test_bitpos() != 0) {
-		return 1;
-	}
-	if (test_getbit() != 0) {
-		return 1;
-	}
-	if (test_setbit() != 0) {
-		return 1;
-	}
-	if (test_pfadd_pfcount() != 0) {
-		return 1;
-	}
-	if (test_pfadd_pfmerge_pfcount() != 0) {
-		return 1;
-	}
-	if (test_pfadd_pfdebug() != 0) {
-		return 1;
-	}
-	if (test_pfadd_empty() != 0) {
-		return 1;
-	}
-	return 0;
+SUITE(hstring_test)
+{
+	RUN_TEST(test_set);
+	RUN_TEST(test_setnx);
+	RUN_TEST(test_setex);
+	RUN_TEST(test_psetex);
+	RUN_TEST(test_get);
+	RUN_TEST(test_append);
+	RUN_TEST(test_getset);
+	RUN_TEST(test_mget);
+	RUN_TEST(test_mset);
+	RUN_TEST(test_msetnx);
+	RUN_TEST(test_getrange);
+	RUN_TEST(test_setrange);
+	RUN_TEST(test_strlen);
+	RUN_TEST(test_incr);
+	RUN_TEST(test_incrbyfloat);
+	RUN_TEST(test_bitcount);
+	RUN_TEST(test_bitopand);
+	RUN_TEST(test_bitopor);
+	RUN_TEST(test_bitopxor);
+	RUN_TEST(test_bitopnot);
+	RUN_TEST(test_bitopwrongtype);
+	RUN_TEST(test_bitpos);
+	RUN_TEST(test_getbit);
+	RUN_TEST(test_setbit);
+	RUN_TEST(test_pfadd_pfcount);
+	RUN_TEST(test_pfadd_pfmerge_pfcount);
+	RUN_TEST(test_pfadd_pfdebug);
+	RUN_TEST(test_pfadd_empty);
 }

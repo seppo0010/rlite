@@ -1,7 +1,9 @@
 #include <string.h>
 #include "hirlite.h"
+#include "util.h"
+#include "greatest.h"
 
-int test_ping() {
+TEST test_ping() {
 	size_t argvlen[2];
 	char* argv[2];
 	rliteReply* reply;
@@ -9,21 +11,14 @@ int test_ping() {
 	argv[0] = "PING";
 	rliteContext *context = rliteConnect(":memory:", 0);
 	reply = rliteCommandArgv(context, 1, argv, argvlen);
-	if (reply->type != RLITE_REPLY_STATUS) {
-		fprintf(stderr, "Expected reply to be STATUS, got %d instead on line %d\n", reply->type, __LINE__);
-		return 1;
-	}
-	if (memcmp(reply->str, "PONG", 4) != 0) {
-		fprintf(stderr, "Expected reply to be %s, got %s instead on line %d\n", "PONG", reply->str, __LINE__);
-		return 1;
-	}
+	EXPECT_REPLY_STATUS(reply, "PONG", 4);
 
 	rliteFreeReplyObject(reply);
 	rliteFree(context);
-	return 0;
+	PASS();
 }
 
-int test_ping_str() {
+TEST test_ping_str() {
 	size_t argvlen[3];
 	char* argv[3];
 	rliteReply* reply;
@@ -33,21 +28,14 @@ int test_ping_str() {
 	argv[1] = "hello world";
 	rliteContext *context = rliteConnect(":memory:", 0);
 	reply = rliteCommandArgv(context, 2, argv, argvlen);
-	if (reply->type != RLITE_REPLY_STATUS) {
-		fprintf(stderr, "Expected reply to be STATUS, got %d instead on line %d\n", reply->type, __LINE__);
-		return 1;
-	}
-	if (memcmp(reply->str, argv[1], argvlen[1]) != 0) {
-		fprintf(stderr, "Expected reply to be %s, got %s instead on line %d\n", argv[1], reply->str, __LINE__);
-		return 1;
-	}
+	EXPECT_REPLY_STATUS(reply, argv[1], argvlen[1]);
 
 	rliteFreeReplyObject(reply);
 	rliteFree(context);
-	return 0;
+	PASS();
 }
 
-int test_echo() {
+TEST test_echo() {
 	size_t argvlen[2];
 	char* argv[2];
 	rliteReply* reply;
@@ -57,21 +45,14 @@ int test_echo() {
 	argv[1] = "hello world";
 	rliteContext *context = rliteConnect(":memory:", 0);
 	reply = rliteCommandArgv(context, 2, argv, argvlen);
-	if (reply->type != RLITE_REPLY_STRING) {
-		fprintf(stderr, "Expected reply to be STRING, got %d instead on line %d\n", reply->type, __LINE__);
-		return 1;
-	}
-	if (memcmp(reply->str, argv[1], argvlen[1]) != 0) {
-		fprintf(stderr, "Expected reply to be %s, got %s instead on line %d\n", argv[1], reply->str, __LINE__);
-		return 1;
-	}
+	EXPECT_REPLY_STR(reply, argv[1], argvlen[1]);
 
 	rliteFreeReplyObject(reply);
 	rliteFree(context);
-	return 0;
+	PASS();
 }
 
-int test_echo_wrong_arity() {
+TEST test_echo_wrong_arity() {
 	size_t argvlen[2];
 	char* argv[2];
 	rliteReply* reply;
@@ -79,22 +60,16 @@ int test_echo_wrong_arity() {
 	argv[0] = "echo";
 	rliteContext *context = rliteConnect(":memory:", 0);
 	reply = rliteCommandArgv(context, 1, argv, argvlen);
-	if (reply->type != RLITE_REPLY_ERROR) {
-		fprintf(stderr, "Expected reply to be ERROR, got %d instead on line %d\n", reply->type, __LINE__);
-		return 1;
-	}
+	EXPECT_REPLY_ERROR(reply);
 	const char *err = "wrong number of arguments for 'echo' command";
-	if (memcmp(reply->str, err, strlen(err)) != 0) {
-		fprintf(stderr, "Expected reply to be \"%s\", got \"%s\" instead on line %d\n", err, reply->str, __LINE__);
-		return 1;
-	}
+	ASSERT_EQ(memcmp(reply->str, err, strlen(err)), 0);
 
 	rliteFreeReplyObject(reply);
 	rliteFree(context);
-	return 0;
+	PASS();
 }
 
-int test_not_null_terminated_long() {
+TEST test_not_null_terminated_long() {
 	size_t argvlen[4];
 	char* argv[4];
 	rliteReply* reply;
@@ -112,32 +87,19 @@ int test_not_null_terminated_long() {
 
 	rliteContext *context = rliteConnect(":memory:", 0);
 	reply = rliteCommandArgv(context, 4, argv, argvlen);
-	if (reply->type != RLITE_REPLY_ARRAY) {
-		fprintf(stderr, "Expected reply to be ARRAY, got %d instead on line %d\n", reply->type, __LINE__);
-		return 1;
-	}
+	ASSERT_EQ(reply->type, RLITE_REPLY_ARRAY);
 
 	rliteFreeReplyObject(reply);
 	rliteFree(context);
 	free(argv[3]);
-	return 0;
+	PASS();
 }
 
-int run_echo() {
-	if (test_ping() != 0) {
-		return 1;
-	}
-	if (test_ping_str() != 0) {
-		return 1;
-	}
-	if (test_echo() != 0) {
-		return 1;
-	}
-	if (test_echo_wrong_arity() != 0) {
-		return 1;
-	}
-	if (test_not_null_terminated_long() != 0) {
-		return 1;
-	}
-	return 0;
+SUITE(echo_test)
+{
+	RUN_TEST(test_ping);
+	RUN_TEST(test_ping_str);
+	RUN_TEST(test_echo);
+	RUN_TEST(test_echo_wrong_arity);
+	RUN_TEST(test_not_null_terminated_long);
 }

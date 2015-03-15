@@ -1,39 +1,27 @@
 #include <string.h>
 #include "hirlite.h"
-#include "test_util.h"
+#include "util.h"
 
 static int _zadd(rliteContext *context) {
-	size_t argvlen[6];
-	char* argv[6];
+	char* argv[100] = {"ZADD", "mykey", "1", "one", "2", "two", NULL};
+	size_t argvlen[100];
 	rliteReply* reply;
-	argvlen[0] = 4;
-	argv[0] = "ZADD";
-	argvlen[1] = 5;
-	argv[1] = "mykey";
-	argvlen[2] = 1;
-	argv[2] = "1";
-	argvlen[3] = 3;
-	argv[3] = "one";
-	argvlen[4] = 1;
-	argv[4] = "2";
-	argvlen[5] = 3;
-	argv[5] = "two";
-	reply = rliteCommandArgv(context, 6, argv, argvlen);
-	EXPECT_REPLY_INTEGER(reply, 2);
+	reply = rliteCommandArgv(context, populateArgvlen(argv, argvlen), argv, argvlen);
 
+	EXPECT_REPLY_INTEGER(reply, 2);
 	rliteFreeReplyObject(reply);
-	return 0;
+	PASS();
 }
-int test_zadd() {
+TEST test_zadd() {
 	rliteContext *context = rliteConnect(":memory:", 0);
 	if (_zadd(context) != 0) {
 		return 1;
 	}
 	rliteFree(context);
-	return 0;
+	PASS();
 }
 
-int test_zrange() {
+TEST test_zrange() {
 	rliteContext *context = rliteConnect(":memory:", 0);
 	if (_zadd(context) != 0) {
 		return 1;
@@ -62,10 +50,10 @@ int test_zrange() {
 	rliteFreeReplyObject(reply);
 
 	rliteFree(context);
-	return 0;
+	PASS();
 }
 
-int test_zrevrange() {
+TEST test_zrevrange() {
 	rliteContext *context = rliteConnect(":memory:", 0);
 	if (_zadd(context) != 0) {
 		return 1;
@@ -94,10 +82,10 @@ int test_zrevrange() {
 	rliteFreeReplyObject(reply);
 
 	rliteFree(context);
-	return 0;
+	PASS();
 }
 
-int test_zrem() {
+TEST test_zrem() {
 	rliteContext *context = rliteConnect(":memory:", 0);
 	if (_zadd(context) != 0) {
 		return 1;
@@ -131,10 +119,10 @@ int test_zrem() {
 	rliteFreeReplyObject(reply);
 
 	rliteFree(context);
-	return 0;
+	PASS();
 }
 
-int test_zremrangebyrank() {
+TEST test_zremrangebyrank() {
 	rliteContext *context = rliteConnect(":memory:", 0);
 	if (_zadd(context) != 0) {
 		return 1;
@@ -166,10 +154,10 @@ int test_zremrangebyrank() {
 	rliteFreeReplyObject(reply);
 
 	rliteFree(context);
-	return 0;
+	PASS();
 }
 
-int test_zremrangebyscore() {
+TEST test_zremrangebyscore() {
 	rliteContext *context = rliteConnect(":memory:", 0);
 	if (_zadd(context) != 0) {
 		return 1;
@@ -201,18 +189,10 @@ int test_zremrangebyscore() {
 	rliteFreeReplyObject(reply);
 
 	rliteFree(context);
-	return 0;
+	PASS();
 }
 
-static int populateArgvlen(char *argv[], size_t argvlen[]) {
-	int i;
-	for (i = 0; argv[i] != NULL; i++) {
-		argvlen[i] = strlen(argv[i]);
-	}
-	return i;
-}
-
-int test_zcard() {
+TEST test_zcard() {
 	rliteContext *context = rliteConnect(":memory:", 0);
 	if (_zadd(context) != 0) {
 		return 1;
@@ -226,10 +206,10 @@ int test_zcard() {
 	rliteFreeReplyObject(reply);
 
 	rliteFree(context);
-	return 0;
+	PASS();
 }
 
-int test_zinterstore() {
+TEST test_zinterstore() {
 	rliteContext *context = rliteConnect(":memory:", 0);
 
 	rliteReply* reply;
@@ -249,10 +229,10 @@ int test_zinterstore() {
 	rliteFreeReplyObject(reply);
 
 	rliteFree(context);
-	return 0;
+	PASS();
 }
 
-int test_zunionstore() {
+TEST test_zunionstore() {
 	rliteContext *context = rliteConnect(":memory:", 0);
 
 	rliteReply* reply;
@@ -272,10 +252,10 @@ int test_zunionstore() {
 	rliteFreeReplyObject(reply);
 
 	rliteFree(context);
-	return 0;
+	PASS();
 }
 
-int test_zrangebyscore() {
+TEST test_zrangebyscore() {
 	rliteContext *context = rliteConnect(":memory:", 0);
 
 	rliteReply* reply;
@@ -293,10 +273,10 @@ int test_zrangebyscore() {
 	rliteFreeReplyObject(reply);
 
 	rliteFree(context);
-	return 0;
+	PASS();
 }
 
-int test_zrevrangebyscore() {
+TEST test_zrevrangebyscore() {
 	rliteContext *context = rliteConnect(":memory:", 0);
 
 	rliteReply* reply;
@@ -314,10 +294,10 @@ int test_zrevrangebyscore() {
 	rliteFreeReplyObject(reply);
 
 	rliteFree(context);
-	return 0;
+	PASS();
 }
 
-int test_zrangebylex() {
+TEST test_zrangebylex() {
 	rliteContext *context = rliteConnect(":memory:", 0);
 
 	rliteReply* reply;
@@ -336,10 +316,10 @@ int test_zrangebylex() {
 	rliteFreeReplyObject(reply);
 
 	rliteFree(context);
-	return 0;
+	PASS();
 }
 
-int test_zrevrangebylex() {
+TEST test_zrevrangebylex() {
 	rliteContext *context = rliteConnect(":memory:", 0);
 
 	rliteReply* reply;
@@ -358,10 +338,10 @@ int test_zrevrangebylex() {
 	rliteFreeReplyObject(reply);
 
 	rliteFree(context);
-	return 0;
+	PASS();
 }
 
-int test_zlexcount() {
+TEST test_zlexcount() {
 	rliteContext *context = rliteConnect(":memory:", 0);
 
 	rliteReply* reply;
@@ -378,10 +358,10 @@ int test_zlexcount() {
 	rliteFreeReplyObject(reply);
 
 	rliteFree(context);
-	return 0;
+	PASS();
 }
 
-int test_zscore() {
+TEST test_zscore() {
 	rliteContext *context = rliteConnect(":memory:", 0);
 
 	if (_zadd(context) != 0) {
@@ -398,10 +378,10 @@ int test_zscore() {
 	rliteFreeReplyObject(reply);
 
 	rliteFree(context);
-	return 0;
+	PASS();
 }
 
-int test_zrank() {
+TEST test_zrank() {
 	rliteContext *context = rliteConnect(":memory:", 0);
 
 	if (_zadd(context) != 0) {
@@ -418,10 +398,10 @@ int test_zrank() {
 	rliteFreeReplyObject(reply);
 
 	rliteFree(context);
-	return 0;
+	PASS();
 }
 
-int test_zrevrank() {
+TEST test_zrevrank() {
 	rliteContext *context = rliteConnect(":memory:", 0);
 
 	if (_zadd(context) != 0) {
@@ -438,10 +418,10 @@ int test_zrevrank() {
 	rliteFreeReplyObject(reply);
 
 	rliteFree(context);
-	return 0;
+	PASS();
 }
 
-int test_zcount() {
+TEST test_zcount() {
 	rliteContext *context = rliteConnect(":memory:", 0);
 
 	if (_zadd(context) != 0) {
@@ -458,10 +438,10 @@ int test_zcount() {
 	rliteFreeReplyObject(reply);
 
 	rliteFree(context);
-	return 0;
+	PASS();
 }
 
-int test_exists() {
+TEST test_exists() {
 	rliteContext *context = rliteConnect(":memory:", 0);
 
 	if (_zadd(context) != 0) {
@@ -478,10 +458,10 @@ int test_exists() {
 	rliteFreeReplyObject(reply);
 
 	rliteFree(context);
-	return 0;
+	PASS();
 }
 
-int test_del() {
+TEST test_del() {
 	rliteContext *context = rliteConnect(":memory:", 0);
 
 	if (_zadd(context) != 0) {
@@ -503,10 +483,10 @@ int test_del() {
 	rliteFreeReplyObject(reply);
 
 	rliteFree(context);
-	return 0;
+	PASS();
 }
 
-int test_debug() {
+TEST test_debug() {
 	rliteContext *context = rliteConnect(":memory:", 0);
 
 	if (_zadd(context) != 0) {
@@ -523,72 +503,29 @@ int test_debug() {
 	rliteFreeReplyObject(reply);
 
 	rliteFree(context);
-	return 0;
+	PASS();
 }
 
-int run_zset() {
-	if (test_zadd() != 0) {
-		return 1;
-	}
-	if (test_zrange() != 0) {
-		return 1;
-	}
-	if (test_zrevrange() != 0) {
-		return 1;
-	}
-	if (test_zrem() != 0) {
-		return 1;
-	}
-	if (test_zremrangebyrank() != 0) {
-		return 1;
-	}
-	if (test_zremrangebyscore() != 0) {
-		return 1;
-	}
-	if (test_zcard() != 0) {
-		return 1;
-	}
-	if (test_zinterstore() != 0) {
-		return 1;
-	}
-	if (test_zunionstore() != 0) {
-		return 1;
-	}
-	if (test_zrangebyscore() != 0) {
-		return 1;
-	}
-	if (test_zrevrangebyscore() != 0) {
-		return 1;
-	}
-	if (test_zrangebylex() != 0) {
-		return 1;
-	}
-	if (test_zrevrangebylex() != 0) {
-		return 1;
-	}
-	if (test_zlexcount() != 0) {
-		return 1;
-	}
-	if (test_zscore() != 0) {
-		return 1;
-	}
-	if (test_zrank() != 0) {
-		return 1;
-	}
-	if (test_zrevrank() != 0) {
-		return 1;
-	}
-	if (test_zcount() != 0) {
-		return 1;
-	}
-	if (test_exists() != 0) {
-		return 1;
-	}
-	if (test_del() != 0) {
-		return 1;
-	}
-	if (test_debug() != 0) {
-		return 1;
-	}
-	return 0;
+SUITE(zset_test) {
+	RUN_TEST(test_zadd);
+	RUN_TEST(test_zrange);
+	RUN_TEST(test_zrevrange);
+	RUN_TEST(test_zrem);
+	RUN_TEST(test_zremrangebyrank);
+	RUN_TEST(test_zremrangebyscore);
+	RUN_TEST(test_zcard);
+	RUN_TEST(test_zinterstore);
+	RUN_TEST(test_zunionstore);
+	RUN_TEST(test_zrangebyscore);
+	RUN_TEST(test_zrevrangebyscore);
+	RUN_TEST(test_zrangebylex);
+	RUN_TEST(test_zrevrangebylex);
+	RUN_TEST(test_zlexcount);
+	RUN_TEST(test_zscore);
+	RUN_TEST(test_zrank);
+	RUN_TEST(test_zrevrank);
+	RUN_TEST(test_zcount);
+	RUN_TEST(test_exists);
+	RUN_TEST(test_del);
+	RUN_TEST(test_debug);
 }

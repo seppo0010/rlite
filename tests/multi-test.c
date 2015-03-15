@@ -1,15 +1,14 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
-#include "test_util.h"
+#include "util.h"
 #include "../src/page_key.h"
 #include "../src/rlite.h"
 #include "../src/type_zset.h"
 
-int basic_multi_test(int _commit)
+TEST basic_multi_test(int _commit)
 {
 	int retval = 0;
-	fprintf(stderr, "Start basic_multi_test\n");
 
 	rlite *db;
 	RL_CALL_VERBOSE(setup_db, RL_OK, &db, _commit, 1);
@@ -41,16 +40,12 @@ int basic_multi_test(int _commit)
 
 	RL_CALL_VERBOSE(rl_get, RL_NOT_FOUND, db, key2, key2len, &testvalue, &testvaluelen);
 
-	fprintf(stderr, "End basic_multi_test\n");
-	retval = RL_OK;
-cleanup:
 	rl_close(db);
-	return retval;
+	PASS();
 }
 
-RL_TEST_MAIN_START(multi_test)
+SUITE(multi_test)
 {
-	RL_TEST(basic_multi_test, 1);
-	RL_TEST(basic_multi_test, 2);
+	RUN_TEST1(basic_multi_test, 1);
+	RUN_TEST1(basic_multi_test, 2);
 }
-RL_TEST_MAIN_END

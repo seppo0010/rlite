@@ -2,15 +2,14 @@
 #include <unistd.h>
 #include <pthread.h>
 #include "rlite.h"
-#include "test_util.h"
+#include "util.h"
 #include "wal.h"
 
 static const char *db_path = "rlite-test.rld";
 static const char *wal_path = ".rlite-test.rld.wal";
 
-static int test_full_wal(int _commit) {
+TEST test_full_wal(int _commit) {
 	int retval;
-	fprintf(stderr, "Start test_full_wal %d\n", _commit);
 	rlite *db;
 	RL_CALL_VERBOSE(setup_db, RL_OK, &db, _commit, 1);
 
@@ -29,22 +28,14 @@ static int test_full_wal(int _commit) {
 	EXPECT_BYTES(value, valuelen, testvalue, testvaluelen);
 	rl_free(testvalue);
 
-	if (access(wal_path, F_OK) == 0) {
-		fprintf(stderr, "Expected wal path not to exist on line %d\n", __LINE__);
-		retval = RL_UNEXPECTED;
-		goto cleanup;
-	}
+	ASSERT_EQm("Expected wal path not to exist", access(wal_path, F_OK), -1);
 
-	fprintf(stderr, "End test_full_wal\n");
-	retval = RL_OK;
-cleanup:
 	rl_close(db);
-	return retval;
+	PASS();
 }
 
-static int test_full_wal_readonly(int _commit) {
+TEST test_full_wal_readonly(int _commit) {
 	int retval;
-	fprintf(stderr, "Start test_full_wal_readonly %d\n", _commit);
 	rlite *db;
 	RL_CALL_VERBOSE(setup_db, RL_OK, &db, _commit, 1);
 
@@ -63,22 +54,14 @@ static int test_full_wal_readonly(int _commit) {
 	EXPECT_BYTES(value, valuelen, testvalue, testvaluelen);
 	rl_free(testvalue);
 
-	if (access(wal_path, F_OK) != 0) {
-		fprintf(stderr, "Expected wal path to exist on line %d\n", __LINE__);
-		retval = RL_UNEXPECTED;
-		goto cleanup;
-	}
+	ASSERT_EQm("Expected wal path to exist", access(wal_path, F_OK), 0);
 
-	fprintf(stderr, "End test_full_wal_readonly\n");
-	retval = RL_OK;
-cleanup:
 	rl_close(db);
-	return retval;
+	PASS();
 }
 
-static int test_partial_wal(int _commit) {
+TEST test_partial_wal(int _commit) {
 	int retval;
-	fprintf(stderr, "Start test_partial_wal %d\n", _commit);
 	rlite *db;
 	RL_CALL_VERBOSE(setup_db, RL_OK, &db, _commit, 1);
 
@@ -95,28 +78,14 @@ static int test_partial_wal(int _commit) {
 	RL_CALL_VERBOSE(setup_db, RL_OK, &db, _commit, 0);
 
 	RL_CALL_VERBOSE(rl_get, RL_NOT_FOUND, db, key, keylen, NULL, NULL);
-	if (access(wal_path, F_OK) == 0) {
-		fprintf(stderr, "Expected wal path not to exist on line %d\n", __LINE__);
-		retval = RL_UNEXPECTED;
-		goto cleanup;
-	}
+	ASSERT_EQm("Expected wal path not to exist", access(wal_path, F_OK), -1);
 
-	if (access(wal_path, F_OK) == 0) {
-		fprintf(stderr, "Expected wal path not to exist on line %d\n", __LINE__);
-		retval = RL_UNEXPECTED;
-		goto cleanup;
-	}
-
-	fprintf(stderr, "End test_partial_wal\n");
-	retval = RL_OK;
-cleanup:
 	rl_close(db);
-	return retval;
+	PASS();
 }
 
-static int test_partial_wal_readonly(int _commit) {
+TEST test_partial_wal_readonly(int _commit) {
 	int retval;
-	fprintf(stderr, "Start test_partial_wal_readonly %d\n", _commit);
 	rlite *db;
 	RL_CALL_VERBOSE(setup_db, RL_OK, &db, _commit, 1);
 	unsigned char *key = UNSIGN("my key");
@@ -143,24 +112,16 @@ static int test_partial_wal_readonly(int _commit) {
 
 	RL_CALL_VERBOSE(rl_get, RL_NOT_FOUND, db, key, keylen, NULL, NULL);
 
-	if (access(wal_path, F_OK) != 0) {
-		fprintf(stderr, "Expected wal path to exist on line %d\n", __LINE__);
-		retval = RL_UNEXPECTED;
-		goto cleanup;
-	}
+	ASSERT_EQm("Expected wal path to exist", access(wal_path, F_OK), 0);
 
-	fprintf(stderr, "End test_partial_wal_readonly\n");
-	retval = RL_OK;
-cleanup:
 	rl_close(db);
-	return retval;
+	PASS();
 }
 
-RL_TEST_MAIN_START(wal_test)
+SUITE(wal_test)
 {
-	RL_TEST(test_full_wal, 1);
-	RL_TEST(test_full_wal_readonly, 1);
-	RL_TEST(test_partial_wal, 1);
-	RL_TEST(test_partial_wal_readonly, 1);
+	RUN_TEST1(test_full_wal, 1);
+	RUN_TEST1(test_full_wal_readonly, 1);
+	RUN_TEST1(test_partial_wal, 1);
+	RUN_TEST1(test_partial_wal_readonly, 1);
 }
-RL_TEST_MAIN_END

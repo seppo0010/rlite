@@ -1,7 +1,18 @@
 LIBS=-lm -lpthread
 CFLAGS +=  -I../src/ -I../deps/lua/src/
 STLIBNAME=../src/libhirlite.a ../deps/lua/src/liblua.a
-OBJS=rlite-test.o btree-test.o list-test.o string-test.o multi_string-test.o multi-test.o key-test.o type_string-test.o type_list-test.o type_set-test.o type_zset-test.o type_hash-test.o skiplist-test.o long-test.o restore-test.o hyperloglog-test.o dump-test.o sort-test.o test_util.o test.o wal-test.o zset-test.o db-test.o hmulti-test.o hsort-test.o scripting-test.o concurrency-test.o echo-test.o hash-test.o hlist-test.o parser-test.o set-test.o hstring-test.o
+OBJS=hstring-test.o set-test.o parser-test.o hlist-test.o hash-test.o echo-test.o scripting-test.o hsort-test.o hmulti-test.o zset-test.o wal-test.o sort-test.o dump-test.o hyperloglog-test.o restore-test.o long-test.o skiplist-test.o type_hash-test.o type_zset-test.o type_set-test.o type_list-test.o type_string-test.o key-test.o multi-test.o multi_string-test.o string-test.o list-test.o rlite-test.o btree-test.o concurrency-test.o db-test.o util.o test.o
+
+DEBUG.gcc += -rdynamic
+CFLAGS.gcc += -std=c99
+
+ifeq ($(shell $(CC) -v 2>&1 | grep -c "clang version"), 1)
+DEBUG += ${DEBUG.clang}
+CFLAGS += ${CFLAGS.clang}
+else
+DEBUG += ${DEBUG.gcc}
+CFLAGS += ${CFLAGS.gcc}
+endif
 
 gcov: CFLAGS += -fprofile-arcs -ftest-coverage
 gcov: clean test

@@ -1,17 +1,9 @@
 #include <string.h>
 #include <unistd.h>
 #include "hirlite.h"
-#include "test_util.h"
+#include "util.h"
 
-static int populateArgvlen(char *argv[], size_t argvlen[]) {
-	int i;
-	for (i = 0; argv[i] != NULL; i++) {
-		argvlen[i] = strlen(argv[i]);
-	}
-	return i;
-}
-
-int test_keys() {
+TEST keys() {
 	rliteContext *context = rliteConnect(":memory:", 0);
 
 	rliteReply* reply;
@@ -49,10 +41,10 @@ int test_keys() {
 	}
 
 	rliteFree(context);
-	return 0;
+	PASS();
 }
 
-int test_dbsize() {
+TEST dbsize() {
 	rliteContext *context = rliteConnect(":memory:", 0);
 
 	rliteReply* reply;
@@ -87,10 +79,10 @@ int test_dbsize() {
 	}
 
 	rliteFree(context);
-	return 0;
+	PASS();
 }
 
-int test_expire(char *command, char *time) {
+TEST expire(char *command, char *time) {
 	rliteContext *context = rliteConnect(":memory:", 0);
 
 	rliteReply* reply;
@@ -118,10 +110,10 @@ int test_expire(char *command, char *time) {
 	}
 
 	rliteFree(context);
-	return 0;
+	PASS();
 }
 
-int test_rename() {
+TEST test_rename() {
 	rliteContext *context = rliteConnect(":memory:", 0);
 
 	rliteReply* reply;
@@ -156,10 +148,10 @@ int test_rename() {
 	}
 
 	rliteFree(context);
-	return 0;
+	PASS();
 }
 
-int test_renamenx() {
+TEST renamenx() {
 	rliteContext *context = rliteConnect(":memory:", 0);
 
 	rliteReply* reply;
@@ -222,10 +214,10 @@ int test_renamenx() {
 	}
 
 	rliteFree(context);
-	return 0;
+	PASS();
 }
 
-int test_ttl_pttl() {
+TEST ttl_pttl() {
 	rliteContext *context = rliteConnect(":memory:", 0);
 
 	rliteReply* reply;
@@ -254,10 +246,10 @@ int test_ttl_pttl() {
 	}
 
 	rliteFree(context);
-	return 0;
+	PASS();
 }
 
-int test_persist() {
+TEST persist() {
 	rliteContext *context = rliteConnect(":memory:", 0);
 
 	rliteReply* reply;
@@ -299,10 +291,10 @@ int test_persist() {
 	}
 
 	rliteFree(context);
-	return 0;
+	PASS();
 }
 
-int test_select() {
+TEST test_select() {
 	rliteContext *context = rliteConnect(":memory:", 0);
 
 	rliteReply* reply;
@@ -344,10 +336,10 @@ int test_select() {
 	}
 
 	rliteFree(context);
-	return 0;
+	PASS();
 }
 
-int test_move() {
+TEST move() {
 	rliteContext *context = rliteConnect(":memory:", 0);
 
 	rliteReply* reply;
@@ -396,10 +388,10 @@ int test_move() {
 	}
 
 	rliteFree(context);
-	return 0;
+	PASS();
 }
 
-int test_type() {
+TEST type() {
 	rliteContext *context = rliteConnect(":memory:", 0);
 
 	rliteReply* reply;
@@ -483,10 +475,10 @@ int test_type() {
 	}
 
 	rliteFree(context);
-	return 0;
+	PASS();
 }
 
-int test_randomkey() {
+TEST randomkey() {
 	rliteContext *context = rliteConnect(":memory:", 0);
 
 	rliteReply* reply;
@@ -514,10 +506,10 @@ int test_randomkey() {
 	}
 
 	rliteFree(context);
-	return 0;
+	PASS();
 }
 
-int test_flushdb() {
+TEST flushdb() {
 	rliteContext *context = rliteConnect(":memory:", 0);
 
 	rliteReply* reply;
@@ -559,10 +551,10 @@ int test_flushdb() {
 	}
 
 	rliteFree(context);
-	return 0;
+	PASS();
 }
 
-int test_flushdb_multidb() {
+TEST flushdb_multidb() {
 	rliteContext *context = rliteConnect(":memory:", 0);
 
 	rliteReply* reply;
@@ -604,57 +596,24 @@ int test_flushdb_multidb() {
 	}
 
 	rliteFree(context);
-	return 0;
+	PASS();
 }
 
-int run_db() {
-	if (test_keys() != 0) {
-		return 1;
-	}
-	if (test_dbsize() != 0) {
-		return 1;
-	}
-	if (test_expire("expire", "-1") != 0) {
-		return 1;
-	}
-	if (test_expire("pexpire", "-1") != 0) {
-		return 1;
-	}
-	if (test_expire("expireat", "1000") != 0) {
-		return 1;
-	}
-	if (test_expire("pexpireat", "1000") != 0) {
-		return 1;
-	}
-	if (test_rename() != 0) {
-		return 1;
-	}
-	if (test_renamenx() != 0) {
-		return 1;
-	}
-	if (test_ttl_pttl() != 0) {
-		return 1;
-	}
-	if (test_persist() != 0) {
-		return 1;
-	}
-	if (test_select() != 0) {
-		return 1;
-	}
-	if (test_move() != 0) {
-		return 1;
-	}
-	if (test_type() != 0) {
-		return 1;
-	}
-	if (test_randomkey() != 0) {
-		return 1;
-	}
-	if (test_flushdb() != 0) {
-		return 1;
-	}
-	if (test_flushdb_multidb() != 0) {
-		return 1;
-	}
-	return 0;
+SUITE(db_test) {
+	RUN_TEST(keys);
+	RUN_TEST(dbsize);
+	RUN_TESTp(expire, "expire", "-1");
+	RUN_TESTp(expire, "pexpire", "-1");
+	RUN_TESTp(expire, "expireat", "1000");
+	RUN_TESTp(expire, "pexpireat", "1000");
+	RUN_TEST(test_rename);
+	RUN_TEST(renamenx);
+	RUN_TEST(ttl_pttl);
+	RUN_TEST(persist);
+	RUN_TEST(test_select);
+	RUN_TEST(move);
+	RUN_TEST(type);
+	RUN_TEST(randomkey);
+	RUN_TEST(flushdb);
+	RUN_TEST(flushdb_multidb);
 }

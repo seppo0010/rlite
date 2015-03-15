@@ -2,15 +2,14 @@
 #include <stdio.h>
 #include <string.h>
 #include <limits.h>
-#include "test_util.h"
+#include "util.h"
 #include "../src/rlite.h"
 #include "../src/status.h"
 #include "../src/page_string.h"
 
-static int do_string_test(int UNUSED(_))
+TEST do_string_test()
 {
 	srand(1);
-	fprintf(stderr, "Start do_string_test\n");
 	int retval;
 	rlite *db = NULL;
 	RL_CALL_VERBOSE(setup_db, RL_OK, &db, 0, 1);
@@ -27,14 +26,11 @@ static int do_string_test(int UNUSED(_))
 	RL_CALL_VERBOSE(rl_string_get, RL_OK, db, &data2, number);
 
 	EXPECT_BYTES(data, db->page_size, data2, db->page_size);
-	fprintf(stderr, "End do_string_test\n");
-cleanup:
 	rl_close(db);
-	return retval;
+	PASS();
 }
 
-RL_TEST_MAIN_START(string_test)
+SUITE(string_test)
 {
-	RL_TEST(do_string_test, 0);
+	RUN_TEST(do_string_test);
 }
-RL_TEST_MAIN_END

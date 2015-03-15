@@ -4,9 +4,9 @@
 #include "../src/rlite.h"
 #include "../src/page_multi_string.h"
 #include "../src/util.h"
-#include "test_util.h"
+#include "util.h"
 
-int basic_set_get(int UNUSED(_))
+TEST basic_set_get()
 {
 	int retval, i, j;
 	long size, size2, number;
@@ -18,7 +18,6 @@ int basic_set_get(int UNUSED(_))
 	for (i = 0; i < 2; i++) {
 		srand(1);
 		size = i == 0 ? 20 : 1020;
-		fprintf(stderr, "Start page_multi_string-test %ld\n", size);
 		data = malloc(sizeof(unsigned char) * size);
 		for (j = 0; j < size; j++) {
 			data[j] = (unsigned char)(rand() / CHAR_MAX);
@@ -28,16 +27,13 @@ int basic_set_get(int UNUSED(_))
 		EXPECT_BYTES(data, size, data2, size2);
 		rl_free(data);
 		rl_free(data2);
-		fprintf(stderr, "End page_multi_string-test %ld\n", size);
 	}
 
-	retval = RL_OK;
-cleanup:
 	rl_close(db);
-	return retval;
+	PASS();
 }
 
-int empty_set_get(int UNUSED(_))
+TEST empty_set_get()
 {
 	int retval;
 	long size, number;
@@ -50,20 +46,16 @@ int empty_set_get(int UNUSED(_))
 	RL_CALL_VERBOSE(rl_multi_string_get, RL_OK, db, number, &data, &size);
 	EXPECT_INT(size, 0);
 	EXPECT_PTR(data, NULL);
-	fprintf(stderr, "End page_multi_string-test %ld\n", size);
 
-	retval = RL_OK;
-cleanup:
 	rl_close(db);
-	return retval;
+	PASS();
 }
 
-static int test_sha(long size)
+TEST test_sha(long size)
 {
-	fprintf(stderr, "Start test_sha %ld\n", size);
+	int retval;
 	unsigned char *data = malloc(sizeof(unsigned char) * size);
 	rlite *db = NULL;
-	int retval;
 	unsigned char digest1[20], digest2[20];
 	RL_CALL_VERBOSE(rl_open, RL_OK, ":memory:", &db, RLITE_OPEN_READWRITE | RLITE_OPEN_CREATE);
 
@@ -77,19 +69,15 @@ static int test_sha(long size)
 	RL_CALL_VERBOSE(sha1, RL_OK, data, size, digest2);
 	EXPECT_BYTES(digest1, 20, digest2, 20);
 
-	fprintf(stderr, "End test_sha %ld\n", size);
-	retval = RL_OK;
-cleanup:
 	rl_free(data);
 	rl_close(db);
-	return retval;
+	PASS();
 }
 
 static int assert_cmp(rlite *db, long p1, unsigned char *data, long size, int expected_cmp)
 {
 	long p2;
-	int cmp;
-	int retval;
+	int retval, cmp;
 	RL_CALL_VERBOSE(rl_multi_string_cmp_str, RL_OK, db, p1, data, size, &cmp);
 	EXPECT_INT(cmp, expected_cmp);
 	if (data) {
@@ -97,18 +85,15 @@ static int assert_cmp(rlite *db, long p1, unsigned char *data, long size, int ex
 		RL_CALL_VERBOSE(rl_multi_string_cmp, RL_OK, db, p1, p2, &cmp);
 		EXPECT_INT(cmp, expected_cmp);
 	}
-	retval = 0;
-cleanup:
-	return retval;
+	PASS();
 }
-static int test_cmp_different_length(int UNUSED(_))
+TEST test_cmp_different_length()
 {
+	int retval;
 	unsigned char data[3], data2[3];
 	long size = 2, i;
 	long p1;
 	rlite *db = NULL;
-	fprintf(stderr, "Start test_cmp_different_length\n");
-	int retval;
 	RL_CALL_VERBOSE(rl_open, RL_OK, ":memory:", &db, RLITE_OPEN_READWRITE | RLITE_OPEN_CREATE);
 	for (i = 0; i < 3; i++) {
 		data[i] = data2[i] = 100 + i;
@@ -123,10 +108,7 @@ static int test_cmp_different_length(int UNUSED(_))
 	RL_CALL_VERBOSE(assert_cmp, 0, db, p1, NULL, 0, 1);
 
 	rl_close(db);
-	fprintf(stderr, "End test_cmp_different_length\n");
-	retval = RL_OK;
-cleanup:
-	return retval;
+	PASS();
 }
 
 #define CMP_SIZE 2000
@@ -134,12 +116,11 @@ static int test_cmp_internal(int expected_cmp, long position)
 {
 	unsigned char data[CMP_SIZE], data2[CMP_SIZE];
 	long size = CMP_SIZE, i;
-	int cmp;
+	int retval, cmp;
 	long p1, p2;
 	rlite *db = NULL;
 	if (position % 500 == 0) {
 	}
-	int retval;
 	RL_CALL_VERBOSE(rl_open, RL_OK, ":memory:", &db, RLITE_OPEN_READWRITE | RLITE_OPEN_CREATE);
 	for (i = 0; i < CMP_SIZE; i++) {
 		data[i] = data2[i] = i % CHAR_MAX;
@@ -159,33 +140,27 @@ static int test_cmp_internal(int expected_cmp, long position)
 	RL_CALL_VERBOSE(rl_multi_string_set, RL_OK, db, &p2, data2, size);
 	RL_CALL_VERBOSE(rl_multi_string_cmp, RL_OK, db, p1, p2, &cmp);
 	EXPECT_INT(cmp, expected_cmp);
-	retval = RL_OK;
-cleanup:
 	rl_close(db);
-	return retval;
+	PASS();
 }
 
-static int test_cmp(int expected_cmp, long position_from, long position_to)
+TEST test_cmp(int expected_cmp, long position_from, long position_to)
 {
-	int retval = RL_OK;
+	int retval;
 	long i;
-	fprintf(stderr, "Start page_multi_string-test test_cmp %d %ld %ld\n", expected_cmp, position_from, position_to);
 	for (i = position_from; i < position_to; i++) {
-		RL_CALL(test_cmp_internal, 0, expected_cmp, i);
+		RL_CALL_VERBOSE(test_cmp_internal, 0, expected_cmp, i);
 	}
-	fprintf(stderr, "End page_multi_string-test basic_cmp\n");
-cleanup:
-	return retval;
+	PASS();
 }
 
 static int test_cmp2_internal(int expected_cmp, long position)
 {
 	unsigned char data[CMP_SIZE], data2[CMP_SIZE];
 	long size = CMP_SIZE, i;
-	int cmp;
+	int retval, cmp;
 	long p1;
 	rlite *db = NULL;
-	int retval;
 	RL_CALL_VERBOSE(rl_open, RL_OK, ":memory:", &db, RLITE_OPEN_READWRITE | RLITE_OPEN_CREATE);
 	for (i = 0; i < CMP_SIZE; i++) {
 		data[i] = data2[i] = i % CHAR_MAX;
@@ -204,34 +179,28 @@ static int test_cmp2_internal(int expected_cmp, long position)
 	RL_CALL_VERBOSE(rl_multi_string_set, RL_OK, db, &p1, data, size);
 	RL_CALL_VERBOSE(rl_multi_string_cmp_str, RL_OK, db, p1, data2, size, &cmp);
 	EXPECT_INT(cmp, expected_cmp);
-	retval = RL_OK;
-cleanup:
 	rl_close(db);
-	return retval;
+	PASS();
 }
 
-static int test_cmp2(int expected_cmp, long position_from, long position_to)
+TEST test_cmp2(int expected_cmp, long position_from, long position_to)
 {
-	int retval = RL_OK;
+	int retval;
 	long i;
-	fprintf(stderr, "Start page_multi_string-test test_cmp2 %d %ld %ld\n", expected_cmp, position_from, position_to);
 	for (i = position_from; i < position_to; i++) {
-		RL_CALL(test_cmp2_internal, 0, expected_cmp, i);
+		RL_CALL_VERBOSE(test_cmp2_internal, 0, expected_cmp, i);
 	}
-	fprintf(stderr, "End page_multi_string-test basic_cmp2\n");
-cleanup:
-	return retval;
+	PASS();
 }
 
-static int test_append(long size, long append_size)
+TEST test_append(long size, long append_size)
 {
-	fprintf(stderr, "Start test_append %ld %ld\n", size, append_size);
+	int retval;
 	unsigned char *data = malloc(sizeof(unsigned char) * size);
 	unsigned char *append_data = malloc(sizeof(unsigned char) * append_size);
 	unsigned char *testdata;
 	long testdatalen;
 	rlite *db = NULL;
-	int retval;
 	RL_CALL_VERBOSE(rl_open, RL_OK, ":memory:", &db, RLITE_OPEN_READWRITE | RLITE_OPEN_CREATE);
 
 	long page, i;
@@ -252,21 +221,17 @@ static int test_append(long size, long append_size)
 	EXPECT_BYTES(&testdata[size], append_size, append_data, append_size);
 	rl_free(testdata);
 
-	fprintf(stderr, "End test_append %ld\n", size);
-	retval = 0;
-cleanup:
 	rl_free(data);
 	rl_free(append_data);
 	rl_close(db);
-	return retval;
+	PASS();
 }
 
-static int test_substr(long strsize, long start, long stop, long startindex, long expectedsize)
+TEST test_substr(long strsize, long start, long stop, long startindex, long expectedsize)
 {
-	fprintf(stderr, "Start test_substr %ld %ld %ld %ld %ld\n", strsize, start, stop, startindex, expectedsize);
+	int retval;
 	unsigned char *data = malloc(sizeof(unsigned char) * strsize), *data2;
 	rlite *db = NULL;
-	int retval;
 	RL_CALL_VERBOSE(rl_open, RL_OK, ":memory:", &db, RLITE_OPEN_READWRITE | RLITE_OPEN_CREATE);
 
 	long page, i, size2;
@@ -278,17 +243,14 @@ static int test_substr(long strsize, long start, long stop, long startindex, lon
 	RL_CALL_VERBOSE(rl_multi_string_getrange, RL_OK, db, page, &data2, &size2, start, stop);
 	EXPECT_BYTES(&data[startindex], size2, data2, expectedsize);
 	rl_free(data2);
-	fprintf(stderr, "End test_substr\n");
-	retval = 0;
-cleanup:
 	free(data);
 	rl_close(db);
-	return retval;
+	PASS();
 }
 
-static int test_setrange(long initialsize, long index, long updatesize)
+TEST test_setrange(long initialsize, long index, long updatesize)
 {
-	fprintf(stderr, "Start test_setrange %ld %ld %ld\n", initialsize, index, updatesize);
+	int retval;
 	long finalsize = index + updatesize > initialsize ? index + updatesize : initialsize;
 	long newlength, testdatalen;
 	unsigned char *testdata;
@@ -296,7 +258,6 @@ static int test_setrange(long initialsize, long index, long updatesize)
 	unsigned char *initialdata = malloc(sizeof(unsigned char) * initialsize);
 	unsigned char *updatedata = malloc(sizeof(unsigned char) * updatesize);
 	rlite *db = NULL;
-	int retval;
 	RL_CALL_VERBOSE(rl_open, RL_OK, ":memory:", &db, RLITE_OPEN_READWRITE | RLITE_OPEN_CREATE);
 
 	long page, i;
@@ -314,43 +275,39 @@ static int test_setrange(long initialsize, long index, long updatesize)
 	EXPECT_BYTES(finaldata, finalsize, testdata, testdatalen);
 	rl_free(testdata);
 
-	fprintf(stderr, "End test_setrange\n");
-	retval = 0;
-cleanup:
 	free(finaldata);
 	free(initialdata);
 	free(updatedata);
 	rl_close(db);
-	return retval;
+	PASS();
 }
 
-RL_TEST_MAIN_START(multi_string_test)
+SUITE(multi_string_test)
 {
-	RL_TEST(basic_set_get, 0);
-	RL_TEST(empty_set_get, 0);
-	RL_TEST(test_cmp_different_length, 0);
-	RL_TEST(test_cmp, 0, 0, 1);
-	RL_TEST(test_sha, 100);
-	RL_TEST(test_sha, 1000);
-	RL_TEST(test_append, 10, 20);
-	RL_TEST(test_append, 10, 1200);
-	RL_TEST(test_append, 1200, 10);
-	RL_TEST(test_append, 1000, 2000);
+	RUN_TEST(basic_set_get);
+	RUN_TEST(empty_set_get);
+	RUN_TEST(test_cmp_different_length);
+	RUN_TESTp(test_cmp, 0, 0, 1);
+	RUN_TESTp(test_sha, 100);
+	RUN_TESTp(test_sha, 1000);
+	RUN_TESTp(test_append, 10, 20);
+	RUN_TESTp(test_append, 10, 1200);
+	RUN_TESTp(test_append, 1200, 10);
+	RUN_TESTp(test_append, 1000, 2000);
 	long i, j;
 	for (i = 0; i < 2; i++) {
 		for (j = 0; j < CMP_SIZE / 500; j++) {
-			RL_TEST(test_cmp, i * 2 - 1, j * 500, (j + 1) * 500);
-			RL_TEST(test_cmp2, i * 2 - 1, j * 500, (j + 1) * 500);
+			RUN_TESTp(test_cmp, i * 2 - 1, j * 500, (j + 1) * 500);
+			RUN_TESTp(test_cmp2, i * 2 - 1, j * 500, (j + 1) * 500);
 		}
 	}
-	RL_TEST(test_substr, 20, 0, 10, 0, 11);
-	RL_TEST(test_substr, 2000, 1, -1, 1, 1999);
-	RL_TEST(test_substr, 2000, -10, -1, 1990, 10);
-	RL_TEST(test_setrange, 10, 5, 3);
-	RL_TEST(test_setrange, 10, 5, 20);
-	RL_TEST(test_setrange, 10, 20, 5);
-	RL_TEST(test_setrange, 1024, 1024, 1024);
-	RL_TEST(test_setrange, 1024, 100, 1024);
-	RL_TEST(test_setrange, 1024, 1024, 100);
+	RUN_TESTp(test_substr, 20, 0, 10, 0, 11);
+	RUN_TESTp(test_substr, 2000, 1, -1, 1, 1999);
+	RUN_TESTp(test_substr, 2000, -10, -1, 1990, 10);
+	RUN_TESTp(test_setrange, 10, 5, 3);
+	RUN_TESTp(test_setrange, 10, 5, 20);
+	RUN_TESTp(test_setrange, 10, 20, 5);
+	RUN_TESTp(test_setrange, 1024, 1024, 1024);
+	RUN_TESTp(test_setrange, 1024, 100, 1024);
+	RUN_TESTp(test_setrange, 1024, 1024, 100);
 }
-RL_TEST_MAIN_END

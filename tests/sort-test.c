@@ -1,13 +1,12 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
-#include "test_util.h"
+#include "util.h"
 #include "../src/rlite.h"
 #include "../src/status.h"
 #include "../src/sort.h"
 
-static int sort_nosort_list_test(int _commit) {
-	fprintf(stderr, "Start sort_nosort_list_test %d\n", _commit);
+TEST sort_nosort_list_test(int _commit) {
 	int retval;
 	rlite *db = NULL;
 	RL_CALL_VERBOSE(setup_db, RL_OK, &db, _commit, 1);
@@ -34,14 +33,11 @@ static int sort_nosort_list_test(int _commit) {
 	rl_free(objv);
 	rl_free(objvlen);
 
-	fprintf(stderr, "End sort_nosort_list_test\n");
-cleanup:
 	rl_close(db);
-	return retval;
+	PASS();
 }
 
-static int sort_list_test(int _commit) {
-	fprintf(stderr, "Start sort_list_test %d\n", _commit);
+TEST sort_list_test(int _commit) {
 	int retval;
 	rlite *db = NULL;
 	RL_CALL_VERBOSE(setup_db, RL_OK, &db, _commit, 1);
@@ -68,14 +64,11 @@ static int sort_list_test(int _commit) {
 	rl_free(objv);
 	rl_free(objvlen);
 
-	fprintf(stderr, "End sort_list_test\n");
-cleanup:
 	rl_close(db);
-	return retval;
+	PASS();
 }
 
-static int sort_list_sortby_test(int _commit) {
-	fprintf(stderr, "Start sort_list_sortby_test %d\n", _commit);
+TEST sort_list_sortby_test(int _commit) {
 	int retval;
 	rlite *db = NULL;
 	RL_CALL_VERBOSE(setup_db, RL_OK, &db, _commit, 1);
@@ -106,14 +99,11 @@ static int sort_list_sortby_test(int _commit) {
 	rl_free(objv);
 	rl_free(objvlen);
 
-	fprintf(stderr, "End sort_list_sortby_test\n");
-cleanup:
 	rl_close(db);
-	return retval;
+	PASS();
 }
 
-static int sort_list_sortby_alpha_test(int _commit) {
-	fprintf(stderr, "Start sort_list_sortby_test %d\n", _commit);
+TEST sort_list_sortby_alpha_test(int _commit) {
 	int retval;
 	rlite *db = NULL;
 	RL_CALL_VERBOSE(setup_db, RL_OK, &db, _commit, 1);
@@ -144,14 +134,11 @@ static int sort_list_sortby_alpha_test(int _commit) {
 	rl_free(objv);
 	rl_free(objvlen);
 
-	fprintf(stderr, "End sort_list_sortby_test\n");
-cleanup:
 	rl_close(db);
-	return retval;
+	PASS();
 }
 
-static int sort_nosort_set_test(int _commit) {
-	fprintf(stderr, "Start sort_nosort_set_test %d\n", _commit);
+TEST sort_nosort_set_test(int _commit) {
 	int retval;
 	rlite *db = NULL;
 	RL_CALL_VERBOSE(setup_db, RL_OK, &db, _commit, 1);
@@ -178,14 +165,11 @@ static int sort_nosort_set_test(int _commit) {
 	rl_free(objv);
 	rl_free(objvlen);
 
-	fprintf(stderr, "End sort_nosort_set_test\n");
-cleanup:
 	rl_close(db);
-	return retval;
+	PASS();
 }
 
-static int sort_set_test(int _commit) {
-	fprintf(stderr, "Start sort_set_test %d\n", _commit);
+TEST sort_set_test(int _commit) {
 	int retval;
 	rlite *db = NULL;
 	RL_CALL_VERBOSE(setup_db, RL_OK, &db, _commit, 1);
@@ -212,14 +196,11 @@ static int sort_set_test(int _commit) {
 	rl_free(objv);
 	rl_free(objvlen);
 
-	fprintf(stderr, "End sort_set_test\n");
-cleanup:
 	rl_close(db);
-	return retval;
+	PASS();
 }
 
-static int sort_set_sortby_test(int _commit) {
-	fprintf(stderr, "Start sort_set_sortby_test %d\n", _commit);
+TEST sort_set_sortby_test(int _commit) {
 	int retval;
 	rlite *db = NULL;
 	RL_CALL_VERBOSE(setup_db, RL_OK, &db, _commit, 1);
@@ -250,14 +231,11 @@ static int sort_set_sortby_test(int _commit) {
 	rl_free(objv);
 	rl_free(objvlen);
 
-	fprintf(stderr, "End sort_set_sortby_test\n");
-cleanup:
 	rl_close(db);
-	return retval;
+	PASS();
 }
 
-static int sort_set_sortby_alpha_test(int _commit) {
-	fprintf(stderr, "Start sort_set_sortby_test %d\n", _commit);
+TEST sort_set_sortby_alpha_test(int _commit) {
 	int retval;
 	rlite *db = NULL;
 	RL_CALL_VERBOSE(setup_db, RL_OK, &db, _commit, 1);
@@ -288,14 +266,11 @@ static int sort_set_sortby_alpha_test(int _commit) {
 	rl_free(objv);
 	rl_free(objvlen);
 
-	fprintf(stderr, "End sort_set_sortby_test\n");
-cleanup:
 	rl_close(db);
-	return retval;
+	PASS();
 }
 
-static int sort_nosort_zset_test(int _commit) {
-	fprintf(stderr, "Start sort_nosort_zset_test %d\n", _commit);
+TEST sort_nosort_zset_test(int _commit) {
 	int retval;
 	rlite *db = NULL;
 	RL_CALL_VERBOSE(setup_db, RL_OK, &db, _commit, 1);
@@ -324,14 +299,11 @@ static int sort_nosort_zset_test(int _commit) {
 	rl_free(objv);
 	rl_free(objvlen);
 
-	fprintf(stderr, "End sort_nosort_zset_test\n");
-cleanup:
 	rl_close(db);
-	return retval;
+	PASS();
 }
 
-static int sort_zset_test(int _commit) {
-	fprintf(stderr, "Start sort_zset_test %d\n", _commit);
+TEST sort_zset_test(int _commit) {
 	int retval;
 	rlite *db = NULL;
 	RL_CALL_VERBOSE(setup_db, RL_OK, &db, _commit, 1);
@@ -360,14 +332,11 @@ static int sort_zset_test(int _commit) {
 	rl_free(objv);
 	rl_free(objvlen);
 
-	fprintf(stderr, "End sort_zset_test\n");
-cleanup:
 	rl_close(db);
-	return retval;
+	PASS();
 }
 
-static int sort_zset_sortby_test(int _commit) {
-	fprintf(stderr, "Start sort_zset_sortby_test %d\n", _commit);
+TEST sort_zset_sortby_test(int _commit) {
 	int retval;
 	rlite *db = NULL;
 	RL_CALL_VERBOSE(setup_db, RL_OK, &db, _commit, 1);
@@ -400,14 +369,11 @@ static int sort_zset_sortby_test(int _commit) {
 	rl_free(objv);
 	rl_free(objvlen);
 
-	fprintf(stderr, "End sort_zset_sortby_test\n");
-cleanup:
 	rl_close(db);
-	return retval;
+	PASS();
 }
 
-static int sort_zset_sortby_alpha_test(int _commit) {
-	fprintf(stderr, "Start sort_zset_sortby_test %d\n", _commit);
+TEST sort_zset_sortby_alpha_test(int _commit) {
 	int retval;
 	rlite *db = NULL;
 	RL_CALL_VERBOSE(setup_db, RL_OK, &db, _commit, 1);
@@ -440,14 +406,11 @@ static int sort_zset_sortby_alpha_test(int _commit) {
 	rl_free(objv);
 	rl_free(objvlen);
 
-	fprintf(stderr, "End sort_zset_sortby_test\n");
-cleanup:
 	rl_close(db);
-	return retval;
+	PASS();
 }
 
-static int sort_set_nosort_lua(int _commit) {
-	fprintf(stderr, "Start sort_set_nosort_lua %d\n", _commit);
+TEST sort_set_nosort_lua(int _commit) {
 	int retval;
 	rlite *db = NULL;
 	RL_CALL_VERBOSE(setup_db, RL_OK, &db, _commit, 1);
@@ -474,30 +437,27 @@ static int sort_set_nosort_lua(int _commit) {
 	rl_free(objv);
 	rl_free(objvlen);
 
-	fprintf(stderr, "End sort_set_nosort_lua\n");
-cleanup:
 	rl_close(db);
-	return retval;
+	PASS();
 }
 
 
-RL_TEST_MAIN_START(sort_test)
+SUITE(sort_test)
 {
 	int i;
 	for (i = 0; i < 3; i++) {
-		RL_TEST(sort_nosort_list_test, i);
-		RL_TEST(sort_list_test, i);
-		RL_TEST(sort_list_sortby_test, i);
-		RL_TEST(sort_list_sortby_alpha_test, i);
-		RL_TEST(sort_nosort_set_test, i);
-		RL_TEST(sort_set_test, i);
-		RL_TEST(sort_set_sortby_test, i);
-		RL_TEST(sort_set_sortby_alpha_test, i);
-		RL_TEST(sort_nosort_zset_test, i);
-		RL_TEST(sort_zset_test, i);
-		RL_TEST(sort_zset_sortby_test, i);
-		RL_TEST(sort_zset_sortby_alpha_test, i);
-		RL_TEST(sort_set_nosort_lua, i);
+		RUN_TEST1(sort_nosort_list_test, i);
+		RUN_TEST1(sort_list_test, i);
+		RUN_TEST1(sort_list_sortby_test, i);
+		RUN_TEST1(sort_list_sortby_alpha_test, i);
+		RUN_TEST1(sort_nosort_set_test, i);
+		RUN_TEST1(sort_set_test, i);
+		RUN_TEST1(sort_set_sortby_test, i);
+		RUN_TEST1(sort_set_sortby_alpha_test, i);
+		RUN_TEST1(sort_nosort_zset_test, i);
+		RUN_TEST1(sort_zset_test, i);
+		RUN_TEST1(sort_zset_sortby_test, i);
+		RUN_TEST1(sort_zset_sortby_alpha_test, i);
+		RUN_TEST1(sort_set_nosort_lua, i);
 	}
 }
-RL_TEST_MAIN_END

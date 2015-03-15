@@ -3,20 +3,12 @@
 #include <stdlib.h>
 #include <string.h>
 #include "hirlite.h"
-
-static int populateArgvlen(char *argv[], size_t argvlen[]) {
-	int i;
-	for (i = 0; argv[i] != NULL; i++) {
-		argvlen[i] = strlen(argv[i]);
-	}
-	return i;
-}
+#include "util.h"
 
 static void sadd(rliteContext* context, char *key, char *element) {
 	rliteReply* reply;
 	size_t argvlen[100];
 	char* argv[100] = {"sadd", key, element, NULL};
-
 	reply = rliteCommandArgv(context, populateArgvlen(argv, argvlen), argv, argvlen);
 	rliteFreeReplyObject(reply);
 }
@@ -36,18 +28,10 @@ static int randomSadd(rliteContext* context, char *key, int elements) {
 		}
 		argv[2 + i][len - 1] = 0;
 	}
+
 	size_t argvlen[100];
-
 	reply = rliteCommandArgv(context, populateArgvlen(argv, argvlen), argv, argvlen);
-	if (reply->type != RLITE_REPLY_INTEGER) {
-		fprintf(stderr, "Expected reply to be INTEGER, got %d instead on line %d\n", reply->type, __LINE__);
-		return 1;
-	}
-
-	if (reply->integer != elements) {
-		fprintf(stderr, "Expected reply to be %d, got %lld instead on line %d\n", elements, reply->integer, __LINE__);
-		return 1;
-	}
+	EXPECT_REPLY_INTEGER(reply, elements);
 	rliteFreeReplyObject(reply);
 	for (i = 0; i < elements; i++) {
 		free(argv[2 + i]);
@@ -55,30 +39,21 @@ static int randomSadd(rliteContext* context, char *key, int elements) {
 	return 0;
 }
 
-static int test_sadd() {
+TEST test_sadd() {
 	rliteContext *context = rliteConnect(":memory:", 0);
 
 	rliteReply* reply;
 	char* argv[100] = {"sadd", "myset", "member1", "member2", "anothermember", "member1", NULL};
 	size_t argvlen[100];
-
 	reply = rliteCommandArgv(context, populateArgvlen(argv, argvlen), argv, argvlen);
-	if (reply->type != RLITE_REPLY_INTEGER) {
-		fprintf(stderr, "Expected reply to be INTEGER, got %d instead on line %d\n", reply->type, __LINE__);
-		return 1;
-	}
-
-	if (reply->integer != 3) {
-		fprintf(stderr, "Expected reply to be %d, got %lld instead on line %d\n", 3, reply->integer, __LINE__);
-		return 1;
-	}
+	EXPECT_REPLY_INTEGER(reply, 3);
 	rliteFreeReplyObject(reply);
 
 	rliteFree(context);
 	return 0;
 }
 
-static int test_scard() {
+TEST test_scard() {
 	rliteContext *context = rliteConnect(":memory:", 0);
 	size_t argvlen[100];
 
@@ -88,17 +63,8 @@ static int test_scard() {
 
 	rliteReply* reply;
 	char* argv[100] = {"scard", "myset", NULL};
-
 	reply = rliteCommandArgv(context, populateArgvlen(argv, argvlen), argv, argvlen);
-	if (reply->type != RLITE_REPLY_INTEGER) {
-		fprintf(stderr, "Expected reply to be INTEGER, got %d instead on line %d\n", reply->type, __LINE__);
-		return 1;
-	}
-
-	if (reply->integer != 5) {
-		fprintf(stderr, "Expected reply to be %d, got %lld instead on line %d\n", 5, reply->integer, __LINE__);
-		return 1;
-	}
+	EXPECT_REPLY_INTEGER(reply, 5);
 	rliteFreeReplyObject(reply);
 
 	if (randomSadd(context, "myset", 3) != 0) {
@@ -106,24 +72,15 @@ static int test_scard() {
 	}
 
 	char* argv2[100] = {"scard", "myset", NULL};
-
 	reply = rliteCommandArgv(context, populateArgvlen(argv2, argvlen), argv2, argvlen);
-	if (reply->type != RLITE_REPLY_INTEGER) {
-		fprintf(stderr, "Expected reply to be INTEGER, got %d instead on line %d\n", reply->type, __LINE__);
-		return 1;
-	}
-
-	if (reply->integer != 8) {
-		fprintf(stderr, "Expected reply to be %d, got %lld instead on line %d\n", 8, reply->integer, __LINE__);
-		return 1;
-	}
+	EXPECT_REPLY_INTEGER(reply, 8);
 	rliteFreeReplyObject(reply);
 
 	rliteFree(context);
 	return 0;
 }
 
-static int test_sismember() {
+TEST test_sismember() {
 	rliteContext *context = rliteConnect(":memory:", 0);
 	size_t argvlen[100];
 
@@ -131,38 +88,20 @@ static int test_sismember() {
 
 	rliteReply* reply;
 	char* argv[100] = {"sismember", "myset", "mymember", NULL};
-
 	reply = rliteCommandArgv(context, populateArgvlen(argv, argvlen), argv, argvlen);
-	if (reply->type != RLITE_REPLY_INTEGER) {
-		fprintf(stderr, "Expected reply to be INTEGER, got %d instead on line %d\n", reply->type, __LINE__);
-		return 1;
-	}
-
-	if (reply->integer != 1) {
-		fprintf(stderr, "Expected reply to be %d, got %lld instead on line %d\n", 1, reply->integer, __LINE__);
-		return 1;
-	}
+	EXPECT_REPLY_INTEGER(reply, 1);
 	rliteFreeReplyObject(reply);
 
 	char* argv2[100] = {"sismember", "myset", "not a member", NULL};
-
 	reply = rliteCommandArgv(context, populateArgvlen(argv2, argvlen), argv2, argvlen);
-	if (reply->type != RLITE_REPLY_INTEGER) {
-		fprintf(stderr, "Expected reply to be INTEGER, got %d instead on line %d\n", reply->type, __LINE__);
-		return 1;
-	}
-
-	if (reply->integer != 0) {
-		fprintf(stderr, "Expected reply to be %d, got %lld instead on line %d\n", 0, reply->integer, __LINE__);
-		return 1;
-	}
+	EXPECT_REPLY_INTEGER(reply, 0);
 	rliteFreeReplyObject(reply);
 
 	rliteFree(context);
 	return 0;
 }
 
-static int test_smove() {
+TEST test_smove() {
 	rliteContext *context = rliteConnect(":memory:", 0);
 	size_t argvlen[100];
 
@@ -171,81 +110,36 @@ static int test_smove() {
 	rliteReply* reply;
 	{
 		char* argv[100] = {"smove", "myset", "otherset", "mymember", NULL};
-
 		reply = rliteCommandArgv(context, populateArgvlen(argv, argvlen), argv, argvlen);
-		if (reply->type != RLITE_REPLY_INTEGER) {
-			fprintf(stderr, "Expected reply to be INTEGER, got %d instead on line %d\n", reply->type, __LINE__);
-			return 1;
-		}
-
-		if (reply->integer != 1) {
-			fprintf(stderr, "Expected reply to be %d, got %lld instead on line %d\n", 1, reply->integer, __LINE__);
-			return 1;
-		}
+		EXPECT_REPLY_INTEGER(reply, 1);
 		rliteFreeReplyObject(reply);
 	}
 
 	{
 		char* argv[100] = {"sismember", "myset", "mymember", NULL};
-
 		reply = rliteCommandArgv(context, populateArgvlen(argv, argvlen), argv, argvlen);
-		if (reply->type != RLITE_REPLY_INTEGER) {
-			fprintf(stderr, "Expected reply to be INTEGER, got %d instead on line %d\n", reply->type, __LINE__);
-			return 1;
-		}
-
-		if (reply->integer != 0) {
-			fprintf(stderr, "Expected reply to be %d, got %lld instead on line %d\n", 0, reply->integer, __LINE__);
-			return 1;
-		}
+		EXPECT_REPLY_INTEGER(reply, 0);
 		rliteFreeReplyObject(reply);
 	}
 
 	{
 		char* argv[100] = {"sismember", "otherset", "mymember", NULL};
-
 		reply = rliteCommandArgv(context, populateArgvlen(argv, argvlen), argv, argvlen);
-		if (reply->type != RLITE_REPLY_INTEGER) {
-			fprintf(stderr, "Expected reply to be INTEGER, got %d instead on line %d\n", reply->type, __LINE__);
-			return 1;
-		}
-
-		if (reply->integer != 1) {
-			fprintf(stderr, "Expected reply to be %d, got %lld instead on line %d\n", 1, reply->integer, __LINE__);
-			return 1;
-		}
+		EXPECT_REPLY_INTEGER(reply, 1);
 		rliteFreeReplyObject(reply);
 	}
 
 	{
 		char* argv[100] = {"smove", "otherset", "myset", "member2", NULL};
-
 		reply = rliteCommandArgv(context, populateArgvlen(argv, argvlen), argv, argvlen);
-		if (reply->type != RLITE_REPLY_INTEGER) {
-			fprintf(stderr, "Expected reply to be INTEGER, got %d instead on line %d\n", reply->type, __LINE__);
-			return 1;
-		}
-
-		if (reply->integer != 0) {
-			fprintf(stderr, "Expected reply to be %d, got %lld instead on line %d\n", 0, reply->integer, __LINE__);
-			return 1;
-		}
+		EXPECT_REPLY_INTEGER(reply, 0);
 		rliteFreeReplyObject(reply);
 	}
 
 	{
 		char* argv[100] = {"sismember", "myset", "member2", NULL};
-
 		reply = rliteCommandArgv(context, populateArgvlen(argv, argvlen), argv, argvlen);
-		if (reply->type != RLITE_REPLY_INTEGER) {
-			fprintf(stderr, "Expected reply to be INTEGER, got %d instead on line %d\n", reply->type, __LINE__);
-			return 1;
-		}
-
-		if (reply->integer != 0) {
-			fprintf(stderr, "Expected reply to be %d, got %lld instead on line %d\n", 0, reply->integer, __LINE__);
-			return 1;
-		}
+		EXPECT_REPLY_INTEGER(reply, 0);
 		rliteFreeReplyObject(reply);
 	}
 
@@ -253,7 +147,7 @@ static int test_smove() {
 	return 0;
 }
 
-static int test_spop() {
+TEST test_spop() {
 	rliteContext *context = rliteConnect(":memory:", 0);
 	size_t argvlen[100];
 
@@ -264,46 +158,30 @@ static int test_spop() {
 	rliteReply* reply;
 	{
 		char* argv[100] = {"spop", "myset", NULL};
-
 		reply = rliteCommandArgv(context, populateArgvlen(argv, argvlen), argv, argvlen);
-		if (reply->type != RLITE_REPLY_STRING) {
-			fprintf(stderr, "Expected reply to be STRING, got %d instead on line %d\n", reply->type, __LINE__);
-			return 1;
-		}
-
+		ASSERT_EQ(reply->type, RLITE_REPLY_STRING);
 		if (!(reply->len == (int)strlen(m1) && memcmp(reply->str, m1, reply->len) == 0) &&
 			!(reply->len == (int)strlen(m2) && memcmp(reply->str, m2, reply->len) == 0)) {
-			fprintf(stderr, "Expected reply to be \"%s\" or \"%s\", got \"%s\" (%d) instead on line %d\n", m1, m2, reply->str, reply->len, __LINE__);
-			return 1;
+			FAIL();
 		}
 		rliteFreeReplyObject(reply);
 	}
 
 	{
 		char* argv[100] = {"spop", "myset", NULL};
-
 		reply = rliteCommandArgv(context, populateArgvlen(argv, argvlen), argv, argvlen);
-		if (reply->type != RLITE_REPLY_STRING) {
-			fprintf(stderr, "Expected reply to be STRING, got %d instead on line %d\n", reply->type, __LINE__);
-			return 1;
-		}
-
+		ASSERT_EQ(reply->type, RLITE_REPLY_STRING);
 		if (!(reply->len == (int)strlen(m1) && memcmp(reply->str, m1, reply->len) == 0) &&
 			!(reply->len == (int)strlen(m2) && memcmp(reply->str, m2, reply->len) == 0)) {
-			fprintf(stderr, "Expected reply to be \"%s\" or \"%s\", got \"%s\" (%d) instead on line %d\n", m1, m2, reply->str, reply->len, __LINE__);
-			return 1;
+			FAIL();
 		}
 		rliteFreeReplyObject(reply);
 	}
 
 	{
 		char* argv[100] = {"spop", "myset", NULL};
-
 		reply = rliteCommandArgv(context, populateArgvlen(argv, argvlen), argv, argvlen);
-		if (reply->type != RLITE_REPLY_NIL) {
-			fprintf(stderr, "Expected reply to be NIL, got %d instead on line %d\n", reply->type, __LINE__);
-			return 1;
-		}
+		EXPECT_REPLY_NIL(reply);
 		rliteFreeReplyObject(reply);
 	}
 
@@ -311,7 +189,7 @@ static int test_spop() {
 	return 0;
 }
 
-static int test_srandmember_nocount() {
+TEST test_srandmember_nocount() {
 	rliteContext *context = rliteConnect(":memory:", 0);
 	size_t argvlen[100];
 
@@ -322,17 +200,11 @@ static int test_srandmember_nocount() {
 	rliteReply* reply;
 	{
 		char* argv[100] = {"srandmember", "myset", NULL};
-
 		reply = rliteCommandArgv(context, populateArgvlen(argv, argvlen), argv, argvlen);
-		if (reply->type != RLITE_REPLY_STRING) {
-			fprintf(stderr, "Expected reply to be STRING, got %d instead on line %d\n", reply->type, __LINE__);
-			return 1;
-		}
-
+		ASSERT_EQ(reply->type, RLITE_REPLY_STRING);
 		if (!(reply->len == (int)strlen(m1) && memcmp(reply->str, m1, reply->len) == 0) &&
 			!(reply->len == (int)strlen(m2) && memcmp(reply->str, m2, reply->len) == 0)) {
-			fprintf(stderr, "Expected reply to be \"%s\" or \"%s\", got \"%s\" (%d) instead on line %d\n", m1, m2, reply->str, reply->len, __LINE__);
-			return 1;
+			FAIL();
 		}
 		rliteFreeReplyObject(reply);
 	}
@@ -340,7 +212,7 @@ static int test_srandmember_nocount() {
 	return 0;
 }
 
-static int test_srandmember_1() {
+TEST test_srandmember_1() {
 	rliteContext *context = rliteConnect(":memory:", 0);
 	size_t argvlen[100];
 
@@ -351,21 +223,11 @@ static int test_srandmember_1() {
 	rliteReply* reply;
 	{
 		char* argv[100] = {"srandmember", "myset", "1", NULL};
-
 		reply = rliteCommandArgv(context, populateArgvlen(argv, argvlen), argv, argvlen);
-		if (reply->type != RLITE_REPLY_ARRAY) {
-			fprintf(stderr, "Expected reply to be ARRAY, got %d instead on line %d\n", reply->type, __LINE__);
-			return 1;
-		}
-		if (reply->elements != 1) {
-			fprintf(stderr, "Expected reply size to be 1, got %lu instead on line %d\n", reply->elements, __LINE__);
-			return 1;
-		}
-
+		EXPECT_REPLY_LEN(reply, 1);
 		if (!(reply->element[0]->len == (int)strlen(m1) && memcmp(reply->element[0]->str, m1, reply->element[0]->len) == 0) &&
 			!(reply->element[0]->len == (int)strlen(m2) && memcmp(reply->element[0]->str, m2, reply->element[0]->len) == 0)) {
-			fprintf(stderr, "Expected reply->element[0] to be \"%s\" or \"%s\", got \"%s\" (%d) instead on line %d\n", m1, m2, reply->element[0]->str, reply->element[0]->len, __LINE__);
-			return 1;
+			FAIL();
 		}
 		rliteFreeReplyObject(reply);
 	}
@@ -373,7 +235,7 @@ static int test_srandmember_1() {
 	return 0;
 }
 
-static int test_srandmember_10_unique() {
+TEST test_srandmember_10_unique() {
 	rliteContext *context = rliteConnect(":memory:", 0);
 	size_t argvlen[100];
 
@@ -386,30 +248,20 @@ static int test_srandmember_10_unique() {
 		char* argv[100] = {"srandmember", "myset", "10", NULL};
 
 		reply = rliteCommandArgv(context, populateArgvlen(argv, argvlen), argv, argvlen);
-		if (reply->type != RLITE_REPLY_ARRAY) {
-			fprintf(stderr, "Expected reply to be ARRAY, got %d instead on line %d\n", reply->type, __LINE__);
-			return 1;
-		}
-		if (reply->elements != 2) {
-			fprintf(stderr, "Expected reply size to be 2, got %lu instead on line %d\n", reply->elements, __LINE__);
-			return 1;
-		}
+		EXPECT_REPLY_LEN(reply, 2);
 
 		if (!(reply->element[0]->len == (int)strlen(m1) && memcmp(reply->element[0]->str, m1, reply->element[0]->len) == 0) &&
 			!(reply->element[0]->len == (int)strlen(m2) && memcmp(reply->element[0]->str, m2, reply->element[0]->len) == 0)) {
-			fprintf(stderr, "Expected reply->element[0] to be \"%s\" or \"%s\", got \"%s\" (%d) instead on line %d\n", m1, m2, reply->element[0]->str, reply->element[0]->len, __LINE__);
-			return 1;
+			FAIL();
 		}
 
 		if (!(reply->element[1]->len == (int)strlen(m1) && memcmp(reply->element[1]->str, m1, reply->element[1]->len) == 0) &&
 			!(reply->element[1]->len == (int)strlen(m2) && memcmp(reply->element[1]->str, m2, reply->element[1]->len) == 0)) {
-			fprintf(stderr, "Expected reply->element[1] to be \"%s\" or \"%s\", got \"%s\" (%d) instead on line %d\n", m1, m2, reply->element[1]->str, reply->element[1]->len, __LINE__);
-			return 1;
+			FAIL();
 		}
 
 		if (reply->element[0]->len == reply->element[1]->len) {
-			fprintf(stderr, "Expected reply elements to be different on line %d\n", __LINE__);
-			return 1;
+			FAIL();
 		}
 
 		rliteFreeReplyObject(reply);
@@ -418,7 +270,7 @@ static int test_srandmember_10_unique() {
 	return 0;
 }
 
-static int test_srandmember_10_non_unique() {
+TEST test_srandmember_10_non_unique() {
 	rliteContext *context = rliteConnect(":memory:", 0);
 	size_t argvlen[100];
 
@@ -432,20 +284,12 @@ static int test_srandmember_10_non_unique() {
 		char* argv[100] = {"srandmember", "myset", "-10", NULL};
 
 		reply = rliteCommandArgv(context, populateArgvlen(argv, argvlen), argv, argvlen);
-		if (reply->type != RLITE_REPLY_ARRAY) {
-			fprintf(stderr, "Expected reply to be ARRAY, got %d instead on line %d\n", reply->type, __LINE__);
-			return 1;
-		}
-		if (reply->elements != 10) {
-			fprintf(stderr, "Expected reply size to be 10, got %lu instead on line %d\n", reply->elements, __LINE__);
-			return 1;
-		}
+		EXPECT_REPLY_LEN(reply, 10);
 
 		for (i = 0; i < 10; i++) {
 			if (!(reply->element[i]->len == (int)strlen(m1) && memcmp(reply->element[i]->str, m1, reply->element[i]->len) == 0) &&
 				!(reply->element[i]->len == (int)strlen(m2) && memcmp(reply->element[i]->str, m2, reply->element[i]->len) == 0)) {
-				fprintf(stderr, "Expected reply->element[%ld] to be \"%s\" or \"%s\", got \"%s\" (%d) instead on line %d\n", i, m1, m2, reply->element[i]->str, reply->element[i]->len, __LINE__);
-				return 1;
+				FAIL();
 			}
 		}
 
@@ -455,7 +299,7 @@ static int test_srandmember_10_non_unique() {
 	return 0;
 }
 
-static int test_srem() {
+TEST test_srem() {
 	rliteContext *context = rliteConnect(":memory:", 0);
 	size_t argvlen[100];
 
@@ -468,16 +312,7 @@ static int test_srem() {
 		char* argv[100] = {"srem", "myset", m1, "other", m2, NULL};
 
 		reply = rliteCommandArgv(context, populateArgvlen(argv, argvlen), argv, argvlen);
-		if (reply->type != RLITE_REPLY_INTEGER) {
-			fprintf(stderr, "Expected reply to be INTEGER, got %d instead on line %d\n", reply->type, __LINE__);
-			return 1;
-		}
-
-		if (reply->integer != 2) {
-			fprintf(stderr, "Expected reply to be %d, got %lld instead on line %d\n", 2, reply->integer, __LINE__);
-			return 1;
-		}
-
+		EXPECT_REPLY_INTEGER(reply, 2);
 		rliteFreeReplyObject(reply);
 	}
 
@@ -485,14 +320,7 @@ static int test_srem() {
 		char* argv[100] = {"exists", "mykey", NULL};
 
 		reply = rliteCommandArgv(context, populateArgvlen(argv, argvlen), argv, argvlen);
-		if (reply->type != RLITE_REPLY_INTEGER) {
-			fprintf(stderr, "Expected reply to be INTEGER, got %d instead on line %d\n", reply->type, __LINE__);
-			return 1;
-		}
-		if (reply->integer != 0) {
-			fprintf(stderr, "Expected reply to be %d, got %lld instead on line %d\n", 1, reply->integer, __LINE__);
-			return 1;
-		}
+		EXPECT_REPLY_INTEGER(reply, 0);
 		rliteFreeReplyObject(reply);
 	}
 
@@ -500,7 +328,7 @@ static int test_srem() {
 	return 0;
 }
 
-static int test_smembers() {
+TEST test_smembers() {
 	rliteContext *context = rliteConnect(":memory:", 0);
 	size_t argvlen[100];
 
@@ -511,18 +339,8 @@ static int test_smembers() {
 	rliteReply* reply;
 	{
 		char* argv[100] = {"smembers", "myset", NULL};
-
 		reply = rliteCommandArgv(context, populateArgvlen(argv, argvlen), argv, argvlen);
-		if (reply->type != RLITE_REPLY_ARRAY) {
-			fprintf(stderr, "Expected reply to be ARRAY, got %d instead on line %d\n", reply->type, __LINE__);
-			return 1;
-		}
-
-		if (reply->elements != 2) {
-			fprintf(stderr, "Expected reply size to be %d, got %lu instead on line %d\n", 2, reply->elements, __LINE__);
-			return 1;
-		}
-
+		EXPECT_REPLY_LEN(reply, 2);
 		rliteFreeReplyObject(reply);
 	}
 
@@ -530,7 +348,7 @@ static int test_smembers() {
 	return 0;
 }
 
-static int test_sinter() {
+TEST test_sinter() {
 	rliteContext *context = rliteConnect(":memory:", 0);
 	size_t argvlen[100];
 
@@ -545,20 +363,8 @@ static int test_sinter() {
 		char* argv[100] = {"sinter", s1, s2, NULL};
 
 		reply = rliteCommandArgv(context, populateArgvlen(argv, argvlen), argv, argvlen);
-		if (reply->type != RLITE_REPLY_ARRAY) {
-			fprintf(stderr, "Expected reply to be ARRAY, got %d instead on line %d\n", reply->type, __LINE__);
-			return 1;
-		}
-
-		if (reply->elements != 1) {
-			fprintf(stderr, "Expected reply size to be %d, got %lu instead on line %d\n", 1, reply->elements, __LINE__);
-			return 1;
-		}
-		if (reply->element[0]->len != (int)strlen(m1) || memcmp(reply->element[0]->str, m1, reply->element[0]->len) != 0) {
-			fprintf(stderr, "Expected reply->element[0] to be \"%s\", got \"%s\" (%d) instead on line %d\n", m1, reply->element[0]->str, reply->element[0]->len, __LINE__);
-			return 1;
-		}
-
+		EXPECT_REPLY_LEN(reply, 1);
+		EXPECT_REPLY_STR(reply->element[0], m1, strlen(m1));
 		rliteFreeReplyObject(reply);
 	}
 
@@ -566,7 +372,7 @@ static int test_sinter() {
 	return 0;
 }
 
-static int test_sinterstore() {
+TEST test_sinterstore() {
 	rliteContext *context = rliteConnect(":memory:", 0);
 	size_t argvlen[100];
 
@@ -579,39 +385,16 @@ static int test_sinterstore() {
 	rliteReply* reply;
 	{
 		char* argv[100] = {"sinterstore", t, s1, s2, NULL};
-
 		reply = rliteCommandArgv(context, populateArgvlen(argv, argvlen), argv, argvlen);
-		if (reply->type != RLITE_REPLY_INTEGER) {
-			fprintf(stderr, "Expected reply to be INTEGER, got %d instead on line %d\n", reply->type, __LINE__);
-			return 1;
-		}
-
-		if (reply->integer != 1) {
-			fprintf(stderr, "Expected reply size to be %d, got %lld instead on line %d\n", 1, reply->integer, __LINE__);
-			return 1;
-		}
-
+		EXPECT_REPLY_INTEGER(reply, 1);
 		rliteFreeReplyObject(reply);
 	}
 
 	{
 		char* argv[100] = {"smembers", t, NULL};
-
 		reply = rliteCommandArgv(context, populateArgvlen(argv, argvlen), argv, argvlen);
-		if (reply->type != RLITE_REPLY_ARRAY) {
-			fprintf(stderr, "Expected reply to be ARRAY, got %d instead on line %d\n", reply->type, __LINE__);
-			return 1;
-		}
-
-		if (reply->elements != 1) {
-			fprintf(stderr, "Expected reply size to be %d, got %lu instead on line %d\n", 1, reply->elements, __LINE__);
-			return 1;
-		}
-		if (reply->element[0]->len != (int)strlen(m1) || memcmp(reply->element[0]->str, m1, reply->element[0]->len) != 0) {
-			fprintf(stderr, "Expected reply->element[0] to be \"%s\", got \"%s\" (%d) instead on line %d\n", m1, reply->element[0]->str, reply->element[0]->len, __LINE__);
-			return 1;
-		}
-
+		EXPECT_REPLY_LEN(reply, 1);
+		EXPECT_REPLY_STR(reply->element[0], m1, strlen(m1));
 		rliteFreeReplyObject(reply);
 	}
 
@@ -619,7 +402,7 @@ static int test_sinterstore() {
 	return 0;
 }
 
-static int test_sunion() {
+TEST test_sunion() {
 	rliteContext *context = rliteConnect(":memory:", 0);
 	size_t argvlen[100];
 
@@ -632,18 +415,8 @@ static int test_sunion() {
 	rliteReply* reply;
 	{
 		char* argv[100] = {"sunion", s1, s2, NULL};
-
 		reply = rliteCommandArgv(context, populateArgvlen(argv, argvlen), argv, argvlen);
-		if (reply->type != RLITE_REPLY_ARRAY) {
-			fprintf(stderr, "Expected reply to be ARRAY, got %d instead on line %d\n", reply->type, __LINE__);
-			return 1;
-		}
-
-		if (reply->elements != 3) {
-			fprintf(stderr, "Expected reply size to be %d, got %lu instead on line %d\n", 3, reply->elements, __LINE__);
-			return 1;
-		}
-
+		EXPECT_REPLY_LEN(reply, 3);
 		rliteFreeReplyObject(reply);
 	}
 
@@ -651,7 +424,7 @@ static int test_sunion() {
 	return 0;
 }
 
-static int test_sunionstore() {
+TEST test_sunionstore() {
 	rliteContext *context = rliteConnect(":memory:", 0);
 	size_t argvlen[100];
 
@@ -666,33 +439,14 @@ static int test_sunionstore() {
 		char* argv[100] = {"sunionstore", t, s1, s2, NULL};
 
 		reply = rliteCommandArgv(context, populateArgvlen(argv, argvlen), argv, argvlen);
-		if (reply->type != RLITE_REPLY_INTEGER) {
-			fprintf(stderr, "Expected reply to be INTEGER, got %d instead on line %d\n", reply->type, __LINE__);
-			return 1;
-		}
-
-		if (reply->integer != 3) {
-			fprintf(stderr, "Expected reply size to be %d, got %lld instead on line %d\n", 3, reply->integer, __LINE__);
-			return 1;
-		}
-
+		EXPECT_REPLY_INTEGER(reply, 3);
 		rliteFreeReplyObject(reply);
 	}
 
 	{
 		char* argv[100] = {"smembers", t, NULL};
-
 		reply = rliteCommandArgv(context, populateArgvlen(argv, argvlen), argv, argvlen);
-		if (reply->type != RLITE_REPLY_ARRAY) {
-			fprintf(stderr, "Expected reply to be ARRAY, got %d instead on line %d\n", reply->type, __LINE__);
-			return 1;
-		}
-
-		if (reply->elements != 3) {
-			fprintf(stderr, "Expected reply size to be %d, got %lu instead on line %d\n", 3, reply->elements, __LINE__);
-			return 1;
-		}
-
+		EXPECT_REPLY_LEN(reply, 3);
 		rliteFreeReplyObject(reply);
 	}
 
@@ -700,7 +454,7 @@ static int test_sunionstore() {
 	return 0;
 }
 
-static int test_sdiff() {
+TEST test_sdiff() {
 	rliteContext *context = rliteConnect(":memory:", 0);
 	size_t argvlen[100];
 
@@ -715,20 +469,8 @@ static int test_sdiff() {
 		char* argv[100] = {"sdiff", s1, s2, NULL};
 
 		reply = rliteCommandArgv(context, populateArgvlen(argv, argvlen), argv, argvlen);
-		if (reply->type != RLITE_REPLY_ARRAY) {
-			fprintf(stderr, "Expected reply to be ARRAY, got %d instead on line %d\n", reply->type, __LINE__);
-			return 1;
-		}
-
-		if (reply->elements != 1) {
-			fprintf(stderr, "Expected reply size to be %d, got %lu instead on line %d\n", 1, reply->elements, __LINE__);
-			return 1;
-		}
-		if (reply->element[0]->len != (int)strlen(m2) || memcmp(reply->element[0]->str, m2, reply->element[0]->len) != 0) {
-			fprintf(stderr, "Expected reply->element[0] to be \"%s\", got \"%s\" (%d) instead on line %d\n", m2, reply->element[0]->str, reply->element[0]->len, __LINE__);
-			return 1;
-		}
-
+		EXPECT_REPLY_LEN(reply, 1);
+		EXPECT_REPLY_STR(reply->element[0], m2, strlen(m2));
 		rliteFreeReplyObject(reply);
 	}
 
@@ -736,7 +478,7 @@ static int test_sdiff() {
 	return 0;
 }
 
-static int test_sdiffstore() {
+TEST test_sdiffstore() {
 	rliteContext *context = rliteConnect(":memory:", 0);
 	size_t argvlen[100];
 
@@ -749,18 +491,8 @@ static int test_sdiffstore() {
 	rliteReply* reply;
 	{
 		char* argv[100] = {"sdiffstore", t, s1, s2, NULL};
-
 		reply = rliteCommandArgv(context, populateArgvlen(argv, argvlen), argv, argvlen);
-		if (reply->type != RLITE_REPLY_INTEGER) {
-			fprintf(stderr, "Expected reply to be INTEGER, got %d instead on line %d\n", reply->type, __LINE__);
-			return 1;
-		}
-
-		if (reply->integer != 1) {
-			fprintf(stderr, "Expected reply size to be %d, got %lld instead on line %d\n", 1, reply->integer, __LINE__);
-			return 1;
-		}
-
+		EXPECT_REPLY_INTEGER(reply, 1);
 		rliteFreeReplyObject(reply);
 	}
 
@@ -768,20 +500,8 @@ static int test_sdiffstore() {
 		char* argv[100] = {"smembers", t, NULL};
 
 		reply = rliteCommandArgv(context, populateArgvlen(argv, argvlen), argv, argvlen);
-		if (reply->type != RLITE_REPLY_ARRAY) {
-			fprintf(stderr, "Expected reply to be ARRAY, got %d instead on line %d\n", reply->type, __LINE__);
-			return 1;
-		}
-
-		if (reply->elements != 1) {
-			fprintf(stderr, "Expected reply size to be %d, got %lu instead on line %d\n", 1, reply->elements, __LINE__);
-			return 1;
-		}
-		if (reply->element[0]->len != (int)strlen(m2) || memcmp(reply->element[0]->str, m2, reply->element[0]->len) != 0) {
-			fprintf(stderr, "Expected reply->element[0] to be \"%s\", got \"%s\" (%d) instead on line %d\n", m2, reply->element[0]->str, reply->element[0]->len, __LINE__);
-			return 1;
-		}
-
+		EXPECT_REPLY_LEN(reply, 1);
+		EXPECT_REPLY_STR(reply->element[0], m2, strlen(m2));
 		rliteFreeReplyObject(reply);
 	}
 
@@ -789,57 +509,23 @@ static int test_sdiffstore() {
 	return 0;
 }
 
-int run_set() {
-	if (test_sadd() != 0) {
-		return 1;
-	}
-	if (test_scard() != 0) {
-		return 1;
-	}
-	if (test_sismember() != 0) {
-		return 1;
-	}
-	if (test_smove() != 0) {
-		return 1;
-	}
-	if (test_spop() != 0) {
-		return 1;
-	}
-	if (test_srandmember_nocount() != 0) {
-		return 1;
-	}
-	if (test_srandmember_1() != 0) {
-		return 1;
-	}
-	if (test_srandmember_10_unique() != 0) {
-		return 1;
-	}
-	if (test_srandmember_10_non_unique() != 0) {
-		return 1;
-	}
-	if (test_srem() != 0) {
-		return 1;
-	}
-	if (test_smembers() != 0) {
-		return 1;
-	}
-	if (test_sinter() != 0) {
-		return 1;
-	}
-	if (test_sinterstore() != 0) {
-		return 1;
-	}
-	if (test_sunion() != 0) {
-		return 1;
-	}
-	if (test_sunionstore() != 0) {
-		return 1;
-	}
-	if (test_sdiff() != 0) {
-		return 1;
-	}
-	if (test_sdiffstore() != 0) {
-		return 1;
-	}
-	return 0;
+SUITE(set_test)
+{
+	RUN_TEST(test_sadd);
+	RUN_TEST(test_scard);
+	RUN_TEST(test_sismember);
+	RUN_TEST(test_smove);
+	RUN_TEST(test_spop);
+	RUN_TEST(test_srandmember_nocount);
+	RUN_TEST(test_srandmember_1);
+	RUN_TEST(test_srandmember_10_unique);
+	RUN_TEST(test_srandmember_10_non_unique);
+	RUN_TEST(test_srem);
+	RUN_TEST(test_smembers);
+	RUN_TEST(test_sinter);
+	RUN_TEST(test_sinterstore);
+	RUN_TEST(test_sunion);
+	RUN_TEST(test_sunionstore);
+	RUN_TEST(test_sdiff);
+	RUN_TEST(test_sdiffstore);
 }

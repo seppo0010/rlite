@@ -1,5 +1,5 @@
 #include "../src/hyperloglog.h"
-#include "test_util.h"
+#include "util.h"
 #include "../src/rlite.h"
 
 int test_hyperloglog_selftest()
@@ -18,9 +18,7 @@ int test_hyperloglog_add_count()
 	RL_CALL_VERBOSE(rl_str_pfcount, 0, 1, &str, &strlen, &card, NULL, NULL);
 	EXPECT_LONG(card, 3);
 	free(str);
-	retval = 0;
-cleanup:
-	return retval;
+	PASS();
 }
 
 int test_hyperloglog_add_merge()
@@ -41,26 +39,16 @@ int test_hyperloglog_add_merge()
 	RL_CALL_VERBOSE(rl_str_pfmerge, 0, 2, strs, strslen, &str3, &strlen3);
 	RL_CALL_VERBOSE(rl_str_pfcount, 0, 1, &str3, &strlen3, &card, NULL, NULL);
 	EXPECT_LONG(card, 6);
-	retval = 0;
 	free(str);
 	free(str2);
 	free(str3);
-cleanup:
-	return retval;
+	PASS();
 }
 
 
-RL_TEST_MAIN_START(hyperloglog_test)
+SUITE(hyperloglog_test)
 {
-	if (test_hyperloglog_selftest()) {
-		return 1;
-	}
-	if (test_hyperloglog_add_count()) {
-		return 1;
-	}
-	if (test_hyperloglog_add_merge()) {
-		return 1;
-	}
-	return 0;
+	RUN_TEST(test_hyperloglog_selftest);
+	RUN_TEST(test_hyperloglog_add_count);
+	RUN_TEST(test_hyperloglog_add_merge);
 }
-RL_TEST_MAIN_END

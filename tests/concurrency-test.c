@@ -1,19 +1,12 @@
 #include <string.h>
 #include <unistd.h>
 #include <pthread.h>
+#include "greatest.h"
 #include "hirlite.h"
-#include "test_util.h"
+#include "util.h"
 
 #define FILEPATH "rlite-test.rld"
 #define INCREMENT_LIMIT 1000
-
-static int populateArgvlen(char *argv[], size_t argvlen[]) {
-	int i;
-	for (i = 0; argv[i] != NULL; i++) {
-		argvlen[i] = strlen(argv[i]);
-	}
-	return i;
-}
 
 static void *increment(void *UNUSED(arg)) {
 	rliteContext *context = rliteConnect(FILEPATH, 0);
@@ -42,8 +35,7 @@ static void delete_file() {
 	}
 }
 
-int test_simple_concurrency() {
-	fprintf(stderr, "starting simple concurrency test\n");
+TEST simple_concurrency() {
 	delete_file();
 	rliteContext *context1 = rliteConnect(FILEPATH, 0);
 	rliteContext *context2 = rliteConnect(FILEPATH, 0);
@@ -74,12 +66,10 @@ int test_simple_concurrency() {
 	rliteFree(context1);
 	rliteFree(context2);
 	unlink(FILEPATH);
-	fprintf(stderr, "end simple concurrency test\n");
-	return 0;
+	PASS();
 }
 
-int test_threads_concurrency() {
-	fprintf(stderr, "starting threads concurrency test\n");
+TEST threads_concurrency() {
 	delete_file();
 	rliteContext *context = rliteConnect(FILEPATH, 0);
 
@@ -110,16 +100,10 @@ int test_threads_concurrency() {
 	} while (val < INCREMENT_LIMIT);
 
 	rliteFree(context);
-	fprintf(stderr, "end threads concurrency test\n");
-	return 0;
+	PASS();
 }
 
-int run_concurrency() {
-	if (test_simple_concurrency() != 0) {
-		return 1;
-	}
-	if (test_threads_concurrency() != 0) {
-		return 1;
-	}
-	return 0;
+SUITE(concurrency_test) {
+	RUN_TEST(simple_concurrency);
+	RUN_TEST(threads_concurrency);
 }

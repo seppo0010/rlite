@@ -1,17 +1,9 @@
 #include <string.h>
 #include <unistd.h>
 #include "hirlite.h"
-#include "test_util.h"
+#include "util.h"
 
-static int populateArgvlen(char *argv[], size_t argvlen[]) {
-	int i;
-	for (i = 0; argv[i] != NULL; i++) {
-		argvlen[i] = strlen(argv[i]);
-	}
-	return i;
-}
-
-static int test_sort_alpha() {
+TEST test_sort_alpha() {
 	rliteContext *context = rliteConnect(":memory:", 0);
 
 	rliteReply* reply;
@@ -35,10 +27,10 @@ static int test_sort_alpha() {
 	}
 
 	rliteFree(context);
-	return 0;
+	PASS();
 }
 
-static int test_sort_numeric() {
+TEST test_sort_numeric() {
 	rliteContext *context = rliteConnect(":memory:", 0);
 
 	rliteReply* reply;
@@ -62,10 +54,10 @@ static int test_sort_numeric() {
 	}
 
 	rliteFree(context);
-	return 0;
+	PASS();
 }
 
-static int test_sortby_hash() {
+TEST test_sortby_hash() {
 	rliteContext *context = rliteConnect(":memory:", 0);
 
 	rliteReply* reply;
@@ -110,10 +102,10 @@ static int test_sortby_hash() {
 	}
 
 	rliteFree(context);
-	return 0;
+	PASS();
 }
 
-static int test_sort_get_pound() {
+TEST test_sort_get_pound() {
 	rliteContext *context = rliteConnect(":memory:", 0);
 
 	rliteReply* reply;
@@ -147,10 +139,10 @@ static int test_sort_get_pound() {
 	}
 
 	rliteFree(context);
-	return 0;
+	PASS();
 }
 
-static int test_sort_get_pattern_get_pound() {
+TEST test_sort_get_pattern_get_pound() {
 	rliteContext *context = rliteConnect(":memory:", 0);
 
 	rliteReply* reply;
@@ -174,10 +166,10 @@ static int test_sort_get_pattern_get_pound() {
 	}
 
 	rliteFree(context);
-	return 0;
+	PASS();
 }
 
-static int test_sort_limit() {
+TEST test_sort_limit() {
 	rliteContext *context = rliteConnect(":memory:", 0);
 
 	rliteReply* reply;
@@ -199,27 +191,15 @@ static int test_sort_limit() {
 	}
 
 	rliteFree(context);
-	return 0;
+	PASS();
 }
 
-int run_sort() {
-	if (test_sort_alpha() != 0) {
-		return 1;
-	}
-	if (test_sort_numeric() != 0) {
-		return 1;
-	}
-	if (test_sortby_hash() != 0) {
-		return 1;
-	}
-	if (test_sort_get_pound() != 0) {
-		return 1;
-	}
-	if (test_sort_get_pattern_get_pound() != 0) {
-		return 1;
-	}
-	if (test_sort_limit() != 0) {
-		return 1;
-	}
-	return 0;
+SUITE(hsort_test)
+{
+	RUN_TEST(test_sort_alpha);
+	RUN_TEST(test_sort_numeric);
+	RUN_TEST(test_sortby_hash);
+	RUN_TEST(test_sort_get_pound);
+	RUN_TEST(test_sort_get_pattern_get_pound);
+	RUN_TEST(test_sort_limit);
 }

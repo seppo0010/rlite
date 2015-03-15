@@ -1,7 +1,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
-#include "test_util.h"
+#include "util.h"
 #include "../src/page_key.h"
 #include "../src/rlite.h"
 #include "../src/type_zset.h"
@@ -11,7 +11,7 @@ static int expect_key(rlite *db, unsigned char *key, long keylen, char type, lon
 	unsigned char type2;
 	long page2;
 	int retval;
-	RL_CALL_VERBOSE(rl_key_get, RL_FOUND, db, key, keylen, &type2, NULL, &page2, NULL, NULL);
+	RL_CALL(rl_key_get, RL_FOUND, db, key, keylen, &type2, NULL, &page2, NULL, NULL);
 	EXPECT_INT(type, type2);
 	EXPECT_LONG(page, page2);
 	retval = 0;
@@ -19,11 +19,9 @@ cleanup:
 	return retval;
 }
 
-int basic_test_set_get(int _commit)
+TEST basic_test_set_get(int _commit)
 {
-	int retval = 0;
-	fprintf(stderr, "Start basic_test_set_get %d\n", _commit);
-
+	int retval;
 	rlite *db;
 	RL_CALL_VERBOSE(setup_db, RL_OK, &db, _commit, 1);
 	unsigned char *key = (unsigned char *)"my key";
@@ -33,17 +31,13 @@ int basic_test_set_get(int _commit)
 	RL_CALL_VERBOSE(rl_key_set, RL_OK, db, key, keylen, type, page, 0, 0);
 	RL_COMMIT();
 	RL_CALL_VERBOSE(expect_key, RL_OK, db, key, keylen, type, page);
-	fprintf(stderr, "End basic_test_set_get\n");
-	retval = RL_OK;
-cleanup:
 	rl_close(db);
-	return retval;
+	PASS();
 }
 
-int basic_test_get_unexisting(int UNUSED(_))
+TEST basic_test_get_unexisting()
 {
 	int retval;
-	fprintf(stderr, "Start basic_test_get_unexisting\n");
 
 	rlite *db;
 	RL_CALL_VERBOSE(setup_db, RL_OK, &db, 0, 1);
@@ -51,17 +45,13 @@ int basic_test_get_unexisting(int UNUSED(_))
 	unsigned char *key = (unsigned char *)"my key";
 	long keylen = strlen((char *)key);
 	RL_CALL_VERBOSE(rl_key_get, RL_NOT_FOUND, db, key, keylen, NULL, NULL, NULL, NULL, NULL);
-	fprintf(stderr, "End basic_test_get_unexisting\n");
-	retval = RL_OK;
-cleanup:
 	rl_close(db);
-	return retval;
+	PASS();
 }
 
-int basic_test_set_delete(int UNUSED(_))
+TEST basic_test_set_delete()
 {
 	int retval;
-	fprintf(stderr, "Start basic_test_set_delete\n");
 
 	rlite *db;
 	RL_CALL_VERBOSE(setup_db, RL_OK, &db, 0, 1);
@@ -74,17 +64,13 @@ int basic_test_set_delete(int UNUSED(_))
 	RL_CALL_VERBOSE(rl_key_delete, RL_OK, db, key, keylen);
 	RL_CALL_VERBOSE(rl_key_get, RL_NOT_FOUND, db, key, keylen, NULL, NULL, NULL, NULL, NULL);
 
-	fprintf(stderr, "End basic_test_set_delete\n");
-	retval = RL_OK;
-cleanup:
 	rl_close(db);
-	return retval;
+	PASS();
 }
 
-int basic_test_get_or_create(int _commit)
+TEST basic_test_get_or_create(int _commit)
 {
 	int retval;
-	fprintf(stderr, "Start basic_test_get_or_create %d\n", _commit);
 
 	rlite *db;
 	RL_CALL_VERBOSE(setup_db, RL_OK, &db, _commit, 1);
@@ -101,17 +87,13 @@ int basic_test_get_or_create(int _commit)
 	EXPECT_LONG(page, page2);
 	RL_CALL_VERBOSE(rl_key_get_or_create, RL_WRONG_TYPE, db, key, keylen, type + 1, &page2, &version);
 
-	fprintf(stderr, "End basic_test_get_or_create\n");
-	retval = RL_OK;
-cleanup:
 	rl_close(db);
-	return retval;
+	PASS();
 }
 
-int basic_test_multidb(int _commit)
+TEST basic_test_multidb(int _commit)
 {
 	int retval;
-	fprintf(stderr, "Start basic_test_multidb %d\n", _commit);
 
 	rlite *db;
 	RL_CALL_VERBOSE(setup_db, RL_OK, &db, _commit, 1);
@@ -128,27 +110,19 @@ int basic_test_multidb(int _commit)
 	RL_CALL_VERBOSE(rl_key_get_or_create, RL_FOUND, db, key, keylen, type, &pagetest, NULL);
 	EXPECT_LONG(pagetest, page2);
 	RL_CALL_VERBOSE(rl_key_get_or_create, RL_FOUND, db, key, keylen, type, &pagetest, NULL);
-	if (pagetest == page) {
-		fprintf(stderr, "Expected pagetest %ld to mismatch page %ld\n", pagetest, page);
-		retval = RL_UNEXPECTED;
-		goto cleanup;
-	}
+	ASSERT(pagetest != page);
 
 	RL_CALL_VERBOSE(rl_select, RL_OK, db, 0);
 	RL_CALL_VERBOSE(rl_key_get_or_create, RL_FOUND, db, key, keylen, type, &pagetest, NULL);
 	EXPECT_LONG(pagetest, page);
 
-	fprintf(stderr, "End basic_test_multidb\n");
-	retval = RL_OK;
-cleanup:
 	rl_close(db);
-	return retval;
+	PASS();
 }
 
-int basic_test_move(int _commit)
+TEST basic_test_move(int _commit)
 {
-	int retval = 0;
-	fprintf(stderr, "Start basic_test_move %d\n", _commit);
+	int retval;
 
 	rlite *db;
 	RL_CALL_VERBOSE(setup_db, RL_OK, &db, _commit, 1);
@@ -165,17 +139,13 @@ int basic_test_move(int _commit)
 	RL_CALL_VERBOSE(rl_select, RL_OK, db, 1);
 	RL_CALL_VERBOSE(rl_key_get_or_create, RL_FOUND, db, key, keylen, type, &pagetest, NULL);
 	EXPECT_LONG(pagetest, page);
-	fprintf(stderr, "End basic_test_move\n");
-	retval = RL_OK;
-cleanup:
 	rl_close(db);
-	return retval;
+	PASS();
 }
 
-int existing_test_move(int _commit)
+TEST existing_test_move(int _commit)
 {
-	int retval = 0;
-	fprintf(stderr, "Start existing_test_move %d\n", _commit);
+	int retval;
 
 	rlite *db;
 	RL_CALL_VERBOSE(setup_db, RL_OK, &db, _commit, 1);
@@ -199,17 +169,13 @@ int existing_test_move(int _commit)
 	RL_CALL_VERBOSE(rl_select, RL_OK, db, 1);
 	RL_CALL_VERBOSE(rl_key_get_or_create, RL_FOUND, db, key, keylen, type, &pagetest, NULL);
 	EXPECT_LONG(pagetest, page);
-	fprintf(stderr, "End existing_test_move\n");
-	retval = RL_OK;
-cleanup:
 	rl_close(db);
-	return retval;
+	PASS();
 }
 
-int basic_test_expires(int _commit)
+TEST basic_test_expires(int _commit)
 {
-	int retval = 0;
-	fprintf(stderr, "Start basic_test_expires %d\n", _commit);
+	int retval;
 
 	rlite *db;
 	RL_CALL_VERBOSE(setup_db, RL_OK, &db, _commit, 1);
@@ -227,17 +193,13 @@ int basic_test_expires(int _commit)
 
 	RL_CALL_VERBOSE(rl_key_get, RL_FOUND, db, key, keylen, NULL, NULL, NULL, NULL, NULL);
 
-	fprintf(stderr, "End basic_test_expires\n");
-	retval = 0;
-cleanup:
 	rl_close(db);
-	return retval;
+	PASS();
 }
 
-int basic_test_change_expiration(int _commit)
+TEST basic_test_change_expiration(int _commit)
 {
-	int retval = 0;
-	fprintf(stderr, "Start basic_test_change_expiration %d\n", _commit);
+	int retval;
 
 	rlite *db;
 	RL_CALL_VERBOSE(setup_db, RL_OK, &db, _commit, 1);
@@ -261,17 +223,13 @@ int basic_test_change_expiration(int _commit)
 
 	RL_CALL_VERBOSE(rl_key_get, RL_NOT_FOUND, db, key, keylen, NULL, NULL, NULL, NULL, NULL);
 
-	fprintf(stderr, "End basic_test_change_expiration\n");
-	retval = RL_OK;
-cleanup:
 	rl_close(db);
-	return retval;
+	PASS();
 }
 
-int test_delete_with_value(int _commit)
+TEST test_delete_with_value(int _commit)
 {
 	int retval;
-	fprintf(stderr, "Start test_delete_with_value %d\n", _commit);
 
 	rlite *db;
 	RL_CALL_VERBOSE(setup_db, RL_OK, &db, _commit, 1);
@@ -283,17 +241,13 @@ int test_delete_with_value(int _commit)
 	RL_CALL_VERBOSE(rl_key_delete_with_value, RL_OK, db, key, keylen);
 	RL_CALL_VERBOSE(rl_is_balanced, RL_OK, db);
 
-	fprintf(stderr, "End test_delete_with_value\n");
-	retval = RL_OK;
-cleanup:
 	rl_close(db);
-	return retval;
+	PASS();
 }
 
-static int test_rename_ok(int _commit)
+TEST test_rename_ok(int _commit)
 {
-	int retval = 0;
-	fprintf(stderr, "Start test_rename_ok %d\n", _commit);
+	int retval;
 
 	rlite *db;
 	RL_CALL_VERBOSE(setup_db, RL_OK, &db, _commit, 1);
@@ -307,17 +261,13 @@ static int test_rename_ok(int _commit)
 	RL_CALL_VERBOSE(rl_rename, RL_OK, db, key, keylen, key2, key2len, 0);
 	RL_CALL_VERBOSE(rl_is_balanced, RL_OK, db);
 
-	fprintf(stderr, "End test_rename_ok\n");
-	retval = 0;
-cleanup:
 	rl_close(db);
-	return retval;
+	PASS();
 }
 
-static int test_rename_overwrite(int _commit)
+TEST test_rename_overwrite(int _commit)
 {
-	int retval = 0;
-	fprintf(stderr, "Start test_rename_overwrite %d\n", _commit);
+	int retval;
 
 	rlite *db;
 	RL_CALL_VERBOSE(setup_db, RL_OK, &db, _commit, 1);
@@ -340,17 +290,13 @@ static int test_rename_overwrite(int _commit)
 	RL_CALL_VERBOSE(rl_zscore, RL_FOUND, db, key2, key2len, data, datalen, &scoretest);
 	EXPECT_DOUBLE(scoretest, score);
 
-	fprintf(stderr, "End test_rename_overwrite\n");
-	retval = 0;
-cleanup:
 	rl_close(db);
-	return retval;
+	PASS();
 }
 
-static int test_rename_no_overwrite(int _commit)
+TEST test_rename_no_overwrite(int _commit)
 {
-	int retval = 0;
-	fprintf(stderr, "Start test_rename_no_overwrite %d\n", _commit);
+	int retval;
 
 	rlite *db;
 	RL_CALL_VERBOSE(setup_db, RL_OK, &db, _commit, 1);
@@ -374,17 +320,13 @@ static int test_rename_no_overwrite(int _commit)
 	RL_CALL_VERBOSE(rl_zscore, RL_FOUND, db, key2, key2len, data, datalen, &scoretest);
 	EXPECT_DOUBLE(scoretest, score2);
 
-	fprintf(stderr, "End test_rename_no_overwrite\n");
-	retval = 0;
-cleanup:
 	rl_close(db);
-	return retval;
+	PASS();
 }
 
-static int test_dbsize(int _commit)
+TEST test_dbsize(int _commit)
 {
-	int retval = 0;
-	fprintf(stderr, "Start test_dbsize %d\n", _commit);
+	int retval;
 
 	rlite *db;
 	RL_CALL_VERBOSE(setup_db, RL_OK, &db, _commit, 1);
@@ -424,17 +366,13 @@ static int test_dbsize(int _commit)
 
 	RL_CALL_VERBOSE(rl_is_balanced, RL_OK, db);
 
-	fprintf(stderr, "End test_dbsize\n");
-	retval = RL_OK;
-cleanup:
 	rl_close(db);
-	return retval;
+	PASS();
 }
 
-static int test_keys(int _commit)
+TEST test_keys(int _commit)
 {
-	int retval = 0;
-	fprintf(stderr, "Start test_keys %d\n", _commit);
+	int retval;
 
 	rlite *db;
 	unsigned char *key = (unsigned char *)"my key";
@@ -480,15 +418,11 @@ static int test_keys(int _commit)
 	EXPECT_LONG(len, 2);
 
 	if ((keyslen[0] == keylen && memcmp(keys[0], key, keylen) != 0) || (keyslen[1] == keylen && memcmp(keys[1], key, keylen) != 0)) {
-		fprintf(stderr, "Expected keys to contain key on line %d\n", __LINE__);
-		retval = RL_UNEXPECTED;
-		goto cleanup;
+		FAIL();
 	}
 
 	if ((keyslen[0] == key2len && memcmp(keys[0], key2, key2len) != 0) || (keyslen[1] == key2len && memcmp(keys[1], key2, key2len) != 0)) {
-		fprintf(stderr, "Expected keys to contain key2 on line %d\n", __LINE__);
-		retval = RL_UNEXPECTED;
-		goto cleanup;
+		FAIL();
 	}
 
 	FREE_KEYS();
@@ -513,18 +447,14 @@ static int test_keys(int _commit)
 	EXPECT_LONG(len, 0);
 	RL_CALL_VERBOSE(rl_is_balanced, RL_OK, db);
 
-	fprintf(stderr, "End test_keys\n");
-	retval = 0;
-cleanup:
 	FREE_KEYS();
 	rl_close(db);
-	return retval;
+	PASS();
 }
 
-static int test_randomkey(int _commit)
+TEST test_randomkey(int _commit)
 {
-	int retval = 0;
-	fprintf(stderr, "Start test_randomkey %d\n", _commit);
+	int retval;
 
 	rlite *db;
 	unsigned char *key = (unsigned char *)"my key";
@@ -551,24 +481,18 @@ static int test_randomkey(int _commit)
 		RL_CALL_VERBOSE(rl_randomkey, RL_OK, db, &testkey, &testkeylen);
 
 		if ((keylen == testkeylen && memcmp(key, testkey, testkeylen) != 0) || (key2len == testkeylen && memcmp(key2, testkey, testkeylen) != 0)) {
-			fprintf(stderr, "Expected keys to contain key on line %d\n", __LINE__);
-			retval = RL_UNEXPECTED;
-			goto cleanup;
+			FAIL();
 		}
 		rl_free(testkey);
 	}
 
-	fprintf(stderr, "End test_randomkey\n");
-	retval = 0;
-cleanup:
 	rl_close(db);
-	return retval;
+	PASS();
 }
 
-static int test_flushdb(int _commit)
+TEST test_flushdb(int _commit)
 {
-	int retval = 0;
-	fprintf(stderr, "Start test_flushdb %d\n", _commit);
+	int retval;
 
 	rlite *db;
 	unsigned char *key = (unsigned char *)"my key";
@@ -590,16 +514,13 @@ static int test_flushdb(int _commit)
 	RL_CALL_VERBOSE(rl_dbsize, RL_OK, db, &len);
 	EXPECT_LONG(len, 0);
 
-	fprintf(stderr, "End test_flushdb\n");
-	retval = 0;
-cleanup:
 	rl_close(db);
-	return retval;
+	PASS();
 }
 
-static int string_version_test(int _commit) {
-	int retval = 0;
-	fprintf(stderr, "Start string_version_test %d\n", _commit);
+TEST string_version_test(int _commit)
+{
+	int retval;
 
 	rlite *db;
 	RL_CALL_VERBOSE(setup_db, RL_OK, &db, _commit, 1);
@@ -617,21 +538,14 @@ static int string_version_test(int _commit) {
 	RL_CALL_VERBOSE(rl_key_delete_with_value, RL_OK, db, key, keylen);
 	RL_CALL_VERBOSE(rl_set, RL_OK, db, key, keylen, data, datalen, 0, 0);
 	RL_CALL_VERBOSE(rl_key_get, RL_FOUND, db, key, keylen, &type, NULL, &page, NULL, &version3);
-	if (version3 == version || version2 == version) {
-		fprintf(stderr, "Expected version after delete not to match with previous ones\n");
-		retval = 1;
-		goto cleanup;
-	}
-	retval = 0;
-	fprintf(stderr, "End string_version_test %d\n", _commit);
-cleanup:
+	ASSERT(version3 != version && version2 != version);
 	rl_close(db);
-	return retval;
+	PASS();
 }
 
-static int list_version_test(int _commit) {
-	int retval = 0;
-	fprintf(stderr, "Start list_version_test %d\n", _commit);
+TEST list_version_test(int _commit)
+{
+	int retval;
 
 	rlite *db;
 	RL_CALL_VERBOSE(setup_db, RL_OK, &db, _commit, 1);
@@ -649,21 +563,14 @@ static int list_version_test(int _commit) {
 	RL_CALL_VERBOSE(rl_key_delete_with_value, RL_OK, db, key, keylen);
 	RL_CALL_VERBOSE(rl_push, RL_OK, db, key, keylen, 1, 1, 1, &data, &datalen, NULL);
 	RL_CALL_VERBOSE(rl_key_get, RL_FOUND, db, key, keylen, &type, NULL, &page, NULL, &version3);
-	if (version3 == version || version2 == version) {
-		fprintf(stderr, "Expected version after delete not to match with previous ones\n");
-		retval = 1;
-		goto cleanup;
-	}
-	retval = 0;
-	fprintf(stderr, "End list_version_test %d\n", _commit);
-cleanup:
+	ASSERT(version3 != version && version2 != version);
 	rl_close(db);
-	return retval;
+	PASS();
 }
 
-static int set_version_test(int _commit) {
-	int retval = 0;
-	fprintf(stderr, "Start set_version_test %d\n", _commit);
+TEST set_version_test(int _commit)
+{
+	int retval;
 
 	rlite *db;
 	RL_CALL_VERBOSE(setup_db, RL_OK, &db, _commit, 1);
@@ -683,21 +590,15 @@ static int set_version_test(int _commit) {
 	RL_CALL_VERBOSE(rl_key_delete_with_value, RL_OK, db, key, keylen);
 	RL_CALL_VERBOSE(rl_sadd, RL_OK, db, key, keylen, 1, &data, &datalen, NULL);
 	RL_CALL_VERBOSE(rl_key_get, RL_FOUND, db, key, keylen, &type, NULL, &page, NULL, &version3);
-	if (version3 == version || version2 == version) {
-		fprintf(stderr, "Expected version after delete not to match with previous ones\n");
-		retval = 1;
-		goto cleanup;
-	}
-	retval = 0;
-	fprintf(stderr, "End set_version_test %d\n", _commit);
-cleanup:
+	ASSERT(version3 != version && version2 != version);
+
 	rl_close(db);
-	return retval;
+	PASS();
 }
 
-static int zset_version_test(int _commit) {
-	int retval = 0;
-	fprintf(stderr, "Start zset_version_test %d\n", _commit);
+TEST zset_version_test(int _commit)
+{
+	int retval;
 
 	rlite *db;
 	RL_CALL_VERBOSE(setup_db, RL_OK, &db, _commit, 1);
@@ -717,21 +618,15 @@ static int zset_version_test(int _commit) {
 	RL_CALL_VERBOSE(rl_key_delete_with_value, RL_OK, db, key, keylen);
 	RL_CALL_VERBOSE(rl_zadd, RL_OK, db, key, keylen, 0.0, data, datalen);
 	RL_CALL_VERBOSE(rl_key_get, RL_FOUND, db, key, keylen, &type, NULL, &page, NULL, &version3);
-	if (version3 == version || version2 == version) {
-		fprintf(stderr, "Expected version after delete not to match with previous ones\n");
-		retval = 1;
-		goto cleanup;
-	}
-	retval = 0;
-	fprintf(stderr, "End zset_version_test %d\n", _commit);
-cleanup:
+	ASSERT(version3 != version && version2 != version);
+
 	rl_close(db);
-	return retval;
+	PASS();
 }
 
-static int hash_version_test(int _commit) {
-	int retval = 0;
-	fprintf(stderr, "Start hash_version_test %d\n", _commit);
+TEST hash_version_test(int _commit)
+{
+	int retval;
 
 	rlite *db;
 	RL_CALL_VERBOSE(setup_db, RL_OK, &db, _commit, 1);
@@ -753,22 +648,16 @@ static int hash_version_test(int _commit) {
 	RL_CALL_VERBOSE(rl_key_delete_with_value, RL_OK, db, key, keylen);
 	RL_CALL_VERBOSE(rl_hset, RL_OK, db, key, keylen, field, fieldlen, data, datalen, NULL, 1);
 	RL_CALL_VERBOSE(rl_key_get, RL_FOUND, db, key, keylen, &type, NULL, &page, NULL, &version3);
-	if (version3 == version || version2 == version) {
-		fprintf(stderr, "Expected version after delete not to match with previous ones\n");
-		retval = 1;
-		goto cleanup;
-	}
-	retval = 0;
-	fprintf(stderr, "End hash_version_test %d\n", _commit);
-cleanup:
+	ASSERT(version3 != version && version2 != version);
+
 	rl_close(db);
-	return retval;
+	PASS();
 }
 
 
-static int watch_test(int _commit) {
-	int retval = 0;
-	fprintf(stderr, "Start watch_test %d\n", _commit);
+TEST watch_test(int _commit)
+{
+	int retval;
 
 	rlite *db;
 	RL_CALL_VERBOSE(setup_db, RL_OK, &db, _commit, 1);
@@ -788,40 +677,36 @@ static int watch_test(int _commit) {
 	RL_CALL_VERBOSE(rl_check_watched_keys, RL_OK, db, 1, &wkey);
 	rl_free(wkey);
 
-	retval = 0;
-	fprintf(stderr, "End watch_test %d\n", _commit);
-cleanup:
 	rl_close(db);
-	return retval;
+	PASS();
 }
-RL_TEST_MAIN_START(key_test)
+
+SUITE(key_test)
 {
 	long i;
 	for (i = 0; i < 3; i++) {
-		RL_TEST(basic_test_set_get, i);
-		RL_TEST(basic_test_get_or_create, i);
-		RL_TEST(basic_test_multidb, i);
-		RL_TEST(basic_test_move, i);
-		RL_TEST(existing_test_move, i);
-		RL_TEST(basic_test_expires, i);
-		RL_TEST(basic_test_change_expiration, i);
-		RL_TEST(test_delete_with_value, i);
-		RL_TEST(test_rename_ok, i);
-		RL_TEST(test_rename_overwrite, i);
-		RL_TEST(test_rename_no_overwrite, i);
-		RL_TEST(test_dbsize, i);
-		RL_TEST(test_keys, i);
-		RL_TEST(test_randomkey, i);
-		RL_TEST(test_flushdb, i);
-		RL_TEST(string_version_test, i);
-		RL_TEST(list_version_test, i);
-		RL_TEST(set_version_test, i);
-		RL_TEST(zset_version_test, i);
-		RL_TEST(hash_version_test, i);
-		RL_TEST(watch_test, i);
+		RUN_TESTp(basic_test_set_get, i);
+		RUN_TESTp(basic_test_get_or_create, i);
+		RUN_TESTp(basic_test_multidb, i);
+		RUN_TESTp(basic_test_move, i);
+		RUN_TESTp(existing_test_move, i);
+		RUN_TESTp(basic_test_expires, i);
+		RUN_TESTp(basic_test_change_expiration, i);
+		RUN_TESTp(test_delete_with_value, i);
+		RUN_TESTp(test_rename_ok, i);
+		RUN_TESTp(test_rename_overwrite, i);
+		RUN_TESTp(test_rename_no_overwrite, i);
+		RUN_TESTp(test_dbsize, i);
+		RUN_TESTp(test_keys, i);
+		RUN_TESTp(test_randomkey, i);
+		RUN_TESTp(test_flushdb, i);
+		RUN_TESTp(string_version_test, i);
+		RUN_TESTp(list_version_test, i);
+		RUN_TESTp(set_version_test, i);
+		RUN_TESTp(zset_version_test, i);
+		RUN_TESTp(hash_version_test, i);
+		RUN_TESTp(watch_test, i);
 	}
-	RL_TEST(basic_test_get_unexisting, 0);
-	RL_TEST(basic_test_set_delete, 0);
-	RL_TEST(basic_test_get_or_create, 0);
+	RUN_TEST(basic_test_get_unexisting);
+	RUN_TEST(basic_test_set_delete);
 }
-RL_TEST_MAIN_END

@@ -2,15 +2,13 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
-#include "test_util.h"
+#include "util.h"
 #include "../src/rlite.h"
 #include "../src/status.h"
 #include "../src/page_list.h"
 
-int basic_insert_list_test(int options)
+TEST basic_insert_list_test(int options)
 {
-	fprintf(stderr, "Start basic_insert_list_test %d\n", options);
-
 	int retval;
 	rlite *db = NULL;
 	rl_list *list = NULL;
@@ -41,8 +39,7 @@ int basic_insert_list_test(int options)
 				position = - 1 - i;
 				break;
 			default:
-				retval = RL_UNEXPECTED;
-				goto cleanup;
+				FAIL();
 		}
 		RL_CALL_VERBOSE(rl_list_add_element, RL_OK, db, list, list_page, vals[i], position);
 		RL_CALL_VERBOSE(rl_list_is_balanced, RL_OK, db, list);
@@ -62,19 +59,15 @@ int basic_insert_list_test(int options)
 	for (i = 0; i < 2; i++) {
 		RL_CALL_VERBOSE(rl_list_find_element, RL_NOT_FOUND, db, list, &nonexistent_vals[i], NULL, NULL, NULL, NULL);
 	}
-	fprintf(stderr, "End basic_insert_list_test\n");
 	retval = 0;
-cleanup:
 	free(vals);
 	rl_close(db);
-	return retval;
+	PASS();
 }
 
 #define ITERATOR_SIZE 500
-int basic_iterator_list_test(int _commit)
+TEST basic_iterator_list_test(int _commit)
 {
-	fprintf(stderr, "Start basic_iterator_list_test %d\n", _commit);
-
 	rlite *db = NULL;
 	rl_list *list = NULL;
 	int retval;
@@ -111,15 +104,12 @@ int basic_iterator_list_test(int _commit)
 
 	if (retval != RL_END) {
 		rl_free(tmp);
-		goto cleanup;
+		FAIL();
 	}
 
 	EXPECT_LONG(i, ITERATOR_SIZE);
-	fprintf(stderr, "End basic_iterator_list_test %d\n", _commit);
-	retval = 0;
-cleanup:
 	rl_close(db);
-	return retval;
+	PASS();
 }
 
 static int contains_element(long element, long *elements, long size)
@@ -132,10 +122,8 @@ static int contains_element(long element, long *elements, long size)
 	}
 	return 0;
 }
-int fuzzy_list_test(long size, long list_node_size, int _commit)
+TEST fuzzy_list_test(long size, long list_node_size, int _commit)
 {
-	fprintf(stderr, "Start fuzzy_list_test %ld %ld %d\n", size, list_node_size, _commit);
-
 	long *elements = malloc(sizeof(long) * size);
 	long *nonelements = malloc(sizeof(long) * size);
 	void **flatten_elements = malloc(sizeof(void *) * size);
@@ -199,21 +187,16 @@ int fuzzy_list_test(long size, long list_node_size, int _commit)
 		RL_CALL_VERBOSE(rl_list_find_element, RL_FOUND, db, list, &elements[i], NULL, NULL, NULL, NULL);
 		RL_CALL_VERBOSE(rl_list_find_element, RL_NOT_FOUND, db, list, &nonelements[i], NULL, NULL, NULL, NULL);
 	}
-	fprintf(stderr, "End fuzzy_list_test\n");
-
 	retval = RL_OK;
-cleanup:
 	free(elements);
 	free(nonelements);
 	free(flatten_elements);
 	rl_close(db);
-	return retval;
+	PASS();
 }
 
-int basic_delete_list_test(long elements, long element_to_remove, char *name)
+TEST basic_delete_list_test(long elements, long element_to_remove, char *name)
 {
-	fprintf(stderr, "Start basic_delete_list_test (%ld, %ld) (%s)\n", elements, element_to_remove, name);
-
 	long **vals = malloc(sizeof(long *) * elements);
 	rlite *db = NULL;
 	rl_list *list = NULL;
@@ -236,15 +219,8 @@ int basic_delete_list_test(long elements, long element_to_remove, char *name)
 	RL_CALL2_VERBOSE(rl_list_remove_element, RL_OK, RL_DELETED, db, list, list_page, element_to_remove);
 
 	if (retval == RL_DELETED) {
-		if (elements == 1) {
-			fprintf(stderr, "End basic_delete_list_test (%ld, %ld)\n", elements, element_to_remove);
-			retval = RL_OK;
-			goto cleanup;
-		} else {
-			fprintf(stderr, "Deleted list that was not supposed to be deleted on line %d\n", __LINE__);
-			retval = RL_UNEXPECTED;
-			goto cleanup;
-		}
+		ASSERT_EQ(elements, 1);
+		PASS();
 	}
 
 	RL_CALL_VERBOSE(rl_list_is_balanced, RL_OK, db, list);
@@ -263,18 +239,14 @@ int basic_delete_list_test(long elements, long element_to_remove, char *name)
 		RL_CALL_VERBOSE(rl_list_find_element, expected, db, list, element, NULL, NULL, NULL, NULL);
 	}
 
-	fprintf(stderr, "End basic_delete_list_test (%ld, %ld)\n", elements, element_to_remove);
 	retval = RL_OK;
-cleanup:
 	free(vals);
 	rl_close(db);
-	return retval;
+	PASS();
 }
 
-int fuzzy_list_delete_test(long size, long list_node_size, int _commit)
+TEST fuzzy_list_delete_test(long size, long list_node_size, int _commit)
 {
-	fprintf(stderr, "Start fuzzy_list_delete_test %ld %ld %d\n", size, list_node_size, _commit);
-
 	rlite *db = NULL;
 	rl_list *list = NULL;
 	long *elements = malloc(sizeof(long) * size);
@@ -311,37 +283,29 @@ int fuzzy_list_delete_test(long size, long list_node_size, int _commit)
 		if (retval == RL_DELETED && size == 1) {
 			break;
 		}
-		if (RL_OK != retval) {
-			fprintf(stderr, "Failed to delete child %ld\n", elements[i]);
-			goto cleanup;
-		}
-
+		ASSERT_EQ(retval, RL_OK);
 		RL_CALL_VERBOSE(rl_list_is_balanced, RL_OK, db, list);
 		elements[i] = elements[size - 1];
 		size--;
 	}
-	fprintf(stderr, "End fuzzy_list_delete_test\n");
-
-	retval = RL_OK;
-cleanup:
 	rl_free(elements);
 	rl_close(db);
-	return retval;
+	PASS();
 }
 
 #define DELETE_TESTS_COUNT 5
-RL_TEST_MAIN_START(list_test)
+SUITE(list_test)
 {
 	int i, j, k;
 	long size, list_node_size;
 	int commit;
 
 	for (i = 0; i < 4; i++) {
-		RL_TEST(basic_insert_list_test, i);
+		RUN_TEST1(basic_insert_list_test, i);
 	}
 
 	for (i = 0; i < 3; i++) {
-		RL_TEST(basic_iterator_list_test, i);
+		RUN_TEST1(basic_iterator_list_test, i);
 	}
 
 	for (i = 0; i < 2; i++) {
@@ -351,7 +315,7 @@ RL_TEST_MAIN_START(list_test)
 			for (k = 0; k < 3; k++) {
 				commit = k;
 				srand(1);
-				RL_TEST(fuzzy_list_test, size, list_node_size, commit);
+				RUN_TESTp(fuzzy_list_test, size, list_node_size, commit);
 			}
 		}
 	}
@@ -371,7 +335,7 @@ RL_TEST_MAIN_START(list_test)
 		"delete element on page, merge and delete",
 	};
 	for (i = 0; i < DELETE_TESTS_COUNT; i++) {
-		RL_TEST(basic_delete_list_test, delete_tests[i][0], delete_tests[i][1], delete_tests_name[i]);
+		RUN_TESTp(basic_delete_list_test, delete_tests[i][0], delete_tests[i][1], delete_tests_name[i]);
 	}
 
 	for (i = 0; i < 2; i++) {
@@ -381,9 +345,8 @@ RL_TEST_MAIN_START(list_test)
 			for (k = 0; k < 3; k++) {
 				commit = k;
 				srand(1);
-				RL_TEST(fuzzy_list_delete_test, size, list_node_size, commit);
+				RUN_TESTp(fuzzy_list_delete_test, size, list_node_size, commit);
 			}
 		}
 	}
 }
-RL_TEST_MAIN_END

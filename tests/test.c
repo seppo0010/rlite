@@ -1,86 +1,73 @@
 #include <stdio.h>
 #include <stdlib.h>
-#include "btree-test.h"
-#include "list-test.h"
-#include "rlite-test.h"
-#include "string-test.h"
-#include "type_string-test.h"
-#include "type_list-test.h"
-#include "type_set-test.h"
-#include "type_zset-test.h"
-#include "type_hash-test.h"
-#include "key-test.h"
-#include "multi-test.h"
-#include "multi_string-test.h"
-#include "skiplist-test.h"
-#include "long-test.h"
-#include "restore-test.h"
-#include "dump-test.h"
-#include "hyperloglog-test.h"
-#include "sort-test.h"
-#include "wal-test.h"
-#include "db-test.h"
-#include "hmulti-test.h"
-#include "echo-test.h"
-#include "hash-test.h"
-#include "parser-test.h"
-#include "hlist-test.h"
-#include "set-test.h"
-#include "hstring-test.h"
-#include "zset-test.h"
-#include "hsort-test.h"
-#include "scripting-test.h"
-#include "concurrency-test.h"
-#include "../src/util.h"
+#include "greatest.h"
 
-#ifdef RL_DEBUG
-int main(int argc, char *argv[]) {
-	int skip_tests = 0, passed_tests = 0;
-	if (argc >= 2) {
-		test_mode = atoi(argv[1]);
-	}
-	if (argc >= 3) {
-		skip_tests = atoi(argv[2]);
-	}
-#define RUN_TEST(name) \
-	retval = name(&skip_tests, &passed_tests);\
-	if (retval != 0 || expect_fail()) {\
-		return retval;\
-	}
-#else
-int main() {
-#define RUN_TEST(name) retval = name(); if (retval != 0) return retval;
-#endif
-	int retval;
-	RUN_TEST(long_test);
-	RUN_TEST(btree_test);
-	RUN_TEST(list_test);
-	RUN_TEST(rlite_test);
-	RUN_TEST(string_test);
-	RUN_TEST(key_test);
-	RUN_TEST(multi_string_test);
-	RUN_TEST(skiplist_test);
-	RUN_TEST(type_string_test);
-	RUN_TEST(type_list_test);
-	RUN_TEST(type_set_test);
-	RUN_TEST(type_zset_test);
-	RUN_TEST(type_hash_test);
-	RUN_TEST(restore_test);
-	RUN_TEST(dump_test);
-	RUN_TEST(hyperloglog_test);
-	RUN_TEST(sort_test);
-	RUN_TEST(wal_test);
-	if (run_echo() != 0) { return 1; }
-	if (run_parser() != 0) { return 1; }
-	if (run_db() != 0) { return 1; }
-	if (run_multi() != 0) { return 1; }
-	if (run_list() != 0) { return 1; }
-	if (run_set() != 0) { return 1; }
-	if (run_string() != 0) { return 1; }
-	if (run_zset() != 0) { return 1; }
-	if (run_hash() != 0) { return 1; }
-	if (run_sort() != 0) { return 1; }
-	if (run_scripting_test() != 0) { return 1; }
-	if (run_concurrency() != 0) { return 1; }
-	return retval;
+extern SUITE(btree_test);
+extern SUITE(concurrency_test);
+extern SUITE(db_test);
+extern SUITE(rlite_test);
+extern SUITE(list_test);
+extern SUITE(string_test);
+extern SUITE(multi_string_test);
+extern SUITE(multi_test);
+extern SUITE(key_test);
+extern SUITE(type_string_test);
+extern SUITE(type_list_test);
+extern SUITE(type_set_test);
+extern SUITE(type_zset_test);
+extern SUITE(type_hash_test);
+extern SUITE(skiplist_test);
+extern SUITE(long_test);
+extern SUITE(restore_test);
+extern SUITE(hyperloglog_test);
+extern SUITE(dump_test);
+extern SUITE(sort_test);
+extern SUITE(wal_test);
+extern SUITE(zset_test);
+extern SUITE(hmulti_test);
+extern SUITE(hsort_test);
+extern SUITE(scripting_test);
+extern SUITE(echo_test);
+extern SUITE(hash_test);
+extern SUITE(hlist_test);
+extern SUITE(parser_test);
+extern SUITE(set_test);
+extern SUITE(hstring_test);
+
+GREATEST_MAIN_DEFS();
+
+int main(int argc, char **argv) {
+	GREATEST_MAIN_BEGIN();
+	RUN_SUITE(btree_test);
+	RUN_SUITE(concurrency_test);
+	RUN_SUITE(db_test);
+	RUN_SUITE(rlite_test);
+	RUN_SUITE(list_test);
+	RUN_SUITE(string_test);
+	RUN_SUITE(multi_string_test);
+	RUN_SUITE(multi_test);
+	RUN_SUITE(key_test);
+	RUN_SUITE(type_string_test);
+	RUN_SUITE(type_list_test);
+	RUN_SUITE(type_set_test);
+	RUN_SUITE(type_zset_test);
+	RUN_SUITE(type_hash_test);
+	RUN_SUITE(skiplist_test);
+	RUN_SUITE(long_test);
+	RUN_SUITE(restore_test);
+	RUN_SUITE(hyperloglog_test);
+	RUN_SUITE(dump_test);
+	RUN_SUITE(sort_test);
+	RUN_SUITE(wal_test);
+	RUN_SUITE(zset_test);
+	RUN_SUITE(hmulti_test);
+	RUN_SUITE(hsort_test);
+	RUN_SUITE(scripting_test);
+	RUN_SUITE(echo_test);
+	RUN_SUITE(hash_test);
+	RUN_SUITE(hlist_test);
+	RUN_SUITE(parser_test);
+	RUN_SUITE(set_test);
+	RUN_SUITE(hstring_test);
+	GREATEST_MAIN_END();
 }

@@ -1,17 +1,9 @@
 #include <string.h>
 #include <unistd.h>
 #include "hirlite.h"
-#include "test_util.h"
+#include "util.h"
 
-static int populateArgvlen(char *argv[], size_t argvlen[]) {
-	int i;
-	for (i = 0; argv[i] != NULL; i++) {
-		argvlen[i] = strlen(argv[i]);
-	}
-	return i;
-}
-
-static int test_types()
+TEST test_types()
 {
 	rliteContext *context = rliteConnect(":memory:", 0);
 
@@ -64,10 +56,10 @@ static int test_types()
 	}
 
 	rliteFree(context);
-	return 0;
+	PASS();
 }
 
-static int test_call_ok()
+TEST test_call_ok()
 {
 	rliteContext *context = rliteConnect(":memory:", 0);
 
@@ -135,10 +127,10 @@ static int test_call_ok()
 	}
 
 	rliteFree(context);
-	return 0;
+	PASS();
 }
 
-static int test_call_err()
+TEST test_call_err()
 {
 	rliteContext *context = rliteConnect(":memory:", 0);
 
@@ -169,10 +161,10 @@ static int test_call_err()
 		rliteFreeReplyObject(reply);
 	}
 	rliteFree(context);
-	return 0;
+	PASS();
 }
 
-static int test_script_evalsha()
+TEST test_script_evalsha()
 {
 	rliteContext *context = rliteConnect(":memory:", 0);
 	char *sha = "30dc9ef2a8d563dced9a243ecd0cc449c2ea0144";
@@ -199,22 +191,13 @@ static int test_script_evalsha()
 		rliteFreeReplyObject(reply);
 	}
 	rliteFree(context);
-	return 0;
+	PASS();
 }
 
-int run_scripting_test()
+SUITE(scripting_test)
 {
-	if (test_types()) {
-		return 1;
-	}
-	if (test_call_ok()) {
-		return 1;
-	}
-	if (test_call_err()) {
-		return 1;
-	}
-	if (test_script_evalsha()) {
-		return 1;
-	}
-	return 0;
+	RUN_TEST(test_types);
+	RUN_TEST(test_call_ok);
+	RUN_TEST(test_call_err);
+	RUN_TEST(test_script_evalsha);
 }

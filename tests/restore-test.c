@@ -5,7 +5,7 @@
 #include <stdio.h>
 #include <string.h>
 #include "../src/rlite.h"
-#include "test_util.h"
+#include "util.h"
 
 static int test_int8()
 {
@@ -19,9 +19,9 @@ static int test_int8()
 	RL_CALL_VERBOSE(rl_get, RL_OK, db, key, keylen, &testvalue, &testvaluelen);
 	EXPECT_BYTES("1", 1, testvalue, testvaluelen);
 	rl_free(testvalue);
-cleanup:
+
 	rl_close(db);
-	return retval;
+	PASS();
 }
 
 static int test_int16()
@@ -36,9 +36,9 @@ static int test_int16()
 	RL_CALL_VERBOSE(rl_get, RL_OK, db, key, keylen, &testvalue, &testvaluelen);
 	EXPECT_BYTES("256", 3, testvalue, testvaluelen);
 	rl_free(testvalue);
-cleanup:
+
 	rl_close(db);
-	return retval;
+	PASS();
 }
 
 static int test_int32()
@@ -53,9 +53,9 @@ static int test_int32()
 	RL_CALL_VERBOSE(rl_get, RL_OK, db, key, keylen, &testvalue, &testvaluelen);
 	EXPECT_BYTES("90000", 5, testvalue, testvaluelen);
 	rl_free(testvalue);
-cleanup:
+
 	rl_close(db);
-	return retval;
+	PASS();
 }
 
 static int test_uncompressedstring()
@@ -70,9 +70,9 @@ static int test_uncompressedstring()
 	RL_CALL_VERBOSE(rl_get, RL_OK, db, key, keylen, &testvalue, &testvaluelen);
 	EXPECT_BYTES("Hello World", 11, testvalue, testvaluelen);
 	rl_free(testvalue);
-cleanup:
+
 	rl_close(db);
-	return retval;
+	PASS();
 }
 
 static int test_uncompressedstring2()
@@ -87,9 +87,9 @@ static int test_uncompressedstring2()
 	RL_CALL_VERBOSE(rl_get, RL_OK, db, key, keylen, &testvalue, &testvaluelen);
 	EXPECT_BYTES("asd", 3, testvalue, testvaluelen);
 	rl_free(testvalue);
-cleanup:
+
 	rl_close(db);
-	return retval;
+	PASS();
 }
 
 static int test_compressedstring()
@@ -104,9 +104,9 @@ static int test_compressedstring()
 	RL_CALL_VERBOSE(rl_get, RL_OK, db, key, keylen, &testvalue, &testvaluelen);
 	EXPECT_BYTES("aaaaaaaaaaaaaaaaaaaaa", 21, testvalue, testvaluelen);
 	rl_free(testvalue);
-cleanup:
+
 	rl_close(db);
-	return retval;
+	PASS();
 }
 
 static int test_list()
@@ -128,9 +128,9 @@ static int test_list()
 	rl_free(values[0]);
 	rl_free(values);
 	rl_free(valueslen);
-cleanup:
+
 	rl_close(db);
-	return retval;
+	PASS();
 }
 
 static int test_list2()
@@ -156,9 +156,9 @@ static int test_list2()
 	rl_free(values[2]);
 	rl_free(values);
 	rl_free(valueslen);
-cleanup:
+
 	rl_close(db);
-	return retval;
+	PASS();
 }
 
 static int test_set()
@@ -177,10 +177,8 @@ static int test_set()
 	RL_CALL_VERBOSE(rl_sismember, RL_FOUND, db, key, keylen, UNSIGN("a"), 1);
 	RL_CALL_VERBOSE(rl_sismember, RL_FOUND, db, key, keylen, UNSIGN("b"), 1);
 	RL_CALL_VERBOSE(rl_sismember, RL_FOUND, db, key, keylen, UNSIGN("c"), 1);
-	retval = RL_OK;
-cleanup:
 	rl_close(db);
-	return retval;
+	PASS();
 }
 
 static int test_zset()
@@ -199,10 +197,9 @@ static int test_zset()
 	EXPECT_LONG(size, 1);
 	RL_CALL_VERBOSE(rl_zscore, RL_FOUND, db, key, keylen, UNSIGN("hi"), 2, &score);
 	EXPECT_DOUBLE(score, 1.23456);
-	retval = RL_OK;
-cleanup:
+
 	rl_close(db);
-	return retval;
+	PASS();
 }
 
 static int test_hash()
@@ -221,10 +218,9 @@ static int test_hash()
 	RL_CALL_VERBOSE(rl_hget, RL_FOUND, db, key, keylen, UNSIGN("field"), 5, &testvalue, &testvaluelen);
 	EXPECT_BYTES("value", 5, testvalue, testvaluelen);
 	rl_free(testvalue);
-	retval = RL_OK;
-cleanup:
+
 	rl_close(db);
-	return retval;
+	PASS();
 }
 
 static int test_ziplist()
@@ -248,10 +244,9 @@ static int test_ziplist()
 	rl_free(values[1]);
 	rl_free(values);
 	rl_free(valueslen);
-	retval = RL_OK;
-cleanup:
+
 	rl_close(db);
-	return retval;
+	PASS();
 }
 
 static int test_intset()
@@ -268,10 +263,9 @@ static int test_intset()
 	EXPECT_LONG(size, 2);
 	RL_CALL_VERBOSE(rl_sismember, RL_FOUND, db, key, keylen, UNSIGN("1"), 1);
 	RL_CALL_VERBOSE(rl_sismember, RL_FOUND, db, key, keylen, UNSIGN("2"), 1);
-	retval = RL_OK;
-cleanup:
+
 	rl_close(db);
-	return retval;
+	PASS();
 }
 
 static int test_zsetziplist()
@@ -291,10 +285,9 @@ static int test_zsetziplist()
 	EXPECT_DOUBLE(score, 1.23);
 	RL_CALL_VERBOSE(rl_zscore, RL_FOUND, db, key, keylen, UNSIGN("c"), 1, &score);
 	EXPECT_DOUBLE(score, 4.5);
-	retval = RL_OK;
-cleanup:
+
 	rl_close(db);
-	return retval;
+	PASS();
 }
 
 static int test_hashziplist()
@@ -317,59 +310,26 @@ static int test_hashziplist()
 	RL_CALL_VERBOSE(rl_hget, RL_FOUND, db, key, keylen, UNSIGN("field2"), 6, &data, &datalen);
 	EXPECT_BYTES("value2", 6, data, datalen);
 	rl_free(data);
-	retval = RL_OK;
-cleanup:
+
 	rl_close(db);
-	return retval;
+	PASS();
 }
 
-RL_TEST_MAIN_START(restore_test)
+SUITE(restore_test)
 {
-	if (test_int8()) {
-		return 1;
-	}
-	if (test_int16()) {
-		return 1;
-	}
-	if (test_int32()) {
-		return 1;
-	}
-	if (test_uncompressedstring()) {
-		return 1;
-	}
-	if (test_uncompressedstring2()) {
-		return 1;
-	}
-	if (test_compressedstring()) {
-		return 1;
-	}
-	if (test_list()) {
-		return 1;
-	}
-	if (test_list2()) {
-		return 1;
-	}
-	if (test_set()) {
-		return 1;
-	}
-	if (test_zset()) {
-		return 1;
-	}
-	if (test_hash()) {
-		return 1;
-	}
-	if (test_ziplist()) {
-		return 1;
-	}
-	if (test_intset()) {
-		return 1;
-	}
-	if (test_zsetziplist()) {
-		return 1;
-	}
-	if (test_hashziplist()) {
-		return 1;
-	}
-	return 0;
+	RUN_TEST(test_int8);
+	RUN_TEST(test_int16);
+	RUN_TEST(test_int32);
+	RUN_TEST(test_uncompressedstring);
+	RUN_TEST(test_uncompressedstring2);
+	RUN_TEST(test_compressedstring);
+	RUN_TEST(test_list);
+	RUN_TEST(test_list2);
+	RUN_TEST(test_set);
+	RUN_TEST(test_zset);
+	RUN_TEST(test_hash);
+	RUN_TEST(test_ziplist);
+	RUN_TEST(test_intset);
+	RUN_TEST(test_zsetziplist);
+	RUN_TEST(test_hashziplist);
 }
-RL_TEST_MAIN_END

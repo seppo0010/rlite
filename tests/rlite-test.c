@@ -2,10 +2,10 @@
 #include <errno.h>
 #include <string.h>
 #include <stdlib.h>
-#include "test_util.h"
+#include "util.h"
 #include "../src/rlite.h"
 
-int test_rlite_page_cache(int UNUSED(_))
+TEST test_rlite_page_cache()
 {
 	rlite *db = malloc(sizeof(rlite));
 	db->driver_type = RL_MEMORY_DRIVER;
@@ -34,12 +34,10 @@ int test_rlite_page_cache(int UNUSED(_))
 	}
 	rl_free(db->read_pages);
 	rl_free(db);
-	retval = 0;
-cleanup:
-	return retval;
+	PASS();
 }
 
-int test_has_key(int UNUSED(_))
+TEST test_has_key()
 {
 	rlite *db = NULL;
 	int retval;
@@ -57,15 +55,12 @@ int test_has_key(int UNUSED(_))
 	RL_CALL_VERBOSE(rl_key_get, RL_FOUND, db, key, keylen, &type2, NULL, &value2, NULL, NULL);
 	EXPECT_LONG(value, value2);
 	EXPECT_INT(type, type2);
-	retval = RL_OK;
-cleanup:
 	rl_close(db);
-	return retval;
+	PASS();
 }
 
-RL_TEST_MAIN_START(rlite_test)
+SUITE(rlite_test)
 {
-	RL_TEST(test_rlite_page_cache, 0);
-	RL_TEST(test_has_key, 0);
+	RUN_TEST(test_rlite_page_cache);
+	RUN_TEST(test_has_key);
 }
-RL_TEST_MAIN_END

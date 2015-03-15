@@ -1,25 +1,23 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
-#include "test_util.h"
 #include "../src/rlite.h"
 #include "../src/page_skiplist.h"
 #include "../src/page_multi_string.h"
+#include "util.h"
 
 #define TEST_SIZE 100
 
-int basic_skiplist_test(int sign, int commit)
+TEST basic_skiplist_test(int sign, int commit)
 {
-	fprintf(stderr, "Start basic_skiplist_test %d %d\n", sign, commit);
-
 	rlite *db;
 	void *tmp;
 	int retval;
 	RL_CALL_VERBOSE(setup_db, RL_OK, &db, commit, 1);
 	rl_skiplist *skiplist;
-	RL_CALL(rl_skiplist_create, RL_OK, db, &skiplist);
+	RL_CALL_VERBOSE(rl_skiplist_create, RL_OK, db, &skiplist);
 	long skiplist_page = db->next_empty_page;
-	RL_CALL(rl_write, RL_OK, db, &rl_data_type_skiplist, skiplist_page, skiplist);
+	RL_CALL_VERBOSE(rl_write, RL_OK, db, &rl_data_type_skiplist, skiplist_page, skiplist);
 
 	long i;
 	unsigned char *data = malloc(sizeof(unsigned char) * 1);
@@ -35,25 +33,20 @@ int basic_skiplist_test(int sign, int commit)
 	}
 	rl_free(data);
 	rl_close(db);
-	fprintf(stderr, "End basic_skiplist_test\n");
-	retval = 0;
-cleanup:
-	return retval;
+	PASS();
 }
 
-int basic_skiplist_first_node_test(int UNUSED(_))
+TEST basic_skiplist_first_node_test()
 {
-	fprintf(stderr, "Start basic_skiplist_first_node_test\n");
-
 	rlite *db;
 	int retval;
 	RL_CALL_VERBOSE(setup_db, RL_OK, &db, 0, 1);
 	rl_skiplist *skiplist;
 	rl_skiplist_node *node;
 	long rank;
-	RL_CALL(rl_skiplist_create, RL_OK, db, &skiplist);
+	RL_CALL_VERBOSE(rl_skiplist_create, RL_OK, db, &skiplist);
 	long skiplist_page = db->next_empty_page;
-	RL_CALL(rl_write, RL_OK, db, &rl_data_type_skiplist, skiplist_page, skiplist);
+	RL_CALL_VERBOSE(rl_write, RL_OK, db, &rl_data_type_skiplist, skiplist_page, skiplist);
 
 	long i, size;
 	unsigned char *data = malloc(sizeof(unsigned char) * 1);
@@ -84,24 +77,19 @@ int basic_skiplist_first_node_test(int UNUSED(_))
 
 	rl_free(data);
 	rl_close(db);
-	fprintf(stderr, "End basic_skiplist_first_node_test\n");
-	retval = 0;
-cleanup:
-	return retval;
+	PASS();
 }
 
-int basic_skiplist_delete_node_test(int commit)
+TEST basic_skiplist_delete_node_test(int commit)
 {
-	fprintf(stderr, "Start basic_skiplist_delete_node_test %d\n", commit);
-
 	void *tmp;
 	rlite *db;
 	int retval;
 	RL_CALL_VERBOSE(setup_db, RL_OK, &db, 0, 1);
 	rl_skiplist *skiplist;
-	RL_CALL(rl_skiplist_create, RL_OK, db, &skiplist);
+	RL_CALL_VERBOSE(rl_skiplist_create, RL_OK, db, &skiplist);
 	long skiplist_page = db->next_empty_page;
-	RL_CALL(rl_write, RL_OK, db, &rl_data_type_skiplist, skiplist_page, skiplist);
+	RL_CALL_VERBOSE(rl_write, RL_OK, db, &rl_data_type_skiplist, skiplist_page, skiplist);
 
 	long i;
 	unsigned char *data[10];
@@ -136,25 +124,20 @@ int basic_skiplist_delete_node_test(int commit)
 	for (i = 0; i < 10; i++) {
 		rl_free(data[i]);
 	}
-	fprintf(stderr, "End basic_skiplist_delete_node_test\n");
-	retval = 0;
-cleanup:
 	rl_close(db);
-	return retval;
+	PASS();
 }
 
-int basic_skiplist_node_by_rank(int UNUSED(_))
+TEST basic_skiplist_node_by_rank()
 {
-	fprintf(stderr, "Start basic_skiplist_node_by_rank\n");
-
 	rlite *db;
 	int retval;
 	RL_CALL_VERBOSE(setup_db, RL_OK, &db, 0, 1);
 	rl_skiplist *skiplist;
 	rl_skiplist_node *node;
-	RL_CALL(rl_skiplist_create, RL_OK, db, &skiplist);
+	RL_CALL_VERBOSE(rl_skiplist_create, RL_OK, db, &skiplist);
 	long skiplist_page = db->next_empty_page;
-	RL_CALL(rl_write, RL_OK, db, &rl_data_type_skiplist, skiplist_page, skiplist);
+	RL_CALL_VERBOSE(rl_write, RL_OK, db, &rl_data_type_skiplist, skiplist_page, skiplist);
 
 	long i;
 	unsigned char *data = malloc(sizeof(unsigned char) * 1);
@@ -169,25 +152,20 @@ int basic_skiplist_node_by_rank(int UNUSED(_))
 	}
 	rl_free(data);
 	rl_close(db);
-	fprintf(stderr, "End basic_skiplist_node_by_rank\n");
-	retval = 0;
-cleanup:
-	return retval;
+	PASS();
 }
 
-int basic_skiplist_iterator_test(int commit)
+TEST basic_skiplist_iterator_test(int commit)
 {
-	fprintf(stderr, "Start basic_skiplist_iterator_test %d\n", commit);
-
 	rlite *db;
 	int retval;
 	RL_CALL_VERBOSE(setup_db, RL_OK, &db, 0, 1);
 	rl_skiplist_iterator *iterator;
 	rl_skiplist *skiplist;
 	rl_skiplist_node *node;
-	RL_CALL(rl_skiplist_create, RL_OK, db, &skiplist);
+	RL_CALL_VERBOSE(rl_skiplist_create, RL_OK, db, &skiplist);
 	long skiplist_page = db->next_empty_page;
-	RL_CALL(rl_write, RL_OK, db, &rl_data_type_skiplist, skiplist_page, skiplist);
+	RL_CALL_VERBOSE(rl_write, RL_OK, db, &rl_data_type_skiplist, skiplist_page, skiplist);
 
 	int cmp;
 	long i;
@@ -255,25 +233,21 @@ int basic_skiplist_iterator_test(int commit)
 
 	rl_free(data);
 	rl_close(db);
-	fprintf(stderr, "End basic_skiplist_iterator_test\n");
-	retval = 0;
-cleanup:
-	return retval;
+	PASS();
 }
 
-RL_TEST_MAIN_START(skiplist_test)
+SUITE(skiplist_test)
 {
 	int i, j;
 	for (i = -1; i <= 1; i++) {
 		for (j = 0; j < 3; j++) {
-			RL_TEST(basic_skiplist_test, i, j);
+			RUN_TESTp(basic_skiplist_test, i, j);
 		}
 	}
-	RL_TEST(basic_skiplist_first_node_test, 0);
+	RUN_TEST(basic_skiplist_first_node_test);
 	for (i = 0; i < 3; i++) {
-		RL_TEST(basic_skiplist_delete_node_test, i);
-		RL_TEST(basic_skiplist_iterator_test, i);
+		RUN_TEST1(basic_skiplist_delete_node_test, i);
+		RUN_TEST1(basic_skiplist_iterator_test, i);
 	}
-	RL_TEST(basic_skiplist_node_by_rank, 0);
+	RUN_TEST(basic_skiplist_node_by_rank);
 }
-RL_TEST_MAIN_END

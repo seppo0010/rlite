@@ -5,7 +5,7 @@
 #include <stdio.h>
 #include <string.h>
 #include "../src/rlite.h"
-#include "test_util.h"
+#include "util.h"
 
 #define PRINT(str, strlen)\
 	{\
@@ -16,7 +16,7 @@
 		fprintf(stderr, "\n");\
 	}
 
-static int test_string()
+TEST test_string()
 {
 	int retval;
 	rlite *db = NULL;
@@ -28,12 +28,11 @@ static int test_string()
 	RL_CALL_VERBOSE(rl_dump, RL_OK, db, key, keylen, &testvalue, &testvaluelen);
 	EXPECT_BYTES(UNSIGN("\x00\x80\x00\x00\x00\x03\x61sd\x06\x00\xa4\xed\x80\xcb:7\x89\xd7"), 19, testvalue, testvaluelen);
 	rl_free(testvalue);
-cleanup:
 	rl_close(db);
-	return retval;
+	PASS();
 }
 
-static int test_list()
+TEST test_list()
 {
 	int retval;
 	rlite *db = NULL;
@@ -47,12 +46,11 @@ static int test_list()
 	RL_CALL_VERBOSE(rl_dump, RL_OK, db, key, keylen, &testvalue, &testvaluelen);
 	EXPECT_BYTES(UNSIGN("\x01\x80\x00\x00\x00\x02\x80\x00\x00\x00\x01\x62\x80\x00\x00\x00\x01\x61\x06\x00\x94\x46\xb5\x94\x1e\x1e_K"), 28, testvalue, testvaluelen);
 	rl_free(testvalue);
-cleanup:
 	rl_close(db);
-	return retval;
+	PASS();
 }
 
-static int test_set()
+TEST test_set()
 {
 	int retval;
 	rlite *db = NULL;
@@ -66,12 +64,11 @@ static int test_set()
 	RL_CALL_VERBOSE(rl_dump, RL_OK, db, key, keylen, &testvalue, &testvaluelen);
 	EXPECT_BYTES(UNSIGN("\x02\x80\x00\x00\x00\x02\x80\x00\x00\x00\x01\x61\x80\x00\x00\x00\x01\x62\x06\x00\xbb\x8c\x8c\xcf\x86{ \xfd"), 28, testvalue, testvaluelen);
 	rl_free(testvalue);
-cleanup:
 	rl_close(db);
-	return retval;
+	PASS();
 }
 
-static int test_zset()
+TEST test_zset()
 {
 	int retval;
 	rlite *db = NULL;
@@ -84,12 +81,11 @@ static int test_zset()
 	RL_CALL_VERBOSE(rl_dump, RL_OK, db, key, keylen, &testvalue, &testvaluelen);
 	EXPECT_BYTES(UNSIGN("\x03\x80\x00\x00\x00\x02\x80\x00\x00\x00\x01\x61\x08\x31\x2e\x32\x33\x30\x30\x30\x30\x80\x00\x00\x00\x01\x62\x08\x34\x2e\x35\x30\x30\x30\x30\x30\x06\x00\x62\xf2\xc1\x8b\x73\x18\x51\xe6"), 46, testvalue, testvaluelen);
 	rl_free(testvalue);
-cleanup:
 	rl_close(db);
-	return retval;
+	PASS();
 }
 
-static int test_hash()
+TEST test_hash()
 {
 	int retval;
 	rlite *db = NULL;
@@ -102,28 +98,15 @@ static int test_hash()
 	RL_CALL_VERBOSE(rl_dump, RL_OK, db, key, keylen, &testvalue, &testvaluelen);
 	EXPECT_BYTES(UNSIGN("\x04\x80\x00\x00\x00\x02\x80\x00\x00\x00\x05\x66\x69\x65\x6c\x64\x80\x00\x00\x00\x05\x76\x61\x6c\x75\x65\x80\x00\x00\x00\x06\x66\x69\x65\x6c\x64\x32\x80\x00\x00\x00\x06\x76\x61\x6c\x75\x65\x32\x06\x00\x74\xaf\xd2\x25\x1d\x50\x0c\xee"), 58, testvalue, testvaluelen);
 	rl_free(testvalue);
-cleanup:
 	rl_close(db);
-	return retval;
+	PASS();
 }
 
-RL_TEST_MAIN_START(dump_test)
+SUITE(dump_test)
 {
-	if (test_string()) {
-		return 1;
-	}
-	if (test_list()) {
-		return 1;
-	}
-	if (test_set()) {
-		return 1;
-	}
-	if (test_zset()) {
-		return 1;
-	}
-	if (test_hash()) {
-		return 1;
-	}
-	return 0;
+	RUN_TEST(test_string);
+	RUN_TEST(test_list);
+	RUN_TEST(test_set);
+	RUN_TEST(test_zset);
+	RUN_TEST(test_hash);
 }
-RL_TEST_MAIN_END

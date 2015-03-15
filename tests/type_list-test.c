@@ -4,7 +4,7 @@
 #include <math.h>
 #include "../src/rlite.h"
 #include "../src/type_list.h"
-#include "test_util.h"
+#include "util.h"
 
 #define UNSIGN(str) ((unsigned char *)(str))
 
@@ -23,16 +23,13 @@ static int create(rlite *db, unsigned char *key, long keylen, int maxsize, int _
 
 	}
 	EXPECT_LONG(size, maxsize);
-	retval = RL_OK;
-cleanup:
 	free(value);
 	return retval;
 }
 
-static int basic_test_lpush_llen(int maxsize, int _commit)
+TEST basic_test_lpush_llen(int maxsize, int _commit)
 {
 	int retval;
-	fprintf(stderr, "Start basic_test_lpush_llen %d %d\n", maxsize, _commit);
 
 	rlite *db = NULL;
 	unsigned char *value = malloc(sizeof(unsigned char) * 2);
@@ -47,18 +44,14 @@ static int basic_test_lpush_llen(int maxsize, int _commit)
 	RL_CALL_VERBOSE(rl_llen, RL_OK, db, key, keylen, &size);
 	EXPECT_LONG(size, maxsize);
 
-	fprintf(stderr, "End basic_test_lpush_llen\n");
-	retval = RL_OK;
-cleanup:
 	free(value);
 	rl_close(db);
-	return retval;
+	PASS();
 }
 
-static int basic_test_lpush_lpop(int maxsize, int _commit)
+TEST basic_test_lpush_lpop(int maxsize, int _commit)
 {
 	int retval;
-	fprintf(stderr, "Start basic_test_lpush_lpop %d %d\n", maxsize, _commit);
 
 	rlite *db = NULL;
 	unsigned char *value = malloc(sizeof(unsigned char) * 2);
@@ -81,18 +74,14 @@ static int basic_test_lpush_lpop(int maxsize, int _commit)
 		RL_BALANCED();
 	}
 
-	fprintf(stderr, "End basic_test_lpush_lpop\n");
-	retval = RL_OK;
-cleanup:
 	free(value);
 	rl_close(db);
-	return retval;
+	PASS();
 }
 
-static int basic_test_rpush_lpop(int maxsize, int _commit)
+TEST basic_test_rpush_lpop(int maxsize, int _commit)
 {
 	int retval;
-	fprintf(stderr, "Start basic_test_rpush_lpop %d %d\n", maxsize, _commit);
 
 	rlite *db = NULL;
 	unsigned char *value = malloc(sizeof(unsigned char) * 2);
@@ -115,18 +104,14 @@ static int basic_test_rpush_lpop(int maxsize, int _commit)
 		RL_BALANCED();
 	}
 
-	fprintf(stderr, "End basic_test_rpush_lpop\n");
-	retval = RL_OK;
-cleanup:
 	free(value);
 	rl_close(db);
-	return retval;
+	PASS();
 }
 
-static int basic_test_lpush_rpop(int maxsize, int _commit)
+TEST basic_test_lpush_rpop(int maxsize, int _commit)
 {
 	int retval;
-	fprintf(stderr, "Start basic_test_lpush_rpop %d %d\n", maxsize, _commit);
 
 	rlite *db = NULL;
 	unsigned char *value = malloc(sizeof(unsigned char) * 2);
@@ -150,18 +135,14 @@ static int basic_test_lpush_rpop(int maxsize, int _commit)
 		RL_BALANCED();
 	}
 
-	fprintf(stderr, "End basic_test_lpush_rpop\n");
-	retval = RL_OK;
-cleanup:
 	free(value);
 	rl_close(db);
-	return retval;
+	PASS();
 }
 
-static int basic_test_lpush_lindex(int maxsize, int _commit)
+TEST basic_test_lpush_lindex(int maxsize, int _commit)
 {
 	int retval;
-	fprintf(stderr, "Start basic_test_lpush_lindex %d %d\n", maxsize, _commit);
 
 	rlite *db = NULL;
 	unsigned char *value = malloc(sizeof(unsigned char) * 2);
@@ -184,18 +165,14 @@ static int basic_test_lpush_lindex(int maxsize, int _commit)
 		RL_BALANCED();
 	}
 
-	fprintf(stderr, "End basic_test_lpush_lindex\n");
-	retval = RL_OK;
-cleanup:
 	free(value);
 	rl_close(db);
-	return retval;
+	PASS();
 }
 
-static int basic_test_lpush_linsert(int _commit)
+TEST basic_test_lpush_linsert(int _commit)
 {
 	int retval;
-	fprintf(stderr, "Start basic_test_lpush_linsert %d\n", _commit);
 
 	rlite *db = NULL;
 	RL_CALL_VERBOSE(setup_db, RL_OK, &db, _commit, 1);
@@ -228,17 +205,13 @@ static int basic_test_lpush_linsert(int _commit)
 
 	RL_CALL_VERBOSE(rl_linsert, RL_NOT_FOUND, db, UNSIGN("non existent key"), 10, 1, UNSIGN("PP"), 2, UNSIGN("AB"), 2, NULL);
 
-	fprintf(stderr, "End basic_test_lpush_linsert\n");
-	retval = RL_OK;
-cleanup:
 	rl_close(db);
-	return retval;
+	PASS();
 }
 
-static int basic_test_lpushx(int _commit)
+TEST basic_test_lpushx(int _commit)
 {
 	int retval;
-	fprintf(stderr, "Start basic_test_lpushx %d\n", _commit);
 
 	rlite *db = NULL;
 	unsigned char *value = malloc(sizeof(unsigned char) * 2);
@@ -257,15 +230,12 @@ static int basic_test_lpushx(int _commit)
 	RL_CALL_VERBOSE(rl_llen, RL_OK, db, key, keylen, &size);
 	EXPECT_LONG(size, 2);
 
-	fprintf(stderr, "End basic_test_lpushx\n");
-	retval = RL_OK;
-cleanup:
 	free(value);
 	rl_close(db);
-	return retval;
+	PASS();
 }
 
-static int test_lrange(rlite *db, unsigned char *key, long keylen, long start, long stop, long cstart, long cstop)
+TEST test_lrange(rlite *db, unsigned char *key, long keylen, long start, long stop, long cstart, long cstop)
 {
 	unsigned char testvalue[2];
 	long testvaluelen = 2;
@@ -284,20 +254,17 @@ static int test_lrange(rlite *db, unsigned char *key, long keylen, long start, l
 		EXPECT_BYTES(values[pos], valueslen[pos], testvalue, testvaluelen);
 	}
 
-	retval = RL_OK;
-cleanup:
 	for (i = 0; i < size; i++) {
 		rl_free(values[i]);
 	}
 	rl_free(values);
 	rl_free(valueslen);
-	return retval;
+	PASS();
 }
 
-static int basic_test_lrange(int _commit)
+TEST basic_test_lrange(int _commit)
 {
 	int retval;
-	fprintf(stderr, "Start basic_test_lrange %d\n", _commit);
 
 	rlite *db = NULL;
 	unsigned char *value = malloc(sizeof(unsigned char) * 2);
@@ -316,15 +283,12 @@ static int basic_test_lrange(int _commit)
 	RL_CALL_VERBOSE(test_lrange, RL_OK, db, key, keylen, 0, -1000, 0, 0);
 	RL_CALL_VERBOSE(test_lrange, RL_OK, db, key, keylen, -5, -4, 5, 7);
 
-	fprintf(stderr, "End basic_test_lrange\n");
-	retval = RL_OK;
-cleanup:
 	free(value);
 	rl_close(db);
-	return retval;
+	PASS();
 }
 
-static int basic_test_lrem(int _commit)
+TEST basic_test_lrem(int _commit)
 {
 	int retval;
 	unsigned char *key = UNSIGN("my key");
@@ -334,7 +298,6 @@ static int basic_test_lrem(int _commit)
 	long size;
 	unsigned char **values;
 	long *valueslen;
-	fprintf(stderr, "Start basic_test_lrem %d\n", _commit);
 
 	rlite *db = NULL;
 	RL_CALL_VERBOSE(setup_db, RL_OK, &db, _commit, 1);
@@ -358,9 +321,7 @@ static int basic_test_lrem(int _commit)
 		long testvaluelen;\
 		RL_CALL_VERBOSE(rl_lindex, RL_OK, db, key, keylen, index, &testvalue, &testvaluelen);\
 		if (testvaluelen != (long)strlen((char *)value) || memcmp(testvalue, value, testvaluelen) != 0) {\
-			fprintf(stderr, "Expected value to be \"%s\" (%ld); got \"%s\" (%ld) instead on line %d\n", value, (long)strlen((char *)value), testvalue, testvaluelen, __LINE__);\
-			retval = RL_UNEXPECTED;\
-			goto cleanup;\
+			FAIL();\
 		}\
 		rl_free(testvalue);\
 	}
@@ -390,17 +351,13 @@ static int basic_test_lrem(int _commit)
 
 	RL_CALL_VERBOSE(rl_lrange, RL_NOT_FOUND, db, key, keylen, 0, -1, &size, &values, &valueslen);
 
-	fprintf(stderr, "End basic_test_lrem\n");
-	retval = RL_OK;
-cleanup:
 	rl_close(db);
-	return retval;
+	PASS();
 }
 
-static int basic_test_lset(int maxsize, int _commit)
+TEST basic_test_lset(int maxsize, int _commit)
 {
 	int retval;
-	fprintf(stderr, "Start basic_test_lset %d %d\n", maxsize, _commit);
 
 	rlite *db = NULL;
 	RL_CALL_VERBOSE(setup_db, RL_OK, &db, _commit, 1);
@@ -419,14 +376,11 @@ static int basic_test_lset(int maxsize, int _commit)
 	EXPECT_BYTES(value, valuelen, testvalue, testvaluelen);
 	rl_free(testvalue);
 
-	fprintf(stderr, "End basic_test_lset\n");
-	retval = RL_OK;
-cleanup:
 	rl_close(db);
-	return retval;
+	PASS();
 }
 
-static int basic_test_ltrim(int _commit)
+TEST basic_test_ltrim(int _commit)
 {
 	int retval;
 	unsigned char *key = UNSIGN("my key");
@@ -434,7 +388,6 @@ static int basic_test_ltrim(int _commit)
 	long i, size;
 	unsigned char **values;
 	long *valueslen;
-	fprintf(stderr, "Start basic_test_ltrim %d\n", _commit);
 
 	rlite *db = NULL;
 	RL_CALL_VERBOSE(setup_db, RL_OK, &db, _commit, 1);
@@ -457,28 +410,24 @@ static int basic_test_ltrim(int _commit)
 	RL_CALL_VERBOSE(rl_ltrim, RL_DELETED, db, key, keylen, 1, 0);
 	RL_BALANCED();
 
-	fprintf(stderr, "End basic_test_ltrim\n");
-	retval = RL_OK;
-cleanup:
 	rl_close(db);
-	return retval;
+	PASS();
 }
 
-RL_TEST_MAIN_START(type_list_test)
+SUITE(type_list_test)
 {
 	int i;
 	for (i = 0; i < 3; i++) {
-		RL_TEST(basic_test_lpush_llen, 100, i);
-		RL_TEST(basic_test_lpush_lpop, 100, i);
-		RL_TEST(basic_test_rpush_lpop, 100, i);
-		RL_TEST(basic_test_lpush_rpop, 500, i);
-		RL_TEST(basic_test_lpush_lindex, 100, i);
-		RL_TEST(basic_test_lpush_linsert, i);
-		RL_TEST(basic_test_lpushx, i);
-		RL_TEST(basic_test_lrange, i);
-		RL_TEST(basic_test_lrem, i);
-		RL_TEST(basic_test_lset, 100, i);
-		RL_TEST(basic_test_ltrim, i);
+		RUN_TESTp(basic_test_lpush_llen, 100, i);
+		RUN_TESTp(basic_test_lpush_lpop, 100, i);
+		RUN_TESTp(basic_test_rpush_lpop, 100, i);
+		RUN_TESTp(basic_test_lpush_rpop, 500, i);
+		RUN_TESTp(basic_test_lpush_lindex, 100, i);
+		RUN_TESTp(basic_test_lpush_linsert, i);
+		RUN_TESTp(basic_test_lpushx, i);
+		RUN_TESTp(basic_test_lrange, i);
+		RUN_TESTp(basic_test_lrem, i);
+		RUN_TESTp(basic_test_lset, 100, i);
+		RUN_TESTp(basic_test_ltrim, i);
 	}
 }
-RL_TEST_MAIN_END

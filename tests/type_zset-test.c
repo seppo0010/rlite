@@ -5,12 +5,12 @@
 #include "../src/rlite.h"
 #include "../src/type_zset.h"
 #include "../src/page_key.h"
-#include "test_util.h"
+#include "util.h"
+#include "greatest.h"
 
-int basic_test_zadd_zscore(int _commit)
+TEST basic_test_zadd_zscore(int _commit)
 {
 	int retval;
-	fprintf(stderr, "Start basic_test_zadd_zscore %d\n", _commit);
 
 	rlite *db = NULL;
 	RL_CALL_VERBOSE(setup_db, RL_OK, &db, _commit, 1);
@@ -25,23 +25,15 @@ int basic_test_zadd_zscore(int _commit)
 
 	RL_CALL_VERBOSE(rl_zscore, RL_FOUND, db, key, keylen, data, datalen, &score2);
 
-	if (score != score2) {
-		fprintf(stderr, "Expected score %lf to match score2 %lf\n", score, score2);
-		retval = RL_UNEXPECTED;
-		goto cleanup;
-	}
+	ASSERT_EQ(score, score2);
 
-	fprintf(stderr, "End basic_test_zadd_zscore\n");
-	retval = RL_OK;
-cleanup:
 	rl_close(db);
-	return retval;
+	PASS();
 }
 
-int basic_test_zadd_zscore2(int _commit)
+TEST basic_test_zadd_zscore2(int _commit)
 {
 	int retval;
-	fprintf(stderr, "Start basic_test_zadd_zscore2 %d\n", _commit);
 
 	rlite *db = NULL;
 	RL_CALL_VERBOSE(setup_db, RL_OK, &db, _commit, 1);
@@ -74,17 +66,13 @@ int basic_test_zadd_zscore2(int _commit)
 
 	RL_BALANCED();
 
-	fprintf(stderr, "End basic_test_zadd_zscore2\n");
-	retval = RL_OK;
-cleanup:
 	rl_close(db);
-	return retval;
+	PASS();
 }
 
-int basic_test_zadd_zrank(int _commit)
+TEST basic_test_zadd_zrank(int _commit)
 {
 	int retval;
-	fprintf(stderr, "Start basic_test_zadd_zrank %d\n", _commit);
 
 	rlite *db = NULL;
 	RL_CALL_VERBOSE(setup_db, RL_OK, &db, _commit, 1);
@@ -115,17 +103,13 @@ int basic_test_zadd_zrank(int _commit)
 	RL_CALL_VERBOSE(rl_zrevrank, RL_FOUND, db, key, keylen, data2, datalen2, &rank);
 	EXPECT_LONG(rank, 0);
 
-	fprintf(stderr, "End basic_test_zadd_zrank\n");
-	retval = RL_OK;
-cleanup:
 	rl_close(db);
-	return retval;
+	PASS();
 }
 
-int basic_test_invalidlex(int UNUSED(_))
+TEST basic_test_invalidlex()
 {
 	int retval;
-	fprintf(stderr, "Start basic_test_invalidlex %d\n", 0);
 
 	rlite *db = NULL;
 	RL_CALL_VERBOSE(setup_db, RL_OK, &db, 0, 1);
@@ -138,17 +122,13 @@ int basic_test_invalidlex(int UNUSED(_))
 	RL_CALL_VERBOSE(rl_zadd, RL_OK, db, key, keylen, score, data, datalen);
 	RL_CALL_VERBOSE(rl_zrangebylex, RL_UNEXPECTED, db, key, keylen, UNSIGN("foo"), 3, UNSIGN("bar"), 3, 0, -1, NULL);
 
-	fprintf(stderr, "End basic_test_invalidlex\n");
-	retval = RL_OK;
-cleanup:
 	rl_close(db);
-	return retval;
+	PASS();
 }
 
-int basic_test_zadd_zrange(int _commit)
+TEST basic_test_zadd_zrange(int _commit)
 {
 	int retval;
-	fprintf(stderr, "Start basic_test_zadd_zrange\n");
 
 	rlite *db = NULL;
 	RL_CALL_VERBOSE(setup_db, RL_OK, &db, 0, 1);
@@ -198,14 +178,11 @@ int basic_test_zadd_zrange(int _commit)
 	rl_free(data);
 	rl_zset_iterator_destroy(iterator);
 
-	fprintf(stderr, "End basic_test_zadd_zrange\n");
-	retval = RL_OK;
-cleanup:
 	rl_close(db);
-	return retval;
+	PASS();
 }
 
-static int test_zrangebylex(rlite *db, unsigned char *key, long keylen, long initial, long size, long total_size, unsigned char min[3], long minlen, unsigned char max[3], long maxlen, long offset, long limit)
+TEST test_zrangebylex(rlite *db, unsigned char *key, long keylen, long initial, long size, long total_size, unsigned char min[3], long minlen, unsigned char max[3], long maxlen, long offset, long limit)
 {
 	rl_zset_iterator *iterator;
 	long lexcount;
@@ -229,9 +206,7 @@ static int test_zrangebylex(rlite *db, unsigned char *key, long keylen, long ini
 			EXPECT_INT(data2_len, ((i & 1) == 0 ? 1 : 2));
 			EXPECT_INT(data2[0], 'a' + (i / 2));
 			if (data2_len == 2 && data2[1] != 'A' + i) {
-				fprintf(stderr, "Unexpected data[1] %d, expected %ld in iterator %ld on line %d\n", data2[1], 'A' + i, i, __LINE__);
-				retval = RL_UNEXPECTED;
-				goto cleanup;
+				FAIL();
 			}
 			i++;
 			rl_free(data2);
@@ -250,9 +225,7 @@ static int test_zrangebylex(rlite *db, unsigned char *key, long keylen, long ini
 			EXPECT_INT(data2_len, ((i & 1) == 0 ? 1 : 2));
 			EXPECT_INT(data2[0], 'a' + (i / 2));
 			if (data2_len == 2 && data2[1] != 'A' + i) {
-				fprintf(stderr, "Unexpected data[1] %d, expected %ld in iterator %ld on line %d\n", data2[1], 'A' + i, i, __LINE__);
-				retval = RL_UNEXPECTED;
-				goto cleanup;
+				FAIL();
 			}
 			i--;
 			rl_free(data2);
@@ -262,16 +235,13 @@ static int test_zrangebylex(rlite *db, unsigned char *key, long keylen, long ini
 
 		EXPECT_LONG(i, total_size - size - 1 - offset);
 	}
-	retval = RL_OK;
-cleanup:
-	return retval;
+	PASS();
 }
 
-int basic_test_zadd_zrangebylex(int _commit)
+TEST basic_test_zadd_zrangebylex(int _commit)
 {
 #define ZRANGEBYLEX_SIZE 20
 	int retval;
-	fprintf(stderr, "Start basic_test_zadd_zrangebylex %d\n", _commit);
 
 	rlite *db = NULL;
 	RL_CALL_VERBOSE(setup_db, RL_OK, &db, _commit, 1);
@@ -310,18 +280,14 @@ int basic_test_zadd_zrangebylex(int _commit)
 	run_test_zrangebylex('-', 0, 1, '[', 'f', 0, 2, 0, 11, 11, 0, -1);
 	run_test_zrangebylex('-', 0, 1, '[', 'c', 1, 3, 0, 5, 5, 0, -1);
 
-	fprintf(stderr, "End basic_test_zadd_zrangebylex\n");
-	retval = RL_OK;
-cleanup:
 	rl_close(db);
-	return retval;
+	PASS();
 }
 
-int basic_test_zadd_zrangebylex_with_empty(int _commit)
+TEST basic_test_zadd_zrangebylex_with_empty(int _commit)
 {
 	rl_zset_iterator *iterator;
 	int retval;
-	fprintf(stderr, "Start basic_test_zadd_zrangebylex_with_empty %d\n", _commit);
 
 	rlite *db = NULL;
 	RL_CALL_VERBOSE(setup_db, RL_OK, &db, _commit, 1);
@@ -360,14 +326,11 @@ int basic_test_zadd_zrangebylex_with_empty(int _commit)
 	RL_CALL_VERBOSE(rl_zset_iterator_next, RL_END, iterator, NULL, NULL, NULL);
 	EXPECT_INT(retval, RL_END);
 
-	fprintf(stderr, "End basic_test_zadd_zrangebylex_with_empty\n");
-	retval = RL_OK;
-cleanup:
 	rl_close(db);
-	return retval;
+	PASS();
 }
 
-static int test_zrangebyscore(rlite *db, unsigned char *key, long keylen, rl_zrangespec *range, long size, double base_score, double step)
+TEST test_zrangebyscore(rlite *db, unsigned char *key, long keylen, rl_zrangespec *range, long size, double base_score, double step)
 {
 	rl_zset_iterator *iterator;
 	long offset = 0, limit = -1;
@@ -396,16 +359,13 @@ static int test_zrangebyscore(rlite *db, unsigned char *key, long keylen, rl_zra
 		EXPECT_LONG(i, -1);
 	}
 
-	retval = RL_OK;
-cleanup:
-	return retval;
+	PASS();
 }
 
-int basic_test_zadd_zrangebyscore(int _commit)
+TEST basic_test_zadd_zrangebyscore(int _commit)
 {
 #define ZRANGEBYSCORE_SIZE 20
 	int retval;
-	fprintf(stderr, "Start basic_test_zadd_zrangebyscore %d\n", _commit);
 	rlite *db = NULL;
 	RL_CALL_VERBOSE(setup_db, RL_OK, &db, _commit, 1);
 
@@ -442,17 +402,13 @@ int basic_test_zadd_zrangebyscore(int _commit)
 	run_test_zrangebyscore(0, 1, 0, 1, 0, 0);
 	run_test_zrangebyscore(1, 0, 1, 0, 1, 1);
 
-	fprintf(stderr, "End basic_test_zadd_zrangebyscore\n");
-	retval = RL_OK;
-cleanup:
 	rl_close(db);
-	return retval;
+	PASS();
 }
 
-int basic_test_zadd_zrem(int _commit)
+TEST basic_test_zadd_zrem(int _commit)
 {
 	int retval;
-	fprintf(stderr, "Start basic_test_zadd_zrem %d\n", _commit);
 
 	rlite *db = NULL;
 	RL_CALL_VERBOSE(setup_db, RL_OK, &db, _commit, 1);
@@ -493,18 +449,14 @@ int basic_test_zadd_zrem(int _commit)
 
 	RL_CALL_VERBOSE(rl_key_get, RL_NOT_FOUND, db, key, keylen, NULL, NULL, NULL, NULL, NULL);
 
-	fprintf(stderr, "End basic_test_zadd_zrem\n");
-	retval = RL_OK;
-cleanup:
 	rl_close(db);
-	return retval;
+	PASS();
 }
 
 #define ZCOUNT_SIZE 100
-int basic_test_zadd_zcount(int _commit)
+TEST basic_test_zadd_zcount(int _commit)
 {
 	int retval;
-	fprintf(stderr, "Start basic_test_zadd_zcount %d\n", _commit);
 
 	rlite *db = NULL;
 	long datalen = 20;
@@ -556,18 +508,14 @@ int basic_test_zadd_zcount(int _commit)
 	RL_CALL_VERBOSE(rl_zcount, RL_OK, db, key, keylen, &range, &count);
 	EXPECT_LONG(count, 1);
 
-	fprintf(stderr, "End basic_test_zadd_zcount\n");
-	retval = RL_OK;
-cleanup:
 	rl_free(data);
 	rl_close(db);
-	return retval;
+	PASS();
 }
 
-int basic_test_zadd_zincrby(int _commit)
+TEST basic_test_zadd_zincrby(int _commit)
 {
 	int retval;
-	fprintf(stderr, "Start basic_test_zadd_zincrby %d\n", _commit);
 
 	rlite *db = NULL;
 	RL_CALL_VERBOSE(setup_db, RL_OK, &db, _commit, 1);
@@ -587,17 +535,13 @@ int basic_test_zadd_zincrby(int _commit)
 	EXPECT_DOUBLE(score * 2, newscore);
 	RL_BALANCED();
 
-	fprintf(stderr, "End basic_test_zadd_zincrby\n");
-	retval = RL_OK;
-cleanup:
 	rl_close(db);
-	return retval;
+	PASS();
 }
 
-int basic_test_zadd_dupe(int _commit)
+TEST basic_test_zadd_dupe(int _commit)
 {
 	int retval;
-	fprintf(stderr, "Start basic_test_zadd_dupe %d\n", _commit);
 
 	rlite *db = NULL;
 	RL_CALL_VERBOSE(setup_db, RL_OK, &db, _commit, 1);
@@ -617,17 +561,13 @@ int basic_test_zadd_dupe(int _commit)
 	RL_CALL_VERBOSE(rl_zscore, RL_FOUND, db, key, keylen, data, datalen, &newscore);
 	EXPECT_DOUBLE(score * 2, newscore);
 
-	fprintf(stderr, "End basic_test_zadd_dupe\n");
-	retval = RL_OK;
-cleanup:
 	rl_close(db);
-	return retval;
+	PASS();
 }
 
-static int basic_test_zincrnan(int _commit)
+TEST basic_test_zincrnan(int _commit)
 {
 	int retval;
-	fprintf(stderr, "Start basic_test_zincrnan %d\n", _commit);
 
 	rlite *db = NULL;
 	RL_CALL_VERBOSE(setup_db, RL_OK, &db, _commit, 1);
@@ -643,19 +583,15 @@ static int basic_test_zincrnan(int _commit)
 	RL_CALL_VERBOSE(rl_zincrby, RL_NAN, db, key, keylen, -INFINITY, data, datalen, NULL);
 	RL_BALANCED();
 
-	fprintf(stderr, "End basic_test_zincrnan\n");
-	retval = RL_OK;
-cleanup:
 	rl_close(db);
-	return retval;
+	PASS();
 }
 #define ZINTERSTORE_KEYS 4
 #define ZINTERSTORE_MEMBERS 10
-int basic_test_zadd_zinterstore(int _commit, long params[5])
+TEST basic_test_zadd_zinterstore(int _commit, long params[5])
 {
 	unsigned char *data = NULL;
 	int retval;
-	fprintf(stderr, "Start basic_test_zadd_zinterstore %d %ld %ld %ld %ld %ld\n", _commit, params[0], params[1], params[2], params[3], params[4]);
 
 	long keys_len[ZINTERSTORE_KEYS];
 	unsigned char *keys[ZINTERSTORE_KEYS];
@@ -710,23 +646,19 @@ int basic_test_zadd_zinterstore(int _commit, long params[5])
 
 	EXPECT_INT(retval, RL_END);
 
-	fprintf(stderr, "End basic_test_zadd_zinterstore\n");
 
-	retval = RL_OK;
-cleanup:
 	for (i = 0; i < ZINTERSTORE_KEYS; i++) {
 		rl_free(keys[i]);
 	}
 	rl_free(data);
 	rl_close(db);
-	return retval;
+	PASS();
 }
 
-int basic_test_sadd_zinterstore(int _commit, long params[5])
+TEST basic_test_sadd_zinterstore(int _commit, long params[5])
 {
 	unsigned char *data = NULL;
 	int retval;
-	fprintf(stderr, "Start basic_test_sadd_zinterstore %d %ld %ld %ld %ld %ld\n", _commit, params[0], params[1], params[2], params[3], params[4]);
 
 	long keys_len[ZINTERSTORE_KEYS];
 	unsigned char *keys[ZINTERSTORE_KEYS];
@@ -785,24 +717,20 @@ int basic_test_sadd_zinterstore(int _commit, long params[5])
 
 	EXPECT_INT(retval, RL_END);
 
-	fprintf(stderr, "End basic_test_sadd_zinterstore\n");
 
-	retval = RL_OK;
-cleanup:
 	for (i = 0; i < ZINTERSTORE_KEYS; i++) {
 		rl_free(keys[i]);
 	}
 	rl_free(data);
 	rl_close(db);
-	return retval;
+	PASS();
 }
 
 #define ZUNIONSTORE_KEYS 4
 #define ZUNIONSTORE_MEMBERS 10
-int basic_test_zadd_zunionstore(int _commit, long params[5])
+TEST basic_test_zadd_zunionstore(int _commit, long params[5])
 {
 	int retval;
-	fprintf(stderr, "Start basic_test_zadd_zunionstore %d %ld %ld %ld %ld %ld\n", _commit, params[0], params[1], params[2], params[3], params[4]);
 
 	long keys_len[ZUNIONSTORE_KEYS];
 	unsigned char *keys[ZUNIONSTORE_KEYS];
@@ -867,20 +795,16 @@ int basic_test_zadd_zunionstore(int _commit, long params[5])
 
 	EXPECT_INT(retval, RL_END);
 
-	fprintf(stderr, "End basic_test_zadd_zunionstore\n");
-	retval = RL_OK;
-cleanup:
 	for (i = 0; i < ZUNIONSTORE_KEYS; i++) {
 		rl_free(keys[i]);
 	}
 	rl_close(db);
-	return retval;
+	PASS();
 }
 
-int basic_test_zadd_zremrangebyrank(int _commit)
+TEST basic_test_zadd_zremrangebyrank(int _commit)
 {
 	int retval;
-	fprintf(stderr, "Start basic_test_zadd_zremrangebyrank %d\n", _commit);
 
 	rlite *db = NULL;
 	RL_CALL_VERBOSE(setup_db, RL_OK, &db, _commit, 1);
@@ -913,17 +837,13 @@ int basic_test_zadd_zremrangebyrank(int _commit)
 	run_test_zremrangebyrank(0, 0, 1, 14, 2);
 	run_test_zremrangebyrank(0, -1, 3, 0, -1);
 
-	fprintf(stderr, "End basic_test_zadd_zremrangebyrank\n");
-	retval = RL_OK;
-cleanup:
 	rl_close(db);
-	return retval;
+	PASS();
 }
 
-int basic_test_zadd_zremrangebyscore(int _commit)
+TEST basic_test_zadd_zremrangebyscore(int _commit)
 {
 	int retval;
-	fprintf(stderr, "Start basic_test_zadd_zremrangebyscore %d\n", _commit);
 
 	rlite *db = NULL;
 	RL_CALL_VERBOSE(setup_db, RL_OK, &db, _commit, 1);
@@ -947,8 +867,7 @@ int basic_test_zadd_zremrangebyscore(int _commit)
 	range.maxex = _maxex;\
 	retval = rl_zremrangebyscore(db, key, keylen, &range, &changed);\
 	if ((changed_expected > 0 && retval != RL_OK) || (changed_expected == 0 && retval != RL_NOT_FOUND)) {\
-		fprintf(stderr, "Failed to zremrangebyscore, got %d on line %d (changed_expected is %d)\n", retval, __LINE__, changed_expected);\
-		goto cleanup;\
+		FAIL();\
 	}\
 	EXPECT_LONG(changed, changed_expected);\
 	RL_BALANCED();\
@@ -968,18 +887,14 @@ int basic_test_zadd_zremrangebyscore(int _commit)
 	run_test_zremrangebyscore(180, 0, INFINITY, 0, 2, 17, 6);
 	run_test_zremrangebyscore(-INFINITY, 0, INFINITY, 0, 7, 0, -1);
 
-	fprintf(stderr, "End basic_test_zadd_zremrangebyscore\n");
-	retval = RL_OK;
-cleanup:
 	rl_close(db);
-	return retval;
+	PASS();
 }
 
-int basic_test_zadd_zremrangebylex(int _commit)
+TEST basic_test_zadd_zremrangebylex(int _commit)
 {
 #define ZRANGEBYLEX_SIZE 20
 	int retval;
-	fprintf(stderr, "Start basic_test_zadd_zremrangebylex%d\n", _commit);
 
 	rlite *db = NULL;
 	RL_CALL_VERBOSE(setup_db, RL_OK, &db, _commit, 1);
@@ -1012,17 +927,13 @@ int basic_test_zadd_zremrangebylex(int _commit)
 	run_remrangebylex("(a", "[b", 2);
 	run_test_zrangebylex('-', 0, 1, '+', 0, 0, 1, 3, ZRANGEBYLEX_SIZE - 3, ZRANGEBYLEX_SIZE, 0, -1)
 
-	fprintf(stderr, "End basic_test_zadd_zremrangebylex\n");
-	retval = RL_OK;
-cleanup:
 	rl_close(db);
-	return retval;
+	PASS();
 }
 
-int regression_zrangebyscore(int _commit)
+TEST regression_zrangebyscore(int _commit)
 {
 	int retval;
-	fprintf(stderr, "Start regression_zrangebyscore %d\n", _commit);
 
 	rlite *db = NULL;
 	RL_CALL_VERBOSE(setup_db, RL_OK, &db, _commit, 1);
@@ -1066,16 +977,13 @@ int regression_zrangebyscore(int _commit)
 	EXPECT_DOUBLE(score, 5.0);
 	RL_CALL_VERBOSE(rl_zset_iterator_next, RL_END, iterator, NULL, NULL, NULL);
 
-	fprintf(stderr, "End regression_zrangebyscore\n");
-	retval = RL_OK;
-cleanup:
 	rl_close(db);
-	return retval;
+	PASS();
 }
 
 #define SADD_ZINTERSTORE_TESTS 4
 #define ZINTERSTORE_TESTS 7
-RL_TEST_MAIN_START(type_zset_test)
+SUITE(type_zset_test)
 {
 	long sadd_zinterunionstore_tests[SADD_ZINTERSTORE_TESTS][5] = {
 		{RL_ZSET_AGGREGATE_SUM, 0, 0, 0, 3},
@@ -1095,30 +1003,29 @@ RL_TEST_MAIN_START(type_zset_test)
 	};
 	int i, j;
 	for (i = 0; i < 3; i++) {
-		RL_TEST(basic_test_zadd_zscore, i);
-		RL_TEST(basic_test_zadd_zscore2, i);
-		RL_TEST(basic_test_zadd_zrank, i);
-		RL_TEST(basic_test_zadd_zrem, i);
-		RL_TEST(basic_test_zadd_zcount, i);
-		RL_TEST(basic_test_zadd_zincrby, i);
-		RL_TEST(basic_test_zadd_zrangebylex, i);
-		RL_TEST(basic_test_zadd_zrangebylex_with_empty, i);
-		RL_TEST(basic_test_zadd_zrangebyscore, i);
-		RL_TEST(basic_test_zadd_zremrangebyrank, i);
-		RL_TEST(basic_test_zadd_zremrangebyscore, i);
-		RL_TEST(basic_test_zadd_zremrangebylex, i);
-		RL_TEST(basic_test_zadd_dupe, i);
-		RL_TEST(basic_test_zincrnan, i);
-		RL_TEST(regression_zrangebyscore, i);
+		RUN_TESTp(basic_test_zadd_zscore, i);
+		RUN_TESTp(basic_test_zadd_zscore2, i);
+		RUN_TESTp(basic_test_zadd_zrank, i);
+		RUN_TESTp(basic_test_zadd_zrem, i);
+		RUN_TESTp(basic_test_zadd_zcount, i);
+		RUN_TESTp(basic_test_zadd_zincrby, i);
+		RUN_TESTp(basic_test_zadd_zrangebylex, i);
+		RUN_TESTp(basic_test_zadd_zrangebylex_with_empty, i);
+		RUN_TESTp(basic_test_zadd_zrangebyscore, i);
+		RUN_TESTp(basic_test_zadd_zremrangebyrank, i);
+		RUN_TESTp(basic_test_zadd_zremrangebyscore, i);
+		RUN_TESTp(basic_test_zadd_zremrangebylex, i);
+		RUN_TESTp(basic_test_zadd_dupe, i);
+		RUN_TESTp(basic_test_zincrnan, i);
+		RUN_TESTp(regression_zrangebyscore, i);
 		for (j = 0; j < ZINTERSTORE_TESTS; j++) {
-			RL_TEST(basic_test_zadd_zinterstore, i, zinterunionstore_tests[j]);
-			RL_TEST(basic_test_zadd_zunionstore, i, zinterunionstore_tests[j]);
+			RUN_TESTp(basic_test_zadd_zinterstore, i, zinterunionstore_tests[j]);
+			RUN_TESTp(basic_test_zadd_zunionstore, i, zinterunionstore_tests[j]);
 		}
 		for (j = 0; j < SADD_ZINTERSTORE_TESTS; j++) {
-			RL_TEST(basic_test_sadd_zinterstore, i, sadd_zinterunionstore_tests[j]);
+			RUN_TESTp(basic_test_sadd_zinterstore, i, sadd_zinterunionstore_tests[j]);
 		}
-		RL_TEST(basic_test_zadd_zrange, 0);
+		RUN_TESTp(basic_test_zadd_zrange, 0);
 	}
-	RL_TEST(basic_test_invalidlex, 0);
+	RUN_TEST(basic_test_invalidlex);
 }
-RL_TEST_MAIN_END
