@@ -23,6 +23,9 @@ int rl_flock(FILE *fp, size_t UNUSED(start), size_t UNUSED(len), int type) {
 /*
  * Ideally, we only lock the block of the files we need. Some polishing seems
  * to be needed for this to work.
+ * Update: `fcntl` provides the same lock for two file descriptor in the same
+ * process, which defeats multi-thread safety. The current implementation
+ * uses file locks, which might be slower, but it is safer.
 int rl_flock(FILE *fp, size_t start, size_t len, int type) {
 	struct flock flck;
 
