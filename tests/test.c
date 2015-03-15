@@ -19,6 +19,18 @@
 #include "hyperloglog-test.h"
 #include "sort-test.h"
 #include "wal-test.h"
+#include "db-test.h"
+#include "hmulti-test.h"
+#include "echo-test.h"
+#include "hash-test.h"
+#include "parser-test.h"
+#include "hlist-test.h"
+#include "set-test.h"
+#include "hstring-test.h"
+#include "zset-test.h"
+#include "hsort-test.h"
+#include "scripting-test.h"
+#include "concurrency-test.h"
 #include "../src/util.h"
 
 #ifdef RL_DEBUG
@@ -58,5 +70,17 @@ int main() {
 	RUN_TEST(hyperloglog_test);
 	RUN_TEST(sort_test);
 	RUN_TEST(wal_test);
+	if (run_echo() != 0) { return 1; }
+	if (run_parser() != 0) { return 1; }
+	if (run_db() != 0) { return 1; }
+	if (run_multi() != 0) { return 1; }
+	if (run_list() != 0) { return 1; }
+	if (run_set() != 0) { return 1; }
+	if (run_string() != 0) { return 1; }
+	if (run_zset() != 0) { return 1; }
+	if (run_hash() != 0) { return 1; }
+	if (run_sort() != 0) { return 1; }
+	if (run_scripting_test() != 0) { return 1; }
+	if (run_concurrency() != 0) { return 1; }
 	return retval;
 }

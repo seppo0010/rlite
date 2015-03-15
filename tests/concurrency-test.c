@@ -2,7 +2,7 @@
 #include <unistd.h>
 #include <pthread.h>
 #include "hirlite.h"
-#include "test_hirlite.h"
+#include "test_util.h"
 
 #define FILEPATH "rlite-test.rld"
 #define INCREMENT_LIMIT 1000
@@ -54,20 +54,20 @@ int test_simple_concurrency() {
 	{
 		char* argv[100] = {"GET", "key", NULL};
 		reply = rliteCommandArgv(context1, populateArgvlen(argv, argvlen), argv, argvlen);
-		EXPECT_NIL(reply);
+		EXPECT_REPLY_NIL(reply);
 		rliteFreeReplyObject(reply);
 	}
 
 	{
 		char* argv[100] = {"set", "key", "value", NULL};
 		reply = rliteCommandArgv(context2, populateArgvlen(argv, argvlen), argv, argvlen);
-		EXPECT_STATUS(reply, "OK", 2);
+		EXPECT_REPLY_STATUS(reply, "OK", 2);
 		rliteFreeReplyObject(reply);
 	}
 	{
 		char* argv[100] = {"GET", "key", NULL};
 		reply = rliteCommandArgv(context1, populateArgvlen(argv, argvlen), argv, argvlen);
-		EXPECT_STR(reply, "value", 5);
+		EXPECT_REPLY_STR(reply, "value", 5);
 		rliteFreeReplyObject(reply);
 	}
 

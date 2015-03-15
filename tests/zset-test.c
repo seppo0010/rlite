@@ -1,6 +1,6 @@
 #include <string.h>
 #include "hirlite.h"
-#include "test_hirlite.h"
+#include "test_util.h"
 
 static int _zadd(rliteContext *context) {
 	size_t argvlen[6];
@@ -19,7 +19,7 @@ static int _zadd(rliteContext *context) {
 	argvlen[5] = 3;
 	argv[5] = "two";
 	reply = rliteCommandArgv(context, 6, argv, argvlen);
-	EXPECT_INTEGER(reply, 2);
+	EXPECT_REPLY_INTEGER(reply, 2);
 
 	rliteFreeReplyObject(reply);
 	return 0;
@@ -53,11 +53,11 @@ int test_zrange() {
 	argvlen[4] = 10;
 	argv[4] = "WITHSCORES";
 	reply = rliteCommandArgv(context, 5, argv, argvlen);
-	EXPECT_LEN(reply, 4);
-	EXPECT_STR(reply->element[0], "one", 3);
-	EXPECT_STR(reply->element[2], "two", 3);
-	EXPECT_STR(reply->element[1], "1", 1);
-	EXPECT_STR(reply->element[3], "2", 1);
+	EXPECT_REPLY_LEN(reply, 4);
+	EXPECT_REPLY_STR(reply->element[0], "one", 3);
+	EXPECT_REPLY_STR(reply->element[2], "two", 3);
+	EXPECT_REPLY_STR(reply->element[1], "1", 1);
+	EXPECT_REPLY_STR(reply->element[3], "2", 1);
 
 	rliteFreeReplyObject(reply);
 
@@ -85,11 +85,11 @@ int test_zrevrange() {
 	argvlen[4] = 10;
 	argv[4] = "WITHSCORES";
 	reply = rliteCommandArgv(context, 5, argv, argvlen);
-	EXPECT_LEN(reply, 4);
-	EXPECT_STR(reply->element[2], "one", 3);
-	EXPECT_STR(reply->element[0], "two", 3);
-	EXPECT_STR(reply->element[3], "1", 1);
-	EXPECT_STR(reply->element[1], "2", 1);
+	EXPECT_REPLY_LEN(reply, 4);
+	EXPECT_REPLY_STR(reply->element[2], "one", 3);
+	EXPECT_REPLY_STR(reply->element[0], "two", 3);
+	EXPECT_REPLY_STR(reply->element[3], "1", 1);
+	EXPECT_REPLY_STR(reply->element[1], "2", 1);
 
 	rliteFreeReplyObject(reply);
 
@@ -115,7 +115,7 @@ int test_zrem() {
 	argvlen[3] = 3;
 	argv[3] = "three";
 	reply = rliteCommandArgv(context, 4, argv, argvlen);
-	EXPECT_INTEGER(reply, 1);
+	EXPECT_REPLY_INTEGER(reply, 1);
 	rliteFreeReplyObject(reply);
 
 	argvlen[0] = 6;
@@ -125,8 +125,8 @@ int test_zrem() {
 	argvlen[3] = 2;
 	argv[3] = "-1";
 	reply = rliteCommandArgv(context, 4, argv, argvlen);
-	EXPECT_LEN(reply, 1);
-	EXPECT_STR(reply->element[0], "one", 3);
+	EXPECT_REPLY_LEN(reply, 1);
+	EXPECT_REPLY_STR(reply->element[0], "one", 3);
 
 	rliteFreeReplyObject(reply);
 
@@ -152,7 +152,7 @@ int test_zremrangebyrank() {
 	argvlen[3] = 1;
 	argv[3] = "3";
 	reply = rliteCommandArgv(context, 4, argv, argvlen);
-	EXPECT_INTEGER(reply, 2);
+	EXPECT_REPLY_INTEGER(reply, 2);
 	rliteFreeReplyObject(reply);
 
 	argvlen[0] = 6;
@@ -162,7 +162,7 @@ int test_zremrangebyrank() {
 	argvlen[3] = 2;
 	argv[3] = "-1";
 	reply = rliteCommandArgv(context, 4, argv, argvlen);
-	EXPECT_LEN(reply, 0);
+	EXPECT_REPLY_LEN(reply, 0);
 	rliteFreeReplyObject(reply);
 
 	rliteFree(context);
@@ -187,7 +187,7 @@ int test_zremrangebyscore() {
 	argvlen[3] = 1;
 	argv[3] = "3";
 	reply = rliteCommandArgv(context, 4, argv, argvlen);
-	EXPECT_INTEGER(reply, 2);
+	EXPECT_REPLY_INTEGER(reply, 2);
 	rliteFreeReplyObject(reply);
 
 	argvlen[0] = 6;
@@ -197,7 +197,7 @@ int test_zremrangebyscore() {
 	argvlen[3] = 2;
 	argv[3] = "-1";
 	reply = rliteCommandArgv(context, 4, argv, argvlen);
-	EXPECT_LEN(reply, 0);
+	EXPECT_REPLY_LEN(reply, 0);
 	rliteFreeReplyObject(reply);
 
 	rliteFree(context);
@@ -222,7 +222,7 @@ int test_zcard() {
 	size_t argvlen[100];
 	rliteReply* reply;
 	reply = rliteCommandArgv(context, populateArgvlen(argv, argvlen), argv, argvlen);
-	EXPECT_INTEGER(reply, 2);
+	EXPECT_REPLY_INTEGER(reply, 2);
 	rliteFreeReplyObject(reply);
 
 	rliteFree(context);
@@ -245,7 +245,7 @@ int test_zinterstore() {
 
 	char *argv3[100] = {"ZINTERSTORE", "out", "2", "key1", "key2", NULL};
 	reply = rliteCommandArgv(context, populateArgvlen(argv3, argvlen), argv3, argvlen);
-	EXPECT_INTEGER(reply, 2);
+	EXPECT_REPLY_INTEGER(reply, 2);
 	rliteFreeReplyObject(reply);
 
 	rliteFree(context);
@@ -268,7 +268,7 @@ int test_zunionstore() {
 
 	char *argv3[100] = {"ZUNIONSTORE", "out", "2", "key1", "key2", NULL};
 	reply = rliteCommandArgv(context, populateArgvlen(argv3, argvlen), argv3, argvlen);
-	EXPECT_INTEGER(reply, 3);
+	EXPECT_REPLY_INTEGER(reply, 3);
 	rliteFreeReplyObject(reply);
 
 	rliteFree(context);
@@ -287,9 +287,9 @@ int test_zrangebyscore() {
 
 	char *argv2[100] = {"ZRANGEBYSCORE", "mykey", "0", "2", NULL};
 	reply = rliteCommandArgv(context, populateArgvlen(argv2, argvlen), argv2, argvlen);
-	EXPECT_LEN(reply, 2);
-	EXPECT_STR(reply->element[0], "one", 3);
-	EXPECT_STR(reply->element[1], "two", 3);
+	EXPECT_REPLY_LEN(reply, 2);
+	EXPECT_REPLY_STR(reply->element[0], "one", 3);
+	EXPECT_REPLY_STR(reply->element[1], "two", 3);
 	rliteFreeReplyObject(reply);
 
 	rliteFree(context);
@@ -308,9 +308,9 @@ int test_zrevrangebyscore() {
 
 	char *argv2[100] = {"ZREVRANGEBYSCORE", "mykey", "2", "0", NULL};
 	reply = rliteCommandArgv(context, populateArgvlen(argv2, argvlen), argv2, argvlen);
-	EXPECT_LEN(reply, 2);
-	EXPECT_STR(reply->element[0], "two", 3);
-	EXPECT_STR(reply->element[1], "one", 3);
+	EXPECT_REPLY_LEN(reply, 2);
+	EXPECT_REPLY_STR(reply->element[0], "two", 3);
+	EXPECT_REPLY_STR(reply->element[1], "one", 3);
 	rliteFreeReplyObject(reply);
 
 	rliteFree(context);
@@ -329,9 +329,9 @@ int test_zrangebylex() {
 
 	char *argv2[100] = {"ZRANGEBYLEX", "mykey", "-", "[b", NULL};
 	reply = rliteCommandArgv(context, populateArgvlen(argv2, argvlen), argv2, argvlen);
-	EXPECT_LEN(reply, 2);
-	EXPECT_STR(reply->element[0], "a", 1);
-	EXPECT_STR(reply->element[1], "b", 1);
+	EXPECT_REPLY_LEN(reply, 2);
+	EXPECT_REPLY_STR(reply->element[0], "a", 1);
+	EXPECT_REPLY_STR(reply->element[1], "b", 1);
 
 	rliteFreeReplyObject(reply);
 
@@ -351,9 +351,9 @@ int test_zrevrangebylex() {
 
 	char *argv2[100] = {"ZREVRANGEBYLEX", "mykey", "[b", "-", NULL};
 	reply = rliteCommandArgv(context, populateArgvlen(argv2, argvlen), argv2, argvlen);
-	EXPECT_LEN(reply, 2);
-	EXPECT_STR(reply->element[0], "b", 1);
-	EXPECT_STR(reply->element[1], "a", 1);
+	EXPECT_REPLY_LEN(reply, 2);
+	EXPECT_REPLY_STR(reply->element[0], "b", 1);
+	EXPECT_REPLY_STR(reply->element[1], "a", 1);
 
 	rliteFreeReplyObject(reply);
 
@@ -373,7 +373,7 @@ int test_zlexcount() {
 
 	char *argv2[100] = {"ZLEXCOUNT", "mykey", "-", "[b", NULL};
 	reply = rliteCommandArgv(context, populateArgvlen(argv2, argvlen), argv2, argvlen);
-	EXPECT_INTEGER(reply, 2);
+	EXPECT_REPLY_INTEGER(reply, 2);
 
 	rliteFreeReplyObject(reply);
 
@@ -393,7 +393,7 @@ int test_zscore() {
 	size_t argvlen[100];
 
 	reply = rliteCommandArgv(context, populateArgvlen(argv, argvlen), argv, argvlen);
-	EXPECT_STR(reply, "1", 1);
+	EXPECT_REPLY_STR(reply, "1", 1);
 
 	rliteFreeReplyObject(reply);
 
@@ -413,7 +413,7 @@ int test_zrank() {
 	size_t argvlen[100];
 
 	reply = rliteCommandArgv(context, populateArgvlen(argv, argvlen), argv, argvlen);
-	EXPECT_INTEGER(reply, 0);
+	EXPECT_REPLY_INTEGER(reply, 0);
 
 	rliteFreeReplyObject(reply);
 
@@ -433,7 +433,7 @@ int test_zrevrank() {
 	size_t argvlen[100];
 
 	reply = rliteCommandArgv(context, populateArgvlen(argv, argvlen), argv, argvlen);
-	EXPECT_INTEGER(reply, 1);
+	EXPECT_REPLY_INTEGER(reply, 1);
 
 	rliteFreeReplyObject(reply);
 
@@ -453,7 +453,7 @@ int test_zcount() {
 	size_t argvlen[100];
 
 	reply = rliteCommandArgv(context, populateArgvlen(argv, argvlen), argv, argvlen);
-	EXPECT_INTEGER(reply, 2);
+	EXPECT_REPLY_INTEGER(reply, 2);
 
 	rliteFreeReplyObject(reply);
 
@@ -473,7 +473,7 @@ int test_exists() {
 	size_t argvlen[100];
 
 	reply = rliteCommandArgv(context, populateArgvlen(argv, argvlen), argv, argvlen);
-	EXPECT_INTEGER(reply, 1);
+	EXPECT_REPLY_INTEGER(reply, 1);
 
 	rliteFreeReplyObject(reply);
 
@@ -493,13 +493,13 @@ int test_del() {
 	size_t argvlen[100];
 
 	reply = rliteCommandArgv(context, populateArgvlen(argv, argvlen), argv, argvlen);
-	EXPECT_INTEGER(reply, 1);
+	EXPECT_REPLY_INTEGER(reply, 1);
 	rliteFreeReplyObject(reply);
 
 	char* argv2[100] = {"exists", "mykey", NULL};
 
 	reply = rliteCommandArgv(context, populateArgvlen(argv2, argvlen), argv2, argvlen);
-	EXPECT_INTEGER(reply, 0);
+	EXPECT_REPLY_INTEGER(reply, 0);
 	rliteFreeReplyObject(reply);
 
 	rliteFree(context);
@@ -518,7 +518,7 @@ int test_debug() {
 	size_t argvlen[100];
 
 	reply = rliteCommandArgv(context, populateArgvlen(argv, argvlen), argv, argvlen);
-	NO_ERROR(reply);
+	EXPECT_REPLY_NO_ERROR(reply);
 
 	rliteFreeReplyObject(reply);
 

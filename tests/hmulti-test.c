@@ -1,7 +1,7 @@
 #include <string.h>
 #include <unistd.h>
 #include "hirlite.h"
-#include "test_hirlite.h"
+#include "test_util.h"
 
 static int populateArgvlen(char *argv[], size_t argvlen[]) {
 	int i;
@@ -20,37 +20,37 @@ int test_multi_nowatch() {
 	{
 		char* argv[100] = {"multi", NULL};
 		reply = rliteCommandArgv(context, populateArgvlen(argv, argvlen), argv, argvlen);
-		EXPECT_STATUS(reply, "OK", 2);
+		EXPECT_REPLY_STATUS(reply, "OK", 2);
 		rliteFreeReplyObject(reply);
 	}
 
 	{
 		char* argv[100] = {"set", "key", "value", NULL};
 		reply = rliteCommandArgv(context, populateArgvlen(argv, argvlen), argv, argvlen);
-		EXPECT_STATUS(reply, "QUEUED", 6);
+		EXPECT_REPLY_STATUS(reply, "QUEUED", 6);
 		rliteFreeReplyObject(reply);
 	}
 
 	{
 		char* argv[100] = {"get", "key", NULL};
 		reply = rliteCommandArgv(context, populateArgvlen(argv, argvlen), argv, argvlen);
-		EXPECT_STATUS(reply, "QUEUED", 6);
+		EXPECT_REPLY_STATUS(reply, "QUEUED", 6);
 		rliteFreeReplyObject(reply);
 	}
 
 	{
 		char* argv[100] = {"exec", NULL};
 		reply = rliteCommandArgv(context, populateArgvlen(argv, argvlen), argv, argvlen);
-		EXPECT_LEN(reply, 2);
-		EXPECT_STATUS(reply->element[0], "OK", 2);
-		EXPECT_STR(reply->element[1], "value", 5);
+		EXPECT_REPLY_LEN(reply, 2);
+		EXPECT_REPLY_STATUS(reply->element[0], "OK", 2);
+		EXPECT_REPLY_STR(reply->element[1], "value", 5);
 		rliteFreeReplyObject(reply);
 	}
 
 	{
 		char* argv[100] = {"get", "key", NULL};
 		reply = rliteCommandArgv(context, populateArgvlen(argv, argvlen), argv, argvlen);
-		EXPECT_STR(reply, "value", 5);
+		EXPECT_REPLY_STR(reply, "value", 5);
 		rliteFreeReplyObject(reply);
 	}
 
@@ -67,36 +67,36 @@ int test_multi_watch_nonexistent_ok() {
 	{
 		char* argv[100] = {"watch", "key", NULL};
 		reply = rliteCommandArgv(context, populateArgvlen(argv, argvlen), argv, argvlen);
-		EXPECT_STATUS(reply, "OK", 2);
+		EXPECT_REPLY_STATUS(reply, "OK", 2);
 		rliteFreeReplyObject(reply);
 	}
 
 	{
 		char* argv[100] = {"multi", NULL};
 		reply = rliteCommandArgv(context, populateArgvlen(argv, argvlen), argv, argvlen);
-		EXPECT_STATUS(reply, "OK", 2);
+		EXPECT_REPLY_STATUS(reply, "OK", 2);
 		rliteFreeReplyObject(reply);
 	}
 
 	{
 		char* argv[100] = {"set", "key", "value", NULL};
 		reply = rliteCommandArgv(context, populateArgvlen(argv, argvlen), argv, argvlen);
-		EXPECT_STATUS(reply, "QUEUED", 6);
+		EXPECT_REPLY_STATUS(reply, "QUEUED", 6);
 		rliteFreeReplyObject(reply);
 	}
 
 	{
 		char* argv[100] = {"exec", NULL};
 		reply = rliteCommandArgv(context, populateArgvlen(argv, argvlen), argv, argvlen);
-		EXPECT_LEN(reply, 1);
-		EXPECT_STATUS(reply->element[0], "OK", 2);
+		EXPECT_REPLY_LEN(reply, 1);
+		EXPECT_REPLY_STATUS(reply->element[0], "OK", 2);
 		rliteFreeReplyObject(reply);
 	}
 
 	{
 		char* argv[100] = {"get", "key", NULL};
 		reply = rliteCommandArgv(context, populateArgvlen(argv, argvlen), argv, argvlen);
-		EXPECT_STR(reply, "value", 5);
+		EXPECT_REPLY_STR(reply, "value", 5);
 		rliteFreeReplyObject(reply);
 	}
 
@@ -113,43 +113,43 @@ int test_multi_watch_existent_ok() {
 	{
 		char* argv[100] = {"set", "key", "value", NULL};
 		reply = rliteCommandArgv(context, populateArgvlen(argv, argvlen), argv, argvlen);
-		EXPECT_STATUS(reply, "OK", 2);
+		EXPECT_REPLY_STATUS(reply, "OK", 2);
 		rliteFreeReplyObject(reply);
 	}
 
 	{
 		char* argv[100] = {"watch", "key", NULL};
 		reply = rliteCommandArgv(context, populateArgvlen(argv, argvlen), argv, argvlen);
-		EXPECT_STATUS(reply, "OK", 2);
+		EXPECT_REPLY_STATUS(reply, "OK", 2);
 		rliteFreeReplyObject(reply);
 	}
 
 	{
 		char* argv[100] = {"multi", NULL};
 		reply = rliteCommandArgv(context, populateArgvlen(argv, argvlen), argv, argvlen);
-		EXPECT_STATUS(reply, "OK", 2);
+		EXPECT_REPLY_STATUS(reply, "OK", 2);
 		rliteFreeReplyObject(reply);
 	}
 
 	{
 		char* argv[100] = {"set", "key", "value2", NULL};
 		reply = rliteCommandArgv(context, populateArgvlen(argv, argvlen), argv, argvlen);
-		EXPECT_STATUS(reply, "QUEUED", 6);
+		EXPECT_REPLY_STATUS(reply, "QUEUED", 6);
 		rliteFreeReplyObject(reply);
 	}
 
 	{
 		char* argv[100] = {"exec", NULL};
 		reply = rliteCommandArgv(context, populateArgvlen(argv, argvlen), argv, argvlen);
-		EXPECT_LEN(reply, 1);
-		EXPECT_STATUS(reply->element[0], "OK", 2);
+		EXPECT_REPLY_LEN(reply, 1);
+		EXPECT_REPLY_STATUS(reply->element[0], "OK", 2);
 		rliteFreeReplyObject(reply);
 	}
 
 	{
 		char* argv[100] = {"get", "key", NULL};
 		reply = rliteCommandArgv(context, populateArgvlen(argv, argvlen), argv, argvlen);
-		EXPECT_STR(reply, "value2", 6);
+		EXPECT_REPLY_STR(reply, "value2", 6);
 		rliteFreeReplyObject(reply);
 	}
 
@@ -166,35 +166,35 @@ int test_multi_watch_changed() {
 	{
 		char* argv[100] = {"watch", "key", NULL};
 		reply = rliteCommandArgv(context, populateArgvlen(argv, argvlen), argv, argvlen);
-		EXPECT_STATUS(reply, "OK", 2);
+		EXPECT_REPLY_STATUS(reply, "OK", 2);
 		rliteFreeReplyObject(reply);
 	}
 
 	{
 		char* argv[100] = {"set", "key", "value", NULL};
 		reply = rliteCommandArgv(context, populateArgvlen(argv, argvlen), argv, argvlen);
-		EXPECT_STATUS(reply, "OK", 2);
+		EXPECT_REPLY_STATUS(reply, "OK", 2);
 		rliteFreeReplyObject(reply);
 	}
 
 	{
 		char* argv[100] = {"multi", NULL};
 		reply = rliteCommandArgv(context, populateArgvlen(argv, argvlen), argv, argvlen);
-		EXPECT_STATUS(reply, "OK", 2);
+		EXPECT_REPLY_STATUS(reply, "OK", 2);
 		rliteFreeReplyObject(reply);
 	}
 
 	{
 		char* argv[100] = {"set", "key", "value2", NULL};
 		reply = rliteCommandArgv(context, populateArgvlen(argv, argvlen), argv, argvlen);
-		EXPECT_STATUS(reply, "QUEUED", 6);
+		EXPECT_REPLY_STATUS(reply, "QUEUED", 6);
 		rliteFreeReplyObject(reply);
 	}
 
 	{
 		char* argv[100] = {"exec", NULL};
 		reply = rliteCommandArgv(context, populateArgvlen(argv, argvlen), argv, argvlen);
-		EXPECT_NIL(reply);
+		EXPECT_REPLY_NIL(reply);
 		rliteFreeReplyObject(reply);
 	}
 
@@ -211,43 +211,43 @@ int test_multi_unwatch_changed() {
 	{
 		char* argv[100] = {"watch", "key", NULL};
 		reply = rliteCommandArgv(context, populateArgvlen(argv, argvlen), argv, argvlen);
-		EXPECT_STATUS(reply, "OK", 2);
+		EXPECT_REPLY_STATUS(reply, "OK", 2);
 		rliteFreeReplyObject(reply);
 	}
 
 	{
 		char* argv[100] = {"unwatch", NULL};
 		reply = rliteCommandArgv(context, populateArgvlen(argv, argvlen), argv, argvlen);
-		EXPECT_STATUS(reply, "OK", 2);
+		EXPECT_REPLY_STATUS(reply, "OK", 2);
 		rliteFreeReplyObject(reply);
 	}
 
 	{
 		char* argv[100] = {"set", "key", "value", NULL};
 		reply = rliteCommandArgv(context, populateArgvlen(argv, argvlen), argv, argvlen);
-		EXPECT_STATUS(reply, "OK", 2);
+		EXPECT_REPLY_STATUS(reply, "OK", 2);
 		rliteFreeReplyObject(reply);
 	}
 
 	{
 		char* argv[100] = {"multi", NULL};
 		reply = rliteCommandArgv(context, populateArgvlen(argv, argvlen), argv, argvlen);
-		EXPECT_STATUS(reply, "OK", 2);
+		EXPECT_REPLY_STATUS(reply, "OK", 2);
 		rliteFreeReplyObject(reply);
 	}
 
 	{
 		char* argv[100] = {"set", "key", "value2", NULL};
 		reply = rliteCommandArgv(context, populateArgvlen(argv, argvlen), argv, argvlen);
-		EXPECT_STATUS(reply, "QUEUED", 6);
+		EXPECT_REPLY_STATUS(reply, "QUEUED", 6);
 		rliteFreeReplyObject(reply);
 	}
 
 	{
 		char* argv[100] = {"exec", NULL};
 		reply = rliteCommandArgv(context, populateArgvlen(argv, argvlen), argv, argvlen);
-		EXPECT_LEN(reply, 1);
-		EXPECT_STATUS(reply->element[0], "OK", 2);
+		EXPECT_REPLY_LEN(reply, 1);
+		EXPECT_REPLY_STATUS(reply->element[0], "OK", 2);
 		rliteFreeReplyObject(reply);
 	}
 
@@ -264,42 +264,42 @@ int test_multi_discard() {
 	{
 		char* argv[100] = {"watch", "key", NULL};
 		reply = rliteCommandArgv(context, populateArgvlen(argv, argvlen), argv, argvlen);
-		EXPECT_STATUS(reply, "OK", 2);
+		EXPECT_REPLY_STATUS(reply, "OK", 2);
 		rliteFreeReplyObject(reply);
 	}
 
 	{
 		char* argv[100] = {"set", "key", "value", NULL};
 		reply = rliteCommandArgv(context, populateArgvlen(argv, argvlen), argv, argvlen);
-		EXPECT_STATUS(reply, "OK", 2);
+		EXPECT_REPLY_STATUS(reply, "OK", 2);
 		rliteFreeReplyObject(reply);
 	}
 
 	{
 		char* argv[100] = {"multi", NULL};
 		reply = rliteCommandArgv(context, populateArgvlen(argv, argvlen), argv, argvlen);
-		EXPECT_STATUS(reply, "OK", 2);
+		EXPECT_REPLY_STATUS(reply, "OK", 2);
 		rliteFreeReplyObject(reply);
 	}
 
 	{
 		char* argv[100] = {"set", "key", "value2", NULL};
 		reply = rliteCommandArgv(context, populateArgvlen(argv, argvlen), argv, argvlen);
-		EXPECT_STATUS(reply, "QUEUED", 6);
+		EXPECT_REPLY_STATUS(reply, "QUEUED", 6);
 		rliteFreeReplyObject(reply);
 	}
 
 	{
 		char* argv[100] = {"discard", NULL};
 		reply = rliteCommandArgv(context, populateArgvlen(argv, argvlen), argv, argvlen);
-		EXPECT_STATUS(reply, "OK", 2);
+		EXPECT_REPLY_STATUS(reply, "OK", 2);
 		rliteFreeReplyObject(reply);
 	}
 
 	{
 		char* argv[100] = {"get", "key", NULL};
 		reply = rliteCommandArgv(context, populateArgvlen(argv, argvlen), argv, argvlen);
-		EXPECT_STR(reply, "value", 5);
+		EXPECT_REPLY_STR(reply, "value", 5);
 		rliteFreeReplyObject(reply);
 	}
 
