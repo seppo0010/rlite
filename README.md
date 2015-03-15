@@ -103,9 +103,8 @@ For more information about the file format check out
   - [x] unit/introspection
 - [ ] pubsub
 - [ ] brpop/brpoplpush
-- [ ] multi process safe
-- [ ] multi thread safe
-- [ ] write ahead log
+- [x] multi process safe
+- [x] write ahead log
 
 ## Installation
 
