@@ -54,6 +54,9 @@
 #define RLITE_FLOCK_EX 2
 #define RLITE_FLOCK_UN 3
 
+#define RLITE_INTERNAL_DB_NO 0
+#define RLITE_INTERNAL_DB_LUA 1
+
 struct rlite;
 struct rl_btree;
 
@@ -97,6 +100,7 @@ typedef struct rlite {
 	long page_size;
 	void *driver;
 	int driver_type;
+	int selected_internal;
 	int selected_database;
 	int number_of_databases;
 	long *databases;
@@ -131,7 +135,9 @@ int rl_dirty_hash(struct rlite *db, unsigned char **hash);
 int rl_commit(struct rlite *db);
 int rl_discard(struct rlite *db);
 int rl_is_balanced(struct rlite *db);
+int rl_get_selected_db(struct rlite *db);
 int rl_select(struct rlite *db, int selected_database);
+int rl_select_internal(struct rlite *db, int internal);
 int rl_move(struct rlite *db, unsigned char *key, long keylen, int database);
 int rl_rename(struct rlite *db, const unsigned char *src, long srclen, const unsigned char *target, long targetlen, int overwrite);
 int rl_dbsize(struct rlite *db, long *size);

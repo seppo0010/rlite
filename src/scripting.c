@@ -52,25 +52,23 @@ static int setScript(rliteClient *c, char *script, long scriptlen) {
 	int retval;
 	char hash[40];
 	sha1hex(hash, script, scriptlen);
-	int selected_database = c->context->db->selected_database;
-	c->context->db->selected_database = c->context->db->number_of_databases;
+	RL_CALL(rl_select_internal, RL_OK, c->context->db, RLITE_INTERNAL_DB_LUA);
 
 	RL_CALL(rl_set, RL_OK, c->context->db, (unsigned char *)hash, 40, (unsigned char *)script, scriptlen, 0, 0);
 
 cleanup:
-	c->context->db->selected_database = selected_database;
+	rl_select_internal(c->context->db, RLITE_INTERNAL_DB_NO);
 	return retval;
 }
 
 static int getScript(rliteClient *c, char hash[40], char **script, long *scriptlen) {
 	int retval;
-	int selected_database = c->context->db->selected_database;
-	c->context->db->selected_database = c->context->db->number_of_databases;
+	RL_CALL(rl_select_internal, RL_OK, c->context->db, RLITE_INTERNAL_DB_LUA);
 
 	RL_CALL(rl_get, RL_OK, c->context->db, (unsigned char *)hash, 40, (unsigned char **)script, scriptlen);
 
 cleanup:
-	c->context->db->selected_database = selected_database;
+	rl_select_internal(c->context->db, RLITE_INTERNAL_DB_NO);
 	return retval;
 }
 

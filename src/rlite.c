@@ -271,6 +271,7 @@ int rl_open(const char *filename, rlite **_db, int flags)
 	db->databases = NULL;
 	db->initial_databases = NULL;
 	db->selected_database = 0;
+	db->selected_internal = RLITE_INTERNAL_DB_NO;
 	db->page_size = DEFAULT_PAGE_SIZE;
 	db->read_pages = db->write_pages = NULL;
 	db->read_pages_alloc = db->read_pages_len = db->write_pages_len = db->write_pages_alloc = 0;
@@ -395,6 +396,7 @@ int rl_create_db(rlite *db)
 	db->initial_number_of_pages =
 	db->number_of_pages = 1;
 	db->selected_database = 0;
+	db->selected_internal = RLITE_INTERNAL_DB_NO;
 	db->initial_number_of_databases =
 	db->number_of_databases = 16;
 	RL_MALLOC(db->databases, sizeof(long) * (db->number_of_databases + 1));
@@ -407,20 +409,29 @@ cleanup:
 	return retval;
 }
 
+int rl_get_selected_db(rlite *db) {
+	if (db->selected_internal == RLITE_INTERNAL_DB_NO) {
+		return db->selected_database;
+	} else {
+		return db->number_of_databases + db->selected_internal - 1;
+	}
+}
+
 int rl_get_key_btree(rlite *db, rl_btree **retbtree, int create)
 {
 	void *_btree;
 	int retval;
-	if (!db->databases[db->selected_database]) {
+	int selected_database = rl_get_selected_db(db);;
+	if (!db->databases[selected_database]) {
 		if (!create) {
 			return RL_NOT_FOUND;
 		}
 		rl_btree *btree;
 		RL_CALL(rl_btree_create, RL_OK, db, &btree, &rl_btree_type_hash_sha1_key);
-		db->databases[db->selected_database] = db->next_empty_page;
-		RL_CALL(rl_write, RL_OK, db, &rl_data_type_btree_hash_sha1_key, db->databases[db->selected_database], btree);
+		db->databases[selected_database] = db->next_empty_page;
+		RL_CALL(rl_write, RL_OK, db, &rl_data_type_btree_hash_sha1_key, db->databases[selected_database], btree);
 	}
-	RL_CALL(rl_read, RL_FOUND, db, &rl_data_type_btree_hash_sha1_key, db->databases[db->selected_database], &rl_btree_type_hash_sha1_key, &_btree, 1);
+	RL_CALL(rl_read, RL_FOUND, db, &rl_data_type_btree_hash_sha1_key, db->databases[selected_database], &rl_btree_type_hash_sha1_key, &_btree, 1);
 	*retbtree = _btree;
 	retval = RL_OK;
 cleanup:
@@ -1074,6 +1085,12 @@ int rl_is_balanced(rlite *db)
 cleanup:
 	rl_free(pages);
 	return retval;
+}
+
+int rl_select_internal(struct rlite *db, int internal)
+{
+	db->selected_internal = internal;
+	return RL_OK;
 }
 
 int rl_select(struct rlite *db, int selected_database)

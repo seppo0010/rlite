@@ -827,7 +827,7 @@ static void execCommand(rliteClient *c) {
 					if (command->sflags[i] == 'w') {
 						char *argv[] = {"multi"};
 						size_t argvlen[] = {5};
-						c->context->writeCommand(c->context->db->selected_database, 1, argv, argvlen);
+						c->context->writeCommand(rl_get_selected_db(c->context->db), 1, argv, argvlen);
 						written = 1;
 						break;
 					}
@@ -835,7 +835,7 @@ static void execCommand(rliteClient *c) {
 			}
 			RL_CALL(rl_dirty_hash, RL_OK, client->context->db, &newhash);
 			if (newhash && (!oldhash || memcmp(newhash, oldhash, 20) != 0)) {
-				client->context->writeCommand(client->context->db->selected_database, client->argc, client->argv, client->argvlen);
+				client->context->writeCommand(rl_get_selected_db(client->context->db), client->argc, client->argv, client->argvlen);
 			}
 		}
 		rl_free(oldhash);
@@ -847,7 +847,7 @@ static void execCommand(rliteClient *c) {
 	if (written) {
 		char *argv[] = {"exec"};
 		size_t argvlen[] = {4};
-		c->context->writeCommand(c->context->db->selected_database, 1, argv, argvlen);
+		c->context->writeCommand(rl_get_selected_db(c->context->db), 1, argv, argvlen);
 	}
 
 	retval = rl_commit(c->context->db);
@@ -1016,7 +1016,7 @@ int rliteAppendCommandClient(rliteClient *client) {
 			if (client->context->writeCommand) {
 				RL_CALL(rl_dirty_hash, RL_OK, client->context->db, &newhash);
 				if (newhash && (!oldhash || memcmp(newhash, oldhash, 20) != 0)) {
-					client->context->writeCommand(client->context->db->selected_database, client->argc, client->argv, client->argvlen);
+					client->context->writeCommand(rl_get_selected_db(client->context->db), client->argc, client->argv, client->argvlen);
 				}
 			}
 			RL_CALL(rl_commit, RL_OK, client->context->db);

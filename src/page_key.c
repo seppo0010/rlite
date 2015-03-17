@@ -72,7 +72,7 @@ int rl_key_set(rlite *db, const unsigned char *key, long keylen, unsigned char t
 	}
 	key_obj->version = version;
 
-	RL_CALL(rl_btree_add_element, RL_OK, db, btree, db->databases[db->selected_database], digest, key_obj);
+	RL_CALL(rl_btree_add_element, RL_OK, db, btree, db->databases[rl_get_selected_db(db)], digest, key_obj);
 	retval = RL_OK;
 cleanup:
 	if (retval != RL_OK) {
@@ -138,7 +138,6 @@ cleanup:
 static int rl_key_sha_check_version(struct rlite *db, struct watched_key* key) {
 	int retval;
 	long version;
-	int selected_database = db->selected_database;
 	// if the key has expired, the version is still valid, according to
 	// https://code.google.com/p/redis/issues/detail?id=270
 	// it seems to be relevant to redis being stateful and single process
@@ -154,7 +153,6 @@ static int rl_key_sha_check_version(struct rlite *db, struct watched_key* key) {
 		retval = RL_OK;
 	}
 cleanup:
-	db->selected_database = selected_database;
 	return retval;
 }
 
@@ -173,7 +171,7 @@ int rl_watch(struct rlite *db, struct watched_key** _watched_key, const unsigned
 	int retval;
 	struct watched_key* wkey = NULL;
 	RL_MALLOC(wkey, sizeof(struct watched_key));
-	wkey->database = db->selected_database;
+	wkey->database = rl_get_selected_db(db);
 
 	RL_CALL(sha1, RL_OK, key, keylen, wkey->digest);
 	RL_CALL2(rl_key_get_hash_ignore_expire, RL_FOUND, RL_NOT_FOUND, db, wkey->digest, NULL, NULL, NULL, NULL, &wkey->version, 1);
@@ -230,11 +228,12 @@ int rl_key_delete(struct rlite *db, const unsigned char *key, long keylen)
 	RL_CALL(rl_get_key_btree, RL_OK, db, &btree, 0);
 	retval = rl_btree_find_score(db, btree, digest, &tmp, NULL, NULL);
 	if (retval == RL_FOUND) {
+		int selected_database = rl_get_selected_db(db);
 		key_obj = tmp;
 		RL_CALL(rl_multi_string_delete, RL_OK, db, key_obj->string_page);
-		retval = rl_btree_remove_element(db, btree, db->databases[db->selected_database], digest);
+		retval = rl_btree_remove_element(db, btree, db->databases[selected_database], digest);
 		if (retval == RL_DELETED) {
-			db->databases[db->selected_database] = 0;
+			db->databases[selected_database] = 0;
 			retval = RL_OK;
 		}
 		else if (retval != RL_OK) {
