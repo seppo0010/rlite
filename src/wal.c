@@ -42,7 +42,7 @@ static int rl_read_wal(const char *wal_path, unsigned char **_data, size_t *_dat
 		// file does not exist! empty data, retval=ok are set
 		goto cleanup;
 	}
-	RL_CALL(rl_flock, RL_OK, fp, 0, 0, RLITE_FLOCK_EX);
+	RL_CALL(rl_flock, RL_OK, fp, RLITE_FLOCK_EX);
 	fseek(fp, 0, SEEK_END);
 	datalen = (size_t)ftell(fp);
 	fseek(fp, 0, SEEK_SET);
@@ -90,7 +90,6 @@ static int rl_apply_wal_data(rlite *db, unsigned char *data, size_t datalen, int
 		page_number = get_4bytes(&data[position]);
 		position += 4;
 		if (readwrite) {
-			RL_CALL(rl_flock, RL_OK, driver->fp, page_number * db->page_size,  db->page_size, RLITE_FLOCK_EX);
 			fseek(driver->fp, page_number * db->page_size, SEEK_SET);
 			written = fwrite(&data[position], sizeof(unsigned char), db->page_size, driver->fp);
 			if ((size_t)db->page_size != written) {
@@ -187,7 +186,7 @@ int rl_write_wal(const char *wal_path, rlite *db, unsigned char **_data, size_t 
 	int retval;
 	FILE *fp = NULL;
 	fp = fopen(wal_path, "wb");
-	RL_CALL(rl_flock, RL_OK, fp, 0, 0, RLITE_FLOCK_EX);
+	RL_CALL(rl_flock, RL_OK, fp, RLITE_FLOCK_EX);
 	RL_CALL(rl_write_wal_file, RL_OK, fp, db, _data, _datalen);
 cleanup:
 	if (fp) {
@@ -245,7 +244,7 @@ int rl_write_apply_wal(rlite *db) {
 			retval = RL_UNEXPECTED;
 			goto cleanup;
 		}
-		RL_CALL(rl_flock, RL_OK, fp, 0, 0, RLITE_FLOCK_EX);
+		RL_CALL(rl_flock, RL_OK, fp, RLITE_FLOCK_EX);
 		RL_CALL(rl_write_wal_file, RL_OK, fp, db, &data, &datalen);
 		RL_CALL(rl_apply_wal_data, RL_OK, db, data, datalen, 1);
 		ftruncate(fileno(fp), 0);

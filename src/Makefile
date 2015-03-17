@@ -102,6 +102,9 @@ $(DYLIBNAME): $(OBJ) lua
 $(STLIBNAME): $(OBJ)
 	ar -cq libhirlite.a $(OBJ)
 
+buildtest: $(STLIBNAME)
+	cd ../tests/ && $(MAKE) buildtest
+
 test: $(STLIBNAME)
 	cd ../tests/ && $(MAKE) test
 

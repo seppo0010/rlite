@@ -156,24 +156,14 @@ rl_data_type rl_data_type_skiplist_node;
 
 static const unsigned char *identifier = (unsigned char *)"rlite0.0";
 
-static int file_driver_fp(rlite *db, int readonly)
+static int file_driver_fp(rlite *db)
 {
 	int retval = RL_OK;
 	rl_file_driver *driver = db->driver;
 	if (driver->fp == NULL) {
-		if (!readonly && (driver->mode & RLITE_OPEN_READWRITE) == 0) {
-			fprintf(stderr, "Trying to write but open as readonly\n");
-			retval = RL_INVALID_PARAMETERS;
-			goto cleanup;
-		}
 		char *mode;
 		if (access(driver->filename, F_OK) == 0) {
-			if (readonly) {
-				mode = "r";
-			}
-			else {
-				mode = "r+";
-			}
+			mode = "r+";
 		}
 		else {
 			if ((driver->mode & RLITE_OPEN_READWRITE) == 0) {
@@ -188,6 +178,12 @@ static int file_driver_fp(rlite *db, int readonly)
 			fprintf(stderr, "Cannot open file %s, errno %d, mode %s\n", driver->filename, errno, mode);
 			perror(NULL);
 			retval = RL_UNEXPECTED;
+			goto cleanup;
+		}
+		retval = rl_flock(driver->fp, (driver->mode & RLITE_OPEN_READWRITE) ? RLITE_FLOCK_EX : RLITE_FLOCK_SH);
+		if (retval != RL_OK) {
+			fclose(driver->fp);
+			driver->fp = NULL;
 			goto cleanup;
 		}
 	}
@@ -440,8 +436,7 @@ int rl_read_header(rlite *db)
 		RL_CALL(rl_create_db, RL_OK, db);
 	}
 	else if (db->driver_type == RL_FILE_DRIVER) {
-		rl_file_driver *driver = db->driver;
-		RL_CALL(file_driver_fp, RL_OK, db, driver->mode & RLITE_OPEN_READONLY ? 1 : 0);
+		RL_CALL(file_driver_fp, RL_OK, db);
 		RL_CALL(rl_apply_wal, RL_OK, db);
 		retval = rl_read(db, &rl_data_type_header, 0, NULL, NULL, 1);
 		if (retval == RL_NOT_FOUND && rl_has_flag(db, RLITE_OPEN_CREATE)) {
@@ -610,8 +605,7 @@ int rl_read(rlite *db, rl_data_type *type, long page, void *context, void **obj,
 	RL_MALLOC(data, db->page_size * sizeof(unsigned char));
 	if (db->driver_type == RL_FILE_DRIVER) {
 		rl_file_driver *driver = db->driver;
-		RL_CALL(file_driver_fp, RL_OK, db, driver->mode & RLITE_OPEN_READONLY ? 1 : 0);
-		RL_CALL(rl_flock, RL_OK, driver->fp, page * db->page_size, db->page_size, RLITE_FLOCK_SH);
+		RL_CALL(file_driver_fp, RL_OK, db);
 		fseek(driver->fp, page * db->page_size, SEEK_SET);
 		size_t read = fread(data, sizeof(unsigned char), db->page_size, driver->fp);
 		if (read != (size_t)db->page_size) {
@@ -772,9 +766,7 @@ int rl_write(struct rlite *db, rl_data_type *type, long page_number, void *obj)
 	}
 	else if (retval == RL_NOT_FOUND) {
 		if (db->driver_type == RL_FILE_DRIVER) {
-			rl_file_driver *driver = db->driver;
-			RL_CALL(file_driver_fp, RL_OK, db, driver->mode & RLITE_OPEN_READONLY ? 1 : 0);
-			RL_CALL(rl_flock, RL_OK, driver->fp, page_number * db->page_size, db->page_size, RLITE_FLOCK_EX);
+			RL_CALL(file_driver_fp, RL_OK, db);
 		}
 		rl_ensure_pages(db);
 		RL_MALLOC(page, sizeof(*page));
@@ -918,20 +910,7 @@ int rl_discard(struct rlite *db)
 	if (db->driver_type == RL_FILE_DRIVER) {
 		rl_file_driver *driver = db->driver;
 		if (driver->fp) {
-			/*
-			 * Ideally the commented code would be the code to write here.
-			 * But it seems to be necessary to close the FILE* in order to
-			 * release the cache of the read blocks, at least in Linux.
-			 * fclose() will release the lock for us instead.
-			for (i = 0; i < db->read_pages_len; i++) {
-				page = db->read_pages[i];
-				RL_CALL(rl_flock, RL_OK, driver->fp, page->page_number * db->page_size, db->page_size, RLITE_FLOCK_UN);
-			}
-			for (i = 0; i < db->write_pages_len; i++) {
-				page = db->write_pages[i];
-				RL_CALL(rl_flock, RL_OK, driver->fp, page->page_number * db->page_size, db->page_size, RLITE_FLOCK_UN);
-			}
-			 */
+			RL_CALL(rl_flock, RL_OK, driver->fp, RLITE_FLOCK_UN);
 			fclose(driver->fp);
 			driver->fp = NULL;
 		}
