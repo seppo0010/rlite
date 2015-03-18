@@ -10,11 +10,11 @@ static char *get_filename(rlite *db, char *identifier)
 	return rl_get_filename_with_suffix(driver->filename, identifier);
 }
 
-int rl_subscribe(rlite *db, unsigned char *channel, size_t channellen, char **data, size_t *datalen)
+int rl_subscribe(rlite *db, int channelc, unsigned char **channelv, long *channelvlen, char **data, size_t *datalen)
 {
 	unsigned char *identifier = NULL;
 	char *filename = NULL;
-	int retval, i;
+	int retval, i, j;
 	long added = 0, identifierlen = FILENAME_LENGTH;
 	if (db->driver_type != RL_FILE_DRIVER) {
 		return RL_NOT_IMPLEMENTED;
@@ -28,7 +28,13 @@ int rl_subscribe(rlite *db, unsigned char *channel, size_t channellen, char **da
 		for (i = 1; i < FILENAME_LENGTH; i++) {
 			identifier[i] = (rand() % 26) + 'a';
 		}
-		RL_CALL(rl_sadd, RL_OK, db, channel, channellen, 1, (unsigned char **)&identifier, &identifierlen, &added);
+		for (j = 0; j < channelc; j++) {
+			RL_CALL(rl_sadd, RL_OK, db, channelv[j], channelvlen[j], 1, (unsigned char **)&identifier, &identifierlen, &added);
+			if (added == 0) {
+				rl_discard(db);
+				break;
+			}
+		}
 	} while (added == 0);
 	// important! commit to release the exclusive lock
 	RL_CALL(rl_commit, RL_OK, db);
