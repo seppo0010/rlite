@@ -17,6 +17,11 @@ int rl_create_fifo(const char *fifo_name) {
 	return mkfifo(fifo_name, 0777) == 0 ? RL_OK : RL_UNEXPECTED;
 }
 
+int rl_delete_fifo(const char *fifo_name) {
+	unlink(fifo_name);
+	return RL_OK;
+}
+
 int rl_read_fifo(const char *fifo_name, char **_data, size_t *_datalen) {
 	char header[FIFO_HEADER_SIZE];
 	uint64_t crc;

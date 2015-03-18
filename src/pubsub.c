@@ -37,6 +37,7 @@ int rl_subscribe(rlite *db, unsigned char *channel, size_t channellen, char **da
 
 	RL_CALL(rl_create_fifo, RL_OK, filename);
 	RL_CALL(rl_read_fifo, RL_OK, filename, data, datalen);
+	RL_CALL(rl_delete_fifo, RL_OK, filename);
 cleanup:
 	rl_free(identifier);
 	rl_free(filename);
