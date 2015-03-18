@@ -332,3 +332,24 @@ double rl_strtod(unsigned char *_str, long strlen, unsigned char **_eptr) {
 	}
 	return d;
 }
+
+char *rl_get_filename_with_suffix(const char *filename, char *suffix) {
+	int retval;
+	char *new_path = NULL;
+	size_t i, last_slash = 0, filenamelen = strlen(filename);
+	size_t suffixlen = strlen(suffix);
+	// Adding "." to the beginning of the filename, and null termination
+	RL_MALLOC(new_path, sizeof(char) * (filenamelen + suffixlen + 2));
+	for (i = filenamelen - 1; i > 0; i--) {
+		if (filename[i] == '/') {
+			last_slash = i + 1;
+			break;
+		}
+	}
+	memcpy(new_path, filename, last_slash);
+	new_path[last_slash] = '.';
+	memcpy(&new_path[last_slash + 1], &filename[last_slash], filenamelen - last_slash);
+	memcpy(&new_path[filenamelen + 1], suffix, suffixlen + 1);
+cleanup:
+	return new_path;
+}

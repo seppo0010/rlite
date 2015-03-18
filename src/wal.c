@@ -9,23 +9,7 @@
 static const char *identifier = "rlwal0.0";
 
 static char *get_wal_filename(const char *filename) {
-	int retval;
-	char *wal_path = NULL;
-	size_t i, last_slash = 0, filenamelen = strlen(filename);
-	// Adding "." to the beginning of the filename, ".wal" to the end and null termination
-	RL_MALLOC(wal_path, sizeof(char) * (filenamelen + 6));
-	for (i = filenamelen - 1; i > 0; i--) {
-		if (filename[i] == '/') {
-			last_slash = i + 1;
-			break;
-		}
-	}
-	memcpy(wal_path, filename, last_slash);
-	wal_path[last_slash] = '.';
-	memcpy(&wal_path[last_slash + 1], &filename[last_slash], filenamelen - last_slash);
-	memcpy(&wal_path[filenamelen + 1], ".wal", 5);
-cleanup:
-	return wal_path;
+	return rl_get_filename_with_suffix(filename, ".wal");
 }
 
 static int rl_delete_wal(const char *wal_path) {

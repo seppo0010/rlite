@@ -55,6 +55,7 @@ TEST test_full_wal_readonly(int _commit) {
 	rl_free(testvalue);
 
 	ASSERT_EQm("Expected wal path to exist", access(wal_path, F_OK), 0);
+	unlink(wal_path);
 
 	rl_close(db);
 	PASS();
@@ -113,6 +114,7 @@ TEST test_partial_wal_readonly(int _commit) {
 	RL_CALL_VERBOSE(rl_get, RL_NOT_FOUND, db, key, keylen, NULL, NULL);
 
 	ASSERT_EQm("Expected wal path to exist", access(wal_path, F_OK), 0);
+	unlink(wal_path);
 
 	rl_close(db);
 	PASS();
