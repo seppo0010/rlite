@@ -14,7 +14,7 @@
 #define FIFO_HEADER_SIZE 12
 
 int rl_create_fifo(const char *fifo_name) {
-	return mkfifo(fifo_name, 0777);
+	return mkfifo(fifo_name, 0777) == 0 ? RL_OK : RL_UNEXPECTED;
 }
 
 int rl_read_fifo(const char *fifo_name, char **_data, size_t *_datalen) {

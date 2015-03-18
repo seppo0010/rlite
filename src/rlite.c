@@ -24,7 +24,7 @@
 #define DEFAULT_READ_PAGES_LEN 16
 #define DEFAULT_WRITE_PAGES_LEN 8
 #define DEFAULT_PAGE_SIZE 1024
-#define HEADER_SIZE 100
+#define HEADER_SIZE 200
 
 int rl_header_serialize(struct rlite *db, void *obj, unsigned char *data);
 int rl_has_flag(rlite *db, int flag);
@@ -200,7 +200,7 @@ int rl_header_serialize(struct rlite *db, void *UNUSED(obj), unsigned char *data
 	put_4bytes(&data[identifier_len + 8], db->number_of_pages);
 	put_4bytes(&data[identifier_len + 12], db->number_of_databases);
 	long i, pos = identifier_len + 16;
-	for (i = 0; i < db->number_of_databases + 1; i++) {
+	for (i = 0; i < db->number_of_databases + RLITE_INTERNAL_DB_COUNT; i++) {
 		if (db->databases[i] != 0) {
 			put_4bytes(&data[pos], db->databases[i]);
 		}
@@ -229,11 +229,11 @@ int rl_header_deserialize(struct rlite *db, void **UNUSED(obj), void *UNUSED(con
 	if (db->initial_databases) {
 		rl_free(db->initial_databases);
 	}
-	RL_MALLOC(db->databases, sizeof(long) * (db->number_of_databases + 1));
-	RL_MALLOC(db->initial_databases, sizeof(long) * (db->number_of_databases + 1));
+	RL_MALLOC(db->databases, sizeof(long) * (db->number_of_databases + RLITE_INTERNAL_DB_COUNT));
+	RL_MALLOC(db->initial_databases, sizeof(long) * (db->number_of_databases + RLITE_INTERNAL_DB_COUNT));
 
 	long i, pos = identifier_len + 16;
-	for (i = 0; i < db->number_of_databases + 1; i++) {
+	for (i = 0; i < db->number_of_databases + RLITE_INTERNAL_DB_COUNT; i++) {
 		db->initial_databases[i] =
 		db->databases[i] = get_4bytes(&data[pos]);
 		pos += 4;
@@ -399,9 +399,9 @@ int rl_create_db(rlite *db)
 	db->selected_internal = RLITE_INTERNAL_DB_NO;
 	db->initial_number_of_databases =
 	db->number_of_databases = 16;
-	RL_MALLOC(db->databases, sizeof(long) * (db->number_of_databases + 1));
-	RL_MALLOC(db->initial_databases, sizeof(long) * (db->number_of_databases + 1));
-	for (i = 0; i < db->number_of_databases + 1; i++) {
+	RL_MALLOC(db->databases, sizeof(long) * (db->number_of_databases + RLITE_INTERNAL_DB_COUNT));
+	RL_MALLOC(db->initial_databases, sizeof(long) * (db->number_of_databases + RLITE_INTERNAL_DB_COUNT));
+	for (i = 0; i < db->number_of_databases + RLITE_INTERNAL_DB_COUNT; i++) {
 		db->initial_databases[i] =
 		db->databases[i] = 0;
 	}
@@ -898,8 +898,8 @@ int rl_commit(struct rlite *db)
 	db->initial_number_of_pages = db->number_of_pages;
 	db->initial_number_of_databases = db->number_of_databases;
 	rl_free(db->initial_databases);
-	RL_MALLOC(db->initial_databases, sizeof(long) * (db->number_of_databases + 1));
-	memcpy(db->initial_databases, db->databases, sizeof(long) * (db->number_of_databases + 1));
+	RL_MALLOC(db->initial_databases, sizeof(long) * (db->number_of_databases + RLITE_INTERNAL_DB_COUNT));
+	memcpy(db->initial_databases, db->databases, sizeof(long) * (db->number_of_databases + RLITE_INTERNAL_DB_COUNT));
 	rl_discard(db);
 cleanup:
 	return retval;
@@ -914,8 +914,8 @@ int rl_discard(struct rlite *db)
 	db->number_of_pages = db->initial_number_of_pages;
 	db->number_of_databases = db->initial_number_of_databases;
 	rl_free(db->databases);
-	RL_MALLOC(db->databases, sizeof(long) * (db->number_of_databases + 1));
-	memcpy(db->databases, db->initial_databases, sizeof(long) *  (db->number_of_databases + 1));
+	RL_MALLOC(db->databases, sizeof(long) * (db->number_of_databases + RLITE_INTERNAL_DB_COUNT));
+	memcpy(db->databases, db->initial_databases, sizeof(long) *  (db->number_of_databases + RLITE_INTERNAL_DB_COUNT));
 	rl_page *page;
 
 	if (db->driver_type == RL_FILE_DRIVER) {
@@ -1054,7 +1054,7 @@ int rl_is_balanced(rlite *db)
 		pages[i] = 0;
 	}
 
-	for (i = 0; i < db->number_of_databases + 1; i++) {
+	for (i = 0; i < db->number_of_databases + RLITE_INTERNAL_DB_COUNT; i++) {
 		if (db->databases[i] == 0) {
 			continue;
 		}
@@ -1284,7 +1284,7 @@ int rl_flushall(struct rlite *db)
 	int retval, i;
 	int selected_database = db->selected_database;
 
-	for (i = 0; i < db->number_of_databases + 1; i++) {
+	for (i = 0; i < db->number_of_databases + RLITE_INTERNAL_DB_COUNT; i++) {
 		db->selected_database = i;
 		RL_CALL(rl_flushdb, RL_OK, db);
 	}

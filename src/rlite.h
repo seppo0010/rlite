@@ -54,8 +54,10 @@
 #define RLITE_FLOCK_EX 2
 #define RLITE_FLOCK_UN 3
 
+#define RLITE_INTERNAL_DB_COUNT 2
 #define RLITE_INTERNAL_DB_NO 0
 #define RLITE_INTERNAL_DB_LUA 1
+#define RLITE_INTERNAL_DB_PUBSUB 2
 
 struct rlite;
 struct rl_btree;
