@@ -52,6 +52,7 @@ static void* subscribe(void* _buffer) {
 	} else {
 		fprintf(stderr, "Data mismatch on secondary subscriber");
 	}
+	rl_free(testdata);
 	rl_close(db);
 	return NULL;
 }
@@ -77,6 +78,7 @@ TEST basic_subscribe_publish()
 
 	ASSERT_EQ(datalen, testdatalen);
 	ASSERT_EQ(memcmp(data, testdata, datalen), 0);
+	rl_free(testdata);
 	PASS();
 }
 
@@ -105,6 +107,7 @@ TEST basic_publish_two_subscribers()
 	ASSERT_EQ(buffer.read, 1);
 	ASSERT_EQ(datalen, testdatalen);
 	ASSERT_EQ(memcmp(data, testdata, datalen), 0);
+	rl_free(testdata);
 	PASS();
 }
 
