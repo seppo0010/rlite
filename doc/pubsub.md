@@ -66,3 +66,20 @@ further references.
 are forced to re-subscribe? that might be alright if they are waiting for a
 fifo `read()`, but the process might be doing anything else; is it ok to
 lose some messages?>
+
+# V2
+
+All the previous concept apply. `connection identifier` is now called
+`subscriptor identifier` and it is only created the first time the connection
+is used to subscribe.
+
+Subscriptions (both to channels and patterns) are persisted in disk, not just
+in memory, in its own special database (a forth one).
+
+When a subscriptor is created, a lock file is created and locked exclusively.
+When a publisher will write to a subscriptor, it will check for its health
+first by querying the status of the lock file. If it is not locked, the
+publisher will instead do housekeeping work, eliminating all references to
+that subscriptor (from channels, patterns, lock file and fifo if exists).
+
+This will make sure reference may be cleaned up at some point.
