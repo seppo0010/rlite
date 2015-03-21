@@ -1,8 +1,7 @@
-#include <sys/file.h>
 #include <stdlib.h>
 #include <string.h>
-#include <unistd.h>
 #include <errno.h>
+#include "compat.h"
 #include "page_btree.h"
 #include "page_list.h"
 #include "page_long.h"
@@ -162,7 +161,7 @@ static int file_driver_fp(rlite *db)
 	rl_file_driver *driver = db->driver;
 	if (driver->fp == NULL) {
 		char *mode;
-		if (access(driver->filename, F_OK) == 0) {
+		if (rl_file_exists(driver->filename)) {
 			mode = "r+";
 		}
 		else {
@@ -297,16 +296,17 @@ int rl_open(const char *filename, rlite **_db, int flags)
 	}
 	else {
 		if ((flags & RLITE_OPEN_CREATE) == 0) {
-			int _access_flags;
 			if ((flags & RLITE_OPEN_READWRITE) != 0) {
-				_access_flags = W_OK;
+				if (!rl_file_is_writable(filename)) {
+					retval = RL_INVALID_PARAMETERS;
+					goto cleanup;
+				}
 			}
 			else {
-				_access_flags = R_OK | F_OK;
-			}
-			if (access(filename, _access_flags) != 0) {
-				retval = RL_INVALID_PARAMETERS;
-				goto cleanup;
+				if (!rl_file_is_readable(filename)) {
+					retval = RL_INVALID_PARAMETERS;
+					goto cleanup;
+				}
 			}
 		}
 

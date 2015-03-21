@@ -92,18 +92,18 @@ int rl_multi_string_cmp(struct rlite *db, long p1, long p2, int *cmp)
 		}
 		node_number1 = node1->right;
 		node_number2 = node2->right;
-		rl_list_node_nocache_destroy(db, node1);
-		rl_list_node_nocache_destroy(db, node2);
+		rl_list_node_destroy(db, node1);
+		rl_list_node_destroy(db, node2);
 		node1 = node2 = NULL;
 	}
 cleanup:
-	rl_list_nocache_destroy(db, list1);
-	rl_list_nocache_destroy(db, list2);
+	rl_list_destroy(db, list1);
+	rl_list_destroy(db, list2);
 	if (node1) {
-		rl_list_node_nocache_destroy(db, node1);
+		rl_list_node_destroy(db, node1);
 	}
 	if (node2) {
-		rl_list_node_nocache_destroy(db, node2);
+		rl_list_node_destroy(db, node2);
 	}
 	return retval;
 }
@@ -162,15 +162,15 @@ int rl_multi_string_cmp_str(struct rlite *db, long p1, unsigned char *str, long 
 		}
 		first = 0;
 		node_number1 = node1->right;
-		rl_list_node_nocache_destroy(db, node1);
+		rl_list_node_destroy(db, node1);
 		node1 = NULL;
 	}
 	while (len > pos);
 	retval = RL_OK;
 cleanup:
-	rl_list_nocache_destroy(db, list1);
+	rl_list_destroy(db, list1);
 	if (node1) {
-		rl_list_node_nocache_destroy(db, node1);
+		rl_list_node_destroy(db, node1);
 	}
 	return retval;
 }
@@ -178,7 +178,7 @@ cleanup:
 static int append(struct rlite *db, rl_list *list, long list_page_number, const unsigned char *data, long size)
 {
 	int retval = RL_OK;
-	long *page;
+	long *page = NULL;
 	long pos = 0, to_copy;
 	unsigned char *string = NULL;
 	while (pos < size) {
@@ -313,10 +313,10 @@ cleanup:
 		rl_free(data);
 	}
 	if (list) {
-		rl_list_nocache_destroy(db, list);
+		rl_list_destroy(db, list);
 	}
 	if (node) {
-		rl_list_node_nocache_destroy(db, node);
+		rl_list_node_destroy(db, node);
 	}
 	return retval;
 }
@@ -450,7 +450,7 @@ int rl_multi_string_sha1(struct rlite *db, unsigned char digest[20], long number
 		goto cleanup;
 	}
 
-	RL_CALL(rl_list_nocache_destroy, RL_OK, db, list);
+	RL_CALL(rl_list_destroy, RL_OK, db, list);
 
 	SHA1Final(digest, &sha);
 	retval = RL_OK;
@@ -489,7 +489,7 @@ int rl_multi_string_pages(struct rlite *db, long page, short *pages)
 		goto cleanup;
 	}
 
-	RL_CALL(rl_list_nocache_destroy, RL_OK, db, list);
+	RL_CALL(rl_list_destroy, RL_OK, db, list);
 
 	retval = RL_OK;
 cleanup:

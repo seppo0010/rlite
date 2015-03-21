@@ -1514,14 +1514,14 @@ int rl_btree_iterator_next(rl_btree_iterator *iterator, void **score, void **val
 	else {
 		if (node->size == iterator->nodes[iterator->position - 1].position + 1) {
 			while (--iterator->position > 0) {
-				RL_CALL(rl_btree_node_nocache_destroy, RL_OK, iterator->db, node);
+				RL_CALL(rl_btree_node_destroy, RL_OK, iterator->db, node);
 				node = iterator->nodes[iterator->position - 1].node;
 				if (iterator->nodes[iterator->position - 1].position < node->size) {
 					break;
 				}
 			}
 			if (iterator->position == 0) {
-				RL_CALL(rl_btree_node_nocache_destroy, RL_OK, iterator->db, node);
+				RL_CALL(rl_btree_node_destroy, RL_OK, iterator->db, node);
 			}
 		}
 		else {
@@ -1534,7 +1534,7 @@ cleanup:
 	if (retval != RL_OK) {
 		if (iterator) {
 			while (--iterator->position >= 0) {
-				rl_btree_node_nocache_destroy(iterator->db, iterator->nodes[iterator->position].node);
+				rl_btree_node_destroy(iterator->db, iterator->nodes[iterator->position].node);
 			}
 			rl_btree_iterator_destroy(iterator);
 		}
@@ -1547,7 +1547,7 @@ int rl_btree_iterator_destroy(rl_btree_iterator *iterator)
 	int retval = RL_OK;
 	if (iterator) {
 		while (--iterator->position >= 0) {
-			RL_CALL(rl_btree_node_nocache_destroy, RL_OK, iterator->db, iterator->nodes[iterator->position].node);
+			RL_CALL(rl_btree_node_destroy, RL_OK, iterator->db, iterator->nodes[iterator->position].node);
 		}
 	}
 cleanup:

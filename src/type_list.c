@@ -416,7 +416,7 @@ cleanup:
 int rl_llist_pages(struct rlite *db, long page, short *pages)
 {
 	rl_list *list;
-	rl_list_iterator *iterator;
+	rl_list_iterator *iterator = NULL;
 	int retval;
 	void *tmp;
 	long member;

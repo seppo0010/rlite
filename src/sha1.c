@@ -28,6 +28,7 @@ A million repetitions of "a"
 #include "solarisfixes.h"
 #endif
 #include "sha1.h"
+#include "compat.h"
 
 #define rol(value, bits) (((value) << (bits)) | ((value) >> (32 - (bits))))
 

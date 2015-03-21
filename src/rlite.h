@@ -2,6 +2,7 @@
 #define _RLITE_H
 
 #include <stdio.h>
+#include "compat.h"
 #include "status.h"
 #include "page_btree.h"
 #include "page_key.h"
@@ -114,31 +115,31 @@ typedef struct watched_key {
 	int database;
 } watched_key;
 
-int rl_open(const char *filename, rlite **db, int flags);
-int rl_refresh(rlite *db);
-int rl_close(rlite *db);
+RLITE_API int rl_open(const char *filename, rlite **db, int flags);
+RLITE_API int rl_refresh(rlite *db);
+RLITE_API int rl_close(rlite *db);
 
-int rl_ensure_pages(rlite *db);
-int rl_read_header(rlite *db);
-int rl_header_deserialize(struct rlite *db, void **obj, void *context, unsigned char *data);
-int rl_read(struct rlite *db, rl_data_type *type, long page, void *context, void **obj, int cache);
-int rl_get_key_btree(rlite *db, struct rl_btree **btree, int create);
-int rl_alloc_page_number(rlite *db, long *page_number);
-int rl_write(struct rlite *db, rl_data_type *type, long page, void *obj);
-int rl_purge_cache(struct rlite *db, long page);
-int rl_delete(struct rlite *db, long page);
-int rl_dirty_hash(struct rlite *db, unsigned char **hash);
-int rl_commit(struct rlite *db);
-int rl_discard(struct rlite *db);
-int rl_is_balanced(struct rlite *db);
-int rl_select(struct rlite *db, int selected_database);
-int rl_move(struct rlite *db, unsigned char *key, long keylen, int database);
-int rl_rename(struct rlite *db, const unsigned char *src, long srclen, const unsigned char *target, long targetlen, int overwrite);
-int rl_dbsize(struct rlite *db, long *size);
-int rl_keys(struct rlite *db, unsigned char *pattern, long patternlen, long *size, unsigned char ***result, long **resultlen);
-int rl_randomkey(struct rlite *db, unsigned char **key, long *keylen);
-int rl_flushall(struct rlite *db);
-int rl_flushdb(struct rlite *db);
+RLITE_API int rl_ensure_pages(rlite *db);
+RLITE_API int rl_read_header(rlite *db);
+RLITE_API int rl_header_deserialize(struct rlite *db, void **obj, void *context, unsigned char *data);
+RLITE_API int rl_read(struct rlite *db, rl_data_type *type, long page, void *context, void **obj, int cache);
+RLITE_API int rl_get_key_btree(rlite *db, struct rl_btree **btree, int create);
+RLITE_API int rl_alloc_page_number(rlite *db, long *page_number);
+RLITE_API int rl_write(struct rlite *db, rl_data_type *type, long page, void *obj);
+RLITE_API int rl_purge_cache(struct rlite *db, long page);
+RLITE_API int rl_delete(struct rlite *db, long page);
+RLITE_API int rl_dirty_hash(struct rlite *db, unsigned char **hash);
+RLITE_API int rl_commit(struct rlite *db);
+RLITE_API int rl_discard(struct rlite *db);
+RLITE_API int rl_is_balanced(struct rlite *db);
+RLITE_API int rl_select(struct rlite *db, int selected_database);
+RLITE_API int rl_move(struct rlite *db, unsigned char *key, long keylen, int database);
+RLITE_API int rl_rename(struct rlite *db, const unsigned char *src, long srclen, const unsigned char *target, long targetlen, int overwrite);
+RLITE_API int rl_dbsize(struct rlite *db, long *size);
+RLITE_API int rl_keys(struct rlite *db, unsigned char *pattern, long patternlen, long *size, unsigned char ***result, long **resultlen);
+RLITE_API int rl_randomkey(struct rlite *db, unsigned char **key, long *keylen);
+RLITE_API int rl_flushall(struct rlite *db);
+RLITE_API int rl_flushdb(struct rlite *db);
 
 extern rl_data_type rl_data_type_header;
 extern rl_data_type rl_data_type_btree_hash_sha1_hashkey;

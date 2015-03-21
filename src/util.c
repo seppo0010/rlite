@@ -11,7 +11,6 @@
 #endif
 #include "status.h"
 #include "util.h"
-#include <sys/time.h>
 
 int _sha1_formatter(unsigned char *data, char formatted[40])
 {
@@ -308,13 +307,6 @@ int sha1(const unsigned char *data, long datalen, unsigned char digest[20])
 	SHA1Update(&sha, data, datalen);
 	SHA1Final(digest, &sha);
 	return RL_OK;
-}
-
-unsigned long long rl_mstime()
-{
-	struct timeval tp;
-	gettimeofday(&tp, NULL);
-	return tp.tv_sec * 1000 + tp.tv_usec / 1000;
 }
 
 double rl_strtod(unsigned char *_str, long strlen, unsigned char **_eptr) {

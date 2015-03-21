@@ -2,7 +2,6 @@
 #define __HIRLITE_H
 #include <stdio.h> /* for size_t */
 #include <stdarg.h> /* for va_list */
-#include <sys/time.h> /* for struct timeval */
 
 #include "rlite.h"
 
@@ -94,12 +93,12 @@ typedef struct rliteReply {
 } rliteReply;
 
 /* Function to free the reply objects hirlite returns by default. */
-void rliteFreeReplyObject(void *reply);
+RLITE_API void rliteFreeReplyObject(void *reply);
 
 /* Functions to format a command according to the protocol. */
-int rlitevFormatCommand(struct rliteClient *client, const char *format, va_list ap);
-int rliteFormatCommand(struct rliteClient *client, const char *format, ...);
-int rliteFormatCommandArgv(struct rliteClient *client, int argc, char **argv, size_t *argvlen);
+RLITE_API int rlitevFormatCommand(struct rliteClient *client, const char *format, va_list ap);
+RLITE_API int rliteFormatCommand(struct rliteClient *client, const char *format, ...);
+RLITE_API int rliteFormatCommandArgv(struct rliteClient *client, int argc, char **argv, size_t *argvlen);
 
 struct rliteClient;
 
@@ -130,61 +129,61 @@ typedef struct rliteContext {
 	struct rliteClient **enqueuedCommands;
 } rliteContext;
 
-rliteContext *rliteConnect(const char *ip, int port);
-rliteContext *rliteConnectWithTimeout(const char *ip, int port, const struct timeval tv);
-rliteContext *rliteConnectNonBlock(const char *ip, int port);
-rliteContext *rliteConnectBindNonBlock(const char *ip, int port, const char *source_addr);
-rliteContext *rliteConnectUnix(const char *path);
-rliteContext *rliteConnectUnixWithTimeout(const char *path, const struct timeval tv);
-rliteContext *rliteConnectUnixNonBlock(const char *path);
-rliteContext *rliteConnectFd(int fd);
-int rliteSetTimeout(rliteContext *c, const struct timeval tv);
-int rliteEnableKeepAlive(rliteContext *c);
-void rliteFree(rliteContext *c);
-int rliteFreeKeepFd(rliteContext *c);
-int rliteBufferRead(rliteContext *c);
-int rliteBufferWrite(rliteContext *c, int *done);
+RLITE_API rliteContext *rliteConnect(const char *ip, int port);
+RLITE_API rliteContext *rliteConnectWithTimeout(const char *ip, int port, const struct timeval tv);
+RLITE_API rliteContext *rliteConnectNonBlock(const char *ip, int port);
+RLITE_API rliteContext *rliteConnectBindNonBlock(const char *ip, int port, const char *source_addr);
+RLITE_API rliteContext *rliteConnectUnix(const char *path);
+RLITE_API rliteContext *rliteConnectUnixWithTimeout(const char *path, const struct timeval tv);
+RLITE_API rliteContext *rliteConnectUnixNonBlock(const char *path);
+RLITE_API rliteContext *rliteConnectFd(int fd);
+RLITE_API int rliteSetTimeout(rliteContext *c, const struct timeval tv);
+RLITE_API int rliteEnableKeepAlive(rliteContext *c);
+RLITE_API void rliteFree(rliteContext *c);
+RLITE_API int rliteFreeKeepFd(rliteContext *c);
+RLITE_API int rliteBufferRead(rliteContext *c);
+RLITE_API int rliteBufferWrite(rliteContext *c, int *done);
 
 /* In a blocking context, this function first checks if there are unconsumed
  * replies to return and returns one if so. Otherwise, it flushes the output
  * buffer to the socket and reads until it has a reply. In a non-blocking
  * context, it will return unconsumed replies until there are no more. */
-int rliteGetReply(rliteContext *c, void **reply);
-int rliteGetReplyFromReader(rliteContext *c, void **reply);
+RLITE_API int rliteGetReply(rliteContext *c, void **reply);
+RLITE_API int rliteGetReplyFromReader(rliteContext *c, void **reply);
 
 /* Write a formatted command to the output buffer. Use these functions in blocking mode
  * to get a pipeline of commands. */
-int rliteAppendFormattedCommand(rliteContext *c, const char *cmd, size_t len);
+RLITE_API int rliteAppendFormattedCommand(rliteContext *c, const char *cmd, size_t len);
 
 /* Write a command to the output buffer. Use these functions in blocking mode
  * to get a pipeline of commands. */
-int rlitevAppendCommand(rliteContext *c, const char *format, va_list ap);
-int rliteAppendCommand(rliteContext *c, const char *format, ...);
-int rliteAppendCommandArgv(rliteContext *c, int argc, char **argv, size_t *argvlen);
-int rliteAppendCommandClient(struct rliteClient *client);
+RLITE_API int rlitevAppendCommand(rliteContext *c, const char *format, va_list ap);
+RLITE_API int rliteAppendCommand(rliteContext *c, const char *format, ...);
+RLITE_API int rliteAppendCommandArgv(rliteContext *c, int argc, char **argv, size_t *argvlen);
+RLITE_API int rliteAppendCommandClient(struct rliteClient *client);
 
 /* Issue a command to Redis. In a blocking context, it is identical to calling
  * rliteAppendCommand, followed by rliteGetReply. The function will return
  * NULL if there was an error in performing the request, otherwise it will
  * return the reply. In a non-blocking context, it is identical to calling
  * only rliteAppendCommand and will always return NULL. */
-void *rlitevCommand(rliteContext *c, const char *format, va_list ap);
-void *rliteCommand(rliteContext *c, const char *format, ...);
-void *rliteCommandArgv(rliteContext *c, int argc, char **argv, size_t *argvlen);
+RLITE_API void *rlitevCommand(rliteContext *c, const char *format, va_list ap);
+RLITE_API void *rliteCommand(rliteContext *c, const char *format, ...);
+RLITE_API void *rliteCommandArgv(rliteContext *c, int argc, char **argv, size_t *argvlen);
 
-struct rliteCommand *rliteLookupCommand(const char *name, size_t len);
-int rliteCommandHasFlag(struct rliteCommand *cmd, int flag);
+RLITE_API struct rliteCommand *rliteLookupCommand(const char *name, size_t len);
+RLITE_API int rliteCommandHasFlag(struct rliteCommand *cmd, int flag);
 
-int getLongLongFromObjectOrReply(struct rliteClient *c, const char *o, size_t len, long long *target, const char *msg);
-rliteReply *createArrayObject(size_t size);
-rliteReply *createStringTypeObject(int type, const char *str, const int len);
-rliteReply *createStringObject(const char *str, const int len);
-rliteReply *createCStringObject(const char *str);
-rliteReply *createErrorObject(const char *str);
-rliteReply *createStatusObject(const char *str);
-rliteReply *createDoubleObject(double d);
-rliteReply *createLongLongObject(long long value);
-rliteReply *createNullReplyObject();
+RLITE_API int getLongLongFromObjectOrReply(struct rliteClient *c, const char *o, size_t len, long long *target, const char *msg);
+RLITE_API rliteReply *createArrayObject(size_t size);
+RLITE_API rliteReply *createStringTypeObject(int type, const char *str, const int len);
+RLITE_API rliteReply *createStringObject(const char *str, const int len);
+RLITE_API rliteReply *createCStringObject(const char *str);
+RLITE_API rliteReply *createErrorObject(const char *str);
+RLITE_API rliteReply *createStatusObject(const char *str);
+RLITE_API rliteReply *createDoubleObject(double d);
+RLITE_API rliteReply *createLongLongObject(long long value);
+RLITE_API rliteReply *createNullReplyObject();
 
 typedef struct rliteClient {
 	int argc;

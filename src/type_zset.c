@@ -774,7 +774,7 @@ int rl_zinterstore(rlite *db, long keys_size, unsigned char **keys, long *keys_l
 	rl_skiplist **skiplists = NULL;
 	double weight = 1.0, weight_tmp;
 	double *weights = NULL;
-	rl_skiplist_node *node;
+	rl_skiplist_node *node = NULL;
 	rl_skiplist_iterator *skiplist_iterator = NULL;
 	rl_btree_iterator *btree_iterator = NULL;
 	int retval;
@@ -800,7 +800,7 @@ int rl_zinterstore(rlite *db, long keys_size, unsigned char **keys, long *keys_l
 	if (retval != RL_OK && retval != RL_NOT_FOUND) {
 		goto cleanup;
 	}
-	rl_btree *btree, *btree_tmp;
+	rl_btree *btree = NULL, *btree_tmp;
 	rl_skiplist *skiplist = NULL, *skiplist_tmp;
 	long i;
 	// key in position 0 is the target key

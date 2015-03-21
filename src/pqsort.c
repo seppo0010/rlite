@@ -41,10 +41,11 @@
 
 #include <errno.h>
 #include <stdlib.h>
+#include "compat.h"
 
-static inline char	*med3 (char *, char *, char *,
+static __inline char	*med3 (char *, char *, char *,
     int (*)(const void *, const void *));
-static inline void	 swapfunc (char *, char *, size_t, int);
+static __inline void	 swapfunc (char *, char *, size_t, int);
 
 #define min(a, b)	(a) < (b) ? a : b
 
@@ -65,7 +66,7 @@ static inline void	 swapfunc (char *, char *, size_t, int);
 #define SWAPINIT(a, es) swaptype = ((char *)a - (char *)0) % sizeof(long) || \
 	es % sizeof(long) ? 2 : es == sizeof(long)? 0 : 1;
 
-static inline void
+static __inline void
 swapfunc(char *a, char *b, size_t n, int swaptype)
 {
 
@@ -85,7 +86,7 @@ swapfunc(char *a, char *b, size_t n, int swaptype)
 
 #define vecswap(a, b, n) if ((n) > 0) swapfunc((a), (b), (size_t)(n), swaptype)
 
-static inline char *
+static __inline char *
 med3(char *a, char *b, char *c,
     int (*cmp) (const void *, const void *))
 {

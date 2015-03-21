@@ -6,10 +6,7 @@
 #include <math.h>
 #include <stdlib.h>
 #include <string.h>
-#include <strings.h>
-#include <sys/time.h>
 #include <time.h>
-#include <unistd.h>
 
 #include "hyperloglog.h"
 #include "hirlite.h"
@@ -1871,7 +1868,7 @@ cleanup:
 
 static void addHashIteratorReply(rliteClient *c, int retval, rl_hash_iterator *iterator, int fields, int values)
 {
-	unsigned char *field, *value;
+	unsigned char *field = NULL, *value = NULL;
 	long fieldlen, valuelen;
 	long i = 0;
 
@@ -3999,10 +3996,12 @@ static struct rliteCommand rliteCommandTable[] = {
 	{"dump",dumpCommand,2,"ar",0,1,1,1,0,0},
 	{"object",objectCommand,3,"r",0,2,2,2,0,0},
 	// {"client",clientCommand,-2,"ars",0,NULL,0,0,0,0,0},
+#ifndef _WIN32
 	{"eval",evalCommand,-3,"s",0,0,0,0,0,0},
 	{"evalsha",evalShaCommand,-3,"s",0,0,0,0,0,0},
 	// {"slowlog",slowlogCommand,-2,"r",0,NULL,0,0,0,0,0},
 	{"script",scriptCommand,-2,"ras",0,0,0,0,0,0},
+#endif
 	// {"time",timeCommand,1,"rRF",0,NULL,0,0,0,0,0},
 	{"bitop",bitopCommand,-4,"wm",0,2,-1,1,0,0},
 	{"bitcount",bitcountCommand,-2,"r",0,1,1,1,0,0},

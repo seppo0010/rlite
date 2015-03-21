@@ -5,9 +5,6 @@ struct rlite;
 struct rl_list;
 struct rl_list_node;
 
-#define rl_list_nocache_destroy(db, list) rl_list_destroy(db, list)
-#define rl_list_node_nocache_destroy(db, node) rl_list_node_destroy(db, node)
-
 typedef struct {
 	struct rl_data_type *list_type;
 	struct rl_data_type *list_node_type;

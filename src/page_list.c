@@ -635,7 +635,7 @@ cleanup:
 int rl_list_iterator_destroy(rlite *UNUSED(db), rl_list_iterator *iterator)
 {
 	if (iterator->node) {
-		rl_list_node_nocache_destroy(iterator->db, iterator->node);
+		rl_list_node_destroy(iterator->db, iterator->node);
 	}
 	rl_free(iterator);
 	return RL_OK;
@@ -655,7 +655,7 @@ int rl_list_iterator_next(rl_list_iterator *iterator, void **element)
 	iterator->node_position += iterator->direction;
 	if (iterator->node_position < 0 || iterator->node_position == iterator->node->size) {
 		long next_node_page = iterator->direction == 1 ? iterator->node->right : iterator->node->left;
-		RL_CALL(rl_list_node_nocache_destroy, RL_OK, iterator->db, iterator->node);
+		RL_CALL(rl_list_node_destroy, RL_OK, iterator->db, iterator->node);
 		iterator->node = NULL;
 		if (next_node_page) {
 			void *_node;
@@ -672,7 +672,7 @@ int rl_list_iterator_next(rl_list_iterator *iterator, void **element)
 cleanup:
 	if (retval != RL_OK) {
 		if (iterator->node) {
-			rl_list_node_nocache_destroy(iterator->db, iterator->node);
+			rl_list_node_destroy(iterator->db, iterator->node);
 		}
 		rl_list_iterator_destroy(iterator->db, iterator);
 	}

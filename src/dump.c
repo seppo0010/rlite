@@ -1,4 +1,3 @@
-#include <arpa/inet.h>
 #include "rlite.h"
 #include "util.h"
 #include "crc64.h"

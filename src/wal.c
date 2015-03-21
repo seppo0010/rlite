@@ -1,6 +1,5 @@
 #include <stdio.h>
 #include <stdlib.h>
-#include <unistd.h>
 
 #include "rlite.h"
 #include "flock.h"
@@ -29,7 +28,7 @@ cleanup:
 }
 
 static int rl_delete_wal(const char *wal_path) {
-	unlink(wal_path);
+	remove(wal_path);
 	return RL_OK;
 }
 
@@ -299,7 +298,7 @@ int rl_apply_wal(rlite *db) {
 		retval = RL_UNEXPECTED;
 		goto cleanup;
 	}
-	if (access(wal_path, F_OK) != 0) {
+	if (rl_file_exists(wal_path) == 0) {
 		retval = RL_OK;
 		goto cleanup;
 	}

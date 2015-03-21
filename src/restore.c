@@ -1,4 +1,3 @@
-#include <arpa/inet.h>
 #include "page_key.h"
 #include "rlite.h"
 #include "util.h"
@@ -47,7 +46,7 @@ static void free_string_streamer(rl_restore_streamer *streamer) {
 	rl_free(streamer);
 }
 
-static int read(rl_restore_streamer *streamer, unsigned char *target, long len) {
+static int restore_read(rl_restore_streamer *streamer, unsigned char *target, long len) {
 	return streamer->read(streamer, target, len);
 }
 
@@ -93,9 +92,9 @@ static int read_unsigned_short(rl_restore_streamer *streamer, unsigned long *val
 	int retval;
 	unsigned char ucint;
 	long val;
-	RL_CALL(read, RL_OK, streamer, &ucint, 1);
+	RL_CALL(restore_read, RL_OK, streamer, &ucint, 1);
 	val = ucint;
-	RL_CALL(read, RL_OK, streamer, &ucint, 1);
+	RL_CALL(restore_read, RL_OK, streamer, &ucint, 1);
 	val |= ucint << 8;
 	*value = val;
 cleanup:
@@ -106,13 +105,13 @@ static int read_unsigned_int(rl_restore_streamer *streamer, unsigned long *value
 	int retval;
 	unsigned char ucint;
 	long val;
-	RL_CALL(read, RL_OK, streamer, &ucint, 1);
+	RL_CALL(restore_read, RL_OK, streamer, &ucint, 1);
 	val = ucint;
-	RL_CALL(read, RL_OK, streamer, &ucint, 1);
+	RL_CALL(restore_read, RL_OK, streamer, &ucint, 1);
 	val |= ucint << 8;
-	RL_CALL(read, RL_OK, streamer, &ucint, 1);
+	RL_CALL(restore_read, RL_OK, streamer, &ucint, 1);
 	val |= ucint << 16;
-	RL_CALL(read, RL_OK, streamer, &ucint, 1);
+	RL_CALL(restore_read, RL_OK, streamer, &ucint, 1);
 	val |= ucint << 24;
 	*value = val;
 cleanup:
@@ -123,21 +122,21 @@ static int read_unsigned_long(rl_restore_streamer *streamer, unsigned long *valu
 	int retval;
 	unsigned char ucint;
 	unsigned long val;
-	RL_CALL(read, RL_OK, streamer, &ucint, 1);
+	RL_CALL(restore_read, RL_OK, streamer, &ucint, 1);
 	val = ucint;
-	RL_CALL(read, RL_OK, streamer, &ucint, 1);
+	RL_CALL(restore_read, RL_OK, streamer, &ucint, 1);
 	val |= ucint << 8;
-	RL_CALL(read, RL_OK, streamer, &ucint, 1);
+	RL_CALL(restore_read, RL_OK, streamer, &ucint, 1);
 	val |= ucint << 16;
-	RL_CALL(read, RL_OK, streamer, &ucint, 1);
+	RL_CALL(restore_read, RL_OK, streamer, &ucint, 1);
 	val |= ucint << 24;
-	RL_CALL(read, RL_OK, streamer, &ucint, 1);
+	RL_CALL(restore_read, RL_OK, streamer, &ucint, 1);
 	val |= (unsigned long)ucint << 32;
-	RL_CALL(read, RL_OK, streamer, &ucint, 1);
+	RL_CALL(restore_read, RL_OK, streamer, &ucint, 1);
 	val |= (unsigned long)ucint << 40;
-	RL_CALL(read, RL_OK, streamer, &ucint, 1);
+	RL_CALL(restore_read, RL_OK, streamer, &ucint, 1);
 	val |= (unsigned long)ucint << 48;
-	RL_CALL(read, RL_OK, streamer, &ucint, 1);
+	RL_CALL(restore_read, RL_OK, streamer, &ucint, 1);
 	val |= (unsigned long)ucint << 56;
 	*value = val;
 cleanup:
@@ -149,7 +148,7 @@ static int read_length_with_encoding(rl_restore_streamer *streamer, long *length
 	int retval;
 	unsigned char f;
 	unsigned char f4[4];
-	RL_CALL(read, RL_OK, streamer, &f, 1);
+	RL_CALL(restore_read, RL_OK, streamer, &f, 1);
 	int enc_type = (f & 0xC0) >> 6;
 	if (enc_type == REDIS_RDB_ENCVAL) {
 		if (is_encoded) {
@@ -168,14 +167,14 @@ static int read_length_with_encoding(rl_restore_streamer *streamer, long *length
 			*is_encoded = 0;
 		}
 		*length = ((f & 0x3F) << 8 );
-		RL_CALL(read, RL_OK, streamer, &f, 1);
+		RL_CALL(restore_read, RL_OK, streamer, &f, 1);
 		*length |= f;
 		return RL_OK;
 	} else {
 		if (is_encoded) {
 			*is_encoded = 0;
 		}
-		RL_CALL(read, RL_OK, streamer, f4, 4);
+		RL_CALL(restore_read, RL_OK, streamer, f4, 4);
 		*length = ntohl(*(uint32_t*)f4);
 		return RL_OK;
 	}
@@ -193,14 +192,14 @@ static int read_ziplist_entry(rl_restore_streamer *streamer, unsigned long prev_
 	}
 	unsigned char ucaux;
 	unsigned long entry_header;
-	RL_CALL(read, RL_OK, streamer, &ucaux, 1);
+	RL_CALL(restore_read, RL_OK, streamer, &ucaux, 1);
 	entry_header = ucaux;
 	if ((entry_header >> 6) == 0) {
 		length = entry_header & 0x3F;
 	}
 	else if ((entry_header >> 6) == 1) {
 		length = ((entry_header & 0x3F) << 8);
-		RL_CALL(read, RL_OK, streamer, &ucaux, 1);
+		RL_CALL(restore_read, RL_OK, streamer, &ucaux, 1);
 		length |= ucaux;
 	}
 	else if ((entry_header >> 6) == 2) {
@@ -209,26 +208,26 @@ static int read_ziplist_entry(rl_restore_streamer *streamer, unsigned long prev_
 		goto cleanup;
 	} else if ((entry_header >> 4) == 12) {
 		length = entry_header;
-		RL_CALL(read, RL_OK, streamer, &ucaux, 1);
+		RL_CALL(restore_read, RL_OK, streamer, &ucaux, 1);
 		length |= ucaux << 8;
 	} else if ((entry_header >> 4) == 13) {
 		unsigned char b[4];
 		b[0] = entry_header;
-		RL_CALL(read, RL_OK, streamer, &b[1], 3);
+		RL_CALL(restore_read, RL_OK, streamer, &b[1], 3);
 		RL_CALL(read_signed_int, RL_OK, b, &length);
 	} else if ((entry_header >> 4) == 14) {
 		unsigned char b[8];
 		b[0] = entry_header;
-		RL_CALL(read, RL_OK, streamer, &b[1], 7);
+		RL_CALL(restore_read, RL_OK, streamer, &b[1], 7);
 		RL_CALL(read_signed_long, RL_OK, b, &length);
 	} else if (entry_header == 240) {
 		unsigned char tmp[5];
 		tmp[0] = tmp[4] = 0;
 		tmp[1] = entry_header;
-		RL_CALL(read, RL_OK, streamer, &tmp[2], 2);
+		RL_CALL(restore_read, RL_OK, streamer, &tmp[2], 2);
 		RL_CALL(read_signed_int, RL_OK, tmp, &length);
 	} else if (entry_header == 254) {
-		RL_CALL(read, RL_OK, streamer, &ucaux, 1);
+		RL_CALL(restore_read, RL_OK, streamer, &ucaux, 1);
 		length = ucaux;
 	} else if (entry_header >= 241 && entry_header <= 253) {
 		RL_MALLOC(entry, sizeof(unsigned char) * 2);
@@ -236,7 +235,7 @@ static int read_ziplist_entry(rl_restore_streamer *streamer, unsigned long prev_
 		goto ret;
 	}
 	RL_MALLOC(entry, sizeof(unsigned char) * length);
-	RL_CALL(read, RL_OK, streamer, entry, length);
+	RL_CALL(restore_read, RL_OK, streamer, entry, length);
 ret:
 	*_entry = entry;
 	*_length = length;
@@ -257,7 +256,7 @@ static int read_string(rl_restore_streamer *streamer, unsigned char **str, long 
 	if (is_encoded && length == REDIS_RDB_ENC_INT8) {
 		strdatalen = 5;
 		RL_MALLOC(strdata, strdatalen * sizeof(unsigned char));
-		RL_CALL(read, RL_OK, streamer, &ucint, 1);
+		RL_CALL(restore_read, RL_OK, streamer, &ucint, 1);
 		strdatalen = snprintf((char *)strdata, strdatalen, "%d", (signed char)ucint);
 		if (strdatalen < 0) {
 			retval = RL_UNEXPECTED;
@@ -267,9 +266,9 @@ static int read_string(rl_restore_streamer *streamer, unsigned char **str, long 
 		strdatalen = 7;
 		RL_MALLOC(strdata, strdatalen * sizeof(unsigned char));
 
-		RL_CALL(read, RL_OK, streamer, &ucint, 1);
+		RL_CALL(restore_read, RL_OK, streamer, &ucint, 1);
 		i16int = ucint;
-		RL_CALL(read, RL_OK, streamer, &ucint, 1);
+		RL_CALL(restore_read, RL_OK, streamer, &ucint, 1);
 		i16int |= ucint << 8;
 
 		strdatalen = snprintf((char *)strdata, strdatalen, "%d", i16int);
@@ -281,13 +280,13 @@ static int read_string(rl_restore_streamer *streamer, unsigned char **str, long 
 		strdatalen = 12;
 		RL_MALLOC(strdata, strdatalen * sizeof(unsigned char));
 
-		RL_CALL(read, RL_OK, streamer, &ucint, 1);
+		RL_CALL(restore_read, RL_OK, streamer, &ucint, 1);
 		i32int = ucint;
-		RL_CALL(read, RL_OK, streamer, &ucint, 1);
+		RL_CALL(restore_read, RL_OK, streamer, &ucint, 1);
 		i32int |= ucint << 8;
-		RL_CALL(read, RL_OK, streamer, &ucint, 1);
+		RL_CALL(restore_read, RL_OK, streamer, &ucint, 1);
 		i32int |= ucint << 16;
-		RL_CALL(read, RL_OK, streamer, &ucint, 1);
+		RL_CALL(restore_read, RL_OK, streamer, &ucint, 1);
 		i32int |= ucint << 24;
 
 		strdatalen = snprintf((char *)strdata, strdatalen, "%d", i32int);
@@ -300,13 +299,13 @@ static int read_string(rl_restore_streamer *streamer, unsigned char **str, long 
 		RL_CALL(read_length_with_encoding, RL_OK, streamer, &strdatalen, NULL);
 		strdata = rl_malloc(strdatalen * sizeof(unsigned char));
 		unsigned char *cdata = malloc(sizeof(unsigned char) * cdatalen);
-		RL_CALL(read, RL_OK, streamer, cdata, cdatalen);
+		RL_CALL(restore_read, RL_OK, streamer, cdata, cdatalen);
 		rl_lzf_decompress(cdata, cdatalen, strdata, strdatalen);
 		free(cdata);
 	} else if (!is_encoded) {
 		strdatalen = length;
 		strdata = rl_malloc(strdatalen * sizeof(unsigned char));
-		RL_CALL(read, RL_OK, streamer, strdata, strdatalen);
+		RL_CALL(restore_read, RL_OK, streamer, strdata, strdatalen);
 	} else {
 		retval = RL_NOT_IMPLEMENTED;
 		goto cleanup;
@@ -329,7 +328,7 @@ int rl_restore_stream(struct rlite *db, const unsigned char *key, long keylen, u
 	double d;
 
 	RL_CALL(rl_key_get, RL_NOT_FOUND, db, key, keylen, NULL, NULL, NULL, NULL, NULL);
-	RL_CALL(read, RL_OK, streamer, &type, 1);
+	RL_CALL(restore_read, RL_OK, streamer, &type, 1);
 
 	if (type == REDIS_RDB_TYPE_STRING) {
 		RL_CALL(read_string, RL_OK, streamer, &strdata, &strdatalen);
@@ -363,13 +362,13 @@ int rl_restore_stream(struct rlite *db, const unsigned char *key, long keylen, u
 		RL_CALL(read_length_with_encoding, RL_OK, streamer, &length, NULL);
 		for (i = 0; i < length; i++) {
 			RL_CALL(read_string, RL_OK, streamer, &strdata, &strdatalen);
-			RL_CALL(read, RL_OK, streamer, &ucaux, 1);
+			RL_CALL(restore_read, RL_OK, streamer, &ucaux, 1);
 			length2 = ucaux;
 			if (length2 > 40 || length2 < 1) {
 				retval = RL_UNEXPECTED;
 				goto cleanup;
 			}
-			RL_CALL(read, RL_OK, streamer, (unsigned char *)f, length2);
+			RL_CALL(restore_read, RL_OK, streamer, (unsigned char *)f, length2);
 			f[length2] = 0;
 			d = strtold(f, NULL);
 
@@ -402,9 +401,9 @@ int rl_restore_stream(struct rlite *db, const unsigned char *key, long keylen, u
 	else if (type == REDIS_RDB_TYPE_LIST_ZIPLIST) {
 		RL_CALL(read_string, RL_OK, streamer, &strdata, &strdatalen);
 		rl_restore_streamer *substreamer = init_string_streamer(strdata, strdatalen);
-		RL_CALL(read, RL_OK, substreamer, NULL, 10);
+		RL_CALL(restore_read, RL_OK, substreamer, NULL, 10);
 		while (1) {
-			RL_CALL(read, RL_OK, substreamer, &ucaux, 1);
+			RL_CALL(restore_read, RL_OK, substreamer, &ucaux, 1);
 			if (ucaux == 255) {
 				break;
 			}
@@ -448,14 +447,14 @@ int rl_restore_stream(struct rlite *db, const unsigned char *key, long keylen, u
 	else if (type == REDIS_RDB_TYPE_ZSET_ZIPLIST) {
 		RL_CALL(read_string, RL_OK, streamer, &strdata, &strdatalen);
 		rl_restore_streamer *substreamer = init_string_streamer(strdata, strdatalen);
-		RL_CALL(read, RL_OK, substreamer, NULL, 10);
+		RL_CALL(restore_read, RL_OK, substreamer, NULL, 10);
 		while (1) {
-			RL_CALL(read, RL_OK, substreamer, &ucaux, 1);
+			RL_CALL(restore_read, RL_OK, substreamer, &ucaux, 1);
 			if (ucaux == 255) {
 				break;
 			}
 			RL_CALL(read_ziplist_entry, RL_OK, substreamer, ucaux, &strdata2, &strdata2len);
-			RL_CALL(read, RL_OK, substreamer, NULL, 1);
+			RL_CALL(restore_read, RL_OK, substreamer, NULL, 1);
 			RL_CALL(read_ziplist_entry, RL_OK, substreamer, ucaux, &strdata3, &strdata3len);
 
 			if (strdata3len > 40 || strdata3len < 1) {
@@ -480,14 +479,14 @@ int rl_restore_stream(struct rlite *db, const unsigned char *key, long keylen, u
 	else if (type == REDIS_RDB_TYPE_HASH_ZIPLIST) {
 		RL_CALL(read_string, RL_OK, streamer, &strdata, &strdatalen);
 		rl_restore_streamer *substreamer = init_string_streamer(strdata, strdatalen);
-		RL_CALL(read, RL_OK, substreamer, NULL, 10);
+		RL_CALL(restore_read, RL_OK, substreamer, NULL, 10);
 		while (1) {
-			RL_CALL(read, RL_OK, substreamer, &ucaux, 1);
+			RL_CALL(restore_read, RL_OK, substreamer, &ucaux, 1);
 			if (ucaux == 255) {
 				break;
 			}
 			RL_CALL(read_ziplist_entry, RL_OK, substreamer, ucaux, &strdata2, &strdata2len);
-			RL_CALL(read, RL_OK, substreamer, NULL, 1);
+			RL_CALL(restore_read, RL_OK, substreamer, NULL, 1);
 			RL_CALL(read_ziplist_entry, RL_OK, substreamer, ucaux, &strdata3, &strdata3len);
 			if (key) {
 				RL_CALL(rl_hset, RL_OK, db, key, keylen, strdata2, strdata2len, strdata3, strdata3len, NULL, 0);
