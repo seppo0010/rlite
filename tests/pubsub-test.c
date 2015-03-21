@@ -17,10 +17,11 @@ struct buf {
 	const char *channel;
 	size_t channellen;
 	int read;
+	long recipients;
 };
 
-static void do_publish(rlite *db, struct buf *buffer) {
-	if (rl_publish(db, UNSIGN(buffer->channel), buffer->channellen, buffer->data, buffer->datalen)) {
+static void do_publish(rlite *db, struct buf *buffer, long *recipients) {
+	if (rl_publish(db, UNSIGN(buffer->channel), buffer->channellen, buffer->data, buffer->datalen, recipients)) {
 		fprintf(stderr, "Failed to publish\n");
 		return;
 	}
@@ -39,7 +40,7 @@ static void* publish(void* _buffer) {
 		fprintf(stderr, "Failed to open database\n");
 		return NULL;
 	}
-	do_publish(db, buffer);
+	do_publish(db, buffer, &buffer->recipients);
 	rl_close(db);
 	return NULL;
 }
@@ -100,6 +101,7 @@ TEST basic_subscribe_publish()
 	size_t testdatalen = 0;
 	char *channel = CHANNEL;
 	long channellen = strlen(CHANNEL);
+	long recipients;
 
 	struct buf buffer;
 	buffer.data = data;
@@ -113,12 +115,13 @@ TEST basic_subscribe_publish()
 		fprintf(stderr, "Failed to subscribe\n");
 		FAIL();
 	}
-	do_publish(db, &buffer);
+	do_publish(db, &buffer, &recipients);
 	rl_discard(db);
 	poll(db, &buffer);
 	rl_close(db);
 
 	ASSERT_EQ(buffer.read, 1);
+	ASSERT_EQ(recipients, 1);
 	rl_free(testdata);
 	PASS();
 }
@@ -151,6 +154,7 @@ TEST basic_subscribe_publish_newdb()
 	rl_close(db);
 
 	ASSERT_EQ(buffer.read, 1);
+	ASSERT_EQ(buffer.recipients, 1);
 	rl_free(testdata);
 	PASS();
 }

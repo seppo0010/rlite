@@ -72,10 +72,10 @@ cleanup:
 	return retval;
 }
 
-int rl_publish(rlite *db, unsigned char *channel, size_t channellen, const char *data, size_t datalen)
+int rl_publish(rlite *db, unsigned char *channel, size_t channellen, const char *data, size_t datalen, long *_recipients)
 {
 	unsigned char *value = NULL;
-	long valuelen;
+	long valuelen, recipients = 0;
 	int retval;
 	unsigned char *values[4];
 	long valueslen[4];
@@ -96,12 +96,16 @@ int rl_publish(rlite *db, unsigned char *channel, size_t channellen, const char 
 
 	RL_CALL(rl_select_internal, RL_OK, db, RLITE_INTERNAL_DB_SUBSCRIBER_MESSAGES);
 	while ((retval = rl_set_iterator_next(iterator, &value, &valuelen)) == RL_OK) {
+		recipients++;
 		RL_CALL(rl_push, RL_OK, db, value, valuelen, 1, 0, 4, values, valueslen, NULL);
 		rl_free(value);
 		value = NULL;
 	}
 	if (retval == RL_END) {
 		retval = RL_OK;
+	}
+	if (_recipients) {
+		*_recipients = recipients;
 	}
 cleanup:
 	rl_free(value);
