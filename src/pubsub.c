@@ -108,6 +108,13 @@ int rl_publish(rlite *db, unsigned char *channel, size_t channellen, const char 
 		*_recipients = recipients;
 	}
 cleanup:
+	if (retval == RL_NOT_FOUND) {
+		// no subscriber? no problem
+		if (_recipients) {
+			*_recipients = 0;
+		}
+		retval = RL_OK;
+	}
 	rl_free(value);
 	rl_select_internal(db, RLITE_INTERNAL_DB_NO);
 	return retval;

@@ -8,6 +8,7 @@
 #include "../src/rlite.h"
 #include "../src/pubsub.h"
 
+#define DATA "hello world!"
 #define CHANNEL "mychannel"
 #define CHANNEL2 "other channel"
 
@@ -19,6 +20,26 @@ struct buf {
 	int read;
 	long recipients;
 };
+
+static void init_buffer(struct buf* buffer, const char *data, size_t datalen, const char *channel, size_t channellen)
+{
+	if (data == NULL) {
+		buffer->data = DATA;
+		buffer->datalen = (size_t)strlen(DATA);
+	} else {
+		buffer->data = data;
+		buffer->datalen = datalen;
+	}
+	if (channel == NULL) {
+		buffer->channel = CHANNEL;
+		buffer->channellen = (size_t)strlen(CHANNEL);
+	} else {
+		buffer->channel = channel;
+		buffer->channellen = channellen;
+	}
+	buffer->read = 0;
+	buffer->recipients = 0;
+}
 
 static void do_publish(rlite *db, struct buf *buffer, long *recipients) {
 	if (rl_publish(db, UNSIGN(buffer->channel), buffer->channellen, buffer->data, buffer->datalen, recipients)) {
@@ -32,7 +53,6 @@ static void do_publish(rlite *db, struct buf *buffer, long *recipients) {
 }
 
 static void* publish(void* _buffer) {
-	sleep(1);
 	struct buf *buffer = _buffer;
 
 	rlite *db = NULL;
@@ -95,19 +115,15 @@ static void* subscribe(void* _buffer) {
 TEST basic_subscribe_publish()
 {
 	int retval;
-	static const char *data = "hello world!";
-	size_t datalen = strlen(data);
 	char *testdata = NULL;
 	size_t testdatalen = 0;
-	char *channel = CHANNEL;
-	long channellen = strlen(CHANNEL);
 	long recipients;
 
+	const char *channel = CHANNEL;
+	long channellen = strlen(channel);
+
 	struct buf buffer;
-	buffer.data = data;
-	buffer.datalen = datalen;
-	buffer.channel = channel;
-	buffer.channellen = channellen;
+	init_buffer(&buffer, NULL, 0, NULL, 0);
 
 	rlite *db = NULL;
 	RL_CALL_VERBOSE(setup_db, RL_OK, &db, 1, 1);
@@ -129,18 +145,13 @@ TEST basic_subscribe_publish()
 TEST basic_subscribe_publish_newdb()
 {
 	int retval;
-	static const char *data = "hello world!";
-	size_t datalen = strlen(data);
 	char *testdata = NULL;
 	size_t testdatalen = 0;
 	char *channel = CHANNEL;
 	long channellen = strlen(CHANNEL);
 
 	struct buf buffer;
-	buffer.data = data;
-	buffer.datalen = datalen;
-	buffer.channel = channel;
-	buffer.channellen = channellen;
+	init_buffer(&buffer, NULL, 0, NULL, 0);
 
 	rlite *db = NULL;
 	RL_CALL_VERBOSE(setup_db, RL_OK, &db, 1, 1);
@@ -159,58 +170,60 @@ TEST basic_subscribe_publish_newdb()
 	PASS();
 }
 
-/*
-TEST basic_publish_two_subscribers()
-{
-	int retval;
-	static const char *data = "hello world!";
-	size_t datalen = strlen(data);
-	char *testdata = NULL;
-	size_t testdatalen = 0;
-	pthread_t thread_w;
-	pthread_t thread_r;
-	char *channel = CHANNEL;
-	long channellen = strlen(CHANNEL);
-
-	struct buf buffer;
-	buffer.data = data;
-	buffer.datalen = datalen;
-	buffer.read = 0;
-	buffer.channel = channel;
-	buffer.channellen = channellen;
-
-	rlite *db = NULL;
-	RL_CALL_VERBOSE(setup_db, RL_OK, &db, 1, 1);
-	pthread_create(&thread_w, NULL, publish, &buffer);
-	pthread_create(&thread_r, NULL, subscribe, &buffer);
-	RL_CALL_VERBOSE(rl_subscribe, RL_OK, db, 1, (unsigned char **)&channel, &channellen, &testdata, &testdatalen);
-	rl_close(db);
-
-	ASSERT_EQ(buffer.read, 1);
-	ASSERT_EQ(datalen, testdatalen);
-	ASSERT_EQ(memcmp(data, testdata, datalen), 0);
-	rl_free(testdata);
-	PASS();
-}
-
 TEST basic_publish_no_subscriber()
 {
 	int retval;
-	static const char *data = "hello world!";
-	size_t datalen = strlen(data);
 
 	struct buf buffer;
-	buffer.data = data;
-	buffer.datalen = datalen;
+	init_buffer(&buffer, NULL, 0, NULL, 0);
 
 	rlite *db = NULL;
 	RL_CALL_VERBOSE(setup_db, RL_OK, &db, 1, 1);
 	rl_close(db);
 	publish(&buffer);
 
+	ASSERT_EQ(buffer.recipients, 0);
+
 	PASS();
 }
 
+TEST basic_publish_two_subscribers()
+{
+	int retval;
+	char *channel = CHANNEL;
+	long channellen = strlen(CHANNEL);
+
+	pthread_t thread_w;
+	struct buf buffer_w;
+	init_buffer(&buffer_w, NULL, 0, NULL, 0);
+
+	pthread_t thread_r;
+	struct buf buffer_r;
+	init_buffer(&buffer_r, NULL, 0, NULL, 0);
+
+	pthread_t thread_r2;
+	struct buf buffer_r2;
+	init_buffer(&buffer_r2, NULL, 0, NULL, 0);
+
+	rlite *db = NULL;
+	RL_CALL_VERBOSE(setup_db, RL_OK, &db, 1, 1);
+	rl_close(db);
+	pthread_create(&thread_r, NULL, subscribe, &buffer_r);
+	pthread_create(&thread_r2, NULL, subscribe, &buffer_r2);
+	sleep(1); // need to make sure both subscribers are ready
+	pthread_create(&thread_w, NULL, publish, &buffer_w);
+
+	pthread_join(thread_w, NULL);
+	pthread_join(thread_r, NULL);
+	pthread_join(thread_r2, NULL);
+
+	ASSERT_EQ(buffer_w.recipients, 2);
+	ASSERT_EQ(buffer_r.read, 1);
+	ASSERT_EQ(buffer_r2.read, 1);
+	PASS();
+}
+
+/*
 TEST basic_subscribe2_publish(int publish_channel)
 {
 	int retval;
@@ -245,8 +258,8 @@ SUITE(pubsub_test)
 {
 	RUN_TEST(basic_subscribe_publish);
 	RUN_TEST(basic_subscribe_publish_newdb);
-	// RUN_TEST(basic_publish_two_subscribers);
-	// RUN_TEST(basic_publish_no_subscriber);
+	RUN_TEST(basic_publish_two_subscribers);
+	RUN_TEST(basic_publish_no_subscriber);
 	// RUN_TEST1(basic_subscribe2_publish, 0);
 	// RUN_TEST1(basic_subscribe2_publish, 1);
 }
