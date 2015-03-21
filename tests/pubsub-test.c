@@ -69,17 +69,20 @@ static void poll(rlite *db, struct buf *buffer) {
 	int elementc;
 	unsigned char **elements;
 	long *elementslen;
-	char *testdata = NULL;
-	size_t testdatalen = 0;
+	char *testdata = NULL, *testchannel = NULL;
+	size_t testdatalen = 0, testchannellen = 0;
 	while (rl_poll(db, &elementc, &elements, &elementslen) == RL_NOT_FOUND) {
 		// need to discard to release lock on file
 		rl_discard(db);
 		sleep(1);
 	}
+	testchannel = (char *)elements[1];
+	testchannellen = (size_t)elementslen[1];
 	testdata = (char *)elements[2];
 	testdatalen = (size_t)elementslen[2];
 
-	if (buffer->datalen == testdatalen && memcmp(buffer->data, testdata, testdatalen) == 0) {
+	if (buffer->channellen == testchannellen && memcmp(buffer->channel, testchannel, testchannellen) == 0 &&
+			buffer->datalen == testdatalen && memcmp(buffer->data, testdata, testdatalen) == 0) {
 		buffer->read = 1;
 	} else {
 		fprintf(stderr, "Data mismatch on secondary subscriber");
@@ -223,36 +226,28 @@ TEST basic_publish_two_subscribers()
 	PASS();
 }
 
-/*
 TEST basic_subscribe2_publish(int publish_channel)
 {
 	int retval;
 	static const char *data = "hello world!";
 	size_t datalen = strlen(data);
-	char *testdata = NULL;
-	size_t testdatalen = 0;
 	pthread_t thread;
 	unsigned char *channels[2] = {UNSIGN(CHANNEL), UNSIGN(CHANNEL2)};
 	long channelslen[2] = {strlen(CHANNEL), strlen(CHANNEL2)};
 
 	struct buf buffer;
-	buffer.data = data;
-	buffer.datalen = datalen;
-	buffer.channel = (const char *)channels[publish_channel];
-	buffer.channellen = channelslen[publish_channel];
+	init_buffer(&buffer, NULL, 0, (char *)channels[publish_channel], channelslen[publish_channel]);
 
 	rlite *db = NULL;
 	RL_CALL_VERBOSE(setup_db, RL_OK, &db, 1, 1);
 	pthread_create(&thread, NULL, publish, &buffer);
-	RL_CALL_VERBOSE(rl_subscribe, RL_OK, db, 2, channels, channelslen, &testdata, &testdatalen);
+	RL_CALL_VERBOSE(rl_subscribe, RL_OK, db, 2, channels, channelslen);
+	poll(db, &buffer);
 	rl_close(db);
 
-	ASSERT_EQ(datalen, testdatalen);
-	ASSERT_EQ(memcmp(data, testdata, datalen), 0);
-	rl_free(testdata);
+	ASSERT_EQ(buffer.read, 1);
 	PASS();
 }
-*/
 
 SUITE(pubsub_test)
 {
@@ -260,6 +255,6 @@ SUITE(pubsub_test)
 	RUN_TEST(basic_subscribe_publish_newdb);
 	RUN_TEST(basic_publish_two_subscribers);
 	RUN_TEST(basic_publish_no_subscriber);
-	// RUN_TEST1(basic_subscribe2_publish, 0);
-	// RUN_TEST1(basic_subscribe2_publish, 1);
+	RUN_TEST1(basic_subscribe2_publish, 0);
+	RUN_TEST1(basic_subscribe2_publish, 1);
 }
