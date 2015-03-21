@@ -59,9 +59,9 @@ int sha1_cmp(void *v1, void *v2);
 int double_cmp(void *v1, void *v2);
 #ifdef RL_DEBUG
 int long_formatter(void *v2, char **formatted, int *size);
-int sha1_formatter(void *v2, char **formatted, int *size);
 int double_formatter(void *v2, char **formatted, int *size);
 #endif
+int sha1_formatter(void *v2, char **formatted, int *size);
 double get_double(const unsigned char *p);
 void put_double(unsigned char *p, double v);
 int sha1(const unsigned char *data, long datalen, unsigned char digest[20]);

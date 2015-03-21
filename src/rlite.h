@@ -54,10 +54,11 @@
 #define RLITE_FLOCK_EX 2
 #define RLITE_FLOCK_UN 3
 
-#define RLITE_INTERNAL_DB_COUNT 2
+#define RLITE_INTERNAL_DB_COUNT 4
 #define RLITE_INTERNAL_DB_NO 0
 #define RLITE_INTERNAL_DB_LUA 1
-#define RLITE_INTERNAL_DB_PUBSUB 2
+#define RLITE_INTERNAL_DB_SUBSCRIBER_CHANNELS 2
+#define RLITE_INTERNAL_DB_SUBSCRIBER_MESSAGES 3
 
 struct rlite;
 struct rl_btree;
@@ -112,6 +113,7 @@ typedef struct rlite {
 	long write_pages_alloc;
 	long write_pages_len;
 	rl_page **write_pages;
+	char *subscriptor_id;
 } rlite;
 
 typedef struct watched_key {

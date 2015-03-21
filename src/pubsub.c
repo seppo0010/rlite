@@ -4,86 +4,107 @@
 
 #define FILENAME_LENGTH 8
 
-static char *get_filename(rlite *db, char *identifier)
-{
-	rl_file_driver *driver = db->driver;
-	return rl_get_filename_with_suffix(driver->filename, identifier);
+static void generate_subscriptor_id(rlite *db) {
+	// TODO: check for collisions and retry?
+	// this is probably the worst random hash in the history of programming
+	char str[60];
+	unsigned char digest[20];
+	memset(str, 0, 60);
+	snprintf(str, 60, "%llu", rl_mstime());
+	snprintf(&str[40], 20, "%d", rand());
+	sha1((unsigned char *)str, 60, digest);
+	sha1_formatter(digest, &db->subscriptor_id, NULL);
 }
 
-int rl_subscribe(rlite *db, int channelc, unsigned char **channelv, long *channelvlen, char **data, size_t *datalen)
+int rl_subscribe(rlite *db, int channelc, unsigned char **channelv, long *channelvlen)
 {
-	unsigned char *identifier = NULL;
-	char *filename = NULL;
-	int retval, i, j;
-	long added = 0, identifierlen = FILENAME_LENGTH;
-	if (db->driver_type != RL_FILE_DRIVER) {
-		return RL_NOT_IMPLEMENTED;
+	int i, retval;
+	long identifierlen[1] = {40};
+	if (db->subscriptor_id == NULL) {
+		generate_subscriptor_id(db);
+		if (db->subscriptor_id == NULL) {
+			retval = RL_OUT_OF_MEMORY;
+			goto cleanup;
+		}
 	}
-	identifier = rl_malloc(sizeof(char) * (FILENAME_LENGTH + 1));
-	identifier[0] = '.';
-	identifier[FILENAME_LENGTH] = 0;
-
-	RL_CALL(rl_select_internal, RL_OK, db, RLITE_INTERNAL_DB_PUBSUB);
-	do {
-		for (i = 1; i < FILENAME_LENGTH; i++) {
-			identifier[i] = (rand() % 26) + 'a';
-		}
-		for (j = 0; j < channelc; j++) {
-			RL_CALL(rl_sadd, RL_OK, db, channelv[j], channelvlen[j], 1, (unsigned char **)&identifier, &identifierlen, &added);
-			if (added == 0) {
-				rl_discard(db);
-				break;
-			}
-		}
-	} while (added == 0);
+	RL_CALL(rl_select_internal, RL_OK, db, RLITE_INTERNAL_DB_SUBSCRIBER_CHANNELS);
+	for (i = 0; i < channelc; i++) {
+		RL_CALL(rl_sadd, RL_OK, db, channelv[i], channelvlen[i], 1, (unsigned char **)&db->subscriptor_id, identifierlen, NULL);
+	}
 	// important! commit to release the exclusive lock
 	RL_CALL(rl_commit, RL_OK, db);
-
-	filename = get_filename(db, (char *)identifier);
-
-	RL_CALL(rl_create_fifo, RL_OK, filename);
-	RL_CALL(rl_read_fifo, RL_OK, filename, data, datalen);
-	RL_CALL(rl_delete_fifo, RL_OK, filename);
 cleanup:
-	rl_free(identifier);
-	rl_free(filename);
+	rl_select_internal(db, RLITE_INTERNAL_DB_NO);
+	return retval;
+}
+
+int rl_poll(rlite *db, int *elementc, unsigned char ***_elements, long **_elementslen)
+{
+	int retval;
+	unsigned char *len = NULL, i;
+	long lenlen;
+	unsigned char **elements = NULL;
+	long *elementslen = NULL;
+	if (db->subscriptor_id == NULL) {
+		retval = RL_NOT_FOUND;
+		goto cleanup;
+	}
+	RL_CALL(rl_refresh, RL_OK, db);
+	RL_CALL(rl_select_internal, RL_OK, db, RLITE_INTERNAL_DB_SUBSCRIBER_MESSAGES);
+	RL_CALL(rl_pop, RL_OK, db, (unsigned char *)db->subscriptor_id, 40, &len, &lenlen, 1);
+	if (lenlen != 1) {
+		// TODO: delete the key and commit? PANIC
+		retval = RL_UNEXPECTED;
+		goto cleanup;
+	}
+
+	*elementc = len[0];
+	RL_MALLOC(elements, sizeof(unsigned char *) * len[0]);
+	RL_MALLOC(elementslen, sizeof(long) * len[0]);
+	for (i = 0; i < len[0]; i++) {
+		RL_CALL(rl_pop, RL_OK, db, (unsigned char *)db->subscriptor_id, 40, &elements[i], &elementslen[i], 1);
+	}
+	*_elements = elements;
+	*_elementslen = elementslen;
+cleanup:
+	rl_free(len);
 	rl_select_internal(db, RLITE_INTERNAL_DB_NO);
 	return retval;
 }
 
 int rl_publish(rlite *db, unsigned char *channel, size_t channellen, const char *data, size_t datalen)
 {
-	if (db->driver_type != RL_FILE_DRIVER) {
-		return RL_NOT_IMPLEMENTED;
-	}
-	char *filename = NULL;
+	unsigned char *value = NULL;
+	long valuelen;
 	int retval;
-	unsigned char *identifier = NULL;
-	long identifierlen;
-	RL_CALL(rl_select_internal, RL_OK, db, RLITE_INTERNAL_DB_PUBSUB);
+	unsigned char *values[4];
+	long valueslen[4];
+	rl_set_iterator *iterator;
+	RL_CALL(rl_select_internal, RL_OK, db, RLITE_INTERNAL_DB_SUBSCRIBER_CHANNELS);
+	RL_CALL(rl_smembers, RL_OK, db, &iterator, channel, channellen);
 
-	// will break when there's nothing to pop
-	for (;;) {
-		RL_CALL(rl_spop, RL_OK, db, channel, channellen, &identifier, &identifierlen);
-		identifier = realloc(identifier, sizeof(char) * (identifierlen + 1));
-		if (!identifier) {
-			retval = RL_OUT_OF_MEMORY;
-			goto cleanup;
-		}
-		identifier[identifierlen] = 0;
-		filename = get_filename(db, (char *)identifier);
-		RL_CALL(rl_write_fifo, RL_OK, filename, data, datalen);
-		rl_free(filename);
-		filename = NULL;
-		rl_free(identifier);
-		identifier = NULL;
+#define MESSAGE "message"
+	unsigned char q = 3;
+	values[0] = &q;
+	valueslen[0] = 1;
+	values[1] = (unsigned char *)MESSAGE;
+	valueslen[1] = (long)strlen(MESSAGE);
+	values[2] = channel;
+	valueslen[2] = channellen;
+	values[3] = (unsigned char *)data;
+	valueslen[3] = datalen;
+
+	RL_CALL(rl_select_internal, RL_OK, db, RLITE_INTERNAL_DB_SUBSCRIBER_MESSAGES);
+	while ((retval = rl_set_iterator_next(iterator, &value, &valuelen)) == RL_OK) {
+		RL_CALL(rl_push, RL_OK, db, value, valuelen, 1, 0, 4, values, valueslen, NULL);
+		rl_free(value);
+		value = NULL;
 	}
-cleanup:
-	rl_free(filename);
-	rl_free(identifier);
-	rl_select_internal(db, RLITE_INTERNAL_DB_NO);
-	if (retval == RL_NOT_FOUND) {
+	if (retval == RL_END) {
 		retval = RL_OK;
 	}
+cleanup:
+	rl_free(value);
+	rl_select_internal(db, RLITE_INTERNAL_DB_NO);
 	return retval;
 }

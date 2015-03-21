@@ -170,6 +170,8 @@ int long_formatter(void *v2, char **formatted, int *size)
 	return RL_OK;
 }
 
+#endif
+
 int sha1_formatter(void *v2, char **formatted, int *size)
 {
 	unsigned char *data = (unsigned char *)v2;
@@ -184,7 +186,6 @@ int sha1_formatter(void *v2, char **formatted, int *size)
 	return RL_OK;
 }
 
-#endif
 
 // Code for serialize/deserialize double comes from
 // http://beej.us/guide/bgnet/output/html/singlepage/bgnet.html#serialization

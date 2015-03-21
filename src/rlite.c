@@ -268,6 +268,7 @@ int rl_open(const char *filename, rlite **_db, int flags)
 	rlite *db;
 	RL_MALLOC(db, sizeof(*db));
 
+	db->subscriptor_id = NULL;
 	db->databases = NULL;
 	db->initial_databases = NULL;
 	db->selected_database = 0;
@@ -357,17 +358,14 @@ int rl_close(rlite *db)
 	rl_discard(db);
 	if (db->driver_type == RL_FILE_DRIVER) {
 		rl_file_driver *driver = db->driver;
-		if (driver->fp) {
-			fclose(driver->fp);
-		}
 		rl_free(driver->filename);
-		rl_free(db->driver);
 	}
 	else if (db->driver_type == RL_MEMORY_DRIVER) {
 		rl_memory_driver* driver = db->driver;
 		rl_free(driver->data);
-		rl_free(driver);
 	}
+	rl_free(db->driver);
+	rl_free(db->subscriptor_id);
 	rl_free(db->read_pages);
 	rl_free(db->write_pages);
 	rl_free(db->databases);
