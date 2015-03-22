@@ -1,7 +1,7 @@
 LIBS=-lm -lpthread
 CFLAGS +=  -I../src/ -I../deps/lua/src/
 STLIBNAME=../src/libhirlite.a ../deps/lua/src/liblua.a
-OBJS=hstring-test.o set-test.o parser-test.o hlist-test.o hash-test.o echo-test.o scripting-test.o hsort-test.o hmulti-test.o zset-test.o wal-test.o sort-test.o dump-test.o hyperloglog-test.o restore-test.o long-test.o skiplist-test.o type_hash-test.o type_zset-test.o type_set-test.o type_list-test.o type_string-test.o key-test.o multi-test.o multi_string-test.o string-test.o list-test.o rlite-test.o btree-test.o concurrency-test.o db-test.o fifo-test.o pubsub-test.o util.o test.o
+OBJS=hstring-test.o set-test.o parser-test.o hlist-test.o hash-test.o echo-test.o scripting-test.o hsort-test.o hmulti-test.o zset-test.o wal-test.o sort-test.o dump-test.o hyperloglog-test.o restore-test.o long-test.o skiplist-test.o type_hash-test.o type_zset-test.o type_set-test.o type_list-test.o type_string-test.o key-test.o multi-test.o multi_string-test.o string-test.o list-test.o rlite-test.o btree-test.o concurrency-test.o db-test.o fifo-test.o flock-test.o pubsub-test.o util.o test.o
 
 CFLAGS.gcc += -std=c99
 

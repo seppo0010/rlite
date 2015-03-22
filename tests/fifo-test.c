@@ -97,6 +97,7 @@ TEST basic_read_timeout_write()
 	ASSERT_EQ(memcmp(data, testdata, datalen), 0);
 	PASS();
 }
+
 SUITE(fifo_test)
 {
 	RUN_TEST(basic_read_write);
