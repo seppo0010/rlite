@@ -1,10 +1,12 @@
 #include "rlite.h"
 #include "util.h"
 #include "fifo.h"
+#include "pubsub.h"
 
 #define FILENAME_LENGTH 8
 
-static void generate_subscriptor_id(rlite *db) {
+static void generate_subscriptor_id(rlite *db)
+{
 	// TODO: check for collisions and retry?
 	// this is probably the worst random hash in the history of programming
 	char str[60];
@@ -15,6 +17,22 @@ static void generate_subscriptor_id(rlite *db) {
 	sha1((unsigned char *)str, 60, digest);
 	sha1_formatter(digest, &db->subscriptor_id, NULL);
 }
+
+static char *get_filename(rlite *db, char *subscriptor_id)
+{
+	rl_file_driver *driver = db->driver;
+	if (subscriptor_id == NULL) {
+		if (db->subscriptor_id == NULL) {
+			generate_subscriptor_id(db);
+			if (db->subscriptor_id == NULL) {
+				return NULL;
+			}
+		}
+		subscriptor_id = db->subscriptor_id;
+	}
+	return rl_get_filename_with_suffix(driver->filename, subscriptor_id);
+}
+
 
 int rl_subscribe(rlite *db, int channelc, unsigned char **channelv, long *channelvlen)
 {
@@ -35,6 +53,22 @@ int rl_subscribe(rlite *db, int channelc, unsigned char **channelv, long *channe
 	RL_CALL(rl_commit, RL_OK, db);
 cleanup:
 	rl_select_internal(db, RLITE_INTERNAL_DB_NO);
+	return retval;
+}
+
+int rl_poll_wait(rlite *db, int *elementc, unsigned char ***_elements, long **_elementslen, struct timeval *timeout)
+{
+	int retval = rl_poll(db, elementc, _elements, _elementslen);
+	if (retval == RL_NOT_FOUND) {
+		// TODO: possible race condition between poll and fifo read?
+		// can we atomically do both without locking the database?
+		char *filename = get_filename(db, NULL);
+		rl_discard(db);
+		rl_create_fifo(filename);
+		rl_read_fifo(filename, timeout, NULL, NULL);
+		rl_free(filename);
+		retval = rl_poll(db, elementc, _elements, _elementslen);
+	}
 	return retval;
 }
 
@@ -75,6 +109,7 @@ cleanup:
 int rl_publish(rlite *db, unsigned char *channel, size_t channellen, const char *data, size_t datalen, long *_recipients)
 {
 	unsigned char *value = NULL;
+	char *filename = NULL, *subscriptor_id = NULL;
 	long valuelen, recipients = 0;
 	int retval;
 	unsigned char *values[4];
@@ -98,6 +133,18 @@ int rl_publish(rlite *db, unsigned char *channel, size_t channellen, const char 
 	while ((retval = rl_set_iterator_next(iterator, &value, &valuelen)) == RL_OK) {
 		recipients++;
 		RL_CALL(rl_push, RL_OK, db, value, valuelen, 1, 0, 4, values, valueslen, NULL);
+
+		subscriptor_id = rl_malloc(sizeof(char) * (valuelen + 1));
+		memcpy(subscriptor_id, value, valuelen);
+		subscriptor_id[valuelen] = 0;
+
+		filename = get_filename(db, subscriptor_id);
+		// this only signals the fifo recipient that new data is available
+		rl_write_fifo(filename, "1", 1);
+		rl_free(filename);
+		filename = NULL;
+		rl_free(subscriptor_id);
+		subscriptor_id = NULL;
 		rl_free(value);
 		value = NULL;
 	}
@@ -116,6 +163,8 @@ cleanup:
 		retval = RL_OK;
 	}
 	rl_free(value);
+	rl_free(filename);
+	rl_free(subscriptor_id);
 	rl_select_internal(db, RLITE_INTERNAL_DB_NO);
 	return retval;
 }

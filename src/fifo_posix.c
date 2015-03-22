@@ -80,11 +80,15 @@ int rl_read_fifo(const char *fifo_name, struct timeval *timeout, char **_data, s
 		retval = RL_UNEXPECTED;
 		goto cleanup;
 	}
-	*_data = data;
-	*_datalen = datalen;
+	if (_data) {
+		*_data = data;
+	}
+	if (_datalen) {
+		*_datalen = datalen;
+	}
 	retval = RL_OK;
 cleanup:
-	if (fd) {
+	if (fd >= 0) {
 		close(fd);
 	}
 	if (retval != RL_OK) {
@@ -103,8 +107,9 @@ int rl_write_fifo(const char *fifo_name, const char *data, size_t datalen) {
 
 	int fd = open(fifo_name, O_WRONLY | O_NONBLOCK);
 	if (fd == -1) {
-		fprintf(stderr, "Failed to open fifo for writing\n");
-		return RL_UNEXPECTED;
+		// fifo may not always exist on our code
+		// it is a way to signal between processes, but it is show and forget
+		return RL_OK;
 	}
 	write(fd, header, FIFO_HEADER_SIZE);
 	write(fd, data, datalen);

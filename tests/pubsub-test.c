@@ -19,6 +19,8 @@ struct buf {
 	size_t channellen;
 	int read;
 	long recipients;
+	int sleep; // in seconds
+	int timeout; // in seconds
 };
 
 static void init_buffer(struct buf* buffer, const char *data, size_t datalen, const char *channel, size_t channellen)
@@ -39,6 +41,8 @@ static void init_buffer(struct buf* buffer, const char *data, size_t datalen, co
 	}
 	buffer->read = 0;
 	buffer->recipients = 0;
+	buffer->sleep = 0;
+	buffer->timeout = 0;
 }
 
 static void do_publish(rlite *db, struct buf *buffer, long *recipients) {
@@ -54,6 +58,10 @@ static void do_publish(rlite *db, struct buf *buffer, long *recipients) {
 
 static void* publish(void* _buffer) {
 	struct buf *buffer = _buffer;
+
+	if (buffer->sleep) {
+		sleep(buffer->sleep);
+	}
 
 	rlite *db = NULL;
 	if (setup_db(&db, 1, 0)) {
@@ -71,10 +79,25 @@ static void poll(rlite *db, struct buf *buffer) {
 	long *elementslen;
 	char *testdata = NULL, *testchannel = NULL;
 	size_t testdatalen = 0, testchannellen = 0;
-	while (rl_poll(db, &elementc, &elements, &elementslen) == RL_NOT_FOUND) {
-		// need to discard to release lock on file
-		rl_discard(db);
-		sleep(1);
+	if (buffer->timeout == 0) {
+		while (rl_poll(db, &elementc, &elements, &elementslen) == RL_NOT_FOUND) {
+			// need to discard to release lock on file
+			rl_discard(db);
+			sleep(1);
+		}
+	} else {
+		int retval;
+		if (buffer->timeout == -1) {
+			retval = rl_poll_wait(db, &elementc, &elements, &elementslen, NULL);
+		} else {
+			struct timeval timeout;
+			timeout.tv_sec = buffer->timeout;
+			timeout.tv_usec = 0;
+			retval = rl_poll_wait(db, &elementc, &elements, &elementslen, &timeout);
+		}
+		if (retval != RL_OK) {
+			return;
+		}
 	}
 	testchannel = (char *)elements[1];
 	testchannellen = (size_t)elementslen[1];
@@ -249,6 +272,69 @@ TEST basic_subscribe2_publish(int publish_channel)
 	PASS();
 }
 
+TEST basic_subscribe_timeout_publish(int timeout)
+{
+	int retval;
+	char *channel = CHANNEL;
+	long channellen = strlen(CHANNEL);
+
+	pthread_t thread_w;
+	struct buf buffer_w;
+	init_buffer(&buffer_w, NULL, 0, NULL, 0);
+	buffer_w.sleep = 1;
+
+	struct buf buffer_r;
+	init_buffer(&buffer_r, NULL, 0, NULL, 0);
+	buffer_r.timeout = timeout;
+
+	rlite *db = NULL;
+	RL_CALL_VERBOSE(setup_db, RL_OK, &db, 1, 1);
+
+	if (rl_subscribe(db, 1, (unsigned char **)&channel, &channellen)) {
+		fprintf(stderr, "Failed to subscribe\n");
+		FAIL();
+	}
+	rl_discard(db);
+	unsigned long long before = rl_mstime();
+	pthread_create(&thread_w, NULL, publish, &buffer_w);
+	poll(db, &buffer_r);
+	rl_close(db);
+
+	unsigned long long elapsed = rl_mstime() - before;
+	ASSERT(elapsed >= 1000);
+	// if we waited more than 5 secs, we just timeouted, it should be close to 1s
+	ASSERT(elapsed < 5000);
+	ASSERT_EQ(buffer_r.read, 1);
+	ASSERT_EQ(buffer_w.recipients, 1);
+	PASS();
+}
+
+TEST basic_subscribe_timeout()
+{
+	int retval;
+	char *channel = CHANNEL;
+	long channellen = strlen(CHANNEL);
+
+	struct buf buffer_r;
+	init_buffer(&buffer_r, NULL, 0, NULL, 0);
+	buffer_r.timeout = 1;
+
+	rlite *db = NULL;
+	RL_CALL_VERBOSE(setup_db, RL_OK, &db, 1, 1);
+
+	if (rl_subscribe(db, 1, (unsigned char **)&channel, &channellen)) {
+		fprintf(stderr, "Failed to subscribe\n");
+		FAIL();
+	}
+	rl_discard(db);
+	unsigned long long before = rl_mstime();
+	poll(db, &buffer_r);
+	rl_close(db);
+
+	ASSERT_EQ(buffer_r.read, 0);
+	PASS();
+}
+
 SUITE(pubsub_test)
 {
 	RUN_TEST(basic_subscribe_publish);
@@ -257,4 +343,7 @@ SUITE(pubsub_test)
 	RUN_TEST(basic_publish_no_subscriber);
 	RUN_TEST1(basic_subscribe2_publish, 0);
 	RUN_TEST1(basic_subscribe2_publish, 1);
+	RUN_TEST1(basic_subscribe_timeout_publish, 5);
+	RUN_TEST1(basic_subscribe_timeout_publish, -1);
+	RUN_TEST(basic_subscribe_timeout);
 }

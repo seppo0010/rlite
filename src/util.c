@@ -175,10 +175,11 @@ int long_formatter(void *v2, char **formatted, int *size)
 int sha1_formatter(void *v2, char **formatted, int *size)
 {
 	unsigned char *data = (unsigned char *)v2;
-	*formatted = rl_malloc(sizeof(char) * 40);
+	*formatted = rl_malloc(sizeof(char) * 41);
 	if (*formatted == NULL) {
 		return RL_OUT_OF_MEMORY;
 	}
+	(*formatted)[40] = 0;
 	_sha1_formatter(data, *formatted);
 	if (size) {
 		*size = 40;
