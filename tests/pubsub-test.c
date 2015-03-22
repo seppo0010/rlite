@@ -45,8 +45,8 @@ static void init_buffer(struct buf* buffer, const char *data, size_t datalen, co
 	buffer->timeout = 0;
 }
 
-static void do_publish(rlite *db, struct buf *buffer, long *recipients) {
-	if (rl_publish(db, UNSIGN(buffer->channel), buffer->channellen, buffer->data, buffer->datalen, recipients)) {
+static void do_publish(rlite *db, struct buf *buffer) {
+	if (rl_publish(db, UNSIGN(buffer->channel), buffer->channellen, buffer->data, buffer->datalen, &buffer->recipients)) {
 		fprintf(stderr, "Failed to publish\n");
 		return;
 	}
@@ -68,7 +68,7 @@ static void* publish(void* _buffer) {
 		fprintf(stderr, "Failed to open database\n");
 		return NULL;
 	}
-	do_publish(db, buffer, &buffer->recipients);
+	do_publish(db, buffer);
 	rl_close(db);
 	return NULL;
 }
@@ -141,7 +141,6 @@ static void* subscribe(void* _buffer) {
 TEST basic_subscribe_publish()
 {
 	int retval;
-	char *testdata = NULL;
 	size_t testdatalen = 0;
 	long recipients;
 
@@ -157,21 +156,19 @@ TEST basic_subscribe_publish()
 		fprintf(stderr, "Failed to subscribe\n");
 		FAIL();
 	}
-	do_publish(db, &buffer, &recipients);
+	do_publish(db, &buffer);
 	rl_discard(db);
 	poll(db, &buffer);
 	rl_close(db);
 
 	ASSERT_EQ(buffer.read, 1);
-	ASSERT_EQ(recipients, 1);
-	rl_free(testdata);
+	ASSERT_EQ(buffer.recipients, 1);
 	PASS();
 }
 
 TEST basic_subscribe_publish_newdb()
 {
 	int retval;
-	char *testdata = NULL;
 	size_t testdatalen = 0;
 	char *channel = CHANNEL;
 	long channellen = strlen(CHANNEL);
@@ -192,7 +189,6 @@ TEST basic_subscribe_publish_newdb()
 
 	ASSERT_EQ(buffer.read, 1);
 	ASSERT_EQ(buffer.recipients, 1);
-	rl_free(testdata);
 	PASS();
 }
 
@@ -335,6 +331,36 @@ TEST basic_subscribe_timeout()
 	PASS();
 }
 
+TEST basic_subscribe_unsubscribe_publish()
+{
+	int retval;
+	size_t testdatalen = 0;
+	long recipients;
+
+	const char *channel = CHANNEL;
+	long channellen = strlen(channel);
+
+	struct buf buffer;
+	init_buffer(&buffer, NULL, 0, NULL, 0);
+
+	rlite *db = NULL;
+	RL_CALL_VERBOSE(setup_db, RL_OK, &db, 1, 1);
+	if (rl_subscribe(db, 1, (unsigned char **)&channel, &channellen)) {
+		fprintf(stderr, "Failed to subscribe\n");
+		FAIL();
+	}
+	if (rl_unsubscribe(db, 1, (unsigned char **)&channel, &channellen)) {
+		fprintf(stderr, "Failed to subscribe\n");
+		FAIL();
+	}
+	do_publish(db, &buffer);
+	rl_close(db);
+
+	ASSERT_EQ(buffer.recipients, 0);
+	ASSERT_EQ(recipients, 0);
+	PASS();
+}
+
 SUITE(pubsub_test)
 {
 	RUN_TEST(basic_subscribe_publish);
@@ -346,4 +372,5 @@ SUITE(pubsub_test)
 	RUN_TEST1(basic_subscribe_timeout_publish, 5);
 	RUN_TEST1(basic_subscribe_timeout_publish, -1);
 	RUN_TEST(basic_subscribe_timeout);
+	RUN_TEST(basic_subscribe_unsubscribe_publish);
 }

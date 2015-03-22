@@ -56,6 +56,25 @@ cleanup:
 	return retval;
 }
 
+int rl_unsubscribe(rlite *db, int channelc, unsigned char **channelv, long *channelvlen)
+{
+	int i, retval;
+	long identifierlen[1] = {40};
+	if (db->subscriptor_id == NULL) {
+		// if there's no subscriptor id, then the connection is not subscribed to anything
+		return RL_OK;
+	}
+	RL_CALL(rl_select_internal, RL_OK, db, RLITE_INTERNAL_DB_SUBSCRIBER_CHANNELS);
+	for (i = 0; i < channelc; i++) {
+		RL_CALL(rl_srem, RL_OK, db, channelv[i], channelvlen[i], 1, (unsigned char **)&db->subscriptor_id, identifierlen, NULL);
+	}
+	// important! commit to release the exclusive lock
+	RL_CALL(rl_commit, RL_OK, db);
+cleanup:
+	rl_select_internal(db, RLITE_INTERNAL_DB_NO);
+	return retval;
+}
+
 int rl_poll_wait(rlite *db, int *elementc, unsigned char ***_elements, long **_elementslen, struct timeval *timeout)
 {
 	int retval = rl_poll(db, elementc, _elements, _elementslen);

@@ -5,6 +5,7 @@
 #include "rlite.h"
 
 int rl_subscribe(rlite *db, int channelc, unsigned char **channelv, long *channelvlen);
+int rl_unsubscribe(rlite *db, int channelc, unsigned char **channelv, long *channelvlen);
 int rl_poll(rlite *db, int *elementc, unsigned char ***_elements, long **_elementslen);
 /**
  * When timeout is NULL, it will wait for ever.
