@@ -28,7 +28,6 @@ endif
 
 CFLAGS +=  -I./ -I../deps/lua/src/
 
-DEBUG.gcc += -rdynamic
 CFLAGS.gcc += -std=c99
 
 ifeq ($(shell $(CC) -v 2>&1 | grep -c "clang version"), 1)

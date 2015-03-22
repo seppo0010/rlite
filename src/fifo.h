@@ -1,6 +1,8 @@
 #ifndef _RL_FIFO_H
 #define _RL_FIFO_H
 
+#include <sys/time.h>
+
 int rl_create_fifo(const char *fifo_name);
 int rl_delete_fifo(const char *fifo_name);
 int rl_read_fifo(const char *fifo_name, struct timeval *timeout, char **_data, size_t *_datalen);

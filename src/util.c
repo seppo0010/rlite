@@ -336,7 +336,7 @@ double rl_strtod(unsigned char *_str, long strlen, unsigned char **_eptr) {
 }
 
 char *rl_get_filename_with_suffix(const char *filename, char *suffix) {
-	int retval;
+	int retval = RL_OK;
 	char *new_path = NULL;
 	size_t i, last_slash = 0, filenamelen = strlen(filename);
 	size_t suffixlen = strlen(suffix);
