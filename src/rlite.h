@@ -118,7 +118,10 @@ typedef struct rlite {
 	long write_pages_alloc;
 	long write_pages_len;
 	rl_page **write_pages;
+
 	char *subscriptor_id;
+	char *subscriptor_lock_filename;
+	FILE *subscriptor_lock_fp;
 } rlite;
 
 typedef struct watched_key {

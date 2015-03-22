@@ -1,9 +1,29 @@
 #include "rlite.h"
 #include "util.h"
 #include "fifo.h"
+#include "flock.h"
 #include "pubsub.h"
 
-#define FILENAME_LENGTH 8
+#define ENSURE_SUBSCRIPTOR_ID(ret) \
+	if (db->subscriptor_id == NULL) {\
+		generate_subscriptor_id(db);\
+		if (db->subscriptor_id == NULL) {\
+			return ret;\
+		}\
+	}
+
+static void generate_subscriptor_id(rlite *db);
+
+static char *get_lock_filename(rlite *db, char *subscriptor_id)
+{
+	char suffix[46];
+	ENSURE_SUBSCRIPTOR_ID(NULL);
+	rl_file_driver *driver = db->driver;
+	// 40 come from subscriptor_id, 5 ".lock" and then a null
+	memcpy(suffix, subscriptor_id, 40);
+	memcpy(&suffix[40], ".lock", 6);
+	return rl_get_filename_with_suffix(driver->filename, suffix);
+}
 
 static void generate_subscriptor_id(rlite *db)
 {
@@ -16,35 +36,42 @@ static void generate_subscriptor_id(rlite *db)
 	snprintf(&str[40], 20, "%d", rand());
 	sha1((unsigned char *)str, 60, digest);
 	sha1_formatter(digest, &db->subscriptor_id, NULL);
+
+	db->subscriptor_lock_filename = get_lock_filename(db, db->subscriptor_id);
+	if (db->subscriptor_lock_filename == NULL) {
+		rl_free(db->subscriptor_id);
+		db->subscriptor_id = NULL;
+		return;
+	}
+	db->subscriptor_lock_fp = fopen(db->subscriptor_lock_filename, "w");
+	if (db->subscriptor_lock_fp == NULL) {
+		rl_free(db->subscriptor_lock_filename);
+		rl_free(db->subscriptor_id);
+		db->subscriptor_id = NULL;
+		return;
+	}
+	int retval = rl_flock(db->subscriptor_lock_fp, RLITE_FLOCK_EX);
+	if (retval != RL_OK) {
+		fclose(db->subscriptor_lock_fp);
+		remove(db->subscriptor_lock_filename);
+		rl_free(db->subscriptor_lock_filename);
+		rl_free(db->subscriptor_id);
+		db->subscriptor_id = NULL;
+	}
 }
 
-static char *get_filename(rlite *db, char *subscriptor_id)
+static char *get_fifo_filename(rlite *db, char *subscriptor_id)
 {
+	ENSURE_SUBSCRIPTOR_ID(NULL);
 	rl_file_driver *driver = db->driver;
-	if (subscriptor_id == NULL) {
-		if (db->subscriptor_id == NULL) {
-			generate_subscriptor_id(db);
-			if (db->subscriptor_id == NULL) {
-				return NULL;
-			}
-		}
-		subscriptor_id = db->subscriptor_id;
-	}
 	return rl_get_filename_with_suffix(driver->filename, subscriptor_id);
 }
-
 
 int rl_subscribe(rlite *db, int channelc, unsigned char **channelv, long *channelvlen)
 {
 	int i, retval;
 	long identifierlen[1] = {40};
-	if (db->subscriptor_id == NULL) {
-		generate_subscriptor_id(db);
-		if (db->subscriptor_id == NULL) {
-			retval = RL_OUT_OF_MEMORY;
-			goto cleanup;
-		}
-	}
+	ENSURE_SUBSCRIPTOR_ID(RL_UNEXPECTED);
 	RL_CALL(rl_select_internal, RL_OK, db, RLITE_INTERNAL_DB_CHANNEL_SUBSCRIBERS);
 	for (i = 0; i < channelc; i++) {
 		RL_CALL(rl_sadd, RL_OK, db, channelv[i], channelvlen[i], 1, (unsigned char **)&db->subscriptor_id, identifierlen, NULL);
@@ -78,19 +105,16 @@ cleanup:
 	return retval;
 }
 
-int rl_unsubscribe_all(rlite *db)
+static int rl_unsubscribe_all_subscriptor(rlite *db, char *subscriptor_id)
 {
 	int i, retval;
 	rl_set_iterator *iterator;
 	int channelc = 0;
 	unsigned char **channelv = NULL, *channel = NULL;
 	long *channelvlen = NULL, channellen;
-	if (db->subscriptor_id == NULL) {
-		// if there's no subscriptor id, then the connection is not subscribed to anything
-		return RL_OK;
-	}
+	char *subscriptor_lock_filename = NULL;
 	RL_CALL(rl_select_internal, RL_OK, db, RLITE_INTERNAL_DB_SUBSCRIBER_CHANNELS);
-	RL_CALL(rl_smembers, RL_OK, db, &iterator, (unsigned char *)db->subscriptor_id, 40);
+	RL_CALL(rl_smembers, RL_OK, db, &iterator, (unsigned char *)subscriptor_id, 40);
 	RL_MALLOC(channelv, sizeof(char *) * iterator->size);
 	RL_MALLOC(channelvlen, sizeof(long) * iterator->size);
 	channelc = 0;
@@ -101,6 +125,11 @@ int rl_unsubscribe_all(rlite *db)
 		channel = NULL;
 	}
 	RL_CALL(rl_unsubscribe, RL_OK, db, channelc, channelv, channelvlen);
+
+	subscriptor_lock_filename = get_lock_filename(db, subscriptor_id);
+	char *filename = get_fifo_filename(db, db->subscriptor_id);
+	remove(filename);
+	rl_free(filename);
 cleanup:
 	rl_select_internal(db, RLITE_INTERNAL_DB_NO);
 	if (retval == RL_NOT_FOUND) {
@@ -114,7 +143,18 @@ cleanup:
 	}
 	rl_free(channelvlen);
 	rl_free(channel);
+	rl_free(subscriptor_lock_filename);
 	return retval;
+}
+
+int rl_unsubscribe_all(rlite *db)
+{
+	if (db->subscriptor_id == NULL) {
+		// if there's no subscriptor id, then the connection is not subscribed to anything
+		return RL_OK;
+	}
+	fclose(db->subscriptor_lock_fp);
+	return rl_unsubscribe_all_subscriptor(db, db->subscriptor_id);
 }
 
 int rl_poll_wait(rlite *db, int *elementc, unsigned char ***_elements, long **_elementslen, struct timeval *timeout)
@@ -123,7 +163,7 @@ int rl_poll_wait(rlite *db, int *elementc, unsigned char ***_elements, long **_e
 	if (retval == RL_NOT_FOUND) {
 		// TODO: possible race condition between poll and fifo read?
 		// can we atomically do both without locking the database?
-		char *filename = get_filename(db, NULL);
+		char *filename = get_fifo_filename(db, db->subscriptor_id);
 		rl_discard(db);
 		rl_create_fifo(filename);
 		rl_read_fifo(filename, timeout, NULL, NULL);
@@ -192,16 +232,27 @@ int rl_publish(rlite *db, unsigned char *channel, size_t channellen, const char 
 
 	RL_CALL(rl_select_internal, RL_OK, db, RLITE_INTERNAL_DB_SUBSCRIBER_MESSAGES);
 	while ((retval = rl_set_iterator_next(iterator, &value, &valuelen)) == RL_OK) {
-		recipients++;
-		RL_CALL(rl_push, RL_OK, db, value, valuelen, 1, 0, 4, values, valueslen, NULL);
-
 		subscriptor_id = rl_malloc(sizeof(char) * (valuelen + 1));
 		memcpy(subscriptor_id, value, valuelen);
 		subscriptor_id[valuelen] = 0;
 
-		filename = get_filename(db, subscriptor_id);
-		// this only signals the fifo recipient that new data is available
-		rl_write_fifo(filename, "1", 1);
+		filename = get_lock_filename(db, subscriptor_id);
+		if (rl_is_flocked(filename, RLITE_FLOCK_EX) == RL_NOT_FOUND) {
+			// the client has "disconnected"; clean up for them
+			RL_CALL(rl_unsubscribe_all_subscriptor, RL_OK, db, subscriptor_id);
+		} else {
+			recipients++;
+
+			RL_CALL(rl_push, RL_OK, db, value, valuelen, 1, 0, 4, values, valueslen, NULL);
+
+			rl_free(filename); // reusing variables?! WHO WROTE THIS?
+			filename = get_fifo_filename(db, subscriptor_id);
+			// this only signals the fifo recipient that new data is available
+			// - Maybe this should be executed AFTER the push was commited?
+			// - Ah, we have an exclusive lock anyway, so they'll have to wait
+			// when they poll
+			rl_write_fifo(filename, "1", 1);
+		}
 		rl_free(filename);
 		filename = NULL;
 		rl_free(subscriptor_id);

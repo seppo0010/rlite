@@ -1,4 +1,5 @@
 #include <sys/file.h>
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
@@ -269,6 +270,7 @@ int rl_open(const char *filename, rlite **_db, int flags)
 	rlite *db;
 	RL_MALLOC(db, sizeof(*db));
 
+	db->subscriptor_lock_filename = NULL;
 	db->subscriptor_id = NULL;
 	db->databases = NULL;
 	db->initial_databases = NULL;
@@ -365,6 +367,10 @@ int rl_close(rlite *db)
 	else if (db->driver_type == RL_MEMORY_DRIVER) {
 		rl_memory_driver* driver = db->driver;
 		rl_free(driver->data);
+	}
+	if (db->subscriptor_lock_filename) {
+		remove(db->subscriptor_lock_filename);
+		rl_free(db->subscriptor_lock_filename);
 	}
 	rl_free(db->driver);
 	rl_free(db->subscriptor_id);

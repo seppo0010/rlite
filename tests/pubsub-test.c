@@ -117,6 +117,30 @@ static void poll(rlite *db, struct buf *buffer) {
 	rl_free(elementslen);
 }
 
+/**
+ * This function intentionally lives data around to test clean up
+ */
+static void subscribe_broken() {
+
+	rlite *db = NULL;
+	if (setup_db(&db, 1, 0)) {
+		fprintf(stderr, "Failed to open database\n");
+		return;
+	}
+	char *channel = CHANNEL;
+	long channellen = strlen(CHANNEL);
+	if (rl_subscribe(db, 1, (unsigned char **)&channel, &channellen)) {
+		fprintf(stderr, "Failed to subscribe\n");
+		return;
+	}
+
+	rl_free(db->subscriptor_id);
+	db->subscriptor_id = NULL;
+	fclose(db->subscriptor_lock_fp);
+	db->subscriptor_lock_fp = NULL;
+	rl_close(db);
+}
+
 static void* subscribe(void* _buffer) {
 	struct buf *buffer = _buffer;
 
@@ -387,6 +411,30 @@ TEST basic_subscribe_unsubscribe_all_publish()
 	PASS();
 }
 
+TEST basic_publish_cleans_broken_subscriptor()
+{
+	int retval;
+	size_t testdatalen = 0;
+
+	const char *channel = CHANNEL;
+	long channellen = strlen(channel);
+
+	struct buf buffer;
+	init_buffer(&buffer, NULL, 0, NULL, 0);
+
+	rlite *db = NULL;
+	RL_CALL_VERBOSE(setup_db, RL_OK, &db, 1, 1);
+	rl_close(db);
+	subscribe_broken();
+
+	RL_CALL_VERBOSE(setup_db, RL_OK, &db, 1, 0);
+	do_publish(db, &buffer);
+	rl_close(db);
+
+	ASSERT_EQ(buffer.recipients, 0);
+	PASS();
+}
+
 SUITE(pubsub_test)
 {
 	RUN_TEST(basic_subscribe_publish);
@@ -400,4 +448,5 @@ SUITE(pubsub_test)
 	RUN_TEST(basic_subscribe_timeout);
 	RUN_TEST(basic_subscribe_unsubscribe_publish);
 	RUN_TEST(basic_subscribe_unsubscribe_all_publish);
+	RUN_TEST(basic_publish_cleans_broken_subscriptor);
 }
