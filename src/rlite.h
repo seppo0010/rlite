@@ -54,16 +54,19 @@
 #define RLITE_FLOCK_EX 2
 #define RLITE_FLOCK_UN 3
 
-#define RLITE_INTERNAL_DB_COUNT 5
+#define RLITE_INTERNAL_DB_COUNT 6
 #define RLITE_INTERNAL_DB_NO 0
 #define RLITE_INTERNAL_DB_LUA 1
 // the following two databases might look confusing, bear with me
 // subscriber->channels map a subscriber_id to a set of channels it is subscribed
 // channel->subscribers maps a channel to the subscribers id
 // any operation on one of them should keep the other one in sync
+// same premise applies to patterns instead of channels
 #define RLITE_INTERNAL_DB_SUBSCRIBER_CHANNELS 2
 #define RLITE_INTERNAL_DB_CHANNEL_SUBSCRIBERS 3
-#define RLITE_INTERNAL_DB_SUBSCRIBER_MESSAGES 4
+#define RLITE_INTERNAL_DB_SUBSCRIBER_PATTERNS 4
+#define RLITE_INTERNAL_DB_PATTERN_SUBSCRIBERS 5
+#define RLITE_INTERNAL_DB_SUBSCRIBER_MESSAGES 6
 
 struct rlite;
 struct rl_btree;
@@ -119,9 +122,9 @@ typedef struct rlite {
 	long write_pages_len;
 	rl_page **write_pages;
 
-	char *subscriptor_id;
-	char *subscriptor_lock_filename;
-	FILE *subscriptor_lock_fp;
+	char *subscriber_id;
+	char *subscriber_lock_filename;
+	FILE *subscriber_lock_fp;
 } rlite;
 
 typedef struct watched_key {

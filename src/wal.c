@@ -6,6 +6,10 @@
 #include "flock.h"
 #include "sha1.h"
 
+#ifdef RL_DEBUG
+int rl_search_cache(rlite *db, rl_data_type *type, long page_number, void **obj, long *position, void *context, rl_page **pages, long page_len);
+#endif
+
 static const char *identifier = "rlwal0.0";
 
 static char *get_wal_filename(const char *filename) {
@@ -203,7 +207,7 @@ int rl_write_apply_wal(rlite *db) {
 					fprintf(stderr, "Different data in position %ld (expected %d, got %d)\n", i, page->serialized_data[i], data[i]);
 				}
 			}
-			retval = rl_search_cache(db, page->type, page->page_number, NULL, NULL, db->write_pages, db->write_pages_len);
+			retval = rl_search_cache(db, page->type, page->page_number, NULL, NULL, NULL, db->write_pages, db->write_pages_len);
 			if (retval == RL_FOUND) {
 				fprintf(stderr, "Page found in write_pages\n");
 			}

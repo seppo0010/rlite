@@ -74,7 +74,7 @@ static void* publish(void* _buffer) {
 }
 
 static void poll(rlite *db, struct buf *buffer) {
-	int elementc;
+	int i, elementc;
 	unsigned char **elements;
 	long *elementslen;
 	char *testdata = NULL, *testchannel = NULL;
@@ -84,6 +84,7 @@ static void poll(rlite *db, struct buf *buffer) {
 			// need to discard to release lock on file
 			rl_discard(db);
 			sleep(1);
+			rl_refresh(db);
 		}
 	} else {
 		int retval;
@@ -99,10 +100,11 @@ static void poll(rlite *db, struct buf *buffer) {
 			return;
 		}
 	}
-	testchannel = (char *)elements[1];
-	testchannellen = (size_t)elementslen[1];
-	testdata = (char *)elements[2];
-	testdatalen = (size_t)elementslen[2];
+
+	testchannel = (char *)elements[elementc - 2];
+	testchannellen = (size_t)elementslen[elementc - 2];
+	testdata = (char *)elements[elementc - 1];
+	testdatalen = (size_t)elementslen[elementc - 1];
 
 	if (buffer->channellen == testchannellen && memcmp(buffer->channel, testchannel, testchannellen) == 0 &&
 			buffer->datalen == testdatalen && memcmp(buffer->data, testdata, testdatalen) == 0) {
@@ -110,9 +112,9 @@ static void poll(rlite *db, struct buf *buffer) {
 	} else {
 		fprintf(stderr, "Data mismatch on secondary subscriber");
 	}
-	rl_free(elements[0]);
-	rl_free(elements[1]);
-	rl_free(elements[2]);
+	for (i = 0; i < elementc; i++) {
+		rl_free(elements[i]);
+	}
 	rl_free(elements);
 	rl_free(elementslen);
 }
@@ -134,10 +136,10 @@ static void subscribe_broken() {
 		return;
 	}
 
-	rl_free(db->subscriptor_id);
-	db->subscriptor_id = NULL;
-	fclose(db->subscriptor_lock_fp);
-	db->subscriptor_lock_fp = NULL;
+	rl_free(db->subscriber_id);
+	db->subscriber_id = NULL;
+	fclose(db->subscriber_lock_fp);
+	db->subscriber_lock_fp = NULL;
 	rl_close(db);
 }
 
@@ -181,7 +183,7 @@ TEST basic_subscribe_publish()
 		FAIL();
 	}
 	do_publish(db, &buffer);
-	rl_discard(db);
+	rl_refresh(db);
 	poll(db, &buffer);
 	rl_close(db);
 
@@ -208,6 +210,7 @@ TEST basic_subscribe_publish_newdb()
 	}
 	rl_discard(db);
 	publish(&buffer);
+	rl_refresh(db);
 	poll(db, &buffer);
 	rl_close(db);
 
@@ -317,6 +320,7 @@ TEST basic_subscribe_timeout_publish(int timeout)
 	rl_discard(db);
 	unsigned long long before = rl_mstime();
 	pthread_create(&thread_w, NULL, publish, &buffer_w);
+	rl_refresh(db);
 	poll(db, &buffer_r);
 	rl_close(db);
 
@@ -346,7 +350,7 @@ TEST basic_subscribe_timeout()
 		fprintf(stderr, "Failed to subscribe\n");
 		FAIL();
 	}
-	rl_discard(db);
+	rl_refresh(db);
 	unsigned long long before = rl_mstime();
 	poll(db, &buffer_r);
 	rl_close(db);
@@ -411,7 +415,7 @@ TEST basic_subscribe_unsubscribe_all_publish()
 	PASS();
 }
 
-TEST basic_publish_cleans_broken_subscriptor()
+TEST basic_publish_cleans_broken_subscriber()
 {
 	int retval;
 	size_t testdatalen = 0;
@@ -435,6 +439,34 @@ TEST basic_publish_cleans_broken_subscriptor()
 	PASS();
 }
 
+TEST basic_psubscribe_publish()
+{
+	int retval;
+	size_t testdatalen = 0;
+	long recipients;
+
+	const char *pattern = "*";
+	long patternlen = strlen(pattern);
+
+	struct buf buffer;
+	init_buffer(&buffer, NULL, 0, NULL, 0);
+
+	rlite *db = NULL;
+	RL_CALL_VERBOSE(setup_db, RL_OK, &db, 1, 1);
+	if (rl_psubscribe(db, 1, (unsigned char **)&pattern, &patternlen)) {
+		fprintf(stderr, "Failed to subscribe\n");
+		FAIL();
+	}
+	do_publish(db, &buffer);
+	rl_refresh(db);
+	poll(db, &buffer);
+	rl_close(db);
+
+	ASSERT_EQ(buffer.read, 1);
+	ASSERT_EQ(buffer.recipients, 1);
+	PASS();
+}
+
 SUITE(pubsub_test)
 {
 	RUN_TEST(basic_subscribe_publish);
@@ -448,5 +480,6 @@ SUITE(pubsub_test)
 	RUN_TEST(basic_subscribe_timeout);
 	RUN_TEST(basic_subscribe_unsubscribe_publish);
 	RUN_TEST(basic_subscribe_unsubscribe_all_publish);
-	RUN_TEST(basic_publish_cleans_broken_subscriptor);
+	RUN_TEST(basic_publish_cleans_broken_subscriber);
+	RUN_TEST(basic_psubscribe_publish);
 }

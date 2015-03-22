@@ -270,8 +270,8 @@ int rl_open(const char *filename, rlite **_db, int flags)
 	rlite *db;
 	RL_MALLOC(db, sizeof(*db));
 
-	db->subscriptor_lock_filename = NULL;
-	db->subscriptor_id = NULL;
+	db->subscriber_lock_filename = NULL;
+	db->subscriber_id = NULL;
 	db->databases = NULL;
 	db->initial_databases = NULL;
 	db->selected_database = 0;
@@ -368,12 +368,12 @@ int rl_close(rlite *db)
 		rl_memory_driver* driver = db->driver;
 		rl_free(driver->data);
 	}
-	if (db->subscriptor_lock_filename) {
-		remove(db->subscriptor_lock_filename);
-		rl_free(db->subscriptor_lock_filename);
+	if (db->subscriber_lock_filename) {
+		remove(db->subscriber_lock_filename);
+		rl_free(db->subscriber_lock_filename);
 	}
 	rl_free(db->driver);
-	rl_free(db->subscriptor_id);
+	rl_free(db->subscriber_id);
 	rl_free(db->read_pages);
 	rl_free(db->write_pages);
 	rl_free(db->databases);
@@ -493,7 +493,11 @@ void print_cache(rlite *db)
 }
 #endif
 
+#ifdef RL_DEBUG
+int rl_search_cache(rlite *db, rl_data_type *type, long page_number, void **obj, long *position, void *context, rl_page **pages, long page_len)
+#else
 static int rl_search_cache(rlite *db, rl_data_type *type, long page_number, void **obj, long *position, void *context, rl_page **pages, long page_len)
+#endif
 {
 	long pos, min = 0, max = page_len - 1;
 	rl_page *page;

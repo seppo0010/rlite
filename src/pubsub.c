@@ -5,27 +5,26 @@
 #include "pubsub.h"
 
 #define ENSURE_SUBSCRIPTOR_ID(ret) \
-	if (db->subscriptor_id == NULL) {\
-		generate_subscriptor_id(db);\
-		if (db->subscriptor_id == NULL) {\
+	if (db->subscriber_id == NULL) {\
+		generate_subscriber_id(db);\
+		if (db->subscriber_id == NULL) {\
 			return ret;\
 		}\
 	}
 
-static void generate_subscriptor_id(rlite *db);
+static void generate_subscriber_id(rlite *db);
 
-static char *get_lock_filename(rlite *db, char *subscriptor_id)
+static char *get_lock_filename(rlite *db, char *subscriber_id)
 {
 	char suffix[46];
-	ENSURE_SUBSCRIPTOR_ID(NULL);
 	rl_file_driver *driver = db->driver;
-	// 40 come from subscriptor_id, 5 ".lock" and then a null
-	memcpy(suffix, subscriptor_id, 40);
+	// 40 come from subscriber_id, 5 ".lock" and then a null
+	memcpy(suffix, subscriber_id, 40);
 	memcpy(&suffix[40], ".lock", 6);
 	return rl_get_filename_with_suffix(driver->filename, suffix);
 }
 
-static void generate_subscriptor_id(rlite *db)
+static void generate_subscriber_id(rlite *db)
 {
 	// TODO: check for collisions and retry?
 	// this is probably the worst random hash in the history of programming
@@ -35,49 +34,79 @@ static void generate_subscriptor_id(rlite *db)
 	snprintf(str, 60, "%llu", rl_mstime());
 	snprintf(&str[40], 20, "%d", rand());
 	sha1((unsigned char *)str, 60, digest);
-	sha1_formatter(digest, &db->subscriptor_id, NULL);
+	sha1_formatter(digest, &db->subscriber_id, NULL);
 
-	db->subscriptor_lock_filename = get_lock_filename(db, db->subscriptor_id);
-	if (db->subscriptor_lock_filename == NULL) {
-		rl_free(db->subscriptor_id);
-		db->subscriptor_id = NULL;
+	db->subscriber_lock_filename = get_lock_filename(db, db->subscriber_id);
+	if (db->subscriber_lock_filename == NULL) {
+		rl_free(db->subscriber_id);
+		db->subscriber_id = NULL;
 		return;
 	}
-	db->subscriptor_lock_fp = fopen(db->subscriptor_lock_filename, "w");
-	if (db->subscriptor_lock_fp == NULL) {
-		rl_free(db->subscriptor_lock_filename);
-		rl_free(db->subscriptor_id);
-		db->subscriptor_id = NULL;
+	db->subscriber_lock_fp = fopen(db->subscriber_lock_filename, "w");
+	if (db->subscriber_lock_fp == NULL) {
+		rl_free(db->subscriber_lock_filename);
+		rl_free(db->subscriber_id);
+		db->subscriber_id = NULL;
 		return;
 	}
-	int retval = rl_flock(db->subscriptor_lock_fp, RLITE_FLOCK_EX);
+	int retval = rl_flock(db->subscriber_lock_fp, RLITE_FLOCK_EX);
 	if (retval != RL_OK) {
-		fclose(db->subscriptor_lock_fp);
-		remove(db->subscriptor_lock_filename);
-		rl_free(db->subscriptor_lock_filename);
-		rl_free(db->subscriptor_id);
-		db->subscriptor_id = NULL;
+		fclose(db->subscriber_lock_fp);
+		remove(db->subscriber_lock_filename);
+		rl_free(db->subscriber_lock_filename);
+		rl_free(db->subscriber_id);
+		db->subscriber_id = NULL;
 	}
 }
 
-static char *get_fifo_filename(rlite *db, char *subscriptor_id)
+static char *get_fifo_filename(rlite *db, char *subscriber_id)
 {
-	ENSURE_SUBSCRIPTOR_ID(NULL);
 	rl_file_driver *driver = db->driver;
-	return rl_get_filename_with_suffix(driver->filename, subscriptor_id);
+	return rl_get_filename_with_suffix(driver->filename, subscriber_id);
 }
 
-int rl_subscribe(rlite *db, int channelc, unsigned char **channelv, long *channelvlen)
+static int do_subscribe(rlite *db, int internal_db_to_subscriber, int internal_db_to_subscription, int subscriptionc, unsigned char **subscriptionv, long *subscriptionvlen)
 {
 	int i, retval;
 	long identifierlen[1] = {40};
 	ENSURE_SUBSCRIPTOR_ID(RL_UNEXPECTED);
-	RL_CALL(rl_select_internal, RL_OK, db, RLITE_INTERNAL_DB_CHANNEL_SUBSCRIBERS);
-	for (i = 0; i < channelc; i++) {
-		RL_CALL(rl_sadd, RL_OK, db, channelv[i], channelvlen[i], 1, (unsigned char **)&db->subscriptor_id, identifierlen, NULL);
+	RL_CALL(rl_select_internal, RL_OK, db, internal_db_to_subscriber);
+	for (i = 0; i < subscriptionc; i++) {
+		RL_CALL(rl_sadd, RL_OK, db, subscriptionv[i], subscriptionvlen[i], 1, (unsigned char **)&db->subscriber_id, identifierlen, NULL);
 	}
-	RL_CALL(rl_select_internal, RL_OK, db, RLITE_INTERNAL_DB_SUBSCRIBER_CHANNELS);
-	RL_CALL(rl_sadd, RL_OK, db, (unsigned char *)db->subscriptor_id, identifierlen[0], channelc, channelv, channelvlen, NULL);
+	RL_CALL(rl_select_internal, RL_OK, db, internal_db_to_subscription);
+	RL_CALL(rl_sadd, RL_OK, db, (unsigned char *)db->subscriber_id, identifierlen[0], subscriptionc, subscriptionv, subscriptionvlen, NULL);
+	// important! commit to release the exclusive lock
+	RL_CALL(rl_commit, RL_OK, db);
+cleanup:
+	rl_select_internal(db, RLITE_INTERNAL_DB_NO);
+	return retval;
+}
+
+int rl_subscribe(rlite *db, int channelc, unsigned char **channelv, long *channelvlen)
+{
+	return do_subscribe(db, RLITE_INTERNAL_DB_CHANNEL_SUBSCRIBERS, RLITE_INTERNAL_DB_SUBSCRIBER_CHANNELS, channelc, channelv, channelvlen);
+}
+
+int rl_psubscribe(rlite *db, int patternc, unsigned char **patternv, long *patternvlen)
+{
+	return do_subscribe(db, RLITE_INTERNAL_DB_PATTERN_SUBSCRIBERS, RLITE_INTERNAL_DB_SUBSCRIBER_PATTERNS, patternc, patternv, patternvlen);
+}
+
+static int do_unsubscribe(rlite *db, int internal_db_to_subscriber, int internal_db_to_subscription, int subscriptionc, unsigned char **subscriptionv, long *subscriptionvlen)
+{
+	int i, retval;
+	long identifierlen[1] = {40};
+	if (db->subscriber_id == NULL) {
+		// if there's no subscriber id, then the connection is not subscribed to anything
+		return RL_OK;
+	}
+	RL_CALL(rl_select_internal, RL_OK, db, internal_db_to_subscription);
+	RL_CALL2(rl_srem, RL_OK, RL_NOT_FOUND, db, (unsigned char *)db->subscriber_id, identifierlen[0], subscriptionc, subscriptionv, subscriptionvlen, NULL);
+	RL_CALL(rl_select_internal, RL_OK, db, internal_db_to_subscriber);
+	for (i = 0; i < subscriptionc; i++) {
+		RL_CALL2(rl_srem, RL_OK, RL_NOT_FOUND, db, subscriptionv[i], subscriptionvlen[i], 1, (unsigned char **)&db->subscriber_id, identifierlen, NULL);
+	}
 	// important! commit to release the exclusive lock
 	RL_CALL(rl_commit, RL_OK, db);
 cleanup:
@@ -87,47 +116,55 @@ cleanup:
 
 int rl_unsubscribe(rlite *db, int channelc, unsigned char **channelv, long *channelvlen)
 {
-	int i, retval;
-	long identifierlen[1] = {40};
-	if (db->subscriptor_id == NULL) {
-		// if there's no subscriptor id, then the connection is not subscribed to anything
-		return RL_OK;
-	}
-	RL_CALL(rl_select_internal, RL_OK, db, RLITE_INTERNAL_DB_CHANNEL_SUBSCRIBERS);
-	for (i = 0; i < channelc; i++) {
-		RL_CALL2(rl_srem, RL_OK, RL_NOT_FOUND, db, channelv[i], channelvlen[i], 1, (unsigned char **)&db->subscriptor_id, identifierlen, NULL);
-	}
-	RL_CALL2(rl_srem, RL_OK, RL_NOT_FOUND, db, (unsigned char *)db->subscriptor_id, identifierlen[0], channelc, channelv, channelvlen, NULL);
-	// important! commit to release the exclusive lock
-	RL_CALL(rl_commit, RL_OK, db);
-cleanup:
-	rl_select_internal(db, RLITE_INTERNAL_DB_NO);
-	return retval;
+	return do_unsubscribe(db, RLITE_INTERNAL_DB_CHANNEL_SUBSCRIBERS, RLITE_INTERNAL_DB_SUBSCRIBER_CHANNELS, channelc, channelv, channelvlen);
 }
 
-static int rl_unsubscribe_all_subscriptor(rlite *db, char *subscriptor_id)
+int rl_punsubscribe(rlite *db, int patternc, unsigned char **patternv, long *patternvlen)
+{
+	return do_unsubscribe(db, RLITE_INTERNAL_DB_PATTERN_SUBSCRIBERS, RLITE_INTERNAL_DB_SUBSCRIBER_PATTERNS, patternc, patternv, patternvlen);
+}
+
+static int rl_unsubscribe_all_type(rlite *db, char *subscriber_id, int internal_db_to_subscriber, int internal_db_to_subscription)
 {
 	int i, retval;
 	rl_set_iterator *iterator;
-	int channelc = 0;
-	unsigned char **channelv = NULL, *channel = NULL;
-	long *channelvlen = NULL, channellen;
-	char *subscriptor_lock_filename = NULL;
-	RL_CALL(rl_select_internal, RL_OK, db, RLITE_INTERNAL_DB_SUBSCRIBER_CHANNELS);
-	RL_CALL(rl_smembers, RL_OK, db, &iterator, (unsigned char *)subscriptor_id, 40);
-	RL_MALLOC(channelv, sizeof(char *) * iterator->size);
-	RL_MALLOC(channelvlen, sizeof(long) * iterator->size);
-	channelc = 0;
-	while ((retval = rl_set_iterator_next(iterator, &channel, &channellen)) == RL_OK) {
-		channelv[channelc] = channel;
-		channelvlen[channelc] = channellen;
-		channelc++;
-		channel = NULL;
+	int subscriptionc = 0;
+	unsigned char **subscriptionv = NULL, *subscription = NULL;
+	long *subscriptionvlen = NULL, subscriptionlen;
+	RL_CALL(rl_select_internal, RL_OK, db, internal_db_to_subscription);
+	RL_CALL(rl_smembers, RL_OK, db, &iterator, (unsigned char *)subscriber_id, 40);
+	RL_MALLOC(subscriptionv, sizeof(char *) * iterator->size);
+	RL_MALLOC(subscriptionvlen, sizeof(long) * iterator->size);
+	subscriptionc = 0;
+	while ((retval = rl_set_iterator_next(iterator, &subscription, &subscriptionlen)) == RL_OK) {
+		subscriptionv[subscriptionc] = subscription;
+		subscriptionvlen[subscriptionc] = subscriptionlen;
+		subscriptionc++;
+		subscription = NULL;
 	}
-	RL_CALL(rl_unsubscribe, RL_OK, db, channelc, channelv, channelvlen);
+	RL_CALL(do_unsubscribe, RL_OK, db, internal_db_to_subscriber, internal_db_to_subscription, subscriptionc, subscriptionv, subscriptionvlen);
+cleanup:
+	if (subscriptionv) {
+		for (i = 0; i < subscriptionc; i++) {
+			rl_free(subscriptionv[i]);
+		}
+		rl_free(subscriptionv);
+	}
+	rl_free(subscriptionvlen);
+	rl_free(subscription);
+	return retval;
+}
 
-	subscriptor_lock_filename = get_lock_filename(db, subscriptor_id);
-	char *filename = get_fifo_filename(db, db->subscriptor_id);
+static int rl_unsubscribe_all_subscriber(rlite *db, char *subscriber_id)
+{
+	int retval;
+	char *subscriber_lock_filename = NULL;
+
+	RL_CALL2(rl_unsubscribe_all_type, RL_OK, RL_NOT_FOUND, db, subscriber_id, RLITE_INTERNAL_DB_CHANNEL_SUBSCRIBERS, RLITE_INTERNAL_DB_SUBSCRIBER_CHANNELS);
+	RL_CALL2(rl_unsubscribe_all_type, RL_OK, RL_NOT_FOUND, db, subscriber_id, RLITE_INTERNAL_DB_PATTERN_SUBSCRIBERS, RLITE_INTERNAL_DB_SUBSCRIBER_PATTERNS);
+
+	subscriber_lock_filename = get_lock_filename(db, subscriber_id);
+	char *filename = get_fifo_filename(db, subscriber_id);
 	remove(filename);
 	rl_free(filename);
 cleanup:
@@ -135,26 +172,23 @@ cleanup:
 	if (retval == RL_NOT_FOUND) {
 		retval = RL_OK;
 	}
-	if (channelv) {
-		for (i = 0; i < channelc; i++) {
-			rl_free(channelv[i]);
-		}
-		rl_free(channelv);
-	}
-	rl_free(channelvlen);
-	rl_free(channel);
-	rl_free(subscriptor_lock_filename);
+	rl_free(subscriber_lock_filename);
 	return retval;
 }
 
 int rl_unsubscribe_all(rlite *db)
 {
-	if (db->subscriptor_id == NULL) {
-		// if there's no subscriptor id, then the connection is not subscribed to anything
+	if (db->subscriber_id == NULL) {
+		// if there's no subscriber id, then the connection is not subscribed to anything
 		return RL_OK;
 	}
-	fclose(db->subscriptor_lock_fp);
-	return rl_unsubscribe_all_subscriptor(db, db->subscriptor_id);
+	int retval = rl_unsubscribe_all_subscriber(db, db->subscriber_id);
+	if (retval == RL_OK) {
+		fclose(db->subscriber_lock_fp);
+		rl_free(db->subscriber_id);
+		db->subscriber_id = NULL;
+	}
+	return retval;
 }
 
 int rl_poll_wait(rlite *db, int *elementc, unsigned char ***_elements, long **_elementslen, struct timeval *timeout)
@@ -163,11 +197,13 @@ int rl_poll_wait(rlite *db, int *elementc, unsigned char ***_elements, long **_e
 	if (retval == RL_NOT_FOUND) {
 		// TODO: possible race condition between poll and fifo read?
 		// can we atomically do both without locking the database?
-		char *filename = get_fifo_filename(db, db->subscriptor_id);
+		ENSURE_SUBSCRIPTOR_ID(RL_UNEXPECTED);
+		char *filename = get_fifo_filename(db, db->subscriber_id);
 		rl_discard(db);
 		rl_create_fifo(filename);
 		rl_read_fifo(filename, timeout, NULL, NULL);
 		rl_free(filename);
+		rl_refresh(db);
 		retval = rl_poll(db, elementc, _elements, _elementslen);
 	}
 	return retval;
@@ -180,13 +216,13 @@ int rl_poll(rlite *db, int *elementc, unsigned char ***_elements, long **_elemen
 	long lenlen;
 	unsigned char **elements = NULL;
 	long *elementslen = NULL;
-	if (db->subscriptor_id == NULL) {
+	if (db->subscriber_id == NULL) {
 		retval = RL_NOT_FOUND;
 		goto cleanup;
 	}
 	RL_CALL(rl_refresh, RL_OK, db);
 	RL_CALL(rl_select_internal, RL_OK, db, RLITE_INTERNAL_DB_SUBSCRIBER_MESSAGES);
-	RL_CALL(rl_pop, RL_OK, db, (unsigned char *)db->subscriptor_id, 40, &len, &lenlen, 1);
+	RL_CALL(rl_pop, RL_OK, db, (unsigned char *)db->subscriber_id, 40, &len, &lenlen, 1);
 	if (lenlen != 1) {
 		// TODO: delete the key and commit? PANIC
 		retval = RL_UNEXPECTED;
@@ -197,7 +233,7 @@ int rl_poll(rlite *db, int *elementc, unsigned char ***_elements, long **_elemen
 	RL_MALLOC(elements, sizeof(unsigned char *) * len[0]);
 	RL_MALLOC(elementslen, sizeof(long) * len[0]);
 	for (i = 0; i < len[0]; i++) {
-		RL_CALL(rl_pop, RL_OK, db, (unsigned char *)db->subscriptor_id, 40, &elements[i], &elementslen[i], 1);
+		RL_CALL(rl_pop, RL_OK, db, (unsigned char *)db->subscriber_id, 40, &elements[i], &elementslen[i], 1);
 	}
 	*_elements = elements;
 	*_elementslen = elementslen;
@@ -207,17 +243,74 @@ cleanup:
 	return retval;
 }
 
-int rl_publish(rlite *db, unsigned char *channel, size_t channellen, const char *data, size_t datalen, long *_recipients)
+static int do_publish(rlite *db, char *subscriber_id, long subscribed_idlen, int valuec, unsigned char *values[], long valueslen[])
 {
-	unsigned char *value = NULL;
-	char *filename = NULL, *subscriptor_id = NULL;
-	long valuelen, recipients = 0;
 	int retval;
-	unsigned char *values[4];
-	long valueslen[4];
+	char *filename = NULL;
+	filename = get_lock_filename(db, subscriber_id);
+	if (rl_is_flocked(filename, RLITE_FLOCK_EX) == RL_NOT_FOUND) {
+		// the client has "disconnected"; clean up for them
+		RL_CALL(rl_unsubscribe_all_subscriber, RL_OK, db, subscriber_id);
+		retval = RL_NOT_FOUND;
+	} else {
+		RL_CALL(rl_push, RL_OK, db, (unsigned char *)subscriber_id, subscribed_idlen, 1, 0, valuec, values, valueslen, NULL);
+
+		rl_free(filename); // reusing variables?! WHO WROTE THIS?
+		filename = get_fifo_filename(db, subscriber_id);
+		// this only signals the fifo recipient that new data is available
+		// - Maybe this should be executed AFTER the push was commited?
+		// - Ah, we have an exclusive lock anyway, so they'll have to wait
+		// when they poll
+		rl_write_fifo(filename, "1", 1);
+	}
+cleanup:
+	rl_free(filename);
+	return retval;
+}
+
+static int publish_to_members(rlite *db, rl_set_iterator *iterator, int valuec, unsigned char *values[], long valueslen[], long *recipients)
+{
+	int retval;
+	unsigned char *value = NULL;
+	long valuelen;
+	char *subscriber_id = NULL;
+	RL_CALL(rl_select_internal, RL_OK, db, RLITE_INTERNAL_DB_SUBSCRIBER_MESSAGES);
+	while ((retval = rl_set_iterator_next(iterator, &value, &valuelen)) == RL_OK) {
+		subscriber_id = rl_malloc(sizeof(char) * (valuelen + 1));
+		memcpy(subscriber_id, value, valuelen);
+		subscriber_id[valuelen] = 0;
+
+		retval = do_publish(db, subscriber_id, valuelen, valuec, values, valueslen);
+		if (retval == RL_OK) {
+			(*recipients)++;
+		} else if (retval != RL_NOT_FOUND) {
+			goto cleanup;
+		}
+		rl_free(subscriber_id);
+		subscriber_id = NULL;
+		rl_free(value);
+		value = NULL;
+	}
+	if (retval == RL_END) {
+		retval = RL_OK;
+	}
+
+cleanup:
+	rl_free(value);
+	rl_free(subscriber_id);
+	return retval;
+}
+
+int rl_publish(rlite *db, unsigned char *channel, size_t channellen, const char *data, size_t datalen, long *recipients)
+{
+	int retval;
+	long i, patternc = 0;
+	unsigned char **patternv = NULL;
+	long *patternvlen = NULL;
+	unsigned char *values[5];
+	long valueslen[5];
 	rl_set_iterator *iterator;
-	RL_CALL(rl_select_internal, RL_OK, db, RLITE_INTERNAL_DB_CHANNEL_SUBSCRIBERS);
-	RL_CALL(rl_smembers, RL_OK, db, &iterator, channel, channellen);
+	*recipients = 0;
 
 #define MESSAGE "message"
 	unsigned char q = 3;
@@ -229,54 +322,54 @@ int rl_publish(rlite *db, unsigned char *channel, size_t channellen, const char 
 	valueslen[2] = channellen;
 	values[3] = (unsigned char *)data;
 	valueslen[3] = datalen;
-
-	RL_CALL(rl_select_internal, RL_OK, db, RLITE_INTERNAL_DB_SUBSCRIBER_MESSAGES);
-	while ((retval = rl_set_iterator_next(iterator, &value, &valuelen)) == RL_OK) {
-		subscriptor_id = rl_malloc(sizeof(char) * (valuelen + 1));
-		memcpy(subscriptor_id, value, valuelen);
-		subscriptor_id[valuelen] = 0;
-
-		filename = get_lock_filename(db, subscriptor_id);
-		if (rl_is_flocked(filename, RLITE_FLOCK_EX) == RL_NOT_FOUND) {
-			// the client has "disconnected"; clean up for them
-			RL_CALL(rl_unsubscribe_all_subscriptor, RL_OK, db, subscriptor_id);
-		} else {
-			recipients++;
-
-			RL_CALL(rl_push, RL_OK, db, value, valuelen, 1, 0, 4, values, valueslen, NULL);
-
-			rl_free(filename); // reusing variables?! WHO WROTE THIS?
-			filename = get_fifo_filename(db, subscriptor_id);
-			// this only signals the fifo recipient that new data is available
-			// - Maybe this should be executed AFTER the push was commited?
-			// - Ah, we have an exclusive lock anyway, so they'll have to wait
-			// when they poll
-			rl_write_fifo(filename, "1", 1);
-		}
-		rl_free(filename);
-		filename = NULL;
-		rl_free(subscriptor_id);
-		subscriptor_id = NULL;
-		rl_free(value);
-		value = NULL;
+	RL_CALL(rl_select_internal, RL_OK, db, RLITE_INTERNAL_DB_CHANNEL_SUBSCRIBERS);
+	RL_CALL2(rl_smembers, RL_OK, RL_NOT_FOUND, db, &iterator, channel, channellen);
+	if (retval == RL_OK) {
+		RL_CALL(publish_to_members, RL_OK, db, iterator, 4, values, valueslen, recipients)
 	}
-	if (retval == RL_END) {
+
+#define PMESSAGE "pmessage"
+	q = 4;
+	values[0] = &q;
+	valueslen[0] = 1;
+	values[1] = (unsigned char *)PMESSAGE;
+	valueslen[1] = (long)strlen(PMESSAGE);
+	values[3] = channel;
+	valueslen[3] = channellen;
+	values[4] = (unsigned char *)data;
+	valueslen[4] = datalen;
+	RL_CALL(rl_select_internal, RL_OK, db, RLITE_INTERNAL_DB_PATTERN_SUBSCRIBERS);
+	RL_CALL2(rl_keys, RL_OK, RL_NOT_FOUND, db, (unsigned char *)"*", 1, &patternc, &patternv, &patternvlen);
+	if (retval == RL_NOT_FOUND || patternc == 0) {
 		retval = RL_OK;
+		goto postpattern;
 	}
-	if (_recipients) {
-		*_recipients = recipients;
+	for (i = 0; i < patternc; i++) {
+		if (!rl_stringmatchlen((char *)patternv[i], patternvlen[i], (char *)channel, channellen, 0)) {
+			continue;
+		}
+		RL_CALL2(rl_smembers, RL_OK, RL_NOT_FOUND, db, &iterator, patternv[i], patternvlen[i]);
+		if (retval == RL_OK) {
+			values[2] = patternv[i];
+			valueslen[2] = patternvlen[i];
+			RL_CALL(publish_to_members, RL_OK, db, iterator, 5, values, valueslen, recipients)
+		}
 	}
+postpattern:
+	// this is equivalent to cleanup, but I'd rather leave this here for clarity
+	// since an early not found needs to skip a bunch of code
+
 cleanup:
+	for (i = 0; i < patternc; i++) {
+		rl_free(patternv[i]);
+	}
+	rl_free(patternv);
+	rl_free(patternvlen);
+
 	if (retval == RL_NOT_FOUND) {
 		// no subscriber? no problem
-		if (_recipients) {
-			*_recipients = 0;
-		}
 		retval = RL_OK;
 	}
-	rl_free(value);
-	rl_free(filename);
-	rl_free(subscriptor_id);
 	rl_select_internal(db, RLITE_INTERNAL_DB_NO);
 	return retval;
 }
