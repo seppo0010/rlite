@@ -91,7 +91,7 @@ cleanup:
 	if (fd >= 0) {
 		close(fd);
 	}
-	if (retval != RL_OK) {
+	if (retval != RL_OK || _data == NULL) {
 		rl_free(data);
 	}
 	return retval;

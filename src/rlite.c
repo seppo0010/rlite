@@ -16,6 +16,7 @@
 #include "util.h"
 #include "sha1.h"
 #include "flock.h"
+#include "pubsub.h"
 #include "wal.h"
 #ifdef RL_DEBUG
 #include <valgrind/valgrind.h>
@@ -354,6 +355,7 @@ int rl_close(rlite *db)
 		return RL_OK;
 	}
 
+	rl_unsubscribe_all(db);
 	// discard before removing the driver, since we need to release locks
 	rl_discard(db);
 	if (db->driver_type == RL_FILE_DRIVER) {

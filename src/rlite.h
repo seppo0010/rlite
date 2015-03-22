@@ -54,11 +54,16 @@
 #define RLITE_FLOCK_EX 2
 #define RLITE_FLOCK_UN 3
 
-#define RLITE_INTERNAL_DB_COUNT 4
+#define RLITE_INTERNAL_DB_COUNT 5
 #define RLITE_INTERNAL_DB_NO 0
 #define RLITE_INTERNAL_DB_LUA 1
+// the following two databases might look confusing, bear with me
+// subscriber->channels map a subscriber_id to a set of channels it is subscribed
+// channel->subscribers maps a channel to the subscribers id
+// any operation on one of them should keep the other one in sync
 #define RLITE_INTERNAL_DB_SUBSCRIBER_CHANNELS 2
-#define RLITE_INTERNAL_DB_SUBSCRIBER_MESSAGES 3
+#define RLITE_INTERNAL_DB_CHANNEL_SUBSCRIBERS 3
+#define RLITE_INTERNAL_DB_SUBSCRIBER_MESSAGES 4
 
 struct rlite;
 struct rl_btree;

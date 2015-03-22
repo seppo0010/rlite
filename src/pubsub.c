@@ -45,10 +45,12 @@ int rl_subscribe(rlite *db, int channelc, unsigned char **channelv, long *channe
 			goto cleanup;
 		}
 	}
-	RL_CALL(rl_select_internal, RL_OK, db, RLITE_INTERNAL_DB_SUBSCRIBER_CHANNELS);
+	RL_CALL(rl_select_internal, RL_OK, db, RLITE_INTERNAL_DB_CHANNEL_SUBSCRIBERS);
 	for (i = 0; i < channelc; i++) {
 		RL_CALL(rl_sadd, RL_OK, db, channelv[i], channelvlen[i], 1, (unsigned char **)&db->subscriptor_id, identifierlen, NULL);
 	}
+	RL_CALL(rl_select_internal, RL_OK, db, RLITE_INTERNAL_DB_SUBSCRIBER_CHANNELS);
+	RL_CALL(rl_sadd, RL_OK, db, (unsigned char *)db->subscriptor_id, identifierlen[0], channelc, channelv, channelvlen, NULL);
 	// important! commit to release the exclusive lock
 	RL_CALL(rl_commit, RL_OK, db);
 cleanup:
@@ -64,14 +66,54 @@ int rl_unsubscribe(rlite *db, int channelc, unsigned char **channelv, long *chan
 		// if there's no subscriptor id, then the connection is not subscribed to anything
 		return RL_OK;
 	}
-	RL_CALL(rl_select_internal, RL_OK, db, RLITE_INTERNAL_DB_SUBSCRIBER_CHANNELS);
+	RL_CALL(rl_select_internal, RL_OK, db, RLITE_INTERNAL_DB_CHANNEL_SUBSCRIBERS);
 	for (i = 0; i < channelc; i++) {
-		RL_CALL(rl_srem, RL_OK, db, channelv[i], channelvlen[i], 1, (unsigned char **)&db->subscriptor_id, identifierlen, NULL);
+		RL_CALL2(rl_srem, RL_OK, RL_NOT_FOUND, db, channelv[i], channelvlen[i], 1, (unsigned char **)&db->subscriptor_id, identifierlen, NULL);
 	}
+	RL_CALL2(rl_srem, RL_OK, RL_NOT_FOUND, db, (unsigned char *)db->subscriptor_id, identifierlen[0], channelc, channelv, channelvlen, NULL);
 	// important! commit to release the exclusive lock
 	RL_CALL(rl_commit, RL_OK, db);
 cleanup:
 	rl_select_internal(db, RLITE_INTERNAL_DB_NO);
+	return retval;
+}
+
+int rl_unsubscribe_all(rlite *db)
+{
+	int i, retval;
+	rl_set_iterator *iterator;
+	int channelc = 0;
+	unsigned char **channelv = NULL, *channel = NULL;
+	long *channelvlen = NULL, channellen;
+	if (db->subscriptor_id == NULL) {
+		// if there's no subscriptor id, then the connection is not subscribed to anything
+		return RL_OK;
+	}
+	RL_CALL(rl_select_internal, RL_OK, db, RLITE_INTERNAL_DB_SUBSCRIBER_CHANNELS);
+	RL_CALL(rl_smembers, RL_OK, db, &iterator, (unsigned char *)db->subscriptor_id, 40);
+	RL_MALLOC(channelv, sizeof(char *) * iterator->size);
+	RL_MALLOC(channelvlen, sizeof(long) * iterator->size);
+	channelc = 0;
+	while ((retval = rl_set_iterator_next(iterator, &channel, &channellen)) == RL_OK) {
+		channelv[channelc] = channel;
+		channelvlen[channelc] = channellen;
+		channelc++;
+		channel = NULL;
+	}
+	RL_CALL(rl_unsubscribe, RL_OK, db, channelc, channelv, channelvlen);
+cleanup:
+	rl_select_internal(db, RLITE_INTERNAL_DB_NO);
+	if (retval == RL_NOT_FOUND) {
+		retval = RL_OK;
+	}
+	if (channelv) {
+		for (i = 0; i < channelc; i++) {
+			rl_free(channelv[i]);
+		}
+		rl_free(channelv);
+	}
+	rl_free(channelvlen);
+	rl_free(channel);
 	return retval;
 }
 
@@ -134,7 +176,7 @@ int rl_publish(rlite *db, unsigned char *channel, size_t channellen, const char 
 	unsigned char *values[4];
 	long valueslen[4];
 	rl_set_iterator *iterator;
-	RL_CALL(rl_select_internal, RL_OK, db, RLITE_INTERNAL_DB_SUBSCRIBER_CHANNELS);
+	RL_CALL(rl_select_internal, RL_OK, db, RLITE_INTERNAL_DB_CHANNEL_SUBSCRIBERS);
 	RL_CALL(rl_smembers, RL_OK, db, &iterator, channel, channellen);
 
 #define MESSAGE "message"

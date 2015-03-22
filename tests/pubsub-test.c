@@ -335,7 +335,6 @@ TEST basic_subscribe_unsubscribe_publish()
 {
 	int retval;
 	size_t testdatalen = 0;
-	long recipients;
 
 	const char *channel = CHANNEL;
 	long channellen = strlen(channel);
@@ -350,14 +349,41 @@ TEST basic_subscribe_unsubscribe_publish()
 		FAIL();
 	}
 	if (rl_unsubscribe(db, 1, (unsigned char **)&channel, &channellen)) {
-		fprintf(stderr, "Failed to subscribe\n");
+		fprintf(stderr, "Failed to unsubscribe\n");
 		FAIL();
 	}
 	do_publish(db, &buffer);
 	rl_close(db);
 
 	ASSERT_EQ(buffer.recipients, 0);
-	ASSERT_EQ(recipients, 0);
+	PASS();
+}
+
+TEST basic_subscribe_unsubscribe_all_publish()
+{
+	int retval;
+	size_t testdatalen = 0;
+
+	const char *channel = CHANNEL;
+	long channellen = strlen(channel);
+
+	struct buf buffer;
+	init_buffer(&buffer, NULL, 0, NULL, 0);
+
+	rlite *db = NULL;
+	RL_CALL_VERBOSE(setup_db, RL_OK, &db, 1, 1);
+	if (rl_subscribe(db, 1, (unsigned char **)&channel, &channellen)) {
+		fprintf(stderr, "Failed to subscribe\n");
+		FAIL();
+	}
+	if (rl_unsubscribe_all(db)) {
+		fprintf(stderr, "Failed to unsubscribe all\n");
+		FAIL();
+	}
+	do_publish(db, &buffer);
+	rl_close(db);
+
+	ASSERT_EQ(buffer.recipients, 0);
 	PASS();
 }
 
@@ -373,4 +399,5 @@ SUITE(pubsub_test)
 	RUN_TEST1(basic_subscribe_timeout_publish, -1);
 	RUN_TEST(basic_subscribe_timeout);
 	RUN_TEST(basic_subscribe_unsubscribe_publish);
+	RUN_TEST(basic_subscribe_unsubscribe_all_publish);
 }
