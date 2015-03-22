@@ -11,6 +11,7 @@
 struct buf {
 	const char *data;
 	size_t datalen;
+	int sleep;
 };
 
 static void delete_file() {
@@ -21,6 +22,9 @@ static void delete_file() {
 
 static void* write_fifo(void* _buffer) {
 	struct buf *buffer = _buffer;
+	if (buffer->sleep) {
+		sleep(buffer->sleep);
+	}
 	rl_write_fifo(FILEPATH, buffer->data, buffer->datalen);
 	return NULL;
 }
@@ -36,11 +40,12 @@ TEST basic_read_write()
 	struct buf buffer;
 	buffer.data = data;
 	buffer.datalen = datalen;
+	buffer.sleep = 0;
 
 	delete_file();
 	rl_create_fifo(FILEPATH);
 	pthread_create(&thread, NULL, write_fifo, &buffer);
-	rl_read_fifo(FILEPATH, &testdata, &testdatalen);
+	rl_read_fifo(FILEPATH, NULL, &testdata, &testdatalen);
 	unlink(FILEPATH);
 
 	ASSERT_EQ(datalen, testdatalen);
@@ -48,7 +53,53 @@ TEST basic_read_write()
 	PASS();
 }
 
+TEST basic_read_timeout()
+{
+	char *testdata = NULL;
+	size_t testdatalen = 0;
+
+	struct timeval timeout;
+	timeout.tv_sec = 1;
+	timeout.tv_usec = 0;
+
+	delete_file();
+	rl_create_fifo(FILEPATH);
+	rl_read_fifo(FILEPATH, &timeout, &testdata, &testdatalen);
+
+	ASSERT_EQ(testdata, NULL);
+	PASS();
+}
+
+TEST basic_read_timeout_write()
+{
+	static const char *data = "hello world!";
+	size_t datalen = strlen(data);
+	char *testdata = NULL;
+	size_t testdatalen = 0;
+	pthread_t thread;
+
+	struct buf buffer;
+	buffer.data = data;
+	buffer.datalen = datalen;
+	buffer.sleep = 1;
+
+	struct timeval timeout;
+	timeout.tv_sec = 10;
+	timeout.tv_usec = 0;
+
+	delete_file();
+	rl_create_fifo(FILEPATH);
+	pthread_create(&thread, NULL, write_fifo, &buffer);
+	rl_read_fifo(FILEPATH, NULL, &testdata, &testdatalen);
+	unlink(FILEPATH);
+
+	ASSERT_EQ(datalen, testdatalen);
+	ASSERT_EQ(memcmp(data, testdata, datalen), 0);
+	PASS();
+}
 SUITE(fifo_test)
 {
 	RUN_TEST(basic_read_write);
+	RUN_TEST(basic_read_timeout);
+	RUN_TEST(basic_read_timeout_write);
 }

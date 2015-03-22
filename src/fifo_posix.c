@@ -3,6 +3,7 @@
 #include <string.h>
 #include <stdio.h>
 #include <sys/types.h>
+#include <sys/select.h>
 #include <sys/stat.h>
 #include <unistd.h>
 #include "rlite.h"
@@ -22,23 +23,44 @@ int rl_delete_fifo(const char *fifo_name) {
 	return RL_OK;
 }
 
-int rl_read_fifo(const char *fifo_name, char **_data, size_t *_datalen) {
+int rl_read_fifo(const char *fifo_name, struct timeval *timeout, char **_data, size_t *_datalen)
+{
 	char header[FIFO_HEADER_SIZE];
 	uint64_t crc;
-	size_t read;
+	size_t readbytes;
 	size_t datalen;
-	FILE *fp;
+	int fd;
 	int retval;
 	char *data = NULL;
+	fd_set rfds;
+	int oflag = O_RDONLY;
 
-	fp = fopen(fifo_name, "r");
-	if (fp == NULL) {
+	if (timeout) {
+		// select will block, we don't want open to block
+		oflag |= O_NONBLOCK;
+	}
+
+	fd = open(fifo_name, oflag);
+	if (fd == -1) {
 		retval = RL_UNEXPECTED;
 		goto cleanup;
 	}
 
-	read = fread(header, sizeof(char), FIFO_HEADER_SIZE, fp);
-	if (read != FIFO_HEADER_SIZE) {
+	if (timeout) {
+		FD_ZERO(&rfds);
+		FD_SET(fd, &rfds);
+		retval = select(fd + 1, &rfds, NULL, NULL, timeout);
+		if (retval == -1) {
+			retval = RL_UNEXPECTED;
+			goto cleanup;
+		} else if (retval != 0) {
+			retval = RL_TIMEOUT;
+			goto cleanup;
+		}
+	}
+
+	readbytes = read(fd, header, FIFO_HEADER_SIZE);
+	if (readbytes != FIFO_HEADER_SIZE) {
 		retval = RL_UNEXPECTED;
 		goto cleanup;
 	}
@@ -46,8 +68,8 @@ int rl_read_fifo(const char *fifo_name, char **_data, size_t *_datalen) {
 	datalen = (size_t)get_4bytes((unsigned char *)header);
 	RL_MALLOC(data, sizeof(char) * datalen);
 
-	read = fread(data, sizeof(char), datalen, fp);
-	if (read != datalen) {
+	readbytes = read(fd, data, datalen);
+	if (readbytes != datalen) {
 		retval = RL_UNEXPECTED;
 		goto cleanup;
 	}
@@ -62,8 +84,8 @@ int rl_read_fifo(const char *fifo_name, char **_data, size_t *_datalen) {
 	*_datalen = datalen;
 	retval = RL_OK;
 cleanup:
-	if (fp) {
-		fclose(fp);
+	if (fd) {
+		close(fd);
 	}
 	if (retval != RL_OK) {
 		rl_free(data);
