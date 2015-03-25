@@ -467,6 +467,61 @@ TEST basic_psubscribe_publish()
 	PASS();
 }
 
+TEST basic_subscribe_pubsub_channels()
+{
+	int retval;
+	size_t testdatalen = 0;
+	long recipients;
+	const char *channel = CHANNEL;
+	long channellen = strlen(channel);
+	const char *channel2 = CHANNEL2;
+	long channel2len = strlen(channel2);
+
+	long channelc;
+	unsigned char **channelv = NULL;
+	long *channelvlen = NULL;
+
+	rlite *db = NULL;
+	RL_CALL_VERBOSE(setup_db, RL_OK, &db, 1, 1);
+	RL_CALL_VERBOSE(rl_pubsub_channels, RL_OK, db, NULL, 0, &channelc, &channelv, &channelvlen);
+	ASSERT_EQ(channelc, 0);
+
+	RL_CALL_VERBOSE(rl_subscribe, RL_OK, db, 1, (unsigned char **)&channel, (long*)&channellen);
+
+	RL_CALL_VERBOSE(rl_pubsub_channels, RL_OK, db, NULL, 0, &channelc, &channelv, &channelvlen);
+	ASSERT_EQ(channelc, 1);
+	ASSERT_EQ(channelvlen[0], channellen);
+	ASSERT_EQ(memcmp(channelv[0], channel, channellen), 0);
+	rl_free(channelv[0]);
+	rl_free(channelvlen);
+	rl_free(channelv);
+
+	RL_CALL_VERBOSE(rl_subscribe, RL_OK, db, 1, (unsigned char **)&channel2, (long*)&channel2len);
+
+	RL_CALL_VERBOSE(rl_pubsub_channels, RL_OK, db, NULL, 0, &channelc, &channelv, &channelvlen);
+	ASSERT_EQ(channelc, 2);
+	ASSERT_EQ(channelvlen[0], channellen);
+	ASSERT_EQ(channelvlen[1], channel2len);
+	ASSERT_EQ(memcmp(channelv[0], channel, channellen), 0);
+	ASSERT_EQ(memcmp(channelv[1], channel2, channel2len), 0);
+	rl_free(channelv[0]);
+	rl_free(channelv[1]);
+	rl_free(channelvlen);
+	rl_free(channelv);
+
+	RL_CALL_VERBOSE(rl_pubsub_channels, RL_OK, db, (unsigned char *)"other *", 7, &channelc, &channelv, &channelvlen);
+	ASSERT_EQ(channelc, 1);
+	ASSERT_EQ(channelvlen[0], channel2len);
+	ASSERT_EQ(memcmp(channelv[0], channel2, channel2len), 0);
+	rl_free(channelv[0]);
+	rl_free(channelvlen);
+	rl_free(channelv);
+
+	rl_close(db);
+
+	PASS();
+}
+
 SUITE(pubsub_test)
 {
 	RUN_TEST(basic_subscribe_publish);
@@ -482,4 +537,5 @@ SUITE(pubsub_test)
 	RUN_TEST(basic_subscribe_unsubscribe_all_publish);
 	RUN_TEST(basic_publish_cleans_broken_subscriber);
 	RUN_TEST(basic_psubscribe_publish);
+	RUN_TEST(basic_subscribe_pubsub_channels);
 }

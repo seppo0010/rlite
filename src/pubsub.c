@@ -142,6 +142,9 @@ static int rl_unsubscribe_all_type(rlite *db, char *subscriber_id, int internal_
 		subscriptionc++;
 		subscription = NULL;
 	}
+	if (retval != RL_END) {
+		goto cleanup;
+	}
 	RL_CALL(do_unsubscribe, RL_OK, db, internal_db_to_subscriber, internal_db_to_subscription, subscriptionc, subscriptionv, subscriptionvlen);
 cleanup:
 	if (subscriptionv) {
@@ -370,6 +373,16 @@ cleanup:
 		// no subscriber? no problem
 		retval = RL_OK;
 	}
+	rl_select_internal(db, RLITE_INTERNAL_DB_NO);
+	return retval;
+}
+
+int rl_pubsub_channels(rlite *db, unsigned char *pattern, long patternlen, long *channelc, unsigned char ***channelv, long **channelvlen)
+{
+	int retval;
+	RL_CALL(rl_select_internal, RL_OK, db, RLITE_INTERNAL_DB_CHANNEL_SUBSCRIBERS);
+	RL_CALL2(rl_keys, RL_OK, RL_NOT_FOUND, db, pattern ? pattern : (unsigned char *)"*", pattern ? patternlen : 1, channelc, channelv, channelvlen);
+cleanup:
 	rl_select_internal(db, RLITE_INTERNAL_DB_NO);
 	return retval;
 }
