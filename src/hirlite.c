@@ -15,6 +15,7 @@
 #include "hirlite.h"
 #include "scripting.h"
 #include "util.h"
+#include "pubsub.h"
 
 #define UNSIGN(val) ((unsigned char *)val)
 
@@ -3851,6 +3852,137 @@ cleanup:
 	free(getvlen);
 }
 
+static void pubsubVarargCommand(rliteClient *c, int func(rlite *db, int argc, unsigned char **argv, long *argvlen)) {
+	int retval = RL_OK, i = 0, argc = c->argc - 1;
+	unsigned char **args = NULL;
+	long *argslen = NULL;
+
+	args = malloc(sizeof(unsigned char *) * argc);
+	if (!args) {
+		__rliteSetError(c->context, RLITE_ERR_OOM, "Out of memory");
+		goto cleanup;
+	}
+	argslen = malloc(sizeof(long) * argc);
+	if (!argslen) {
+		__rliteSetError(c->context, RLITE_ERR_OOM, "Out of memory");
+		goto cleanup;
+	}
+	for (i = 0; i < argc; i++) {
+		args[i] = (unsigned char *)c->argv[2 + i];
+		argslen[i] = (long)c->argvlen[2 + i];
+	}
+	retval = func(c->context->db, argc, args, argslen);
+	RLITE_SERVER_ERR(c, retval);
+	retval = RL_OK;
+cleanup:
+	free(args);
+	free(argslen);
+	return;
+}
+
+static void subscribeCommand(rliteClient *c) {
+	pubsubVarargCommand(c, rl_subscribe);
+}
+
+static void unsubscribeCommand(rliteClient *c) {
+	pubsubVarargCommand(c, rl_unsubscribe);
+}
+
+static void psubscribeCommand(rliteClient *c) {
+	pubsubVarargCommand(c, rl_psubscribe);
+}
+
+static void punsubscribeCommand(rliteClient *c) {
+	pubsubVarargCommand(c, rl_punsubscribe);
+}
+
+static void publishCommand(rliteClient *c) {
+	unsigned char *channel = (unsigned char *)c->argv[1];
+	size_t channellen = c->argvlen[1];
+	char *data = c->argv[2];
+	size_t datalen = c->argvlen[2];
+	long recipients = 0;
+	int retval = rl_publish(c->context->db, channel, channellen, data, datalen, &recipients);
+	RLITE_SERVER_ERR(c, retval);
+	c->reply = createLongLongObject(recipients);
+cleanup:
+	return;
+}
+
+static void pubsubCommand(rliteClient *c) {
+	long i, channelc = 0;
+	unsigned char **channelv = NULL;
+	long *channelvlen = NULL;
+	int retval;
+	if (!strcasecmp(c->argv[1],"channels")) {
+		unsigned char *pattern = NULL;
+		long patternlen = 0;
+		if (c->argc >= 3) {
+			pattern = (unsigned char *)c->argv[2];
+			patternlen = c->argvlen[2];
+		}
+		retval = rl_pubsub_channels(c->context->db, pattern, patternlen, &channelc, &channelv, &channelvlen);
+		RLITE_SERVER_ERR(c, retval);
+		c->reply = createArrayObject(channelc);
+		if (c->reply == NULL) {
+			goto cleanup;
+		}
+		for (i = 0; i < channelc; i++) {
+			c->reply->element[i] = createStringObject((char *)channelv[i], channelvlen[i]);
+		}
+	} else if (!strcasecmp(c->argv[1],"numsub")) {
+		long numsub;
+		retval = rl_pubsub_numsub(c->context->db, c->argc - 2, (unsigned char **)&c->argv[2], (long *)&c->argvlen[2], &numsub);
+		c->reply = createLongLongObject(numsub);
+	} else if (!strcasecmp(c->argv[1],"numpat")) {
+		long numpat;
+		retval = rl_pubsub_numpat(c->context->db, &numpat);
+		c->reply = createLongLongObject(numpat);
+	}
+cleanup:
+	for (i = 0; i < channelc; i++) {
+		rl_free(channelv[i]);
+	}
+	rl_free(channelv);
+	rl_free(channelvlen);
+	return;
+}
+
+void pubsubPollCommand(rliteClient *c) {
+	int retval;
+	int i, elementc;
+	unsigned char **elements;
+	long *elementslen;
+	if (c->argc >= 2) {
+		long timeout_param;
+		struct timeval timeout;
+		if ((getLongFromObjectOrReply(c, c->argv[2], c->argvlen[2], &timeout_param, NULL) != RLITE_OK)) {
+			return;
+		}
+		timeout.tv_sec = 0;
+		timeout.tv_usec = timeout_param;
+		retval = rl_poll_wait(c->context->db, &elementc, &elements, &elementslen, &timeout);
+	} else {
+		retval = rl_poll(c->context->db, &elementc, &elements, &elementslen);
+	}
+	RLITE_SERVER_ERR(c, retval);
+	if (retval == RL_NOT_FOUND) {
+		c->reply = createReplyObject(RLITE_REPLY_NIL);
+	} else if (retval == RL_OK) {
+		c->reply = createArrayObject(elementc);
+		for (i = 0; i < elementc; i++) {
+			c->reply->element[i] = createStringObject((char *)elements[i], elementslen[i]);
+			rl_free(elements[i]);
+		}
+		rl_free(elements);
+		rl_free(elementslen);
+	} else {
+		addReplyErrorFormat(c->context, "unknown retval %d", retval);
+	}
+cleanup:
+	return;
+}
+
 static struct rliteCommand rliteCommandTable[] = {
 	{"get",getCommand,2,"rF",0,1,1,1,0,0},
 	{"set",setCommand,-3,"wm",0,1,1,1,0,0},
@@ -3981,12 +4113,13 @@ static struct rliteCommand rliteCommandTable[] = {
 	// {"role",roleCommand,1,"last",0,NULL,0,0,0,0,0},
 	{"debug",debugCommand,-2,"as",0,0,0,0,0,0},
 	// {"config",configCommand,-2,"art",0,NULL,0,0,0,0,0},
-	// {"subscribe",subscribeCommand,-2,"rpslt",0,NULL,0,0,0,0,0},
-	// {"unsubscribe",unsubscribeCommand,-1,"rpslt",0,NULL,0,0,0,0,0},
-	// {"psubscribe",psubscribeCommand,-2,"rpslt",0,NULL,0,0,0,0,0},
-	// {"punsubscribe",punsubscribeCommand,-1,"rpslt",0,NULL,0,0,0,0,0},
-	// {"publish",publishCommand,3,"pltrF",0,NULL,0,0,0,0,0},
-	// {"pubsub",pubsubCommand,-2,"pltrR",0,NULL,0,0,0,0,0},
+	{"subscribe",subscribeCommand,-2,"rpslt",0,0,0,0,0,0},
+	{"unsubscribe",unsubscribeCommand,-1,"rpslt",0,0,0,0,0,0},
+	{"psubscribe",psubscribeCommand,-2,"rpslt",0,0,0,0,0,0},
+	{"punsubscribe",punsubscribeCommand,-1,"rpslt",0,0,0,0,0,0},
+	{"publish",publishCommand,3,"pltrF",0,0,0,0,0,0},
+	{"pubsub",pubsubCommand,-2,"pltrR",0,0,0,0,0,0},
+	{"__rlite_poll",pubsubPollCommand,-2,"pltrR",0,0,0,0,0,0},
 	{"watch",watchCommand,-2,"rsF",0,1,-1,1,0,0},
 	{"unwatch",unwatchCommand,1,"rsF",0,0,0,0,0,0},
 	// {"cluster",clusterCommand,-2,"ar",0,NULL,0,0,0,0,0},

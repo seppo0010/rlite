@@ -7,6 +7,7 @@
 int rl_subscribe(rlite *db, int channelc, unsigned char **channelv, long *channelvlen);
 int rl_psubscribe(rlite *db, int patternc, unsigned char **patternv, long *patternvlen);
 int rl_unsubscribe(rlite *db, int channelc, unsigned char **channelv, long *channelvlen);
+int rl_punsubscribe(rlite *db, int patternc, unsigned char **patternv, long *patternvlen);
 int rl_unsubscribe_all(rlite *db);
 int rl_poll(rlite *db, int *elementc, unsigned char ***_elements, long **_elementslen);
 /**
