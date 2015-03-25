@@ -522,6 +522,55 @@ TEST basic_subscribe_pubsub_channels()
 	PASS();
 }
 
+TEST basic_subscribe_pubsub_numsub()
+{
+	int retval;
+	size_t testdatalen = 0;
+	long recipients;
+	unsigned char *channel = (unsigned char *)CHANNEL;
+	long channellen = strlen((char *)channel);
+	unsigned char *channel2 = (unsigned char *)CHANNEL2;
+	long channel2len = strlen((char *)channel2);
+	unsigned char *channels[] = {channel, channel2};
+	long channelslen[] = {channellen, channel2len};
+	long count[2] = {-1, -1};
+
+	rlite *db = NULL;
+	RL_CALL_VERBOSE(setup_db, RL_OK, &db, 1, 1);
+
+	RL_CALL_VERBOSE(rl_pubsub_numsub, RL_OK, db, 2, channels, channelslen, count);
+	ASSERT_EQ(count[0], 0);
+	ASSERT_EQ(count[1], 0);
+
+	RL_CALL_VERBOSE(rl_subscribe, RL_OK, db, 1, &channel, &channellen);
+	RL_CALL_VERBOSE(rl_pubsub_numsub, RL_OK, db, 2, channels, channelslen, count);
+	ASSERT_EQ(count[0], 1);
+	ASSERT_EQ(count[1], 0);
+
+	RL_CALL_VERBOSE(rl_subscribe, RL_OK, db, 1, &channel2, &channel2len);
+	RL_CALL_VERBOSE(rl_pubsub_numsub, RL_OK, db, 2, channels, channelslen, count);
+	ASSERT_EQ(count[0], 1);
+	ASSERT_EQ(count[1], 1);
+	RL_CALL_VERBOSE(rl_commit, RL_OK, db);
+
+	rlite *db2;
+	RL_CALL_VERBOSE(setup_db, RL_OK, &db2, 1, 0);
+	RL_CALL_VERBOSE(rl_subscribe, RL_OK, db2, 1, &channel2, &channel2len);
+	RL_CALL_VERBOSE(rl_commit, RL_OK, db2);
+
+	RL_CALL_VERBOSE(rl_pubsub_numsub, RL_OK, db, 2, channels, channelslen, count);
+	ASSERT_EQ(count[0], 1);
+	ASSERT_EQ(count[1], 2);
+
+	RL_CALL_VERBOSE(rl_refresh, RL_OK, db);
+	rl_close(db);
+
+	RL_CALL_VERBOSE(rl_refresh, RL_OK, db2);
+	rl_close(db2);
+
+	PASS();
+}
+
 SUITE(pubsub_test)
 {
 	RUN_TEST(basic_subscribe_publish);
@@ -538,4 +587,5 @@ SUITE(pubsub_test)
 	RUN_TEST(basic_publish_cleans_broken_subscriber);
 	RUN_TEST(basic_psubscribe_publish);
 	RUN_TEST(basic_subscribe_pubsub_channels);
+	RUN_TEST(basic_subscribe_pubsub_numsub);
 }

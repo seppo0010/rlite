@@ -386,3 +386,17 @@ cleanup:
 	rl_select_internal(db, RLITE_INTERNAL_DB_NO);
 	return retval;
 }
+
+int rl_pubsub_numsub(rlite *db, int channelc, unsigned char **channelv, long *channelvlen, long *numsub)
+{
+	int i, retval;
+	RL_CALL(rl_select_internal, RL_OK, db, RLITE_INTERNAL_DB_CHANNEL_SUBSCRIBERS);
+	for (i = 0; i < channelc; i++) {
+		numsub[i] = 0;
+		RL_CALL2(rl_scard, RL_OK, RL_NOT_FOUND, db, channelv[i], channelvlen[i], &numsub[i]);
+	}
+	retval = RL_OK;
+cleanup:
+	rl_select_internal(db, RLITE_INTERNAL_DB_NO);
+	return retval;
+}
