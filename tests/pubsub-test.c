@@ -571,6 +571,28 @@ TEST basic_subscribe_pubsub_numsub()
 	PASS();
 }
 
+TEST basic_subscribe_pubsub_numpat()
+{
+	int retval;
+	size_t testdatalen = 0;
+	long recipients;
+	unsigned char *pattern = (unsigned char *)"pattern*";
+	long patternlen = strlen((char *)pattern), count;
+
+	rlite *db = NULL;
+	RL_CALL_VERBOSE(setup_db, RL_OK, &db, 1, 1);
+
+	RL_CALL_VERBOSE(rl_pubsub_numpat, RL_OK, db, &count);
+	ASSERT_EQ(count, 0);
+
+	RL_CALL_VERBOSE(rl_psubscribe, RL_OK, db, 1, (unsigned char **)&pattern, &patternlen);
+	RL_CALL_VERBOSE(rl_pubsub_numpat, RL_OK, db, &count);
+	ASSERT_EQ(count, 1);
+
+	rl_close(db);
+	PASS();
+}
+
 SUITE(pubsub_test)
 {
 	RUN_TEST(basic_subscribe_publish);
@@ -588,4 +610,5 @@ SUITE(pubsub_test)
 	RUN_TEST(basic_psubscribe_publish);
 	RUN_TEST(basic_subscribe_pubsub_channels);
 	RUN_TEST(basic_subscribe_pubsub_numsub);
+	RUN_TEST(basic_subscribe_pubsub_numpat);
 }

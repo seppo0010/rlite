@@ -400,3 +400,14 @@ cleanup:
 	rl_select_internal(db, RLITE_INTERNAL_DB_NO);
 	return retval;
 }
+
+int rl_pubsub_numpat(rlite *db, long *numpat)
+{
+	int i, retval;
+	RL_CALL(rl_select_internal, RL_OK, db, RLITE_INTERNAL_DB_PATTERN_SUBSCRIBERS);
+	RL_CALL(rl_dbsize, RL_OK, db, numpat);
+	retval = RL_OK;
+cleanup:
+	rl_select_internal(db, RLITE_INTERNAL_DB_NO);
+	return retval;
+}
