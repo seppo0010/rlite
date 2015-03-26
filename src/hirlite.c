@@ -919,6 +919,18 @@ static void unwatchCommand(rliteClient *c) {
 	c->reply = createStatusObject(RLITE_STR_OK);
 }
 
+static rliteReply *pollToReply(long elementc, unsigned char **elements, long *elementslen) {
+	long i;
+	rliteReply *reply = createArrayObject(elementc);
+	for (i = 0; i < elementc; i++) {
+		reply->element[i] = createStringObject((char *)elements[i], elementslen[i]);
+		rl_free(elements[i]);
+	}
+	rl_free(elements);
+	rl_free(elementslen);
+	return reply;
+}
+
 static void *_popReply(rliteContext *c) {
 	if (c->replyPosition < c->replyLength) {
 		void *ret;
@@ -928,6 +940,18 @@ static void *_popReply(rliteContext *c) {
 			c->replyPosition = c->replyLength = 0;
 		}
 		return ret;
+	} else if (c->replyPosition == c->replyLength && c->db->subscriber_id) {
+		int elementc;
+		unsigned char **elements;
+		long *elementslen;
+		int retval = rl_poll_wait(c->db, &elementc, &elements, &elementslen, NULL);
+		if (retval == RL_NOT_FOUND) {
+			return createReplyObject(RLITE_REPLY_NIL);
+		} else if (retval == RL_OK) {
+			return pollToReply(elementc, elements, elementslen);
+		} else {
+			return createErrorObject("unknown retval");
+		}
 	} else {
 		return NULL;
 	}
@@ -3868,8 +3892,8 @@ static void pubsubVarargCommand(rliteClient *c, int func(rlite *db, int argc, un
 		goto cleanup;
 	}
 	for (i = 0; i < argc; i++) {
-		args[i] = (unsigned char *)c->argv[2 + i];
-		argslen[i] = (long)c->argvlen[2 + i];
+		args[i] = (unsigned char *)c->argv[1 + i];
+		argslen[i] = (long)c->argvlen[1 + i];
 	}
 	retval = func(c->context->db, argc, args, argslen);
 	RLITE_SERVER_ERR(c, retval);
@@ -3950,7 +3974,7 @@ cleanup:
 
 void pubsubPollCommand(rliteClient *c) {
 	int retval;
-	int i, elementc;
+	int elementc;
 	unsigned char **elements;
 	long *elementslen;
 	if (c->argc >= 2) {
@@ -3959,9 +3983,11 @@ void pubsubPollCommand(rliteClient *c) {
 		if ((getLongFromObjectOrReply(c, c->argv[2], c->argvlen[2], &timeout_param, NULL) != RLITE_OK)) {
 			return;
 		}
-		timeout.tv_sec = 0;
-		timeout.tv_usec = timeout_param;
-		retval = rl_poll_wait(c->context->db, &elementc, &elements, &elementslen, &timeout);
+		if (timeout_param != 0) {
+			timeout.tv_sec = 0;
+			timeout.tv_usec = timeout_param;
+		}
+		retval = rl_poll_wait(c->context->db, &elementc, &elements, &elementslen, timeout_param == 0 ? NULL : &timeout);
 	} else {
 		retval = rl_poll(c->context->db, &elementc, &elements, &elementslen);
 	}
@@ -3969,13 +3995,7 @@ void pubsubPollCommand(rliteClient *c) {
 	if (retval == RL_NOT_FOUND) {
 		c->reply = createReplyObject(RLITE_REPLY_NIL);
 	} else if (retval == RL_OK) {
-		c->reply = createArrayObject(elementc);
-		for (i = 0; i < elementc; i++) {
-			c->reply->element[i] = createStringObject((char *)elements[i], elementslen[i]);
-			rl_free(elements[i]);
-		}
-		rl_free(elements);
-		rl_free(elementslen);
+		c->reply = pollToReply(elementc, elements, elementslen);
 	} else {
 		addReplyErrorFormat(c->context, "unknown retval %d", retval);
 	}

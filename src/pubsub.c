@@ -240,6 +240,7 @@ int rl_poll(rlite *db, int *elementc, unsigned char ***_elements, long **_elemen
 	}
 	*_elements = elements;
 	*_elementslen = elementslen;
+	RL_CALL(rl_commit, RL_OK, db);
 cleanup:
 	rl_free(len);
 	rl_select_internal(db, RLITE_INTERNAL_DB_NO);

@@ -185,6 +185,7 @@ TEST basic_subscribe_publish()
 	do_publish(db, &buffer);
 	rl_refresh(db);
 	poll(db, &buffer);
+	RL_CALL_VERBOSE(rl_poll, RL_NOT_FOUND, db, NULL, NULL, NULL);
 	rl_close(db);
 
 	ASSERT_EQ(buffer.read, 1);
