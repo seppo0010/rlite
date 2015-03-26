@@ -412,3 +412,23 @@ cleanup:
 	rl_select_internal(db, RLITE_INTERNAL_DB_NO);
 	return retval;
 }
+
+int rl_pubsub_count_subscriptions(rlite *db, long *numsubscriptions)
+{
+	int retval;
+	if (!db->subscriber_id) {
+		*numsubscriptions = 0;
+		retval = RL_OK;
+		goto cleanup;
+	}
+	long count = 0, count2 = 0;
+	RL_CALL(rl_select_internal, RL_OK, db, RLITE_INTERNAL_DB_SUBSCRIBER_CHANNELS);
+	RL_CALL2(rl_scard, RL_OK, RL_NOT_FOUND, db, (unsigned char *)db->subscriber_id, 40, &count);
+	RL_CALL(rl_select_internal, RL_OK, db, RLITE_INTERNAL_DB_SUBSCRIBER_PATTERNS);
+	RL_CALL2(rl_scard, RL_OK, RL_NOT_FOUND, db, (unsigned char *)db->subscriber_id, 40, &count2);
+	*numsubscriptions = count + count2;
+	retval = RL_OK;
+cleanup:
+	rl_select_internal(db, RLITE_INTERNAL_DB_NO);
+	return retval;
+}

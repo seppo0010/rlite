@@ -189,8 +189,7 @@ static int addReply(rliteContext* c, rliteReply *reply) {
 		c->replies = tmp;
 	}
 
-	c->replies[c->replyPosition] = reply;
-	c->replyLength++;
+	c->replies[c->replyLength++] = reply;
 	return RLITE_OK;
 }
 
@@ -3876,7 +3875,7 @@ cleanup:
 	free(getvlen);
 }
 
-static void pubsubVarargCommand(rliteClient *c, int func(rlite *db, int argc, unsigned char **argv, long *argvlen)) {
+static void pubsubVarargCommand(rliteClient *c, const char *type, int func(rlite *db, int argc, unsigned char **argv, long *argvlen)) {
 	int retval = RL_OK, i = 0, argc = c->argc - 1;
 	unsigned char **args = NULL;
 	long *argslen = NULL;
@@ -3897,6 +3896,19 @@ static void pubsubVarargCommand(rliteClient *c, int func(rlite *db, int argc, un
 	}
 	retval = func(c->context->db, argc, args, argslen);
 	RLITE_SERVER_ERR(c, retval);
+
+	long count = 0;
+	rl_pubsub_count_subscriptions(c->context->db, &count);
+	for (i = 0; i < argc; i++) {
+		rliteReply *reply = createArrayObject(3);;
+		if (reply) {
+			reply->element[0] = createCStringObject(type);
+			reply->element[1] = createStringObject(c->argv[i + 1], c->argvlen[i + 1]);
+			// TODO: count might be off if a clients connects to the same channel multiple times
+			reply->element[2] = createLongLongObject(count - argc + i + 1);
+			addReply(c->context, reply);
+		}
+	}
 	retval = RL_OK;
 cleanup:
 	free(args);
@@ -3905,19 +3917,19 @@ cleanup:
 }
 
 static void subscribeCommand(rliteClient *c) {
-	pubsubVarargCommand(c, rl_subscribe);
+	pubsubVarargCommand(c, "subscribe", rl_subscribe);
 }
 
 static void unsubscribeCommand(rliteClient *c) {
-	pubsubVarargCommand(c, rl_unsubscribe);
+	pubsubVarargCommand(c, "unsubscribe", rl_unsubscribe);
 }
 
 static void psubscribeCommand(rliteClient *c) {
-	pubsubVarargCommand(c, rl_psubscribe);
+	pubsubVarargCommand(c, "psubscribe", rl_psubscribe);
 }
 
 static void punsubscribeCommand(rliteClient *c) {
-	pubsubVarargCommand(c, rl_punsubscribe);
+	pubsubVarargCommand(c, "punsubscribe", rl_punsubscribe);
 }
 
 static void publishCommand(rliteClient *c) {

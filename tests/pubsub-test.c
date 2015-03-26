@@ -159,6 +159,7 @@ static void* subscribe(void* _buffer) {
 	}
 
 	poll(db, buffer);
+	rl_refresh(db);
 	rl_close(db);
 
 	return NULL;
