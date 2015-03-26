@@ -24,6 +24,9 @@ debug: builddebug vtest
 full-lcov: CFLAGS += -fprofile-arcs -ftest-coverage -DDEBUG=1
 full-lcov: clean buildtest
 
+.c.o:
+	$(CC) $(ARCH) $(DEBUG) $(CFLAGS) -c $<
+
 buildtest: $(OBJS)
 	$(CC) $(DEBUG) $(CFLAGS) -o rlite-test $(OBJS) $(STLIBNAME) $(LIBS)
 
