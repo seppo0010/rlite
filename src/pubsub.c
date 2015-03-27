@@ -1,6 +1,6 @@
 #include "rlite.h"
 #include "util.h"
-#include "fifo.h"
+#include "signal.h"
 #include "flock.h"
 #include "pubsub.h"
 
@@ -59,7 +59,7 @@ static void generate_subscriber_id(rlite *db)
 	}
 }
 
-static char *get_fifo_filename(rlite *db, char *subscriber_id)
+static char *get_signal_filename(rlite *db, char *subscriber_id)
 {
 	rl_file_driver *driver = db->driver;
 	return rl_get_filename_with_suffix(driver->filename, subscriber_id);
@@ -167,7 +167,7 @@ static int rl_unsubscribe_all_subscriber(rlite *db, char *subscriber_id)
 	RL_CALL2(rl_unsubscribe_all_type, RL_OK, RL_NOT_FOUND, db, subscriber_id, RLITE_INTERNAL_DB_PATTERN_SUBSCRIBERS, RLITE_INTERNAL_DB_SUBSCRIBER_PATTERNS);
 
 	subscriber_lock_filename = get_lock_filename(db, subscriber_id);
-	char *filename = get_fifo_filename(db, subscriber_id);
+	char *filename = get_signal_filename(db, subscriber_id);
 	remove(filename);
 	rl_free(filename);
 cleanup:
@@ -198,13 +198,13 @@ int rl_poll_wait(rlite *db, int *elementc, unsigned char ***_elements, long **_e
 {
 	int retval = rl_poll(db, elementc, _elements, _elementslen);
 	if (retval == RL_NOT_FOUND) {
-		// TODO: possible race condition between poll and fifo read?
+		// TODO: possible race condition between poll and signal read?
 		// can we atomically do both without locking the database?
 		ENSURE_SUBSCRIPTOR_ID(RL_UNEXPECTED);
-		char *filename = get_fifo_filename(db, db->subscriber_id);
+		char *filename = get_signal_filename(db, db->subscriber_id);
 		rl_discard(db);
-		rl_create_fifo(filename);
-		rl_read_fifo(filename, timeout, NULL, NULL);
+		rl_create_signal(filename);
+		rl_read_signal(filename, timeout, NULL, NULL);
 		rl_free(filename);
 		rl_refresh(db);
 		retval = rl_poll(db, elementc, _elements, _elementslen);
@@ -260,12 +260,12 @@ static int do_publish(rlite *db, char *subscriber_id, long subscribed_idlen, int
 		RL_CALL(rl_push, RL_OK, db, (unsigned char *)subscriber_id, subscribed_idlen, 1, 0, valuec, values, valueslen, NULL);
 
 		rl_free(filename); // reusing variables?! WHO WROTE THIS?
-		filename = get_fifo_filename(db, subscriber_id);
-		// this only signals the fifo recipient that new data is available
+		filename = get_signal_filename(db, subscriber_id);
+		// this only signals the signal recipient that new data is available
 		// - Maybe this should be executed AFTER the push was commited?
 		// - Ah, we have an exclusive lock anyway, so they'll have to wait
 		// when they poll
-		rl_write_fifo(filename, "1", 1);
+		rl_write_signal(filename, "1", 1);
 	}
 cleanup:
 	rl_free(filename);

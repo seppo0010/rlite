@@ -14,16 +14,16 @@
 // header is 4-bytes size and 8-bytes crc
 #define FIFO_HEADER_SIZE 12
 
-int rl_create_fifo(const char *fifo_name) {
-	return mkfifo(fifo_name, 0777) == 0 ? RL_OK : RL_UNEXPECTED;
+int rl_create_signal(const char *signal_name) {
+	return mkfifo(signal_name, 0777) == 0 ? RL_OK : RL_UNEXPECTED;
 }
 
-int rl_delete_fifo(const char *fifo_name) {
-	unlink(fifo_name);
+int rl_delete_signal(const char *signal_name) {
+	unlink(signal_name);
 	return RL_OK;
 }
 
-int rl_read_fifo(const char *fifo_name, struct timeval *timeout, char **_data, size_t *_datalen)
+int rl_read_signal(const char *signal_name, struct timeval *timeout, char **_data, size_t *_datalen)
 {
 	char header[FIFO_HEADER_SIZE];
 	uint64_t crc;
@@ -40,7 +40,7 @@ int rl_read_fifo(const char *fifo_name, struct timeval *timeout, char **_data, s
 		oflag |= O_NONBLOCK;
 	}
 
-	fd = open(fifo_name, oflag);
+	fd = open(signal_name, oflag);
 	if (fd == -1) {
 		retval = RL_UNEXPECTED;
 		goto cleanup;
@@ -97,7 +97,7 @@ cleanup:
 	return retval;
 }
 
-int rl_write_fifo(const char *fifo_name, const char *data, size_t datalen) {
+int rl_write_signal(const char *signal_name, const char *data, size_t datalen) {
 	char header[FIFO_HEADER_SIZE];
 	put_4bytes((unsigned char *)header, datalen);
 
@@ -105,7 +105,7 @@ int rl_write_fifo(const char *fifo_name, const char *data, size_t datalen) {
 	memrev64ifbe(&crc);
 	memcpy(&header[4], &crc, 8);
 
-	int fd = open(fifo_name, O_WRONLY | O_NONBLOCK);
+	int fd = open(signal_name, O_WRONLY | O_NONBLOCK);
 	if (fd == -1) {
 		// fifo may not always exist on our code
 		// it is a way to signal between processes, but it is show and forget

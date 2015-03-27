@@ -34,7 +34,7 @@ extern SUITE(parser_test);
 extern SUITE(set_test);
 extern SUITE(hstring_test);
 extern SUITE(flock_test);
-extern SUITE(fifo_test);
+extern SUITE(signal_test);
 extern SUITE(pubsub_test);
 extern SUITE(hpubsub_test);
 
@@ -74,7 +74,7 @@ int main(int argc, char **argv) {
 	RUN_SUITE(set_test);
 	RUN_SUITE(hstring_test);
 	RUN_SUITE(flock_test);
-	RUN_SUITE(fifo_test);
+	RUN_SUITE(signal_test);
 	RUN_SUITE(pubsub_test);
 	RUN_SUITE(hpubsub_test);
 	GREATEST_MAIN_END();

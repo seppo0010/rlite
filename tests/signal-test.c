@@ -5,7 +5,7 @@
 #include <pthread.h>
 #include "greatest.h"
 #include "rlite.h"
-#include "../src/fifo.h"
+#include "../src/signal.h"
 
 #define FILEPATH "myfifo"
 
@@ -21,12 +21,12 @@ static void delete_file() {
 	}
 }
 
-static void* write_fifo(void* _buffer) {
+static void* write_signal(void* _buffer) {
 	struct buf *buffer = _buffer;
 	if (buffer->sleep) {
 		sleep(buffer->sleep);
 	}
-	rl_write_fifo(FILEPATH, buffer->data, buffer->datalen);
+	rl_write_signal(FILEPATH, buffer->data, buffer->datalen);
 	return NULL;
 }
 
@@ -44,9 +44,9 @@ TEST basic_read_write()
 	buffer.sleep = 0;
 
 	delete_file();
-	rl_create_fifo(FILEPATH);
-	pthread_create(&thread, NULL, write_fifo, &buffer);
-	rl_read_fifo(FILEPATH, NULL, &testdata, &testdatalen);
+	rl_create_signal(FILEPATH);
+	pthread_create(&thread, NULL, write_signal, &buffer);
+	rl_read_signal(FILEPATH, NULL, &testdata, &testdatalen);
 	unlink(FILEPATH);
 
 	ASSERT_EQ(datalen, testdatalen);
@@ -65,8 +65,8 @@ TEST basic_read_timeout()
 	timeout.tv_usec = 0;
 
 	delete_file();
-	rl_create_fifo(FILEPATH);
-	rl_read_fifo(FILEPATH, &timeout, &testdata, &testdatalen);
+	rl_create_signal(FILEPATH);
+	rl_read_signal(FILEPATH, &timeout, &testdata, &testdatalen);
 
 	ASSERT_EQ(testdata, NULL);
 	PASS();
@@ -90,9 +90,9 @@ TEST basic_read_timeout_write()
 	timeout.tv_usec = 0;
 
 	delete_file();
-	rl_create_fifo(FILEPATH);
-	pthread_create(&thread, NULL, write_fifo, &buffer);
-	rl_read_fifo(FILEPATH, NULL, &testdata, &testdatalen);
+	rl_create_signal(FILEPATH);
+	pthread_create(&thread, NULL, write_signal, &buffer);
+	rl_read_signal(FILEPATH, NULL, &testdata, &testdatalen);
 	unlink(FILEPATH);
 
 	ASSERT_EQ(datalen, testdatalen);
@@ -101,7 +101,7 @@ TEST basic_read_timeout_write()
 	PASS();
 }
 
-SUITE(fifo_test)
+SUITE(signal_test)
 {
 	RUN_TEST(basic_read_write);
 	RUN_TEST(basic_read_timeout);
