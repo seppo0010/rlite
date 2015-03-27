@@ -220,7 +220,7 @@ TEST basic_delete_list_test(long elements, long element_to_remove, char *name)
 
 	if (retval == RL_DELETED) {
 		ASSERT_EQ(elements, 1);
-		PASS();
+		goto cleanup;
 	}
 
 	RL_CALL_VERBOSE(rl_list_is_balanced, RL_OK, db, list);
@@ -240,6 +240,7 @@ TEST basic_delete_list_test(long elements, long element_to_remove, char *name)
 	}
 
 	retval = RL_OK;
+cleanup:
 	free(vals);
 	rl_close(db);
 	PASS();

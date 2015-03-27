@@ -4,6 +4,7 @@
 #include <unistd.h>
 #include <pthread.h>
 #include "greatest.h"
+#include "rlite.h"
 #include "../src/fifo.h"
 
 #define FILEPATH "myfifo"
@@ -50,6 +51,7 @@ TEST basic_read_write()
 
 	ASSERT_EQ(datalen, testdatalen);
 	ASSERT_EQ(memcmp(data, testdata, datalen), 0);
+	rl_free(testdata);
 	PASS();
 }
 
@@ -95,6 +97,7 @@ TEST basic_read_timeout_write()
 
 	ASSERT_EQ(datalen, testdatalen);
 	ASSERT_EQ(memcmp(data, testdata, datalen), 0);
+	rl_free(testdata);
 	PASS();
 }
 
