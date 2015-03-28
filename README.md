@@ -101,7 +101,7 @@ For more information about the file format check out
   - [ ] integration/replication
   - [x] unit/scripting
   - [x] unit/introspection
-- [ ] pubsub
+- [x] pubsub
 - [ ] brpop/brpoplpush
 - [x] multi process safe
 - [x] write ahead log
