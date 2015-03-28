@@ -600,6 +600,21 @@ TEST basic_subscribe_pubsub_numpat()
 	PASS();
 }
 
+TEST basic_memory_test()
+{
+	int retval;
+	const char *channel = CHANNEL;
+	long channellen = strlen(channel);
+
+	rlite *db = NULL;
+	RL_CALL_VERBOSE(setup_db, RL_OK, &db, 0, 0);
+	if (rl_subscribe(db, 1, (unsigned char **)&channel, &channellen)) {
+		rl_close(db);
+		PASS();
+	}
+	FAIL();
+}
+
 SUITE(pubsub_test)
 {
 	RUN_TEST(basic_subscribe_publish);
@@ -618,4 +633,5 @@ SUITE(pubsub_test)
 	RUN_TEST(basic_subscribe_pubsub_channels);
 	RUN_TEST(basic_subscribe_pubsub_numsub);
 	RUN_TEST(basic_subscribe_pubsub_numpat);
+	RUN_TEST(basic_memory_test);
 }

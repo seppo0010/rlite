@@ -24,9 +24,13 @@
 		c->reply = createErrorObject(RLITE_WRONGTYPEERR);\
 		goto cleanup;\
 	}\
+	if (retval == RL_UNEXPECTED) {\
+		c->reply = createErrorObject("ERR unexpected");\
+		goto cleanup;\
+	}\
 	if (retval == RL_OVERFLOW) {\
 		c->reply = createErrorObject("ERR increment would produce NaN or Infinity");\
-		return;\
+		goto cleanup;\
 	}\
 	if (retval == RL_NAN) {\
 		c->reply = createErrorObject("ERR resulting score is not a number (NaN)");\

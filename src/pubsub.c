@@ -17,6 +17,9 @@ static void generate_subscriber_id(rlite *db);
 static char *get_lock_filename(rlite *db, char *subscriber_id)
 {
 	char suffix[46];
+	if (db->driver_type != RL_FILE_DRIVER) {
+		return NULL;
+	}
 	rl_file_driver *driver = db->driver;
 	// 40 come from subscriber_id, 5 ".lock" and then a null
 	memcpy(suffix, subscriber_id, 40);

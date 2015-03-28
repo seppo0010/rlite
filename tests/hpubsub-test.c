@@ -30,7 +30,25 @@ TEST test_pubsub() {
 	PASS();
 }
 
+TEST test_pubsub_memory() {
+	rliteContext *context = rliteConnect(":memory:", 0);
+
+	rliteReply* reply;
+	size_t argvlen[100];
+
+	{
+		char* argv[100] = {"subscribe", "channel", "channel2", NULL};
+		reply = rliteCommandArgv(context, populateArgvlen(argv, argvlen), argv, argvlen);
+		EXPECT_REPLY_ERROR(reply);
+		rliteFreeReplyObject(reply);
+	}
+
+	rliteFree(context);
+	PASS();
+}
+
 SUITE(hpubsub_test)
 {
 	RUN_TEST(test_pubsub);
+	RUN_TEST(test_pubsub_memory);
 }
