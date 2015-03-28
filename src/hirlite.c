@@ -4048,7 +4048,9 @@ void pubsubPollCommand(rliteClient *c) {
 	}
 	RLITE_SERVER_ERR(c, retval);
 	if (retval == RL_NOT_FOUND) {
-		c->reply = createReplyObject(RLITE_REPLY_NIL);
+		if (c->context->replyPosition == c->context->replyLength) {
+			c->reply = createReplyObject(RLITE_REPLY_NIL);
+		}
 	} else if (retval == RL_OK) {
 		c->reply = pollToReply(elementc, elements, elementslen);
 	} else {
