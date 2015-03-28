@@ -3,8 +3,8 @@
 #include <string.h>
 #include "util.h"
 #include "../src/rlite.h"
-#include "../src/status.h"
-#include "../src/sort.h"
+#include "../src/rlite/status.h"
+#include "../src/rlite/sort.h"
 
 TEST sort_nosort_list_test(int _commit) {
 	int retval;

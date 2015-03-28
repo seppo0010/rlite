@@ -3,10 +3,10 @@
 #include <stdio.h>
 #include <math.h>
 #include "rlite.h"
-#include "status.h"
-#include "page_list.h"
-#include "page_string.h"
-#include "util.h"
+#include "rlite/status.h"
+#include "rlite/page_list.h"
+#include "rlite/page_string.h"
+#include "rlite/util.h"
 
 #ifdef RL_DEBUG
 int rl_print_list_node(rl_list *list, rl_list_node *node);

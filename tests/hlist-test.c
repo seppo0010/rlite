@@ -2,7 +2,7 @@
 #include <math.h>
 #include <stdlib.h>
 #include <string.h>
-#include "hirlite.h"
+#include "rlite/hirlite.h"
 #include "util.h"
 
 static void lpush(rliteContext* context, char *key, char *element) {

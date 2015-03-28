@@ -2,7 +2,7 @@
 #define _RL_TEST_UTIL_H
 
 #include "greatest.h"
-#include "../src/util.h"
+#include "../src/rlite/util.h"
 struct rlite;
 
 int setup_db(struct rlite **db, int file, int del);

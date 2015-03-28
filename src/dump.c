@@ -1,8 +1,8 @@
 #include <arpa/inet.h>
 #include "rlite.h"
-#include "util.h"
-#include "crc64.h"
-#include "endianconv.h"
+#include "rlite/util.h"
+#include "rlite/crc64.h"
+#include "rlite/endianconv.h"
 
 int rl_dump(struct rlite *db, const unsigned char *key, long keylen, unsigned char **data, long *datalen)
 {

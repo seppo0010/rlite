@@ -1,10 +1,10 @@
 #include <arpa/inet.h>
-#include "page_key.h"
+#include "rlite/page_key.h"
 #include "rlite.h"
-#include "util.h"
-#include "crc64.h"
-#include "endianconv.h"
-#include "lzf.h"
+#include "rlite/util.h"
+#include "rlite/crc64.h"
+#include "rlite/endianconv.h"
+#include "rlite/lzf.h"
 
 struct stringwithlength {
 	unsigned char *string;

@@ -3,7 +3,7 @@
 #include <limits.h>
 #include <math.h>
 #include "../src/rlite.h"
-#include "../src/type_list.h"
+#include "../src/rlite/type_list.h"
 #include "util.h"
 
 #define UNSIGN(str) ((unsigned char *)(str))

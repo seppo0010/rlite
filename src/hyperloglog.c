@@ -29,7 +29,7 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "hyperloglog.h"
+#include "rlite/hyperloglog.h"
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>

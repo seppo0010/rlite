@@ -3,7 +3,7 @@
 #include <string.h>
 #include "greatest.h"
 #include "../src/rlite.h"
-#include "../src/flock.h"
+#include "../src/rlite/flock.h"
 
 TEST basic_flock_check()
 {

@@ -7,9 +7,9 @@
 #include <sys/stat.h>
 #include <unistd.h>
 #include "rlite.h"
-#include "util.h"
-#include "crc64.h"
-#include "endianconv.h"
+#include "rlite/util.h"
+#include "rlite/crc64.h"
+#include "rlite/endianconv.h"
 
 // header is 4-bytes size and 8-bytes crc
 #define FIFO_HEADER_SIZE 12

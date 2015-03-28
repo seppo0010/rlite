@@ -1,7 +1,7 @@
 #include <string.h>
 #include <stdlib.h>
 #include "greatest.h"
-#include "hirlite.h"
+#include "rlite/hirlite.h"
 
 TEST test_format_noparam() {
 	rliteClient client;

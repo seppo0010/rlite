@@ -1,9 +1,9 @@
 #include <stdlib.h>
 #include "rlite.h"
-#include "page_multi_string.h"
-#include "type_set.h"
-#include "page_btree.h"
-#include "util.h"
+#include "rlite/page_multi_string.h"
+#include "rlite/type_set.h"
+#include "rlite/page_btree.h"
+#include "rlite/util.h"
 
 static int rl_set_create(rlite *db, long btree_page, rl_btree **btree)
 {

@@ -6,7 +6,7 @@
 #include "greatest.h"
 #include "util.h"
 #include "../src/rlite.h"
-#include "../src/pubsub.h"
+#include "../src/rlite/pubsub.h"
 
 #define DATA "hello world!"
 #define CHANNEL "mychannel"

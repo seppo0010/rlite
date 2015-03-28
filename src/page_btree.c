@@ -2,10 +2,10 @@
 #include <string.h>
 #include <stdio.h>
 #include <math.h>
-#include "status.h"
-#include "page_btree.h"
+#include "rlite/status.h"
+#include "rlite/page_btree.h"
 #include "rlite.h"
-#include "util.h"
+#include "rlite/util.h"
 
 rl_btree_type rl_btree_type_hash_sha1_key = {
 	0,

@@ -1,8 +1,8 @@
 #include <string.h>
 #include <stdlib.h>
-#include "page_skiplist.h"
-#include "page_multi_string.h"
-#include "util.h"
+#include "rlite/page_skiplist.h"
+#include "rlite/page_multi_string.h"
+#include "rlite/util.h"
 
 static int rl_skiplist_random_level()
 {

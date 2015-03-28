@@ -2,15 +2,15 @@
 #include <string.h>
 #include <stdio.h>
 #include <math.h>
-#include "sha1.h"
+#include "rlite/sha1.h"
 #ifdef RL_DEBUG
 #include <unistd.h>
 #include <sys/stat.h>
 #include <execinfo.h>
 #include <valgrind/valgrind.h>
 #endif
-#include "status.h"
-#include "util.h"
+#include "rlite/status.h"
+#include "rlite/util.h"
 #include <sys/time.h>
 
 int _sha1_formatter(unsigned char *data, char formatted[40])

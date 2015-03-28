@@ -2,7 +2,7 @@
 #include <unistd.h>
 #include <pthread.h>
 #include "greatest.h"
-#include "hirlite.h"
+#include "rlite/hirlite.h"
 #include "util.h"
 
 #define FILEPATH "rlite-test.rld"

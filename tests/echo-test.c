@@ -1,5 +1,5 @@
 #include <string.h>
-#include "hirlite.h"
+#include "rlite/hirlite.h"
 #include "util.h"
 #include "greatest.h"
 

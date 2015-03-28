@@ -1,6 +1,6 @@
 #include <string.h>
 #include <unistd.h>
-#include "hirlite.h"
+#include "rlite/hirlite.h"
 #include "util.h"
 
 TEST keys() {

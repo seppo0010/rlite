@@ -1,5 +1,5 @@
-#include "../src/crc64.h"
-#include "../src/endianconv.h"
+#include "../src/rlite/crc64.h"
+#include "../src/rlite/endianconv.h"
 
 #include <stdlib.h>
 #include <stdio.h>

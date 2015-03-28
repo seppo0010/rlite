@@ -1,8 +1,8 @@
 #include <stdlib.h>
 #include <string.h>
 #include "rlite.h"
-#include "page_string.h"
-#include "util.h"
+#include "rlite/page_string.h"
+#include "rlite/util.h"
 
 int rl_string_serialize(rlite *db, void *obj, unsigned char *data)
 {

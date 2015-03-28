@@ -3,8 +3,8 @@
 #include <string.h>
 #include "util.h"
 #include "../src/rlite.h"
-#include "../src/status.h"
-#include "../src/page_long.h"
+#include "../src/rlite/status.h"
+#include "../src/rlite/page_long.h"
 
 TEST do_long_test(int _commit)
 {

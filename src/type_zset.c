@@ -1,13 +1,13 @@
 #include <math.h>
 #include <stdlib.h>
 #include "rlite.h"
-#include "page_key.h"
-#include "page_multi_string.h"
-#include "type_zset.h"
-#include "page_btree.h"
-#include "page_list.h"
-#include "page_skiplist.h"
-#include "util.h"
+#include "rlite/page_key.h"
+#include "rlite/page_multi_string.h"
+#include "rlite/type_zset.h"
+#include "rlite/page_btree.h"
+#include "rlite/page_list.h"
+#include "rlite/page_skiplist.h"
+#include "rlite/util.h"
 
 static int rl_zset_create(rlite *db, long levels_page_number, rl_btree **btree, long *btree_page, rl_skiplist **_skiplist, long *skiplist_page)
 {

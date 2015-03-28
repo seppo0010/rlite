@@ -30,8 +30,8 @@
 
 
 #include "rlite.h"
-#include "sort.h"
-#include "pqsort.h" /* Partial qsort for SORT+LIMIT */
+#include "rlite/sort.h"
+#include "rlite/pqsort.h" /* Partial qsort for SORT+LIMIT */
 #include <math.h> /* isnan() */
 #include <errno.h>
 

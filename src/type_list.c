@@ -1,9 +1,9 @@
 #include <stdlib.h>
 #include "rlite.h"
-#include "page_multi_string.h"
-#include "type_list.h"
-#include "page_list.h"
-#include "util.h"
+#include "rlite/page_multi_string.h"
+#include "rlite/type_list.h"
+#include "rlite/page_list.h"
+#include "rlite/util.h"
 
 static int rl_llist_create(rlite *db, long list_page, rl_list **_list)
 {

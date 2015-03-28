@@ -1,11 +1,11 @@
 #include <stdlib.h>
 #include <string.h>
-#include "sha1.h"
+#include "rlite/sha1.h"
 #include "rlite.h"
-#include "page_list.h"
-#include "page_string.h"
-#include "page_multi_string.h"
-#include "util.h"
+#include "rlite/page_list.h"
+#include "rlite/page_string.h"
+#include "rlite/page_multi_string.h"
+#include "rlite/util.h"
 
 int rl_normalize_string_range(long totalsize, long *start, long *stop)
 {

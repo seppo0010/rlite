@@ -26,7 +26,7 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
  */
-#include "utilfromredis.h"
+#include "rlite/utilfromredis.h"
 #include <ctype.h>
 #include <limits.h>
 #include <string.h>

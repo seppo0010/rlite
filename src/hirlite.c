@@ -1,5 +1,5 @@
 #include <stdio.h>
-#include "constants.h"
+#include "rlite/constants.h"
 #include <assert.h>
 #include <errno.h>
 #include <ctype.h>
@@ -11,11 +11,11 @@
 #include <time.h>
 #include <unistd.h>
 
-#include "hyperloglog.h"
-#include "hirlite.h"
-#include "scripting.h"
-#include "util.h"
-#include "pubsub.h"
+#include "rlite/hyperloglog.h"
+#include "rlite/hirlite.h"
+#include "rlite/scripting.h"
+#include "rlite/util.h"
+#include "rlite/pubsub.h"
 
 #define UNSIGN(val) ((unsigned char *)val)
 

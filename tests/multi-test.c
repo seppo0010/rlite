@@ -2,9 +2,9 @@
 #include <stdio.h>
 #include <string.h>
 #include "util.h"
-#include "../src/page_key.h"
+#include "../src/rlite/page_key.h"
 #include "../src/rlite.h"
-#include "../src/type_zset.h"
+#include "../src/rlite/type_zset.h"
 
 TEST basic_multi_test(int _commit)
 {

@@ -34,7 +34,7 @@
  * either the BSD or the GPL.
  */
 
-#include "lzfP.h"
+#include "rlite/lzfP.h"
 
 #if AVOID_ERRNO
 # define SET_ERRNO(n)

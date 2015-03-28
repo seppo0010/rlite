@@ -4,8 +4,8 @@
 #include <string.h>
 #include "util.h"
 #include "../src/rlite.h"
-#include "../src/status.h"
-#include "../src/page_list.h"
+#include "../src/rlite/status.h"
+#include "../src/rlite/page_list.h"
 
 TEST basic_insert_list_test(int options)
 {

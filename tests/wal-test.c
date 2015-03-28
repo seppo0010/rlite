@@ -3,7 +3,7 @@
 #include <pthread.h>
 #include "rlite.h"
 #include "util.h"
-#include "wal.h"
+#include "rlite/wal.h"
 
 static const char *db_path = "rlite-test.rld";
 static const char *wal_path = ".rlite-test.rld.wal";

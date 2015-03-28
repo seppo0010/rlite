@@ -3,10 +3,10 @@
 #include <math.h>
 #include <ctype.h>
 #include "rlite.h"
-#include "page_multi_string.h"
-#include "type_string.h"
-#include "util.h"
-#include "hyperloglog.h"
+#include "rlite/page_multi_string.h"
+#include "rlite/type_string.h"
+#include "rlite/util.h"
+#include "rlite/hyperloglog.h"
 
 static int rl_string_get_objects(rlite *db, const unsigned char *key, long keylen, long *_page_number, unsigned long long *expires, long *version)
 {

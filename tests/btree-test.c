@@ -4,8 +4,8 @@
 #include "greatest.h"
 #include "util.h"
 #include "../src/rlite.h"
-#include "../src/page_btree.h"
-#include "../src/status.h"
+#include "../src/rlite/page_btree.h"
+#include "../src/rlite/status.h"
 
 TEST basic_insert_set_test()
 {

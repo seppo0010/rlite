@@ -25,9 +25,9 @@ A million repetitions of "a"
 #include <string.h>
 #include <sys/types.h>	/* for u_int*_t */
 #if defined(__sun)
-#include "solarisfixes.h"
+#include "rlite/solarisfixes.h"
 #endif
-#include "sha1.h"
+#include "rlite/sha1.h"
 
 #define rol(value, bits) (((value) << (bits)) | ((value) >> (32 - (bits))))
 

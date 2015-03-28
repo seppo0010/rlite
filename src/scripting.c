@@ -29,10 +29,10 @@
  */
 
 #include "rlite.h"
-#include "hirlite.h"
-#include "sha1.h"
-#include "rand.h"
-#include "constants.h"
+#include "rlite/hirlite.h"
+#include "rlite/sha1.h"
+#include "rlite/rand.h"
+#include "rlite/constants.h"
 
 #include <lua.h>
 #include <lauxlib.h>

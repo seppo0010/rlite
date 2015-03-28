@@ -4,8 +4,8 @@
 #include <limits.h>
 #include "util.h"
 #include "../src/rlite.h"
-#include "../src/status.h"
-#include "../src/page_string.h"
+#include "../src/rlite/status.h"
+#include "../src/rlite/page_string.h"
 
 TEST do_string_test()
 {

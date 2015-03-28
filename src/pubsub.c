@@ -1,8 +1,8 @@
 #include "rlite.h"
-#include "util.h"
-#include "signal.h"
-#include "flock.h"
-#include "pubsub.h"
+#include "rlite/util.h"
+#include "rlite/signal.h"
+#include "rlite/flock.h"
+#include "rlite/pubsub.h"
 
 #define ENSURE_SUBSCRIPTOR_ID(ret) \
 	if (db->subscriber_id == NULL) {\

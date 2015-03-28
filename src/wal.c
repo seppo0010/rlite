@@ -3,8 +3,8 @@
 #include <unistd.h>
 
 #include "rlite.h"
-#include "flock.h"
-#include "sha1.h"
+#include "rlite/flock.h"
+#include "rlite/sha1.h"
 
 #ifdef RL_DEBUG
 int rl_search_cache(rlite *db, rl_data_type *type, long page_number, void **obj, long *position, void *context, rl_page **pages, long page_len);

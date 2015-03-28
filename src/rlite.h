@@ -2,18 +2,18 @@
 #define _RLITE_H
 
 #include <stdio.h>
-#include "status.h"
-#include "page_btree.h"
-#include "page_key.h"
-#include "type_hash.h"
-#include "type_zset.h"
-#include "type_set.h"
-#include "type_list.h"
-#include "type_string.h"
-#include "sort.h"
-#include "restore.h"
-#include "dump.h"
-#include "util.h"
+#include "rlite/status.h"
+#include "rlite/page_btree.h"
+#include "rlite/page_key.h"
+#include "rlite/type_hash.h"
+#include "rlite/type_zset.h"
+#include "rlite/type_set.h"
+#include "rlite/type_list.h"
+#include "rlite/type_string.h"
+#include "rlite/sort.h"
+#include "rlite/restore.h"
+#include "rlite/dump.h"
+#include "rlite/util.h"
 
 #define REDIS_RDB_VERSION 6
 

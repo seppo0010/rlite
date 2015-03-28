@@ -1,13 +1,13 @@
 #include <stdlib.h>
 #include <string.h>
 #include "rlite.h"
-#include "util.h"
-#include "page_btree.h"
-#include "page_key.h"
-#include "page_multi_string.h"
-#include "type_string.h"
-#include "type_zset.h"
-#include "type_hash.h"
+#include "rlite/util.h"
+#include "rlite/page_btree.h"
+#include "rlite/page_key.h"
+#include "rlite/page_multi_string.h"
+#include "rlite/type_string.h"
+#include "rlite/type_zset.h"
+#include "rlite/type_hash.h"
 
 #define TYPES_LENGTH 5
 rl_type types[TYPES_LENGTH] = {

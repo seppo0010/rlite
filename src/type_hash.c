@@ -4,10 +4,10 @@
 #include <math.h>
 #include <stdlib.h>
 #include "rlite.h"
-#include "page_multi_string.h"
-#include "type_hash.h"
-#include "page_btree.h"
-#include "util.h"
+#include "rlite/page_multi_string.h"
+#include "rlite/type_hash.h"
+#include "rlite/page_btree.h"
+#include "rlite/util.h"
 
 static int rl_hash_create(rlite *db, long btree_page, rl_btree **btree)
 {

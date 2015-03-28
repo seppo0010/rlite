@@ -3,8 +3,8 @@
 #include <limits.h>
 #include <math.h>
 #include "../src/rlite.h"
-#include "../src/type_zset.h"
-#include "../src/page_key.h"
+#include "../src/rlite/type_zset.h"
+#include "../src/rlite/page_key.h"
 #include "util.h"
 #include "greatest.h"
 

@@ -5,7 +5,7 @@
 #include <pthread.h>
 #include "greatest.h"
 #include "rlite.h"
-#include "../src/signal.h"
+#include "../src/rlite/signal.h"
 
 #define FILEPATH "myfifo"
 

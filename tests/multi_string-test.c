@@ -2,8 +2,8 @@
 #include <string.h>
 #include <limits.h>
 #include "../src/rlite.h"
-#include "../src/page_multi_string.h"
-#include "../src/util.h"
+#include "../src/rlite/page_multi_string.h"
+#include "../src/rlite/util.h"
 #include "util.h"
 
 TEST basic_set_get()

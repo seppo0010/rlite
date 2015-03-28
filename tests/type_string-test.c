@@ -3,7 +3,7 @@
 #include <limits.h>
 #include <math.h>
 #include "../src/rlite.h"
-#include "../src/type_string.h"
+#include "../src/rlite/type_string.h"
 #include "util.h"
 
 TEST basic_test_set_get(int _commit)
