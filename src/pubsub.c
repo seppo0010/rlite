@@ -188,6 +188,7 @@ int rl_unsubscribe_all(rlite *db)
 		// if there's no subscriber id, then the connection is not subscribed to anything
 		return RL_OK;
 	}
+    rl_refresh(db);
 	int retval = rl_unsubscribe_all_subscriber(db, db->subscriber_id);
 	if (retval == RL_OK) {
 		fclose(db->subscriber_lock_fp);
