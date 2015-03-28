@@ -3996,7 +3996,7 @@ void pubsubPollCommand(rliteClient *c) {
 	if (c->argc >= 2) {
 		long timeout_param;
 		struct timeval timeout;
-		if ((getLongFromObjectOrReply(c, c->argv[2], c->argvlen[2], &timeout_param, NULL) != RLITE_OK)) {
+		if ((getLongFromObjectOrReply(c, c->argv[1], c->argvlen[1], &timeout_param, NULL) != RLITE_OK)) {
 			return;
 		}
 		if (timeout_param != 0) {
@@ -4155,7 +4155,7 @@ static struct rliteCommand rliteCommandTable[] = {
 	{"punsubscribe",punsubscribeCommand,-1,"rpslt",0,0,0,0,0,0},
 	{"publish",publishCommand,3,"pltrF",0,0,0,0,0,0},
 	{"pubsub",pubsubCommand,-2,"pltrR",0,0,0,0,0,0},
-	{"__rlite_poll",pubsubPollCommand,-2,"pltrR",0,0,0,0,0,0},
+	{"__rlite_poll",pubsubPollCommand,-1,"pltrR",0,0,0,0,0,0},
 	{"watch",watchCommand,-2,"rsF",0,1,-1,1,0,0},
 	{"unwatch",unwatchCommand,1,"rsF",0,0,0,0,0,0},
 	// {"cluster",clusterCommand,-2,"ar",0,NULL,0,0,0,0,0},
