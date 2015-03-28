@@ -382,6 +382,16 @@ cleanup:
 	return retval;
 }
 
+int rl_pubsub_patterns(rlite *db, long *patternc, unsigned char ***patternv, long **patternvlen)
+{
+	int retval;
+	RL_CALL(rl_select_internal, RL_OK, db, RLITE_INTERNAL_DB_PATTERN_SUBSCRIBERS);
+	RL_CALL2(rl_keys, RL_OK, RL_NOT_FOUND, db, (unsigned char *)"*", 1, patternc, patternv, patternvlen);
+cleanup:
+	rl_select_internal(db, RLITE_INTERNAL_DB_NO);
+	return retval;
+}
+
 int rl_pubsub_channels(rlite *db, unsigned char *pattern, long patternlen, long *channelc, unsigned char ***channelv, long **channelvlen)
 {
 	int retval;

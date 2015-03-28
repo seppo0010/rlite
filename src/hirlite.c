@@ -3879,8 +3879,31 @@ cleanup:
 	free(getvlen);
 }
 
+static void pubsubVarargCommandProcessed(rliteClient *c, const char *type, int argc, unsigned char **args, long *argslen, int func(rlite *db, int argc, unsigned char **argv, long *argvlen)) {
+	int i, retval;
+	retval = func(c->context->db, argc, args, argslen);
+	RLITE_SERVER_ERR(c, retval);
+
+	long count = 0;
+	int subscribing = !strcasecmp(type, "subscribe") || !strcasecmp(type, "psubscribe");
+	rl_pubsub_count_subscriptions(c->context->db, &count);
+	for (i = 0; i < argc; i++) {
+		rliteReply *reply = createArrayObject(3);;
+		if (reply) {
+			reply->element[0] = createCStringObject(type);
+			reply->element[1] = createStringObject((char *)args[i], argslen[i]);
+			// TODO: count might be off if a clients connects to the same channel multiple times
+			reply->element[2] = createLongLongObject(subscribing ? (count - argc + i + 1) : (count + argc - i - 1));
+			addReply(c->context, reply);
+		}
+	}
+	retval = RL_OK;
+cleanup:
+	return;
+}
+
 static void pubsubVarargCommand(rliteClient *c, const char *type, int func(rlite *db, int argc, unsigned char **argv, long *argvlen)) {
-	int retval = RL_OK, i = 0, argc = c->argc - 1;
+	int i = 0, argc = c->argc - 1;
 	unsigned char **args = NULL;
 	long *argslen = NULL;
 
@@ -3898,26 +3921,10 @@ static void pubsubVarargCommand(rliteClient *c, const char *type, int func(rlite
 		args[i] = (unsigned char *)c->argv[1 + i];
 		argslen[i] = (long)c->argvlen[1 + i];
 	}
-	retval = func(c->context->db, argc, args, argslen);
-	RLITE_SERVER_ERR(c, retval);
-
-	long count = 0;
-	rl_pubsub_count_subscriptions(c->context->db, &count);
-	for (i = 0; i < argc; i++) {
-		rliteReply *reply = createArrayObject(3);;
-		if (reply) {
-			reply->element[0] = createCStringObject(type);
-			reply->element[1] = createStringObject(c->argv[i + 1], c->argvlen[i + 1]);
-			// TODO: count might be off if a clients connects to the same channel multiple times
-			reply->element[2] = createLongLongObject(count - argc + i + 1);
-			addReply(c->context, reply);
-		}
-	}
-	retval = RL_OK;
+	pubsubVarargCommandProcessed(c, type, argc, args, argslen, func);
 cleanup:
-	free(args);
-	free(argslen);
-	return;
+	rl_free(args);
+	rl_free(argslen);
 }
 
 static void subscribeCommand(rliteClient *c) {
@@ -3925,7 +3932,23 @@ static void subscribeCommand(rliteClient *c) {
 }
 
 static void unsubscribeCommand(rliteClient *c) {
-	pubsubVarargCommand(c, "unsubscribe", rl_unsubscribe);
+	long i, channelc = 0;
+	unsigned char **channelv = NULL;
+	long *channelvlen = NULL;
+	if (c->argc == 1) {
+		int retval = rl_pubsub_channels(c->context->db, NULL, 0, &channelc, &channelv, &channelvlen);
+		RLITE_SERVER_ERR(c, retval);
+		pubsubVarargCommandProcessed(c, "unsubscribe", channelc, channelv, channelvlen, rl_unsubscribe);
+	} else {
+		pubsubVarargCommand(c, "unsubscribe", rl_unsubscribe);
+	}
+
+cleanup:
+	for (i = 0; i < channelc; i++) {
+		rl_free(channelv[i]);
+	}
+	rl_free(channelv);
+	rl_free(channelvlen);
 }
 
 static void psubscribeCommand(rliteClient *c) {
@@ -3933,7 +3956,23 @@ static void psubscribeCommand(rliteClient *c) {
 }
 
 static void punsubscribeCommand(rliteClient *c) {
-	pubsubVarargCommand(c, "punsubscribe", rl_punsubscribe);
+	long i, patternc = 0;
+	unsigned char **patternv = NULL;
+	long *patternvlen = NULL;
+	if (c->argc == 1) {
+		int retval = rl_pubsub_patterns(c->context->db, &patternc, &patternv, &patternvlen);
+		RLITE_SERVER_ERR(c, retval);
+		pubsubVarargCommandProcessed(c, "punsubscribe", patternc, patternv, patternvlen, rl_punsubscribe);
+	} else {
+		pubsubVarargCommand(c, "punsubscribe", rl_punsubscribe);
+	}
+
+cleanup:
+	for (i = 0; i < patternc; i++) {
+		rl_free(patternv[i]);
+	}
+	rl_free(patternv);
+	rl_free(patternvlen);
 }
 
 static void publishCommand(rliteClient *c) {
