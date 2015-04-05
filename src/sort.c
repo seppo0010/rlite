@@ -520,8 +520,10 @@ int rl_sort(struct rlite *db, unsigned char *key, long keylen, unsigned char *so
 	retval = RL_OK;
 cleanup:
 	if (retval != RL_OK) {
-		for (j = 0; j < vectorlen; j++) {
-			rl_free(vector[j].obj);
+		if (vector) {
+			for (j = 0; j < vectorlen; j++) {
+				rl_free(vector[j].obj);
+			}
 		}
 		*retobjc = 0;
 	}
