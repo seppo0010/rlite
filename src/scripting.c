@@ -110,6 +110,9 @@ void rliteToLuaType(lua_State *lua, rliteReply *reply) {
 	case RLITE_REPLY_INTEGER:
 		rliteToLuaType_Int(lua,reply);
 		break;
+	case RLITE_REPLY_NIL:
+		lua_pushboolean(lua,0);
+		break;
 	case RLITE_REPLY_STRING:
 		rliteToLuaType_Bulk(lua,reply);
 		break;
