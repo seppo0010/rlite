@@ -800,6 +800,7 @@ static void execCommand(rliteClient *c) {
 		goto cleanup;
 	}
 
+	c->context->inTransaction = 0;
 	c->reply = createReplyObject(RLITE_REPLY_ARRAY);
 	if (retval == RL_NOT_FOUND) {
 		c->reply->elements = 0;

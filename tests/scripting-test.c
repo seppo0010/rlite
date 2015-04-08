@@ -194,10 +194,42 @@ TEST test_script_evalsha()
 	PASS();
 }
 
+TEST test_multi()
+{
+	rliteContext *context = rliteConnect(":memory:", 0);
+
+	rliteReply* reply;
+	size_t argvlen[100];
+	{
+		char* argv[100] = {"MULTI", NULL};
+		reply = rliteCommandArgv(context, populateArgvlen(argv, argvlen), argv, argvlen);
+		EXPECT_REPLY_STATUS(reply, "OK", 2);
+		rliteFreeReplyObject(reply);
+	}
+	{
+		char* argv[100] = {"eval", "return {redis.call('incrby', 'key', 123), redis.call('incrby', 'key', 456)}", "0", NULL};
+		reply = rliteCommandArgv(context, populateArgvlen(argv, argvlen), argv, argvlen);
+		EXPECT_REPLY_STATUS(reply, "QUEUED", 6);
+		rliteFreeReplyObject(reply);
+	}
+	{
+		char* argv[100] = {"EXEC", NULL};
+		reply = rliteCommandArgv(context, populateArgvlen(argv, argvlen), argv, argvlen);
+		EXPECT_REPLY_LEN(reply, 1);
+		EXPECT_REPLY_LEN(reply->element[0], 2);
+		EXPECT_REPLY_INTEGER(reply->element[0]->element[0], 123);
+		EXPECT_REPLY_INTEGER(reply->element[0]->element[1], 579);
+		rliteFreeReplyObject(reply);
+	}
+	rliteFree(context);
+	PASS();
+}
+
 SUITE(scripting_test)
 {
 	RUN_TEST(test_types);
 	RUN_TEST(test_call_ok);
 	RUN_TEST(test_call_err);
 	RUN_TEST(test_script_evalsha);
+	RUN_TEST(test_multi);
 }
