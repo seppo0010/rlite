@@ -13,9 +13,9 @@ LUA_OBJ=../deps/lua/src/lapi.o ../deps/lua/src/lcode.o ../deps/lua/src/ldebug.o 
 LIBNAME=libhirlite
 PKGCONFNAME=hirlite.pc
 
-HIRLITE_MAJOR=$(shell grep HIRLITE_MAJOR hirlite.h | awk '{print $$3}')
-HIRLITE_MINOR=$(shell grep HIRLITE_MINOR hirlite.h | awk '{print $$3}')
-HIRLITE_PATCH=$(shell grep HIRLITE_PATCH hirlite.h | awk '{print $$3}')
+HIRLITE_MAJOR=$(shell grep HIRLITE_MAJOR rlite/hirlite.h | awk '{print $$3}')
+HIRLITE_MINOR=$(shell grep HIRLITE_MINOR rlite/hirlite.h | awk '{print $$3}')
+HIRLITE_PATCH=$(shell grep HIRLITE_PATCH rlite/hirlite.h | awk '{print $$3}')
 
 OPTIMIZATION?=-O2
 ifeq ($(uname_S),SunOS)
@@ -110,7 +110,7 @@ test: $(STLIBNAME)
 vtest: $(STLIBNAME)
 	cd ../tests/ && $(MAKE) vtest
 
-$(PKGCONFNAME): hirlite.h
+$(PKGCONFNAME): rlite/hirlite.h
 	@echo "Generating $@ for pkgconfig..."
 	@echo prefix=$(PREFIX) > $@
 	@echo exec_prefix=$${prefix} >> $@
