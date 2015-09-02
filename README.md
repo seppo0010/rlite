@@ -121,6 +121,7 @@ rlite has no dependencies, just run `make all`.
 - [rlite-py](https://github.com/seppo0010/rlite-py)
 - [rlite-rb](https://github.com/seppo0010/rlite-rb)
 - [rrlite](https://github.com/richfitz/rrlite) (thanks [richfitz](https://github.com/richfitz)!)
+- [rlite-rs](https://github.com/seppo0010/rlite-rs)
 
 ### Command-line interface
 
