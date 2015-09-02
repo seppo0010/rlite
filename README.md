@@ -24,8 +24,9 @@ puts redis.get "key"
 [Node.js](//github.com/seppo0010/rlite-js#usage),
 [Objective-C](https://github.com/seppo0010/objc-rlite#api),
 [PHP](https://github.com/seppo0010/rlite-php#usage),
-[Python](https://github.com/seppo0010/rlite-py#usage), and
-[R](https://github.com/richfitz/rrlite#usage).
+[Python](https://github.com/seppo0010/rlite-py#usage),
+[R](https://github.com/richfitz/rrlite#usage), and
+[Rust](https://github.com/seppo0010/rlite-rs#example)
 
 ### Example in C
 ```c
