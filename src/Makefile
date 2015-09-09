@@ -96,6 +96,7 @@ clang-analyzer:
 	$(CC) $(ARCH) $(DEBUG) $(CFLAGS) -c $<
 
 $(DYLIBNAME): $(OBJ) lua
+	rm -f $(DYLIBNAME)
 	$(DYLIB_MAKE_CMD) $(LUA_OBJ) $(OBJ)
 
 $(STLIBNAME): $(OBJ)
