@@ -66,6 +66,19 @@ cleanup:
 	return retval;
 }
 
+int rl_get_cpy(struct rlite *db, const unsigned char *key, long keylen, unsigned char *value, long *valuelen)
+{
+	long page_number;
+	int retval;
+	RL_CALL(rl_string_get_objects, RL_OK, db, key, keylen, &page_number, NULL, NULL);
+	if (value || valuelen) {
+		RL_CALL(rl_multi_string_cpy, RL_OK, db, page_number, value, valuelen);
+	}
+	retval = RL_OK;
+cleanup:
+	return retval;
+}
+
 int rl_append(struct rlite *db, const unsigned char *key, long keylen, unsigned char *value, long valuelen, long *newlength)
 {
 	int retval;

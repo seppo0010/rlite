@@ -7,26 +7,24 @@
 static int rl_dump_string(struct rlite *db, const unsigned char *key, long keylen, unsigned char **data, long *datalen)
 {
 	int retval;
-	unsigned char *value = NULL;
 	long valuelen;
 	unsigned char *buf = NULL;
 	long buflen;
 	uint32_t length;
 
-	RL_CALL(rl_get, RL_OK, db, key, keylen, &value, &valuelen);
+	RL_CALL(rl_get, RL_OK, db, key, keylen, NULL, &valuelen);
 	RL_MALLOC(buf, sizeof(unsigned char) * (16 + valuelen));
 	buf[0] = REDIS_RDB_TYPE_STRING;
 	buf[1] = (REDIS_RDB_32BITLEN << 6);
 	length = htonl(valuelen);
 	memcpy(&buf[2], &length, 4);
-	memcpy(&buf[6], value, valuelen);
+	RL_CALL(rl_get_cpy, RL_OK, db, key, keylen, &buf[6], NULL);
 	buflen = valuelen + 6;
 
 	*data = buf;
 	*datalen = buflen;
 	retval = RL_OK;
 cleanup:
-	rl_free(value);
 	return retval;
 }
 

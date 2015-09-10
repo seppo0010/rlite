@@ -9,6 +9,7 @@ struct rlite;
 
 int rl_set(struct rlite *db, const unsigned char *key, long keylen, unsigned char *value, long valuelen, int nx, unsigned long long expires);
 int rl_get(struct rlite *db, const unsigned char *key, long keylen, unsigned char **value, long *valuelen);
+int rl_get_cpy(struct rlite *db, const unsigned char *key, long keylen, unsigned char *value, long *valuelen);
 int rl_append(struct rlite *db, const unsigned char *key, long keylen, unsigned char *value, long valuelen, long *newlength);
 int rl_getrange(struct rlite *db, const unsigned char *key, long keylen, long start, long stop, unsigned char **value, long *valuelen);
 int rl_setrange(struct rlite *db, const unsigned char *key, long keylen, long index, unsigned char *value, long valuelen, long *newlength);

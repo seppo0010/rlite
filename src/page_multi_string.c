@@ -250,7 +250,7 @@ cleanup:
 	return retval;
 }
 
-int rl_multi_string_cpyrange(struct rlite *db, long number, unsigned char *data, long *size, long start, long stop)
+int rl_multi_string_cpyrange(struct rlite *db, long number, unsigned char *data, long *_size, long start, long stop)
 {
 	long totalsize;
 	rl_list *list = NULL;
@@ -261,21 +261,29 @@ int rl_multi_string_cpyrange(struct rlite *db, long number, unsigned char *data,
 	list = _list;
 	unsigned char *tmp_data;
 	long i, pos = 0, pagesize, pagestart;
+	long size;
 
 	RL_CALL(rl_list_get_element, RL_FOUND, db, list, &tmp, 0);
 	totalsize = *(long *)tmp;
 	if (totalsize == 0) {
-		*size = 0;
+		if (_size) {
+			*_size = 0;
+		}
 		retval = RL_OK;
 		goto cleanup;
 	}
 	rl_normalize_string_range(totalsize, &start, &stop);
 	if (stop < start) {
-		*size = 0;
+		if (_size) {
+			*_size = 0;
+		}
 		retval = RL_OK;
 		goto cleanup;
 	}
-	*size = stop - start + 1;
+	size = stop - start + 1;
+	if (_size) {
+		*_size = size;
+	}
 
 	i = start / db->page_size;
 	pagestart = start % db->page_size;
@@ -285,8 +293,8 @@ int rl_multi_string_cpyrange(struct rlite *db, long number, unsigned char *data,
 		RL_CALL(rl_list_get_element, RL_FOUND, db, list, &tmp, i);
 		RL_CALL(rl_string_get, RL_OK, db, &tmp_data, *(long *)tmp);
 		pagesize = db->page_size - pagestart;
-		if (pos + pagesize > *size) {
-			pagesize = *size - pos;
+		if (pos + pagesize > size) {
+			pagesize = size - pos;
 		}
 		memcpy(&data[pos], &tmp_data[pagestart], sizeof(unsigned char) * pagesize);
 		pos += pagesize;
