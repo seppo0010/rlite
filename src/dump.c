@@ -49,6 +49,7 @@ static int rl_dump_list(struct rlite *db, const unsigned char *key, long keylen,
 	length = htonl(valuelen);
 	memcpy(&buf[2], &length, 4);
 	buflen = 6;
+	// TODO: add iterator
 	for (i = 0; i < valuelen; i++) {
 		buf[buflen++] = (REDIS_RDB_32BITLEN << 6);
 		length = htonl(valueslen[i]);
