@@ -84,7 +84,8 @@ lua:
 	cd ../deps/lua && $(MAKE) ansi CFLAGS="$(LUA_CFLAGS)" MYLDFLAGS="$(LUA_LDFLAGS)" AR="$(AR) $(ARFLAGS)"
 
 gcov: CFLAGS += -fprofile-arcs -ftest-coverage
-gcov: clean test
+gcov: clean $(STLIBNAME)
+	cd ../tests/ && $(MAKE) gcov
 
 lcov: gcov
 	mkdir -p lcov
