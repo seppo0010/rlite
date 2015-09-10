@@ -83,6 +83,9 @@ ARFLAGS=rcu
 lua:
 	cd ../deps/lua && $(MAKE) ansi CFLAGS="$(LUA_CFLAGS)" MYLDFLAGS="$(LUA_LDFLAGS)" AR="$(AR) $(ARFLAGS)"
 
+gcov: CFLAGS += -fprofile-arcs -ftest-coverage
+gcov: clean test
+
 lcov: gcov
 	mkdir -p lcov
 	lcov --directory . --capture --output-file lcov/app.info
