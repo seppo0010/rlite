@@ -161,7 +161,7 @@ TEST basic_test_zadd_zrange(int _commit)
 	RL_CALL_VERBOSE(rl_zrange, RL_OK, db, key, keylen, 0, 0, &iterator);
 	EXPECT_LONG(iterator->size, 1);
 
-	RL_CALL_VERBOSE(rl_zset_iterator_next, RL_OK, iterator, NULL, &data, &datalen);
+	RL_CALL_VERBOSE(rl_zset_iterator_next, RL_OK, iterator, NULL, NULL, &data, &datalen);
 	EXPECT_BYTES("\0", 1, data, datalen);
 
 	rl_free(data);
@@ -170,7 +170,7 @@ TEST basic_test_zadd_zrange(int _commit)
 	RL_CALL_VERBOSE(rl_zrevrange, RL_OK, db, key, keylen, 0, -1, &iterator);
 	EXPECT_LONG(iterator->size, 200);
 
-	RL_CALL_VERBOSE(rl_zset_iterator_next, retval, iterator, &score, &data, &datalen);
+	RL_CALL_VERBOSE(rl_zset_iterator_next, retval, iterator, NULL, &score, &data, &datalen);
 	EXPECT_DOUBLE(score, 10.5 * 199);
 	EXPECT_INT(data[0], 199);
 	EXPECT_LONG(datalen, 1);
@@ -202,7 +202,7 @@ TEST test_zrangebylex(rlite *db, unsigned char *key, long keylen, long initial, 
 	if (retval != RL_NOT_FOUND || size != 0) {
 		EXPECT_LONG(size, iterator->size);
 		i = initial;
-		while ((retval = rl_zset_iterator_next(iterator, NULL, &data2, &data2_len)) == RL_OK) {
+		while ((retval = rl_zset_iterator_next(iterator, NULL, NULL, &data2, &data2_len)) == RL_OK) {
 			EXPECT_INT(data2_len, ((i & 1) == 0 ? 1 : 2));
 			EXPECT_INT(data2[0], 'a' + (i / 2));
 			if (data2_len == 2 && data2[1] != 'A' + i) {
@@ -221,7 +221,7 @@ TEST test_zrangebylex(rlite *db, unsigned char *key, long keylen, long initial, 
 		EXPECT_LONG(size, iterator->size);
 
 		i = total_size - 1 - offset;
-		while ((retval = rl_zset_iterator_next(iterator, NULL, &data2, &data2_len)) == RL_OK) {
+		while ((retval = rl_zset_iterator_next(iterator, NULL, NULL, &data2, &data2_len)) == RL_OK) {
 			EXPECT_INT(data2_len, ((i & 1) == 0 ? 1 : 2));
 			EXPECT_INT(data2[0], 'a' + (i / 2));
 			if (data2_len == 2 && data2[1] != 'A' + i) {
@@ -311,19 +311,19 @@ TEST basic_test_zadd_zrangebylex_with_empty(int _commit)
 
 	RL_CALL_VERBOSE(rl_zrangebylex, RL_OK, db, key, keylen, min, 1, max, 2, 0, -1, &iterator);
 	EXPECT_LONG(iterator->size, 1);
-	RL_CALL_VERBOSE(rl_zset_iterator_next, RL_OK, iterator, NULL, &data2, &data2_len);
+	RL_CALL_VERBOSE(rl_zset_iterator_next, RL_OK, iterator, NULL, NULL, &data2, &data2_len);
 	EXPECT_LONG(data2_len, 0);
 	rl_free(data2);
 
-	RL_CALL_VERBOSE(rl_zset_iterator_next, RL_END, iterator, NULL, NULL, NULL);
+	RL_CALL_VERBOSE(rl_zset_iterator_next, RL_END, iterator, NULL, NULL, NULL, NULL);
 	RL_CALL_VERBOSE(rl_zrevrangebylex, RL_OK, db, key, keylen, max, 2, min, 1, 0, -1, &iterator);
 	EXPECT_LONG(iterator->size, 1);
 
-	RL_CALL_VERBOSE(rl_zset_iterator_next, RL_OK, iterator, NULL, &data2, &data2_len);
+	RL_CALL_VERBOSE(rl_zset_iterator_next, RL_OK, iterator, NULL, NULL, &data2, &data2_len);
 	EXPECT_LONG(data2_len, 0);
 	rl_free(data2);
 
-	RL_CALL_VERBOSE(rl_zset_iterator_next, RL_END, iterator, NULL, NULL, NULL);
+	RL_CALL_VERBOSE(rl_zset_iterator_next, RL_END, iterator, NULL, NULL, NULL, NULL);
 	EXPECT_INT(retval, RL_END);
 
 	rl_close(db);
@@ -339,7 +339,7 @@ TEST test_zrangebyscore(rlite *db, unsigned char *key, long keylen, rl_zrangespe
 	if (size != 0 || retval != RL_NOT_FOUND) {
 		double score;
 		long i = 0;
-		while ((retval = rl_zset_iterator_next(iterator, &score, NULL, NULL)) == RL_OK) {
+		while ((retval = rl_zset_iterator_next(iterator, NULL, &score, NULL, NULL)) == RL_OK) {
 			EXPECT_DOUBLE(score, base_score + i * step);
 			i++;
 		}
@@ -351,7 +351,7 @@ TEST test_zrangebyscore(rlite *db, unsigned char *key, long keylen, rl_zrangespe
 	if (size != 0 || retval != RL_NOT_FOUND) {
 		double score;
 		long i = size - 1;
-		while ((retval = rl_zset_iterator_next(iterator, &score, NULL, NULL)) == RL_OK) {
+		while ((retval = rl_zset_iterator_next(iterator, NULL, &score, NULL, NULL)) == RL_OK) {
 			EXPECT_DOUBLE(score, base_score + i * step);
 			i--;
 		}
@@ -635,7 +635,7 @@ TEST basic_test_zadd_zinterstore(int _commit, long params[5])
 	i = 0;
 	long datalen;
 	double score;
-	while ((retval = rl_zset_iterator_next(iterator, &score, &data, &datalen)) == RL_OK) {
+	while ((retval = rl_zset_iterator_next(iterator, NULL, &score, &data, &datalen)) == RL_OK) {
 		EXPECT_DOUBLE(score, i * params[4]);
 		EXPECT_LONG(data[0], members[i][0]);
 		EXPECT_LONG(datalen, 1);
@@ -705,7 +705,7 @@ TEST basic_test_sadd_zinterstore(int _commit, long params[5])
 	i = 0;
 	long datalen;
 	double score;
-	while ((retval = rl_zset_iterator_next(iterator, &score, &data, &datalen)) == RL_OK) {
+	while ((retval = rl_zset_iterator_next(iterator, NULL, &score, &data, &datalen)) == RL_OK) {
 		EXPECT_DOUBLE(score, params[4]);
 		EXPECT_LONG(data[0], members[i][0]);
 		EXPECT_LONG(datalen, 1);
@@ -778,7 +778,7 @@ TEST basic_test_zadd_zunionstore(int _commit, long params[5])
 	long datalen;
 	double score, exp_score;
 	long pos;
-	while ((retval = rl_zset_iterator_next(iterator, &score, &data, &datalen)) == RL_OK) {
+	while ((retval = rl_zset_iterator_next(iterator, NULL, &score, &data, &datalen)) == RL_OK) {
 		EXPECT_LONG(datalen, 1);
 		if (data[0] == (unsigned char)(CHAR_MAX - 1) || data[0] == (unsigned char)(CHAR_MAX - 2) || data[0] == (unsigned char)(CHAR_MAX - 3)) {
 			pos = (unsigned char)CHAR_MAX - data[0];
@@ -969,13 +969,13 @@ TEST regression_zrangebyscore(int _commit)
 	EXPECT_LONG(iterator->size, 3);
 
 	double score;
-	RL_CALL_VERBOSE(rl_zset_iterator_next, RL_OK, iterator, &score, NULL, NULL);
+	RL_CALL_VERBOSE(rl_zset_iterator_next, RL_OK, iterator, NULL, &score, NULL, NULL);
 	EXPECT_DOUBLE(score, 3.0);
-	RL_CALL_VERBOSE(rl_zset_iterator_next, RL_OK, iterator, &score, NULL, NULL);
+	RL_CALL_VERBOSE(rl_zset_iterator_next, RL_OK, iterator, NULL, &score, NULL, NULL);
 	EXPECT_DOUBLE(score, 4.0);
-	RL_CALL_VERBOSE(rl_zset_iterator_next, RL_OK, iterator, &score, NULL, NULL);
+	RL_CALL_VERBOSE(rl_zset_iterator_next, RL_OK, iterator, NULL, &score, NULL, NULL);
 	EXPECT_DOUBLE(score, 5.0);
-	RL_CALL_VERBOSE(rl_zset_iterator_next, RL_END, iterator, NULL, NULL, NULL);
+	RL_CALL_VERBOSE(rl_zset_iterator_next, RL_END, iterator, NULL, NULL, NULL, NULL);
 
 	rl_close(db);
 	PASS();

@@ -160,7 +160,7 @@ static void addZsetIteratorReply(rliteClient *c, int retval, rl_zset_iterator *i
 	c->reply->elements = withscores ? (iterator->size * 2) : iterator->size;
 	c->reply->element = malloc(sizeof(rliteReply*) * c->reply->elements);
 	i = 0;
-	while ((retval = rl_zset_iterator_next(iterator, withscores ? &score : NULL, &vstr, &vlen)) == RL_OK) {
+	while ((retval = rl_zset_iterator_next(iterator, NULL, withscores ? &score : NULL, &vstr, &vlen)) == RL_OK) {
 		c->reply->element[i] = createStringObject((char *)vstr, vlen);
 		i++;
 		if (withscores) {

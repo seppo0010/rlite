@@ -136,7 +136,7 @@ static int rl_dump_zset(struct rlite *db, const unsigned char *key, long keylen,
 	RL_CALL(rl_zrange, RL_OK, db, key, keylen, 0, -1, &iterator);
 	buflen = 16;
 	length = 0;
-	while ((retval = rl_zset_iterator_next(iterator, &score, NULL, &valuelen)) == RL_OK) {
+	while ((retval = rl_zset_iterator_next(iterator, NULL, &score, NULL, &valuelen)) == RL_OK) {
 		buflen += 6 + valuelen + snprintf(f, 40, "%lf", score);
 		length++;
 	}
@@ -152,7 +152,7 @@ static int rl_dump_zset(struct rlite *db, const unsigned char *key, long keylen,
 	buflen = 6;
 
 	RL_CALL(rl_zrange, RL_OK, db, key, keylen, 0, -1, &iterator);
-	while ((retval = rl_zset_iterator_next(iterator, &score, &value, &valuelen)) == RL_OK) {
+	while ((retval = rl_zset_iterator_next(iterator, NULL, &score, &value, &valuelen)) == RL_OK) {
 		buf[buflen++] = (REDIS_RDB_32BITLEN << 6);
 		length = htonl(valuelen);
 		memcpy(&buf[buflen], &length, 4);

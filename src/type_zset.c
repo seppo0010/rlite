@@ -565,7 +565,7 @@ cleanup:
 	return retval;
 }
 
-int rl_zset_iterator_next(rl_zset_iterator *iterator, double *score, unsigned char **member, long *memberlen)
+int rl_zset_iterator_next(rl_zset_iterator *iterator, long *page, double *score, unsigned char **member, long *memberlen)
 {
 	if (member && !memberlen) {
 		fprintf(stderr, "If member is provided, memberlen is required\n");
@@ -576,6 +576,9 @@ int rl_zset_iterator_next(rl_zset_iterator *iterator, double *score, unsigned ch
 	int retval;
 	RL_CALL(rl_skiplist_iterator_next, RL_OK, iterator, &node);
 
+	if (page) {
+		*page = node->value;
+	}
 	if (memberlen) {
 		retval = rl_multi_string_get(iterator->db, node->value, member, memberlen);
 		if (retval != RL_OK) {
@@ -632,7 +635,7 @@ static int _zremiterator(rlite *db, const unsigned char *key, long keylen, long 
 	unsigned char *member;
 	long memberlen;
 	int retval;
-	while ((retval = rl_zset_iterator_next(iterator, &score, &member, &memberlen)) == RL_OK) {
+	while ((retval = rl_zset_iterator_next(iterator, NULL, &score, &member, &memberlen)) == RL_OK) {
 		retval = remove_member_score(db, key, keylen, levels_page_number, scores, scores_page, skiplist, skiplist_page, member, memberlen, score);
 		rl_free(member);
 		if (retval != RL_OK && retval != RL_DELETED) {
@@ -937,7 +940,7 @@ static int zunionstore_minmax(rlite *db, long keys_size, unsigned char **keys, l
 			goto cleanup;
 		}
 		RL_CALL(rl_skiplist_iterator_create, RL_OK, db, &iterators[i], skiplist, 0, aggregate == RL_ZSET_AGGREGATE_MAX ? -1 : 1, 0);
-		retval = rl_zset_iterator_next(iterators[i], &scores[i], &members[i], &memberslen[i]);
+		retval = rl_zset_iterator_next(iterators[i], NULL, &scores[i], &members[i], &memberslen[i]);
 		if (retval != RL_OK) {
 			iterators[i] = NULL;
 			if (retval != RL_END) {
@@ -980,7 +983,7 @@ static int zunionstore_minmax(rlite *db, long keys_size, unsigned char **keys, l
 		rl_free(members[position]);
 		members[position] = NULL;
 
-		retval = rl_zset_iterator_next(iterators[position], &scores[position], &members[position], &memberslen[position]);
+		retval = rl_zset_iterator_next(iterators[position], NULL, &scores[position], &members[position], &memberslen[position]);
 		if (retval != RL_OK) {
 			iterators[position] = NULL;
 			if (retval != RL_END) {
@@ -1027,7 +1030,7 @@ static int zunionstore_sum(rlite *db, long keys_size, unsigned char **keys, long
 			goto cleanup;
 		}
 		RL_CALL(rl_skiplist_iterator_create, RL_OK, db, &iterator, skiplist, 0, 1, 0);
-		while ((retval = rl_zset_iterator_next(iterator, &score, &member, &memberlen)) == RL_OK) {
+		while ((retval = rl_zset_iterator_next(iterator, NULL, &score, &member, &memberlen)) == RL_OK) {
 			if (weights) {
 				score *= weights[i - 1];
 			}

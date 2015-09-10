@@ -20,7 +20,7 @@ typedef struct {
 
 typedef struct rl_skiplist_iterator rl_zset_iterator;
 
-int rl_zset_iterator_next(rl_zset_iterator *iterator, double *score, unsigned char **data, long *datalen);
+int rl_zset_iterator_next(rl_zset_iterator *iterator, long *page, double *score, unsigned char **data, long *datalen);
 int rl_zset_iterator_destroy(rl_zset_iterator *iterator);
 
 int rl_zadd(struct rlite *db, const unsigned char *key, long keylen, double score, unsigned char *data, long datalen);

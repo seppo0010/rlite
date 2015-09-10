@@ -364,7 +364,7 @@ int rl_sort(struct rlite *db, unsigned char *key, long keylen, unsigned char *so
 		} else {
 			RL_CALL(rl_zrange, RL_OK, db, key, keylen, start, end, &ziterator);
 		}
-		while ((retval = rl_zset_iterator_next(ziterator, NULL, &value, &valuelen)) == RL_OK) {
+		while ((retval = rl_zset_iterator_next(ziterator, NULL, NULL, &value, &valuelen)) == RL_OK) {
 			vector[j].obj = value;
 			vector[j].objlen = valuelen;
 			vector[j].u.score = 0;
@@ -381,7 +381,7 @@ int rl_sort(struct rlite *db, unsigned char *key, long keylen, unsigned char *so
 	} else if (type == RL_TYPE_ZSET) {
 		rl_zset_iterator *ziterator;
 		RL_CALL(rl_zrange, RL_OK, db, key, keylen, 0, -1, &ziterator);
-		while ((retval = rl_zset_iterator_next(ziterator, NULL, &value, &valuelen)) == RL_OK) {
+		while ((retval = rl_zset_iterator_next(ziterator, NULL, NULL, &value, &valuelen)) == RL_OK) {
 			vector[j].obj = value;
 			vector[j].objlen = valuelen;
 			vector[j].u.score = 0;
