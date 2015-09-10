@@ -220,13 +220,16 @@ cleanup:
 	return retval;
 }
 
-int rl_set_iterator_next(rl_set_iterator *iterator, unsigned char **member, long *memberlen)
+int rl_set_iterator_next(rl_set_iterator *iterator, long *_page, unsigned char **member, long *memberlen)
 {
 	void *tmp;
 	long page;
 	int retval = rl_btree_iterator_next(iterator, NULL, &tmp);
 	if (retval == RL_OK) {
 		page = *(long *)tmp;
+		if (_page) {
+			*_page = page;
+		}
 		rl_free(tmp);
 		RL_CALL(rl_multi_string_get, RL_OK, iterator->db, page, member, memberlen);
 	}

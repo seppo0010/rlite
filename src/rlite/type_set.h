@@ -10,7 +10,7 @@ struct rlite;
 typedef rl_btree_iterator rl_set_iterator;
 
 int rl_set_get_objects(struct rlite *db, const unsigned char *key, long keylen, long *_set_page_number, rl_btree **btree, int update_version, int create);
-int rl_set_iterator_next(rl_set_iterator *iterator, unsigned char **member, long *memberlen);
+int rl_set_iterator_next(rl_set_iterator *iterator, long *page, unsigned char **member, long *memberlen);
 int rl_set_iterator_destroy(rl_set_iterator *iterator);
 
 int rl_sadd(struct rlite *db, const unsigned char *key, long keylen, int memberc, unsigned char **members, long *memberslen, long *added);

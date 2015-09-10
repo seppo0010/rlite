@@ -530,7 +530,7 @@ TEST basic_test_sadd_smembers(int _commit)
 	RL_CALL_VERBOSE(rl_smembers, RL_OK, db, &iterator, key, keylen);
 
 	i = 0;
-	while ((retval = rl_set_iterator_next(iterator, &testdata, &testdatalen)) == RL_OK) {
+	while ((retval = rl_set_iterator_next(iterator, NULL, &testdata, &testdatalen)) == RL_OK) {
 		if (i++ == 1) {
 			EXPECT_BYTES(data, datalen, testdata, testdatalen);
 		} else {

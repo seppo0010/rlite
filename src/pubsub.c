@@ -139,7 +139,7 @@ static int rl_unsubscribe_all_type(rlite *db, char *subscriber_id, int internal_
 	RL_MALLOC(subscriptionv, sizeof(char *) * iterator->size);
 	RL_MALLOC(subscriptionvlen, sizeof(long) * iterator->size);
 	subscriptionc = 0;
-	while ((retval = rl_set_iterator_next(iterator, &subscription, &subscriptionlen)) == RL_OK) {
+	while ((retval = rl_set_iterator_next(iterator, NULL, &subscription, &subscriptionlen)) == RL_OK) {
 		subscriptionv[subscriptionc] = subscription;
 		subscriptionvlen[subscriptionc] = subscriptionlen;
 		subscriptionc++;
@@ -283,7 +283,7 @@ static int publish_to_members(rlite *db, rl_set_iterator *iterator, int valuec, 
 	long valuelen;
 	char *subscriber_id = NULL;
 	RL_CALL(rl_select_internal, RL_OK, db, RLITE_INTERNAL_DB_SUBSCRIBER_MESSAGES);
-	while ((retval = rl_set_iterator_next(iterator, &value, &valuelen)) == RL_OK) {
+	while ((retval = rl_set_iterator_next(iterator, NULL, &value, &valuelen)) == RL_OK) {
 		subscriber_id = rl_malloc(sizeof(char) * (valuelen + 1));
 		memcpy(subscriber_id, value, valuelen);
 		subscriber_id[valuelen] = 0;

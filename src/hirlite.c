@@ -3604,7 +3604,7 @@ static void getKeyEncoding(rliteClient *c, char *encoding, unsigned char *key, l
 			if (!hashtable) {
 				int retval = rl_smembers(c->context->db, &iterator, key, keylen);
 				RLITE_SERVER_ERR(c, retval);
-				while ((retval = rl_set_iterator_next(iterator, &value, &valuelen)) == RL_OK) {
+				while ((retval = rl_set_iterator_next(iterator, NULL, &value, &valuelen)) == RL_OK) {
 					if (getLongLongFromObject((char *)value, valuelen, NULL) != RLITE_OK) {
 						hashtable = 1;
 						rl_free(value);

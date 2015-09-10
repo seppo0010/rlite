@@ -339,7 +339,7 @@ int rl_sort(struct rlite *db, unsigned char *key, long keylen, unsigned char *so
 		rl_set_iterator *siterator;
 		RL_CALL(rl_smembers, RL_OK, db, &siterator, key, keylen);
 
-		while ((retval = rl_set_iterator_next(siterator, &value, &valuelen)) == RL_OK) {
+		while ((retval = rl_set_iterator_next(siterator, NULL, &value, &valuelen)) == RL_OK) {
 			vector[j].obj = value;
 			vector[j].objlen = valuelen;
 			vector[j].u.score = 0;
