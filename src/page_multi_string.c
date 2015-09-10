@@ -250,6 +250,62 @@ cleanup:
 	return retval;
 }
 
+int rl_multi_string_cpyrange(struct rlite *db, long number, unsigned char *data, long *size, long start, long stop)
+{
+	long totalsize;
+	rl_list *list = NULL;
+	rl_list_node *node = NULL;
+	void *_list, *tmp;
+	int retval;
+	RL_CALL(rl_read, RL_FOUND, db, &rl_data_type_list_long, number, &rl_list_type_long, &_list, 0);
+	list = _list;
+	unsigned char *tmp_data;
+	long i, pos = 0, pagesize, pagestart;
+
+	RL_CALL(rl_list_get_element, RL_FOUND, db, list, &tmp, 0);
+	totalsize = *(long *)tmp;
+	if (totalsize == 0) {
+		*size = 0;
+		retval = RL_OK;
+		goto cleanup;
+	}
+	rl_normalize_string_range(totalsize, &start, &stop);
+	if (stop < start) {
+		*size = 0;
+		retval = RL_OK;
+		goto cleanup;
+	}
+	*size = stop - start + 1;
+
+	i = start / db->page_size;
+	pagestart = start % db->page_size;
+	// pos = i * db->page_size + pagestart;
+	// the first element in the list is the length of the array, skip to the second
+	for (i++; i < list->size; i++) {
+		RL_CALL(rl_list_get_element, RL_FOUND, db, list, &tmp, i);
+		RL_CALL(rl_string_get, RL_OK, db, &tmp_data, *(long *)tmp);
+		pagesize = db->page_size - pagestart;
+		if (pos + pagesize > *size) {
+			pagesize = *size - pos;
+		}
+		memcpy(&data[pos], &tmp_data[pagestart], sizeof(unsigned char) * pagesize);
+		pos += pagesize;
+		pagestart = 0;
+	}
+	retval = RL_OK;
+cleanup:
+	if (retval != RL_OK) {
+		rl_free(data);
+	}
+	if (list) {
+		rl_list_nocache_destroy(db, list);
+	}
+	if (node) {
+		rl_list_node_nocache_destroy(db, node);
+	}
+	return retval;
+}
+
 int rl_multi_string_getrange(struct rlite *db, long number, unsigned char **_data, long *size, long start, long stop)
 {
 	long totalsize;
@@ -324,6 +380,11 @@ cleanup:
 int rl_multi_string_get(struct rlite *db, long number, unsigned char **_data, long *size)
 {
 	return rl_multi_string_getrange(db, number, _data, size, 0, -1);
+}
+
+int rl_multi_string_cpy(struct rlite *db, long number, unsigned char *data, long *size)
+{
+	return rl_multi_string_cpyrange(db, number, data, size, 0, -1);
 }
 
 int rl_multi_string_set(struct rlite *db, long *number, const unsigned char *data, long size)

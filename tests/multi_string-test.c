@@ -9,8 +9,9 @@
 TEST basic_set_get()
 {
 	int retval, i, j;
-	long size, size2, number;
+	long size, size2, size3, number;
 	unsigned char *data, *data2;
+	unsigned char localdata[2000];
 
 	rlite *db = NULL;
 	RL_CALL_VERBOSE(rl_open, RL_OK, ":memory:", &db, RLITE_OPEN_READWRITE | RLITE_OPEN_CREATE);
@@ -24,7 +25,9 @@ TEST basic_set_get()
 		}
 		RL_CALL_VERBOSE(rl_multi_string_set, RL_OK, db, &number, data, size);
 		RL_CALL_VERBOSE(rl_multi_string_get, RL_OK, db, number, &data2, &size2);
+		RL_CALL_VERBOSE(rl_multi_string_cpy, RL_OK, db, number, localdata, &size3);
 		EXPECT_BYTES(data, size, data2, size2);
+		EXPECT_BYTES(data, size, localdata, size3);
 		rl_free(data);
 		rl_free(data2);
 	}
