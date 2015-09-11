@@ -197,7 +197,7 @@ int rl_lrange(struct rlite *db, const unsigned char *key, long keylen, long star
 	RL_MALLOC(values, sizeof(unsigned char *) * size);
 	RL_MALLOC(valueslen, sizeof(unsigned char *) * size);
 	i = 0;
-	while (i <= size && (retval = rl_list_iterator_next(iterator, &tmp)) == RL_OK) {
+	while (i < size && (retval = rl_list_iterator_next(iterator, &tmp)) == RL_OK) {
 		RL_CALL(rl_multi_string_get, RL_OK, db, *(long *)tmp, &values[i], &valueslen[i]);
 		rl_free(tmp);
 		i++;
