@@ -141,16 +141,12 @@ cleanup:
 	return retval;
 }
 
-int rl_lrange(struct rlite *db, const unsigned char *key, long keylen, long start, long stop, long *size, unsigned char ***_values, long **_valueslen)
+int rl_lrange_iterator(struct rlite *db, const unsigned char *key, long keylen, long start, long stop, long *size, rl_list_iterator **_iterator)
 {
 	rl_list *list;
 	rl_list_iterator *iterator;
 	int retval;
-	long len;
-	long i;
-	void *tmp = NULL;
-	unsigned char **values = NULL;
-	long *valueslen = NULL;
+	long len, i = 0;
 	RL_CALL(rl_llist_get_objects, RL_OK, db, key, keylen, NULL, &list, 0, 0);
 	len = list->size;
 
@@ -168,22 +164,42 @@ int rl_lrange(struct rlite *db, const unsigned char *key, long keylen, long star
 		stop = len - 1;
 	}
 	if (start > stop) {
+		retval = RL_OK;
 		*size = 0;
+		goto cleanup;
+	}
+	*size = stop - start + 1;
+
+	RL_CALL(rl_list_iterator_create, RL_OK, db, &iterator, list, 1);
+	while (i < start && rl_list_iterator_next(iterator, NULL) == RL_OK) {
+		i++;
+	}
+	*_iterator = iterator;
+cleanup:
+	return retval;
+}
+
+int rl_lrange(struct rlite *db, const unsigned char *key, long keylen, long start, long stop, long *_size, unsigned char ***_values, long **_valueslen)
+{
+	rl_list_iterator *iterator;
+	int retval;
+	long i;
+	void *tmp = NULL;
+	unsigned char **values = NULL;
+	long *valueslen = NULL;
+	long size = 0;
+	RL_CALL(rl_lrange_iterator, RL_OK, db, key, keylen, start, stop, &size, &iterator);
+	*_size = size;
+	if (size == 0) {
 		retval = RL_OK;
 		goto cleanup;
 	}
-
-	*size = stop - start + 1;
-
-	RL_MALLOC(values, sizeof(unsigned char *) * (*size));
-	RL_MALLOC(valueslen, sizeof(unsigned char *) * (*size));
-	RL_CALL(rl_list_iterator_create, RL_OK, db, &iterator, list, 1);
+	RL_MALLOC(values, sizeof(unsigned char *) * size);
+	RL_MALLOC(valueslen, sizeof(unsigned char *) * size);
 	i = 0;
-	while (i <= stop && (retval = rl_list_iterator_next(iterator, i >= start ? &tmp : NULL)) == RL_OK) {
-		if (tmp) {
-			RL_CALL(rl_multi_string_get, RL_OK, db, *(long *)tmp, &values[i - start], &valueslen[i - start]);
-			rl_free(tmp);
-		}
+	while (i <= size && (retval = rl_list_iterator_next(iterator, &tmp)) == RL_OK) {
+		RL_CALL(rl_multi_string_get, RL_OK, db, *(long *)tmp, &values[i], &valueslen[i]);
+		rl_free(tmp);
 		i++;
 	}
 
@@ -411,6 +427,27 @@ int rl_ltrim(struct rlite *db, const unsigned char *key, long keylen, long start
 	retval = RL_OK;
 cleanup:
 	return retval;
+}
+
+int rl_llist_iterator_next(rl_llist_iterator *iterator, long *_page, unsigned char **value, long *valuelen)
+{
+	void *tmp;
+	long page;
+	int retval = rl_list_iterator_next(iterator, &tmp);
+	if (retval == RL_OK) {
+		page = *(long *)tmp;
+		if (_page) {
+			*_page = page;
+		}
+		rl_free(tmp);
+		RL_CALL(rl_multi_string_get, RL_OK, iterator->db, page, value, valuelen);
+	}
+cleanup:
+	return retval;
+}
+
+int rl_llist_iterator_destroy(rl_llist_iterator *iterator) {
+	return rl_list_iterator_destroy(iterator->db, iterator);
 }
 
 int rl_llist_pages(struct rlite *db, long page, short *pages)

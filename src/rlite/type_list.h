@@ -7,6 +7,11 @@
 
 struct rlite;
 
+typedef rl_list_iterator rl_llist_iterator;
+
+int rl_llist_iterator_next(rl_llist_iterator *iterator, long *page, unsigned char **value, long *valuelen);
+int rl_llist_iterator_destroy(rl_llist_iterator *iterator);
+
 int rl_push(struct rlite *db, const unsigned char *key, long keylen, int create, int left, int valuec, unsigned char **values, long *valueslen, long *size);
 int rl_llen(struct rlite *db, const unsigned char *key, long keylen, long *len);
 int rl_pop(struct rlite *db, const unsigned char *key, long keylen, unsigned char **value, long *valuelen, int left);
