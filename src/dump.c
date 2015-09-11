@@ -182,7 +182,7 @@ static int rl_dump_hash(struct rlite *db, const unsigned char *key, long keylen,
 	unsigned char *buf = NULL;
 	long buflen;
 	uint32_t length;
-	unsigned char *value, *value2;
+	long valuepage, value2page;
 
 	rl_hash_iterator *iterator;
 	RL_CALL(rl_hgetall, RL_OK, db, &iterator, key, keylen);
@@ -204,24 +204,20 @@ static int rl_dump_hash(struct rlite *db, const unsigned char *key, long keylen,
 	buflen = 6;
 
 	RL_CALL(rl_hgetall, RL_OK, db, &iterator, key, keylen);
-	while ((retval = rl_hash_iterator_next(iterator, NULL, &value, &valuelen, NULL, &value2, &value2len)) == RL_OK) {
+	while ((retval = rl_hash_iterator_next(iterator, &valuepage, NULL, &valuelen, &value2page, NULL, &value2len)) == RL_OK) {
 		buf[buflen++] = (REDIS_RDB_32BITLEN << 6);
 		length = htonl(valuelen);
 		memcpy(&buf[buflen], &length, 4);
 		buflen += 4;
-		memcpy(&buf[buflen], value, valuelen);
+		RL_CALL(rl_multi_string_cpy, RL_OK, db, valuepage, &buf[buflen], NULL);
 		buflen += valuelen;
-		rl_free(value);
-		value = NULL;
 
 		buf[buflen++] = (REDIS_RDB_32BITLEN << 6);
 		length = htonl(value2len);
 		memcpy(&buf[buflen], &length, 4);
 		buflen += 4;
-		memcpy(&buf[buflen], value2, value2len);
+		RL_CALL(rl_multi_string_cpy, RL_OK, db, value2page, &buf[buflen], NULL);
 		buflen += value2len;
-		rl_free(value2);
-		value2 = NULL;
 	}
 
 	if (retval != RL_END) {
