@@ -31,45 +31,57 @@ cleanup:
 static int rl_dump_list(struct rlite *db, const unsigned char *key, long keylen, unsigned char **data, long *datalen)
 {
 	int retval;
-	long valuelen;
 	unsigned char *buf = NULL;
 	long buflen;
 	uint32_t length;
-	unsigned char **values = NULL;
-	long i = -1, *valueslen = NULL;
+	long valuelen = 0;
+	rl_list_iterator *iterator;
+	void *tmp;
+	long page, size;
 
-	RL_CALL(rl_lrange, RL_OK, db, key, keylen, 0, -1, &valuelen, &values, &valueslen);
+	RL_CALL(rl_lrange_iterator, RL_OK, db, key, keylen, 0, -1, &size, &iterator);
 	buflen = 16;
-	for (i = 0; i < valuelen; i++) {
-		buflen += 5 + valueslen[i];
+	while ((retval = rl_list_iterator_next(iterator, &tmp)) == RL_OK) {
+		page = *(long *)tmp;
+		rl_free(tmp);
+		RL_CALL(rl_multi_string_get, RL_OK, db, page, NULL, &valuelen);
+		buflen += 5 + valuelen;
 	}
+
+	if (retval != RL_END) {
+		rl_list_iterator_destroy(db, iterator);
+		goto cleanup;
+	}
+
 	RL_MALLOC(buf, sizeof(unsigned char) * buflen);
 	buf[0] = REDIS_RDB_TYPE_LIST;
 	buf[1] = (REDIS_RDB_32BITLEN << 6);
-	length = htonl(valuelen);
+	length = htonl(size);
 	memcpy(&buf[2], &length, 4);
 	buflen = 6;
-	// TODO: add iterator
-	for (i = 0; i < valuelen; i++) {
+
+	RL_CALL(rl_lrange_iterator, RL_OK, db, key, keylen, 0, -1, &size, &iterator);
+	while ((retval = rl_list_iterator_next(iterator, &tmp)) == RL_OK) {
+		page = *(long *)tmp;
+		rl_free(tmp);
 		buf[buflen++] = (REDIS_RDB_32BITLEN << 6);
-		length = htonl(valueslen[i]);
+		RL_CALL(rl_multi_string_get, RL_OK, db, page, NULL, &valuelen);
+		length = htonl(valuelen);
 		memcpy(&buf[buflen], &length, 4);
 		buflen += 4;
-		memcpy(&buf[buflen], values[i], valueslen[i]);
-		buflen += valueslen[i];
+		RL_CALL(rl_multi_string_cpy, RL_OK, db, page, &buf[buflen], NULL);
+		buflen += valuelen;
+	}
+
+	if (retval != RL_END) {
+		rl_list_iterator_destroy(db, iterator);
+		goto cleanup;
 	}
 
 	*data = buf;
 	*datalen = buflen;
 	retval = RL_OK;
 cleanup:
-	if (values) {
-		for (i = 0; i < valuelen; i++) {
-			rl_free(values[i]);
-		}
-		rl_free(values);
-	}
-	rl_free(valueslen);
 	return retval;
 }
 
