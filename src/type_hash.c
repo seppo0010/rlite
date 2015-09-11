@@ -497,7 +497,7 @@ cleanup:
 	return retval;
 }
 
-int rl_hash_iterator_next(rl_hash_iterator *iterator, unsigned char **field, long *fieldlen, unsigned char **member, long *memberlen)
+int rl_hash_iterator_next(rl_hash_iterator *iterator, long *fieldpage, unsigned char **field, long *fieldlen, long *memberpage, unsigned char **member, long *memberlen)
 {
 	void *tmp;
 	rl_hashkey *hashkey = NULL;
@@ -515,6 +515,9 @@ int rl_hash_iterator_next(rl_hash_iterator *iterator, unsigned char **field, lon
 	RL_CALL(rl_btree_iterator_next, RL_OK, iterator, NULL, &tmp);
 	hashkey = tmp;
 
+	if (fieldpage) {
+		*fieldpage = hashkey->string_page;
+	}
 	if (fieldlen) {
 		retval = rl_multi_string_get(iterator->db, hashkey->string_page, field, fieldlen);
 		if (retval != RL_OK) {
@@ -523,6 +526,9 @@ int rl_hash_iterator_next(rl_hash_iterator *iterator, unsigned char **field, lon
 		}
 	}
 
+	if (memberpage) {
+		*memberpage = hashkey->value_page;
+	}
 	if (memberlen) {
 		retval = rl_multi_string_get(iterator->db, hashkey->value_page, member, memberlen);
 		if (retval != RL_OK) {

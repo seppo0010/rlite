@@ -188,7 +188,7 @@ static int rl_dump_hash(struct rlite *db, const unsigned char *key, long keylen,
 	RL_CALL(rl_hgetall, RL_OK, db, &iterator, key, keylen);
 	buflen = 16;
 	length = 0;
-	while ((retval = rl_hash_iterator_next(iterator, NULL, &value2len, NULL, &valuelen)) == RL_OK) {
+	while ((retval = rl_hash_iterator_next(iterator, NULL, NULL, &value2len, NULL, NULL, &valuelen)) == RL_OK) {
 		buflen += 10 + valuelen + value2len;
 		length++;
 	}
@@ -204,7 +204,7 @@ static int rl_dump_hash(struct rlite *db, const unsigned char *key, long keylen,
 	buflen = 6;
 
 	RL_CALL(rl_hgetall, RL_OK, db, &iterator, key, keylen);
-	while ((retval = rl_hash_iterator_next(iterator, &value, &valuelen, &value2, &value2len)) == RL_OK) {
+	while ((retval = rl_hash_iterator_next(iterator, NULL, &value, &valuelen, NULL, &value2, &value2len)) == RL_OK) {
 		buf[buflen++] = (REDIS_RDB_32BITLEN << 6);
 		length = htonl(valuelen);
 		memcpy(&buf[buflen], &length, 4);

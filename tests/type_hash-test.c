@@ -124,7 +124,7 @@ TEST basic_test_hset_hgetall(int _commit)
 	RL_BALANCED();
 
 	RL_CALL_VERBOSE(rl_hgetall, RL_OK, db, &iterator, key, keylen);
-	while ((retval = rl_hash_iterator_next(iterator, &f, &fl, &m, &ml)) == RL_OK) {
+	while ((retval = rl_hash_iterator_next(iterator, NULL, &f, &fl, NULL, &m, &ml)) == RL_OK) {
 		if (i == 0) {
 			EXPECT_BYTES(f, fl, field, fieldlen);
 			EXPECT_BYTES(m, ml, data, datalen);
@@ -538,7 +538,7 @@ TEST hiterator_destroy()
 	RL_BALANCED();
 
 	RL_CALL_VERBOSE(rl_hgetall, RL_OK, db, &iterator, key, keylen);
-	RL_CALL_VERBOSE(rl_hash_iterator_next, RL_OK, iterator, NULL, NULL, NULL, NULL);
+	RL_CALL_VERBOSE(rl_hash_iterator_next, RL_OK, iterator, NULL, NULL, NULL, NULL, NULL, NULL);
 	RL_CALL_VERBOSE(rl_hash_iterator_destroy, RL_OK, iterator);
 	RL_BALANCED();
 

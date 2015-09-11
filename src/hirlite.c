@@ -1912,8 +1912,8 @@ static void addHashIteratorReply(rliteClient *c, int retval, rl_hash_iterator *i
 	c->reply->elements = iterator->size * (fields + values);
 	c->reply->element = malloc(sizeof(rliteReply*) * c->reply->elements);
 	while ((retval = rl_hash_iterator_next(iterator,
-					fields ? &field : NULL, fields ? &fieldlen : NULL,
-					values ? &value : NULL, values ? &valuelen : NULL
+					NULL, fields ? &field : NULL, fields ? &fieldlen : NULL,
+					NULL, values ? &value : NULL, values ? &valuelen : NULL
 					)) == RL_OK) {
 		if (fields) {
 			c->reply->element[i] = createStringObject((char *)field, fieldlen);
@@ -3576,7 +3576,7 @@ static void getKeyEncoding(rliteClient *c, char *encoding, unsigned char *key, l
 			if (!hashtable) {
 				int retval = rl_hgetall(c->context->db, &iterator, key, keylen);
 				RLITE_SERVER_ERR(c, retval);
-				while ((retval = rl_hash_iterator_next(iterator, NULL, NULL, &value, &valuelen)) == RL_OK) {
+				while ((retval = rl_hash_iterator_next(iterator, NULL, NULL, NULL, NULL, &value, &valuelen)) == RL_OK) {
 					rl_free(value);
 					if ((size_t)valuelen > c->context->hashtableLimitValue) {
 						hashtable = 1;
