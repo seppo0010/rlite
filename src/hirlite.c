@@ -2963,7 +2963,6 @@ static void pfmergeCommand(rliteClient *c) {
 cleanup:
 	rl_free(elements);
 	rl_free(elementslen);
-	return;
 }
 
 static void pfdebugCommand(rliteClient *c) {
