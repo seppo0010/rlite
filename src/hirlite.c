@@ -3220,12 +3220,11 @@ static void randomkeyCommand(rliteClient *c) {
 	int retval = rl_randomkey(c->context->db, &key, &keylen);
 	RLITE_SERVER_ERR(c, retval);
 	if (retval == RL_OK) {
-		c->reply = createStringObject((char *)key, keylen);
+		c->reply = createTakeStringObject((char *)key, keylen);
 	} else {
 		c->reply = createReplyObject(RLITE_REPLY_NIL);
 	}
 cleanup:
-	rl_free(key);
 	return;
 }
 
