@@ -183,10 +183,7 @@ static int append(struct rlite *db, rl_list *list, long list_page_number, const 
 	unsigned char *string = NULL;
 	while (pos < size) {
 		RL_MALLOC(page, sizeof(*page));
-		retval = rl_string_create(db, &string, page);
-		if (retval != RL_OK) {
-			goto cleanup;
-		}
+		RL_CALL(rl_string_create, RL_OK, db, &string, page);
 		to_copy = db->page_size;
 		if (pos + to_copy > size) {
 			to_copy = size - pos;
