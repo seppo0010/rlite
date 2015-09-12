@@ -1784,6 +1784,7 @@ static void bitopCommand(rliteClient *c) {
 	char *opname = c->argv[1];
 	int op, retval;
 	long j, length;
+	long *memberslen = NULL;
 
 	/* Parse the operation name. */
 	if ((opname[0] == 'a' || opname[0] == 'A') && !strcasecmp(opname,"and"))
@@ -1805,7 +1806,7 @@ static void bitopCommand(rliteClient *c) {
 		return;
 	}
 
-	long *memberslen = rl_malloc(sizeof(long) * (c->argc - 2));
+	memberslen = rl_malloc(sizeof(long) * (c->argc - 2));
 	if (!memberslen) {
 		__rliteSetError(c->context, RLITE_ERR_OOM, "Out of memory");
 		goto cleanup;
@@ -1815,7 +1816,6 @@ static void bitopCommand(rliteClient *c) {
 	}
 
 	retval = rl_bitop(c->context->db, op, destkey, destkeylen, c->argc - 3, (const unsigned char **)&c->argv[3], memberslen);
-	rl_free(memberslen);
 	RLITE_SERVER_ERR(c, retval);
 
 	retval = rl_get(c->context->db, destkey, destkeylen, NULL, &length);
@@ -1824,7 +1824,7 @@ static void bitopCommand(rliteClient *c) {
 		c->reply = createLongLongObject(length);
 	}
 cleanup:
-	return;
+	rl_free(memberslen);
 }
 
 static void bitposCommand(rliteClient *c) {
