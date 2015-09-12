@@ -467,7 +467,7 @@ int rl_list_is_balanced(rlite *db, rl_list *list)
 	long max_node = (list->size / list->max_node_size + 1) * 2;
 	int retval = RL_OK;
 	long *left = NULL;
-	long *right;
+	long *right = NULL;
 	RL_MALLOC(right, sizeof(long) * max_node);
 	RL_MALLOC(left, sizeof(long) * max_node);
 	rl_list_node *node;
