@@ -2057,6 +2057,10 @@ static void hmgetCommand(rliteClient *c) {
 	int retval = rl_hmget(c->context->db, key, keylen, fieldc, fields, fieldslen, &values, &valueslen);
 	RLITE_SERVER_ERR(c, retval);
 	c->reply = createReplyObject(RLITE_REPLY_ARRAY);
+	if (!c->reply) {
+		__rliteSetError(c->context, RLITE_ERR_OOM, "Out of memory");
+		goto cleanup;
+	}
 	c->reply->elements = fieldc;
 	c->reply->element = rl_malloc(sizeof(rliteReply*) * c->reply->elements);
 	if (!c->reply->element) {
@@ -2070,8 +2074,7 @@ static void hmgetCommand(rliteClient *c) {
 		if (retval == RL_NOT_FOUND || valueslen[i] < 0) {
 			c->reply->element[i] = createReplyObject(RLITE_REPLY_NIL);
 		} else {
-			c->reply->element[i] = createStringObject((char *)values[i], valueslen[i]);
-			rl_free(values[i]);
+			c->reply->element[i] = createTakeStringObject((char *)values[i], valueslen[i]);
 		}
 	}
 cleanup:
