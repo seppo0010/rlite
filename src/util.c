@@ -95,7 +95,7 @@ void *rl_malloc(size_t size)
 		fprintf(stderr, "Simulating OOM\n");
 		r = NULL;
 	}
-	free(strings);
+	rl_free(strings);
 	return r;
 }
 

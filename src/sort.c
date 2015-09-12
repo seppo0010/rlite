@@ -154,8 +154,8 @@ static int lookupKeyByPattern(rlite *db, unsigned char *pattern, long patternlen
 	}
 	retval = RL_OK;
 cleanup:
-	free(key);
-	free(field);
+	rl_free(key);
+	rl_free(field);
 	if (retval != RL_OK) {
 		*retobj = NULL;
 		*retobjlen = 0;
@@ -468,7 +468,7 @@ int rl_sort(struct rlite *db, unsigned char *key, long keylen, unsigned char *so
 	}
 	objvlen = rl_malloc(sizeof(long) * objc);
 	if (!objvlen) {
-		free(objv);
+		rl_free(objv);
 		retval = RL_OUT_OF_MEMORY;
 		goto cleanup;
 	}

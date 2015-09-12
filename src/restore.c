@@ -302,7 +302,7 @@ static int read_string(rl_restore_streamer *streamer, unsigned char **str, long 
 		unsigned char *cdata = rl_malloc(sizeof(unsigned char) * cdatalen);
 		RL_CALL(read, RL_OK, streamer, cdata, cdatalen);
 		rl_lzf_decompress(cdata, cdatalen, strdata, strdatalen);
-		free(cdata);
+		rl_free(cdata);
 	} else if (!is_encoded) {
 		strdatalen = length;
 		strdata = rl_malloc(strdatalen * sizeof(unsigned char));

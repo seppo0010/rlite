@@ -323,7 +323,7 @@ int rl_bitop(struct rlite *db, int op, const unsigned char *dest, long destlen, 
 	}
 	rl_internal_bitop(op, keyc, values, valueslen, &result, &resultlen);
 	RL_CALL(rl_set, RL_OK, db, dest, destlen, result, resultlen, 0, 0);
-	free(result);
+	rl_free(result);
 	retval = RL_OK;
 cleanup:
 	if (values) {
@@ -436,7 +436,7 @@ int rl_pfadd(struct rlite *db, const unsigned char *key, long keylen, int elemen
 	}
 	retval = RL_OK;
 cleanup:
-	free(value);
+	rl_free(value);
 	return retval;
 }
 
@@ -519,7 +519,7 @@ cleanup:
 	}
 	rl_free(argv);
 	rl_free(argvlen);
-	free(newvalue);
+	rl_free(newvalue);
 	return retval;
 }
 
@@ -542,7 +542,7 @@ int rl_pfdebug_getreg(struct rlite *db, const unsigned char *key, long keylen, i
 	}
 	retval = RL_OK;
 cleanup:
-	free(value);
+	rl_free(value);
 	return retval;
 }
 

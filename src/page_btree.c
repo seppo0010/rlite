@@ -488,8 +488,8 @@ int rl_btree_add_element(rlite *db, rl_btree *btree, long btree_page, void *scor
 	retval = RL_OK;
 cleanup:
 	if (retval != RL_OK) {
-		free(value);
-		free(score);
+		rl_free(value);
+		rl_free(score);
 	}
 	rl_free(nodes);
 	rl_free(positions);

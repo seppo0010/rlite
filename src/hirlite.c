@@ -54,7 +54,7 @@ static int catvprintf(char** s, size_t *slen, const char *fmt, va_list ap) {
 		va_copy(cpy,ap);
 		vsnprintf(buf, buflen, fmt, cpy);
 		if (buf[buflen-2] != '\0') {
-			free(buf);
+			rl_free(buf);
 			buflen *= 2;
 			continue;
 		}
@@ -62,11 +62,11 @@ static int catvprintf(char** s, size_t *slen, const char *fmt, va_list ap) {
 	}
 	t = realloc(*s, sizeof(char) * (*slen + buflen));
 	if (!t) {
-		free(buf);
+		rl_free(buf);
 		return RLITE_ERR;
 	}
 	memmove(&t[*slen], buf, buflen);
-	free(buf);
+	rl_free(buf);
 	return RLITE_OK;
 }
 
@@ -88,7 +88,7 @@ rliteReply *createArrayObject(size_t size) {
 	reply->elements = size;
 	reply->element = rl_malloc(sizeof(rliteReply*) * size);
 	if (!reply->element) {
-		free(reply);
+		rl_free(reply);
 		return NULL;
 	}
 	return reply;
@@ -236,12 +236,12 @@ static int addReplyStatusFormat(rliteContext *c, const char *fmt, ...) {
 	va_end(ap);
 	if (written < 0) {
 		fprintf(stderr, "Failed to vsnprintf near line %d, got %d\n", __LINE__, written);
-		free(str);
+		rl_free(str);
 		return RLITE_ERR;
 	}
 	rliteReply *reply = createReplyObject(RLITE_REPLY_STATUS);
 	if (!reply) {
-		free(str);
+		rl_free(str);
 		__rliteSetError(c,RLITE_ERR_OOM,"Out of memory");
 		return RLITE_ERR;
 	}
@@ -260,12 +260,12 @@ static int addReplyErrorFormat(rliteContext *c, const char *fmt, ...) {
 	va_end(ap);
 	if (written < 0) {
 		fprintf(stderr, "Failed to vsnprintf near line %d, got %d\n", __LINE__, written);
-		free(str);
+		rl_free(str);
 		return RLITE_ERR;
 	}
 	rliteReply *reply = createReplyObject(RLITE_REPLY_ERROR);
 	if (!reply) {
-		free(str);
+		rl_free(str);
 		__rliteSetError(c,RLITE_ERR_OOM,"Out of memory");
 		return RLITE_ERR;
 	}
@@ -398,17 +398,17 @@ void rliteFreeReplyObject(void *reply) {
 			for (j = 0; j < r->elements; j++)
 				if (r->element[j] != NULL)
 					rliteFreeReplyObject(r->element[j]);
-			free(r->element);
+			rl_free(r->element);
 		}
 		break;
 	case RLITE_REPLY_ERROR:
 	case RLITE_REPLY_STATUS:
 	case RLITE_REPLY_STRING:
 		if (r->str != NULL)
-			free(r->str);
+			rl_free(r->str);
 		break;
 	}
-	free(r);
+	rl_free(r);
 }
 
 int rlitevFormatCommand(rliteClient *client, const char *format, va_list ap) {
@@ -602,7 +602,7 @@ int rlitevFormatCommand(rliteClient *client, const char *format, va_list ap) {
 		curargv[argc] = curarg;
 		curargvlen[argc++] = curarglen;
 	} else {
-		free(curarg);
+		rl_free(curarg);
 	}
 
 	/* Clear curarg because it was put in curargv or was free'd. */
@@ -614,11 +614,11 @@ int rlitevFormatCommand(rliteClient *client, const char *format, va_list ap) {
 	return RLITE_OK;
 err:
 	while(argc--)
-		free(curargv[argc]);
-	free(curargv);
+		rl_free(curargv[argc]);
+	rl_free(curargv);
 
 	if (curarg != NULL)
-		free(curarg);
+		rl_free(curarg);
 
 	return RLITE_ERR;
 }
@@ -651,15 +651,15 @@ static rliteContext *_rliteConnect(const char *path) {
 	}
 	context->replies = rl_malloc(sizeof(rliteReply*) * DEFAULT_REPLIES_SIZE);
 	if (!context->replies) {
-		free(context);
+		rl_free(context);
 		context = NULL;
 		goto cleanup;
 	}
 	size_t pathlen = 1 + strlen(path);
 	context->path = rl_malloc(sizeof(char) * pathlen);
 	if (!context->path) {
-		free(context->replies);
-		free(context);
+		rl_free(context->replies);
+		rl_free(context);
 		context = NULL;
 		goto cleanup;
 	}
@@ -683,9 +683,9 @@ static rliteContext *_rliteConnect(const char *path) {
 	context->db = NULL;
 	int retval = rl_open(context->path, &context->db, RLITE_OPEN_READWRITE | RLITE_OPEN_CREATE);;
 	if (retval != RL_OK) {
-		free(context->path);
-		free(context->replies);
-		free(context);
+		rl_free(context->path);
+		rl_free(context->replies);
+		rl_free(context);
 		context = NULL;
 		goto cleanup;
 	}
@@ -693,9 +693,9 @@ static rliteContext *_rliteConnect(const char *path) {
 	retval = rl_commit(context->db);
 	if (retval != RL_OK) {
 		rl_close(context->db);
-		free(context->path);
-		free(context->replies);
-		free(context);
+		rl_free(context->path);
+		rl_free(context->replies);
+		rl_free(context);
 		context = NULL;
 		goto cleanup;
 	}
@@ -749,9 +749,9 @@ void rliteFree(rliteContext *c) {
 	for (i = c->replyPosition; i < c->replyLength; i++) {
 		rliteFreeReplyObject(c->replies[i]);
 	}
-	free(c->replies);
-	free(c->path);
-	free(c);
+	rl_free(c->replies);
+	rl_free(c->path);
+	rl_free(c);
 }
 
 int rliteFreeKeepFd(rliteContext *UNUSED(c)) {
@@ -782,20 +782,20 @@ static void discard(rliteClient *c) {
 	for (i = 0; i < c->context->watchedKeysLength; i++) {
 		rl_free(c->context->watchedKeys[i]);
 	}
-	free(c->context->watchedKeys);
+	rl_free(c->context->watchedKeys);
 	c->context->watchedKeys = NULL;
 	c->context->watchedKeysLength = 0;
 	c->context->watchedKeysAlloc = 0;
 
 	for (i = 0; i < c->context->enqueuedCommandsLength; i++) {
 		for (j = 0; j < c->context->enqueuedCommands[i]->argc; j++) {
-			free(c->context->enqueuedCommands[i]->argv[j]);
+			rl_free(c->context->enqueuedCommands[i]->argv[j]);
 		}
-		free(c->context->enqueuedCommands[i]->argv);
-		free(c->context->enqueuedCommands[i]->argvlen);
-		free(c->context->enqueuedCommands[i]);
+		rl_free(c->context->enqueuedCommands[i]->argv);
+		rl_free(c->context->enqueuedCommands[i]->argvlen);
+		rl_free(c->context->enqueuedCommands[i]);
 	}
-	free(c->context->enqueuedCommands);
+	rl_free(c->context->enqueuedCommands);
 	c->context->enqueuedCommands = NULL;
 	c->context->enqueuedCommandsLength = 0;
 	c->context->enqueuedCommandsAlloc = 0;
@@ -946,7 +946,7 @@ static void unwatchCommand(rliteClient *c) {
 	for (i = 0; i < c->context->watchedKeysLength; i++) {
 		rl_free(c->context->watchedKeys[i]);
 	}
-	free(c->context->watchedKeys);
+	rl_free(c->context->watchedKeys);
 	c->context->watchedKeys = NULL;
 	c->context->watchedKeysLength = 0;
 	c->context->watchedKeysAlloc = 0;
@@ -1103,10 +1103,10 @@ int rlitevAppendCommand(rliteContext *c, const char *format, va_list ap) {
 	int retval = rliteAppendCommandClient(&client);
 	int i;
 	for (i = 0; i < client.argc; i++) {
-		free(client.argv[i]);
+		rl_free(client.argv[i]);
 	}
-	free(client.argv);
-	free(client.argvlen);
+	rl_free(client.argv);
+	rl_free(client.argvlen);
 
 	return retval;
 }
@@ -1208,7 +1208,7 @@ static void zaddGenericCommand(rliteClient *c, int incr) {
 		c->reply = createLongLongObject(added);
 
 cleanup:
-	free(scores);
+	rl_free(scores);
 }
 
 static void zaddCommand(rliteClient *c) {
@@ -1264,7 +1264,7 @@ static void zremCommand(rliteClient *c) {
 		memberslen[j - 2] = c->argvlen[j];
 	}
 	int retval = rl_zrem(c->context->db, key, keylen, c->argc - 2, (unsigned char **)&c->argv[2], memberslen, &deleted);
-	free(memberslen);
+	rl_free(memberslen);
 	RLITE_SERVER_ERR(c, retval);
 
 	c->reply = createLongLongObject(deleted);
@@ -1393,7 +1393,7 @@ static void zunionInterGenericCommand(rliteClient *c, int op) {
 			for (i = 0; i < setnum; i++) {
 				if (getDoubleFromObjectOrReply(c,c->argv[j + 1 + i],c->argvlen[j + 1 + i], &weights[i],
 						"weight value is not a float") != RLITE_OK) {
-					free(weights);
+					rl_free(weights);
 					return;
 				}
 			}
@@ -1407,14 +1407,14 @@ static void zunionInterGenericCommand(rliteClient *c, int op) {
 			} else if (strcasecmp(c->argv[j + 1], "sum") == 0) {
 				aggregate = RL_ZSET_AGGREGATE_SUM;
 			} else {
-				free(weights);
+				rl_free(weights);
 				c->reply = createErrorObject(RLITE_SYNTAXERR);
 				return;
 			}
 			j += 2;
 		}
 		if (j != c->argc) {
-			free(weights);
+			rl_free(weights);
 			c->reply = createErrorObject(RLITE_SYNTAXERR);
 			return;
 		}
@@ -1429,9 +1429,9 @@ static void zunionInterGenericCommand(rliteClient *c, int op) {
 		keys_len[i + 1] = c->argvlen[3 + i];
 	}
 	int retval = (op == RLITE_OP_UNION ? rl_zunionstore : rl_zinterstore)(c->context->db, setnum + 1, keys, keys_len, weights, aggregate);
-	free(keys);
-	free(keys_len);
-	free(weights);
+	rl_free(keys);
+	rl_free(keys_len);
+	rl_free(weights);
 	RLITE_SERVER_ERR(c, retval);
 	zcardCommand(c);
 cleanup:
@@ -1718,10 +1718,10 @@ static void hmsetCommand(rliteClient *c) {
 	RLITE_SERVER_ERR(c, retval);
 	c->reply = createStatusObject(RLITE_STR_OK);
 cleanup:
-	free(fields);
-	free(fieldslen);
-	free(values);
-	free(valueslen);
+	rl_free(fields);
+	rl_free(fieldslen);
+	rl_free(values);
+	rl_free(valueslen);
 	return;
 }
 
@@ -1791,7 +1791,7 @@ static void bitopCommand(rliteClient *c) {
 	}
 
 	retval = rl_bitop(c->context->db, op, destkey, destkeylen, c->argc - 3, (const unsigned char **)&c->argv[3], memberslen);
-	free(memberslen);
+	rl_free(memberslen);
 	RLITE_SERVER_ERR(c, retval);
 
 	retval = rl_get(c->context->db, destkey, destkeylen, NULL, &length);
@@ -1866,7 +1866,7 @@ static void hdelCommand(rliteClient *c) {
 		memberslen[j - 2] = c->argvlen[j];
 	}
 	retval = rl_hdel(c->context->db, key, keylen, c->argc - 2, (unsigned char **)&c->argv[2], memberslen, &delcount);
-	free(memberslen);
+	rl_free(memberslen);
 	RLITE_SERVER_ERR(c, retval);
 	c->reply = createLongLongObject(delcount);
 cleanup:
@@ -2032,7 +2032,7 @@ static void hmgetCommand(rliteClient *c) {
 	c->reply->elements = fieldc;
 	c->reply->element = rl_malloc(sizeof(rliteReply*) * c->reply->elements);
 	if (!c->reply->element) {
-		free(c->reply);
+		rl_free(c->reply);
 		c->reply = NULL;
 		__rliteSetError(c->context, RLITE_ERR_OOM, "Out of memory");
 		goto cleanup;
@@ -2047,8 +2047,8 @@ static void hmgetCommand(rliteClient *c) {
 		}
 	}
 cleanup:
-	free(fields);
-	free(fieldslen);
+	rl_free(fields);
+	rl_free(fieldslen);
 	rl_free(values);
 	rl_free(valueslen);
 }
@@ -2081,8 +2081,8 @@ static void saddCommand(rliteClient *c) {
 	RLITE_SERVER_ERR(c, retval);
 	c->reply = createLongLongObject(count);
 cleanup:
-	free(members);
-	free(memberslen);
+	rl_free(members);
+	rl_free(memberslen);
 }
 
 static void scardCommand(rliteClient *c) {
@@ -2194,8 +2194,8 @@ static void sremCommand(rliteClient *c) {
 	RLITE_SERVER_ERR(c, retval);
 	c->reply = createLongLongObject(count);
 cleanup:
-	free(members);
-	free(memberslen);
+	rl_free(members);
+	rl_free(memberslen);
 }
 
 static void sinterCommand(rliteClient *c) {
@@ -2224,7 +2224,7 @@ static void sinterCommand(rliteClient *c) {
 	if (membersc > 0) {
 		c->reply->element = rl_malloc(sizeof(rliteReply*) * membersc);
 		if (!c->reply->element) {
-			free(c->reply);
+			rl_free(c->reply);
 			__rliteSetError(c->context, RLITE_ERR_OOM, "Out of memory");
 			goto cleanup;
 		}
@@ -2240,8 +2240,8 @@ cleanup:
 		rl_free(members);
 		rl_free(memberslen);
 	}
-	free(keys);
-	free(keyslen);
+	rl_free(keys);
+	rl_free(keyslen);
 	return;
 }
 
@@ -2270,8 +2270,8 @@ static void sinterstoreCommand(rliteClient *c) {
 	RLITE_SERVER_ERR(c, retval);
 	c->reply = createLongLongObject(membersc);
 cleanup:
-	free(keys);
-	free(keyslen);
+	rl_free(keys);
+	rl_free(keyslen);
 	return;
 }
 
@@ -2301,7 +2301,7 @@ static void sunionCommand(rliteClient *c) {
 	if (membersc > 0) {
 		c->reply->element = rl_malloc(sizeof(rliteReply*) * membersc);
 		if (!c->reply->element) {
-			free(c->reply);
+			rl_free(c->reply);
 			__rliteSetError(c->context, RLITE_ERR_OOM, "Out of memory");
 			goto cleanup;
 		}
@@ -2317,8 +2317,8 @@ cleanup:
 		rl_free(members);
 		rl_free(memberslen);
 	}
-	free(keys);
-	free(keyslen);
+	rl_free(keys);
+	rl_free(keyslen);
 	return;
 }
 
@@ -2347,8 +2347,8 @@ static void sunionstoreCommand(rliteClient *c) {
 	RLITE_SERVER_ERR(c, retval);
 	c->reply = createLongLongObject(membersc);
 cleanup:
-	free(keys);
-	free(keyslen);
+	rl_free(keys);
+	rl_free(keyslen);
 	return;
 }
 
@@ -2378,7 +2378,7 @@ static void sdiffCommand(rliteClient *c) {
 	if (membersc > 0) {
 		c->reply->element = rl_malloc(sizeof(rliteReply*) * membersc);
 		if (!c->reply->element) {
-			free(c->reply);
+			rl_free(c->reply);
 			__rliteSetError(c->context, RLITE_ERR_OOM, "Out of memory");
 			goto cleanup;
 		}
@@ -2394,8 +2394,8 @@ cleanup:
 		rl_free(members);
 		rl_free(memberslen);
 	}
-	free(keys);
-	free(keyslen);
+	rl_free(keys);
+	rl_free(keyslen);
 	return;
 }
 
@@ -2424,8 +2424,8 @@ static void sdiffstoreCommand(rliteClient *c) {
 	RLITE_SERVER_ERR(c, retval);
 	c->reply = createLongLongObject(membersc);
 cleanup:
-	free(keys);
-	free(keyslen);
+	rl_free(keys);
+	rl_free(keyslen);
 	return;
 }
 
@@ -2461,8 +2461,8 @@ static void pushGenericCommand(rliteClient *c, int create, int left) {
 		c->reply = createLongLongObject(count);
 	}
 cleanup:
-	free(values);
-	free(valueslen);
+	rl_free(values);
+	rl_free(valueslen);
 }
 
 static void lpushCommand(rliteClient *c) {
@@ -2845,7 +2845,7 @@ static void mgetCommand(rliteClient *c) {
 	c->reply->elements = keyc;
 	c->reply->element = rl_malloc(sizeof(rliteReply*) * c->reply->elements);
 	if (!c->reply->element) {
-		free(c->reply);
+		rl_free(c->reply);
 		c->reply = NULL;
 		__rliteSetError(c->context, RLITE_ERR_OOM, "Out of memory");
 		goto cleanup;
@@ -2871,9 +2871,9 @@ static void mgetCommand(rliteClient *c) {
 cleanup:
 	if (retval != RL_OK) {
 		for (; i >= 0; i--) {
-			free(c->reply->element[i]);
+			rl_free(c->reply->element[i]);
 		}
-		free(c->reply);
+		rl_free(c->reply);
 		c->reply = NULL;
 	}
 	return;
@@ -3174,8 +3174,8 @@ static void pfaddCommand(rliteClient *c) {
 		c->reply = createErrorObject("WRONGTYPE Key is not a valid HyperLogLog string value.");
 	}
 cleanup:
-	free(elements);
-	free(elementslen);
+	rl_free(elements);
+	rl_free(elementslen);
 	return;
 }
 
@@ -3207,8 +3207,8 @@ static void pfcountCommand(rliteClient *c) {
 		c->reply = createErrorObject("WRONGTYPE Key is not a valid HyperLogLog string value.");
 	}
 cleanup:
-	free(elements);
-	free(elementslen);
+	rl_free(elements);
+	rl_free(elementslen);
 	return;
 }
 
@@ -3242,8 +3242,8 @@ static void pfmergeCommand(rliteClient *c) {
 		c->reply = createErrorObject("WRONGTYPE Key is not a valid HyperLogLog string value.");
 	}
 cleanup:
-	free(elements);
-	free(elementslen);
+	rl_free(elements);
+	rl_free(elementslen);
 	return;
 }
 
@@ -3264,7 +3264,7 @@ static void pfdebugCommand(rliteClient *c) {
 			c->reply->elements = size;
 			c->reply->element = rl_malloc(sizeof(rliteReply*) * c->reply->elements);
 			if (!c->reply->element) {
-				free(c->reply);
+				rl_free(c->reply);
 				c->reply = NULL;
 				__rliteSetError(c->context, RLITE_ERR_OOM, "Out of memory");
 				goto cleanup;
@@ -3296,8 +3296,8 @@ static void pfdebugCommand(rliteClient *c) {
 		}
 	}
 cleanup:
-	free(elements);
-	free(value);
+	rl_free(elements);
+	rl_free(value);
 	return;
 }
 
@@ -3534,7 +3534,7 @@ static void keysCommand(rliteClient *c) {
 	c->reply->elements = size;
 	c->reply->element = rl_malloc(sizeof(rliteReply*) * c->reply->elements);
 	if (!c->reply->element) {
-		free(c->reply);
+		rl_free(c->reply);
 		c->reply = NULL;
 		__rliteSetError(c->context, RLITE_ERR_OOM, "Out of memory");
 		goto cleanup;
@@ -3683,7 +3683,7 @@ static void debugCommand(rliteClient *c) {
 		*((char*)-1) = 'x';
 	} else if (!strcasecmp(c->argv[1],"oom")) {
 		void *ptr = rl_malloc(ULONG_MAX); /* Should trigger an out of memory. */
-		free(ptr);
+		rl_free(ptr);
 		c->reply = createStatusObject(RLITE_STR_OK);
 	} else if (!strcasecmp(c->argv[1],"assert")) {
 		// TODO
@@ -3906,8 +3906,8 @@ static void sortCommand(rliteClient *c) {
 		}
 	}
 cleanup:
-	free(getv);
-	free(getvlen);
+	rl_free(getv);
+	rl_free(getvlen);
 }
 
 static void pubsubVarargCommandProcessed(rliteClient *c, const char *type, int argc, unsigned char **args, long *argslen, int func(rlite *db, int argc, unsigned char **argv, long *argvlen)) {

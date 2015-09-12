@@ -564,7 +564,7 @@ static double hllDenseSum(uint8_t *registers, double *PE, int *ezp) {
 
 /* Convert the HLL with sparse representation given as input in its dense
  * representation. Both representations are represented by SDS strings, and
- * the input representation is freed as a side effect.
+ * the input representation is rl_freed as a side effect.
  *
  * The function returns 0 if the sparse representation was valid,
  * otherwise 1 is returned if the representation was corrupted. */
@@ -612,12 +612,12 @@ static int hllSparseToDense(unsigned char *sparse, long sparselen, unsigned char
     /* If the sparse representation was valid, we expect to find idx
      * set to HLL_REGISTERS. */
     if (idx != HLL_REGISTERS) {
-        free(dense);
+        rl_free(dense);
         return 1;
     }
 
     /* Free the old representation and set the new one. */
-    free(sparse);
+    rl_free(sparse);
     *newstr = dense;
     *newstrlen = HLL_DENSE_SIZE;
     return 0;
@@ -1420,8 +1420,8 @@ int rl_str_pfselftest() {
     retval = 0;
 
 cleanup:
-    free(bitcounters);
-    free(o);
+    rl_free(bitcounters);
+    rl_free(o);
     return retval;
 }
 
@@ -1459,7 +1459,7 @@ int rl_str_pfdebug_getreg(unsigned char *str, long strlen, int *size, long **ele
     while (objlen + srclen > objalloc) {\
         unsigned char *tmp = realloc(obj, sizeof(unsigned char) * objalloc * 2);\
         if (!tmp) {\
-            free(obj);\
+            rl_free(obj);\
             return -4;\
         }\
         obj = tmp;\

@@ -24,7 +24,7 @@ cleanup:
 
 int rl_long_destroy(rlite *UNUSED(db), void *obj)
 {
-	free(obj);
+	rl_free(obj);
 	return RL_OK;
 }
 

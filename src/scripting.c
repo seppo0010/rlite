@@ -174,7 +174,7 @@ void luaPushError(lua_State *lua, char *error) {
 		snprintf(msg, len, "%s: %d: %s",
 			dbg.source, dbg.currentline, error);
 		lua_pushstring(lua, msg);
-		free(msg);
+		rl_free(msg);
 	} else {
 		lua_pushstring(lua, error);
 	}
@@ -292,7 +292,7 @@ int luaRedisGenericCommand(lua_State *lua, int raise_error) {
 	if (j != argc) {
 		j--;
 		while (j >= 0) {
-			free(argv[j]);
+			rl_free(argv[j]);
 			j--;
 		}
 		luaPushError(lua,
@@ -354,7 +354,7 @@ int luaRedisGenericCommand(lua_State *lua, int raise_error) {
 	rliteFreeReplyObject(reply);
 cleanup:
 	if (c->argv != argv) {
-		free(c->argv);
+		rl_free(c->argv);
 		argv = NULL;
 		argv_size = 0;
 	}
@@ -454,7 +454,7 @@ int luaLogCommand(lua_State *lua) {
 	}
 	strlens = rl_malloc(sizeof(size_t) * (argc - 1));
 	if (!strlens) {
-		free(strs);
+		rl_free(strs);
 		return 1;
 	}
 	strlens = rl_malloc(sizeof(size_t) * (argc - 1));
@@ -464,8 +464,8 @@ int luaLogCommand(lua_State *lua) {
 	}
 	log = rl_malloc(sizeof(char) * (totalsize + 1));
 	if (!log) {
-		free(strs);
-		free(strlens);
+		rl_free(strs);
+		rl_free(strlens);
 		return 1;
 	}
 
@@ -736,7 +736,7 @@ rliteReply *luaReplyToStringReply(int type) {
 	}
 	err[len] = '\0';
 	reply = createStringTypeObject(type, err, len);
-	free(err);
+	rl_free(err);
 	return reply;
 }
 void luaReplyToRedisReply(rliteClient *c, lua_State *lua) {
@@ -867,10 +867,10 @@ int luaCreateFunction(rliteClient *c, lua_State *lua, char *funcname, char *body
 			lua_tostring(lua,-1));
 		c->reply = createErrorObject(err);
 		lua_pop(lua,1);
-		free(funcdef);
+		rl_free(funcdef);
 		return RLITE_ERR;
 	}
-	free(funcdef);
+	rl_free(funcdef);
 	if (lua_pcall(lua,0,0,0)) {
 		char err[1024];
 		snprintf(err, 1024, "ERR Error running script (new function): %s",
