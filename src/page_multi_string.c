@@ -178,7 +178,7 @@ cleanup:
 static int append(struct rlite *db, rl_list *list, long list_page_number, const unsigned char *data, long size)
 {
 	int retval = RL_OK;
-	long *page;
+	long *page = NULL;
 	long pos = 0, to_copy;
 	unsigned char *string = NULL;
 	while (pos < size) {
