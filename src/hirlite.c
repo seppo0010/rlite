@@ -120,11 +120,11 @@ rliteReply *createCStringObject(const char *str) {
 }
 
 rliteReply *createErrorObject(const char *str) {
-	return createStringTypeObject(RLITE_REPLY_ERROR, str, strlen((char *)str));
+	return createStringTypeObject(RLITE_REPLY_ERROR, str, strlen(str));
 }
 
 rliteReply *createStatusObject(const char *str) {
-	return createStringTypeObject(RLITE_REPLY_STATUS, str, strlen((char *)str));
+	return createStringTypeObject(RLITE_REPLY_STATUS, str, strlen(str));
 }
 
 rliteReply *createDoubleObject(double d) {
