@@ -120,9 +120,7 @@ int rl_btree_node_create(rlite *UNUSED(db), rl_btree *btree, rl_btree_node **_no
 	*_node = node;
 cleanup:
 	if (retval != RL_OK && node) {
-		if (node->scores) {
-			rl_free(node->scores);
-		}
+		rl_free(node->scores);
 		rl_free(node);
 	}
 	return retval;
