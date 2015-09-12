@@ -2080,7 +2080,7 @@ static void srandmemberCommand(rliteClient *c) {
 	RLITE_SERVER_ERR(c, retval);
 	if (retval == RL_OK && count > 0) {
 		if (c->argc == 2) {
-			c->reply = createStringObject((char *)members[0], memberslen[0]);
+			c->reply = createTakeStringObject((char *)members[0], memberslen[0]);
 		} else {
 			CHECK_OOM(c->reply = createReplyObject(RLITE_REPLY_ARRAY));
 			c->reply->elements = count;
