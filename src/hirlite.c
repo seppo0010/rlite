@@ -2293,8 +2293,7 @@ static void lindexCommand(rliteClient *c) {
 	if (retval == RL_INVALID_PARAMETERS || retval == RL_NOT_FOUND) {
 		c->reply = createReplyObject(RLITE_REPLY_NIL);
 	} else if (retval == RL_OK) {
-		c->reply = createStringObject((char *)value, valuelen);
-		rl_free(value);
+		c->reply = createTakeStringObject((char *)value, valuelen);
 	}
 cleanup:
 	return;
@@ -2348,16 +2347,12 @@ static void lrangeCommand(rliteClient *c) {
 	c->reply->elements = size;
 	MALLOC(c->reply->element, sizeof(rliteReply*) * c->reply->elements);
 	for (i = 0; i < size; i++) {
-		c->reply->element[i] = createStringObject((char *)values[i], valueslen[i]);
+		CHECK_OOM_ELSE(c->reply->element[i] = createTakeStringObject((char *)values[i], valueslen[i]),
+				c->reply->elements = i - 1; rliteFreeReplyObject(c->reply); c->reply = NULL);
 	}
 cleanup:
-	if (values) {
-		for (i = 0; i < size; i++) {
-			rl_free(values[i]);
-		}
-		rl_free(values);
-		rl_free(valueslen);
-	}
+	rl_free(values);
+	rl_free(valueslen);
 }
 
 static void lremCommand(rliteClient *c) {
@@ -2432,8 +2427,7 @@ static void rpoplpushCommand(rliteClient *c) {
 	retval = rl_push(c->context->db, UNSIGN(c->argv[2]), c->argvlen[2], 1, 1, 1, &value, &valuelen, NULL);
 	RLITE_SERVER_ERR(c, retval);
 
-	c->reply = createStringObject((char *)value, valuelen);
-	rl_free(value);
+	c->reply = createTakeStringObject((char *)value, valuelen);
 cleanup:
 	return;
 }
