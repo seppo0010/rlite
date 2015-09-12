@@ -88,7 +88,7 @@ static int lookupKeyByPattern(rlite *db, unsigned char *pattern, long patternlen
 	/* If the pattern is "#" return the substitution object itself in order
 	 * to implement the "SORT ... GET #" feature. */
 	if (pattern[0] == '#' && pattern[1] == '\0') {
-		*retobj = malloc(sizeof(unsigned char) * sublen);
+		*retobj = rl_malloc(sizeof(unsigned char) * sublen);
 		if (!*retobj) {
 			return RL_OUT_OF_MEMORY;
 		}
@@ -108,7 +108,7 @@ static int lookupKeyByPattern(rlite *db, unsigned char *pattern, long patternlen
 	/* Find out if we're dealing with a hash dereference. */
 	if ((f = (unsigned char *)strstr((char *)p+1, "->")) != NULL && *(f+2) != '\0') {
 		fieldlen = patternlen-(f-pattern)-2;
-		field = malloc(sizeof(unsigned char) * fieldlen);
+		field = rl_malloc(sizeof(unsigned char) * fieldlen);
 		if (!field) {
 			return RL_OUT_OF_MEMORY;
 		}
@@ -121,7 +121,7 @@ static int lookupKeyByPattern(rlite *db, unsigned char *pattern, long patternlen
 	prefixlen = p-pattern;
 	postfixlen = patternlen-(prefixlen+1)-(fieldlen ? fieldlen+2 : 0);
 	keylen = prefixlen+sublen+postfixlen;
-	key = malloc(sizeof(unsigned char) * keylen);
+	key = rl_malloc(sizeof(unsigned char) * keylen);
 	if (!key) {
 		retval = RL_OUT_OF_MEMORY;
 		goto cleanup;
@@ -461,12 +461,12 @@ int rl_sort(struct rlite *db, unsigned char *key, long keylen, unsigned char *so
 	/* Send command output to the output buffer, performing the specified
 	 * GET/DEL/INCR/DECR operations if any. */
 	objc = getc ? getc*(end-start+1) : end-start+1;
-	objv = malloc(sizeof(unsigned char *) * objc);
+	objv = rl_malloc(sizeof(unsigned char *) * objc);
 	if (!objv) {
 		retval = RL_OUT_OF_MEMORY;
 		goto cleanup;
 	}
-	objvlen = malloc(sizeof(long) * objc);
+	objvlen = rl_malloc(sizeof(long) * objc);
 	if (!objvlen) {
 		free(objv);
 		retval = RL_OUT_OF_MEMORY;

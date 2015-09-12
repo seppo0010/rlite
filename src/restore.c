@@ -299,7 +299,7 @@ static int read_string(rl_restore_streamer *streamer, unsigned char **str, long 
 		RL_CALL(read_length_with_encoding, RL_OK, streamer, &cdatalen, NULL);
 		RL_CALL(read_length_with_encoding, RL_OK, streamer, &strdatalen, NULL);
 		strdata = rl_malloc(strdatalen * sizeof(unsigned char));
-		unsigned char *cdata = malloc(sizeof(unsigned char) * cdatalen);
+		unsigned char *cdata = rl_malloc(sizeof(unsigned char) * cdatalen);
 		RL_CALL(read, RL_OK, streamer, cdata, cdatalen);
 		rl_lzf_decompress(cdata, cdatalen, strdata, strdatalen);
 		free(cdata);

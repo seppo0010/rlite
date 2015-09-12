@@ -170,7 +170,7 @@ void luaPushError(lua_State *lua, char *error) {
 	if(lua_getstack(lua, 1, &dbg) && lua_getinfo(lua, "nSl", &dbg)) {
 		// 4 for formatting, 1 for null termination, 35 ought to be enough for an integer
 		size_t len = strlen(dbg.source) + strlen(error) + 40;
-		char *msg = malloc(sizeof(char) * len);
+		char *msg = rl_malloc(sizeof(char) * len);
 		snprintf(msg, len, "%s: %d: %s",
 			dbg.source, dbg.currentline, error);
 		lua_pushstring(lua, msg);
@@ -448,21 +448,21 @@ int luaLogCommand(lua_State *lua) {
 	}
 
 	size_t totalsize = 0;
-	strs = malloc(sizeof(char *) * (argc - 1));
+	strs = rl_malloc(sizeof(char *) * (argc - 1));
 	if (!strs) {
 		return 1;
 	}
-	strlens = malloc(sizeof(size_t) * (argc - 1));
+	strlens = rl_malloc(sizeof(size_t) * (argc - 1));
 	if (!strlens) {
 		free(strs);
 		return 1;
 	}
-	strlens = malloc(sizeof(size_t) * (argc - 1));
+	strlens = rl_malloc(sizeof(size_t) * (argc - 1));
 	for (j = 1; j < argc; j++) {
 		strs[j - 1] = (char*)lua_tolstring(lua,(-argc)+j,&strlens[j - 1]);
 		totalsize += strlens[j - 1];
 	}
-	log = malloc(sizeof(char) * (totalsize + 1));
+	log = rl_malloc(sizeof(char) * (totalsize + 1));
 	if (!log) {
 		free(strs);
 		free(strlens);
@@ -677,7 +677,7 @@ void scriptingInit(void) {
 	 * Note: there is no need to create it again when this function is called
 	 * by scriptingReset(). */
 	if (lua_client == NULL) {
-		lua_client = malloc(sizeof(*lua_client));
+		lua_client = rl_malloc(sizeof(*lua_client));
 
 		lua_client->flags = RLITE_LUA_CLIENT;
 	}
@@ -726,7 +726,7 @@ rliteReply *luaReplyToStringReply(int type) {
 	rliteReply* reply;
 	const char *_err = lua_tostring(lua,-1);
 	size_t i, len = strlen(_err);
-	char *err = malloc(sizeof(char) * (len + 1));
+	char *err = rl_malloc(sizeof(char) * (len + 1));
 	if (!err) {
 		return NULL;
 	}
@@ -841,7 +841,7 @@ int luaCreateFunction(rliteClient *c, lua_State *lua, char *funcname, char *body
 	const char *end = " end";
 	size_t funcnamelen = 42;
 	size_t funcdeflen = bodylen + funcnamelen + strlen(f) + strlen(params) + strlen(end) + 1;
-	char *funcdef = malloc(sizeof(char) * funcdeflen);
+	char *funcdef = rl_malloc(sizeof(char) * funcdeflen);
 
 
 	strcpy(funcdef, f);

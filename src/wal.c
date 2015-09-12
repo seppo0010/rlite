@@ -35,7 +35,7 @@ static int rl_read_wal(const char *wal_path, unsigned char **_data, size_t *_dat
 	datalen = (size_t)ftell(fp);
 	fseek(fp, 0, SEEK_SET);
 
-	data = malloc(datalen * sizeof(char));
+	data = rl_malloc(datalen * sizeof(char));
 	fread(data, datalen, 1, fp);
 	fclose(fp);
 cleanup:
@@ -100,7 +100,7 @@ static int rl_apply_wal_data(rlite *db, unsigned char *data, size_t datalen, int
 			RL_MALLOC(page_obj, sizeof(*page_obj));
 			page_obj->page_number = page_number;
 			page_obj->type = NULL;
-			page_obj->obj = malloc(sizeof(unsigned char) * db->page_size);
+			page_obj->obj = rl_malloc(sizeof(unsigned char) * db->page_size);
 			if (page_obj->obj == NULL) {
 				rl_free(page_obj);
 				return RL_OUT_OF_MEMORY;

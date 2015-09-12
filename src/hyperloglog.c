@@ -29,6 +29,7 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
+#include "rlite/util.h"
 #include "rlite/hyperloglog.h"
 #include <stdlib.h>
 #include <stdio.h>
@@ -1439,7 +1440,7 @@ int rl_str_pfdebug_getreg(unsigned char *str, long strlen, int *size, long **ele
     hdr = (struct hllhdr *)str;
 
     *size = HLL_REGISTERS;
-    *elements = malloc(sizeof(long) * HLL_REGISTERS);
+    *elements = rl_malloc(sizeof(long) * HLL_REGISTERS);
     if (!*elements) {
         return -3;
     }
@@ -1480,7 +1481,7 @@ int rl_str_pfdebug_decode(unsigned char *str, long strlen, unsigned char **respo
     uint8_t *p = str, *end = p+strlen;
     long decodedlen = 0;
     long decodedall = strlen * 10;
-    unsigned char *decoded = malloc(sizeof(unsigned char) * decodedall);
+    unsigned char *decoded = rl_malloc(sizeof(unsigned char) * decodedall);
     char tmp[100];
     long tmplen;
 
@@ -1522,7 +1523,7 @@ int rl_str_pfdebug_encoding(unsigned char *str, long strlen, unsigned char **res
     char *encodingstr[2] = {"dense","sparse"};
 
     *responselen = 5 + hdr->encoding;
-    *response = malloc(sizeof(unsigned char) * (*responselen));
+    *response = rl_malloc(sizeof(unsigned char) * (*responselen));
     memcpy(*response, encodingstr[hdr->encoding], *responselen);
     return 0;
 }

@@ -26,6 +26,7 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
  */
+#include "rlite/util.h"
 #include "rlite/utilfromredis.h"
 #include <ctype.h>
 #include <limits.h>
@@ -175,7 +176,7 @@ void rl_internal_bitop(int op, unsigned long numkeys, unsigned char **objects, u
 
     /* Compute the bit operation, if at least one string is not empty. */
     if (maxlen) {
-        res = (unsigned char *)malloc(sizeof(unsigned char) * maxlen);
+        res = (unsigned char *)rl_malloc(sizeof(unsigned char) * maxlen);
         unsigned char output, byte;
         unsigned long i;
 

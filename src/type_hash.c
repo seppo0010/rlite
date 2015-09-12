@@ -169,8 +169,8 @@ int rl_hmget(struct rlite *db, const unsigned char *key, long keylen, int fieldc
 	unsigned char *digest = NULL;
 	rl_hashkey *hashkey;
 
-	unsigned char **data = malloc(sizeof(unsigned char *) * fieldc);
-	long *datalen = malloc(sizeof(long) * fieldc);
+	unsigned char **data = rl_malloc(sizeof(unsigned char *) * fieldc);
+	long *datalen = rl_malloc(sizeof(long) * fieldc);
 	RL_CALL(rl_hash_get_objects, RL_OK, db, key, keylen, &hash_page_number, &hash, 0, 0);
 
 	RL_MALLOC(digest, sizeof(unsigned char) * 20);
