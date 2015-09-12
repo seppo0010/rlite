@@ -2583,9 +2583,8 @@ static void getsetCommand(rliteClient *c) {
 	if (retval == RL_NOT_FOUND) {
 		c->reply = createReplyObject(RLITE_REPLY_NIL);
 	} else {
-		c->reply = createStringObject((char *)prevvalue, prevvaluelen);
+		c->reply = createTakeStringObject((char *)prevvalue, prevvaluelen);
 	}
-	rl_free(prevvalue);
 
 	retval = rl_set(c->context->db, key, keylen, value, valuelen, 0, 0);
 	RLITE_SERVER_ERR(c, retval);
@@ -2600,7 +2599,7 @@ static void mgetCommand(rliteClient *c) {
 	unsigned char *value;
 	long valuelen;
 
-	c->reply = createReplyObject(RLITE_REPLY_ARRAY);
+	CHECK_OOM(c->reply = createReplyObject(RLITE_REPLY_ARRAY));
 	c->reply->elements = keyc;
 	CHECK_OOM_ELSE(c->reply->element = rl_malloc(sizeof(rliteReply*) * c->reply->elements),
 			rl_free(c->reply); c->reply = NULL);
@@ -2617,19 +2616,12 @@ static void mgetCommand(rliteClient *c) {
 		if (retval == RL_NOT_FOUND) {
 			c->reply->element[i] = createReplyObject(RLITE_REPLY_NIL);
 		} else {
-			c->reply->element[i] = createStringObject((char *)value, valuelen);
-			rl_free(value);
+			c->reply->element[i] = createTakeStringObject((char *)value, valuelen);
 		}
+		CHECK_OOM_ELSE(c->reply->element[i],
+				c->reply->elements = i - 1; rliteFreeReplyObject(c->reply); c->reply = NULL);
 	}
-	retval = RL_OK;
 cleanup:
-	if (retval != RL_OK) {
-		for (; i >= 0; i--) {
-			rl_free(c->reply->element[i]);
-		}
-		rl_free(c->reply);
-		c->reply = NULL;
-	}
 	return;
 }
 
