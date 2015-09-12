@@ -3448,8 +3448,7 @@ static void dumpCommand(rliteClient *c) {
 	if (retval == RL_NOT_FOUND) {
 		c->reply = createReplyObject(RLITE_REPLY_NIL);
 	} else if (retval == RL_OK){
-		c->reply = createStringObject((char *)data, datalen);
-		rl_free(data);
+		c->reply = createTakeStringObject((char *)data, datalen);
 	}
 cleanup:
 	return;
