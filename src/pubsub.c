@@ -4,7 +4,7 @@
 #include "rlite/flock.h"
 #include "rlite/pubsub.h"
 
-#define ENSURE_SUBSCRIPTOR_ID(ret) \
+#define ENSURE_SUBSCRIBER_ID(ret) \
 	if (db->subscriber_id == NULL) {\
 		generate_subscriber_id(db);\
 		if (db->subscriber_id == NULL) {\
@@ -72,7 +72,7 @@ static int do_subscribe(rlite *db, int internal_db_to_subscriber, int internal_d
 {
 	int i, retval;
 	long identifierlen[1] = {40};
-	ENSURE_SUBSCRIPTOR_ID(RL_UNEXPECTED);
+	ENSURE_SUBSCRIBER_ID(RL_UNEXPECTED);
 	RL_CALL(rl_select_internal, RL_OK, db, internal_db_to_subscriber);
 	for (i = 0; i < subscriptionc; i++) {
 		RL_CALL(rl_sadd, RL_OK, db, subscriptionv[i], subscriptionvlen[i], 1, (unsigned char **)&db->subscriber_id, identifierlen, NULL);
@@ -204,7 +204,7 @@ int rl_poll_wait(rlite *db, int *elementc, unsigned char ***_elements, long **_e
 	if (retval == RL_NOT_FOUND) {
 		// TODO: possible race condition between poll and signal read?
 		// can we atomically do both without locking the database?
-		ENSURE_SUBSCRIPTOR_ID(RL_UNEXPECTED);
+		ENSURE_SUBSCRIBER_ID(RL_UNEXPECTED);
 		char *filename = get_signal_filename(db, db->subscriber_id);
 		rl_discard(db);
 		rl_create_signal(filename);
