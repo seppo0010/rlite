@@ -3754,7 +3754,6 @@ static void pubsubCommand(rliteClient *c) {
 cleanup:
 	rl_free(channelv);
 	rl_free(channelvlen);
-	return;
 }
 
 void pubsubPollCommand(rliteClient *c) {
