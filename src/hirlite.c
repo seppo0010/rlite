@@ -3011,7 +3011,6 @@ static void pfdebugCommand(rliteClient *c) {
 cleanup:
 	rl_free(elements);
 	rl_free(value);
-	return;
 }
 
 static void expireGenericCommand(rliteClient *c, unsigned long long expires) {
