@@ -741,6 +741,35 @@ int rliteSetTimeout(rliteContext *UNUSED(c), const struct timeval UNUSED(tv)) {
 int rliteEnableKeepAlive(rliteContext *UNUSED(c)) {
 	return 0;
 }
+
+static void freeEnqueuedCommands(rliteContext *c) {
+	size_t i;
+	int j;
+	for (i = 0; i < c->enqueuedCommandsLength; i++) {
+		for (j = 0; j < c->enqueuedCommands[i]->argc; j++) {
+			rl_free(c->enqueuedCommands[i]->argv[j]);
+		}
+		rl_free(c->enqueuedCommands[i]->argv);
+		rl_free(c->enqueuedCommands[i]->argvlen);
+		rl_free(c->enqueuedCommands[i]);
+	}
+	rl_free(c->enqueuedCommands);
+	c->enqueuedCommands = NULL;
+	c->enqueuedCommandsLength = 0;
+	c->enqueuedCommandsAlloc = 0;
+}
+
+static void freeWatchedKeys(rliteContext *c) {
+	size_t i;
+	for (i = 0; i < c->watchedKeysLength; i++) {
+		rl_free(c->watchedKeys[i]);
+	}
+	rl_free(c->watchedKeys);
+	c->watchedKeys = NULL;
+	c->watchedKeysLength = 0;
+	c->watchedKeysAlloc = 0;
+}
+
 void rliteFree(rliteContext *c) {
 	if (c->db) {
 		rl_close(c->db);
@@ -750,6 +779,8 @@ void rliteFree(rliteContext *c) {
 		rliteFreeReplyObject(c->replies[i]);
 	}
 	rl_free(c->replies);
+	freeWatchedKeys(c);
+	freeEnqueuedCommands(c);
 	rl_free(c->path);
 	rl_free(c);
 }
@@ -777,28 +808,8 @@ static void multiCommand(rliteClient *c) {
 }
 
 static void discard(rliteClient *c) {
-	size_t i;
-	int j;
-	for (i = 0; i < c->context->watchedKeysLength; i++) {
-		rl_free(c->context->watchedKeys[i]);
-	}
-	rl_free(c->context->watchedKeys);
-	c->context->watchedKeys = NULL;
-	c->context->watchedKeysLength = 0;
-	c->context->watchedKeysAlloc = 0;
-
-	for (i = 0; i < c->context->enqueuedCommandsLength; i++) {
-		for (j = 0; j < c->context->enqueuedCommands[i]->argc; j++) {
-			rl_free(c->context->enqueuedCommands[i]->argv[j]);
-		}
-		rl_free(c->context->enqueuedCommands[i]->argv);
-		rl_free(c->context->enqueuedCommands[i]->argvlen);
-		rl_free(c->context->enqueuedCommands[i]);
-	}
-	rl_free(c->context->enqueuedCommands);
-	c->context->enqueuedCommands = NULL;
-	c->context->enqueuedCommandsLength = 0;
-	c->context->enqueuedCommandsAlloc = 0;
+	freeWatchedKeys(c->context);
+	freeEnqueuedCommands(c->context);
 
 	c->context->inTransaction = 0;
 	c->context->transactionFailed = 0;
@@ -942,14 +953,7 @@ cleanup:
 }
 
 static void unwatchCommand(rliteClient *c) {
-	size_t i;
-	for (i = 0; i < c->context->watchedKeysLength; i++) {
-		rl_free(c->context->watchedKeys[i]);
-	}
-	rl_free(c->context->watchedKeys);
-	c->context->watchedKeys = NULL;
-	c->context->watchedKeysLength = 0;
-	c->context->watchedKeysAlloc = 0;
+	freeWatchedKeys(c->context);
 	c->reply = createStatusObject(RLITE_STR_OK);
 }
 
