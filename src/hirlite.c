@@ -2266,8 +2266,7 @@ static void popGenericCommand(rliteClient *c, int left) {
 	if (retval == RL_NOT_FOUND) {
 		c->reply = createReplyObject(RLITE_REPLY_NIL);
 	} else if (retval == RL_OK) {
-		c->reply = createStringObject((char *)value, valuelen);
-		rl_free(value);
+		c->reply = createTakeStringObject((char *)value, valuelen);
 	}
 cleanup:
 	return;
