@@ -1497,8 +1497,6 @@ static void genericZrangebyscoreCommand(rliteClient *c, int reverse) {
 		return;
 	}
 
-	/* Parse optional extra arguments. Note that ZCOUNT will exactly have
-	 * 4 arguments, so we'll never enter the following code path. */
 	if (c->argc > 4) {
 		int remaining = c->argc - 4;
 		int pos = 4;
