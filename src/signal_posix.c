@@ -108,7 +108,7 @@ int rl_write_signal(const char *signal_name, const char *data, size_t datalen) {
 	int fd = open(signal_name, O_WRONLY | O_NONBLOCK);
 	if (fd == -1) {
 		// fifo may not always exist on our code
-		// it is a way to signal between processes, but it is show and forget
+		// it is a way to signal between processes, but it is fire and forget
 		return RL_OK;
 	}
 	write(fd, header, FIFO_HEADER_SIZE);
