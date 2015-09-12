@@ -213,12 +213,8 @@ int rl_header_deserialize(struct rlite *db, void **UNUSED(obj), void *UNUSED(con
 	db->number_of_pages = get_4bytes(&data[identifier_len + 8]);
 	db->initial_number_of_databases =
 	db->number_of_databases = get_4bytes(&data[identifier_len + 12]);
-	if (db->databases) {
-		rl_free(db->databases);
-	}
-	if (db->initial_databases) {
-		rl_free(db->initial_databases);
-	}
+	rl_free(db->databases);
+	rl_free(db->initial_databases);
 	RL_MALLOC(db->databases, sizeof(long) * (db->number_of_databases + RLITE_INTERNAL_DB_COUNT));
 	RL_MALLOC(db->initial_databases, sizeof(long) * (db->number_of_databases + RLITE_INTERNAL_DB_COUNT));
 
