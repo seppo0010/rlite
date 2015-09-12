@@ -2082,15 +2082,12 @@ static void srandmemberCommand(rliteClient *c) {
 		if (c->argc == 2) {
 			c->reply = createStringObject((char *)members[0], memberslen[0]);
 		} else {
-			c->reply = createReplyObject(RLITE_REPLY_ARRAY);
+			CHECK_OOM(c->reply = createReplyObject(RLITE_REPLY_ARRAY));
 			c->reply->elements = count;
 			MALLOC(c->reply->element, sizeof(rliteReply*) * count);
 			for (i = 0; i < count; i++) {
-				c->reply->element[i] = createStringObject((char *)members[i], memberslen[i]);
+				c->reply->element[i] = createTakeStringObject((char *)members[i], memberslen[i]);
 			}
-		}
-		for (i = 0; i < count; i++) {
-			rl_free(members[i]);
 		}
 	} else {
 		c->reply = createReplyObject(RLITE_REPLY_ARRAY);
