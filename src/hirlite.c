@@ -1324,51 +1324,47 @@ static int zslParseRange(const char *min, const char *max, rl_zrangespec *spec) 
 
 	return RLITE_OK;
 }
-/* Implements ZREMRANGEBYRANK, ZREMRANGEBYSCORE, ZREMRANGEBYLEX commands. */
-#define ZRANGE_RANK 0
-#define ZRANGE_SCORE 1
-#define ZRANGE_LEX 2
-static void zremrangeGenericCommand(rliteClient *c, int rangetype) {
+
+static void zremrangebyrankCommand(rliteClient *c) {
 	int retval;
 	long deleted;
-	rl_zrangespec rlrange;
 	long start, end;
 
-	/* Step 1: Parse the range. */
-	if (rangetype == ZRANGE_RANK) {
-		if ((getLongFromObjectOrReply(c,c->argv[2],c->argvlen[2],&start,NULL) != RLITE_OK) ||
-			(getLongFromObjectOrReply(c,c->argv[3],c->argvlen[3],&end,NULL) != RLITE_OK))
-			return;
-		retval = rl_zremrangebyrank(c->context->db, UNSIGN(c->argv[1]), c->argvlen[1], start, end, &deleted);
-	} else if (rangetype == ZRANGE_SCORE) {
-		if (zslParseRange(c->argv[2],c->argv[3],&rlrange) != RLITE_OK) {
-			c->reply = createErrorObject("ERR min or max is not a float");
-			return;
-		}
-		retval = rl_zremrangebyscore(c->context->db, UNSIGN(c->argv[1]), c->argvlen[1], &rlrange, &deleted);
-	} else if (rangetype == ZRANGE_LEX) {
-		retval = rl_zremrangebylex(c->context->db, UNSIGN(c->argv[1]), c->argvlen[1], UNSIGN(c->argv[2]), c->argvlen[2], UNSIGN(c->argv[3]), c->argvlen[3], &deleted);
-	} else {
-		__rliteSetError(c->context, RLITE_ERR, "Unexpected rangetype");
-		goto cleanup;
-	}
+	if ((getLongFromObjectOrReply(c,c->argv[2],c->argvlen[2],&start,NULL) != RLITE_OK) ||
+		(getLongFromObjectOrReply(c,c->argv[3],c->argvlen[3],&end,NULL) != RLITE_OK))
+		return;
+	retval = rl_zremrangebyrank(c->context->db, UNSIGN(c->argv[1]), c->argvlen[1], start, end, &deleted);
 	RLITE_SERVER_ERR(c, retval);
-
 	c->reply = createLongLongObject(deleted);
 cleanup:
 	return;
 }
 
-static void zremrangebyrankCommand(rliteClient *c) {
-	zremrangeGenericCommand(c,ZRANGE_RANK);
-}
-
 static void zremrangebyscoreCommand(rliteClient *c) {
-	zremrangeGenericCommand(c,ZRANGE_SCORE);
+	int retval;
+	long deleted;
+	rl_zrangespec rlrange;
+
+	if (zslParseRange(c->argv[2],c->argv[3],&rlrange) != RLITE_OK) {
+		c->reply = createErrorObject("ERR min or max is not a float");
+		return;
+	}
+	retval = rl_zremrangebyscore(c->context->db, UNSIGN(c->argv[1]), c->argvlen[1], &rlrange, &deleted);
+	RLITE_SERVER_ERR(c, retval);
+	c->reply = createLongLongObject(deleted);
+cleanup:
+	return;
 }
 
 static void zremrangebylexCommand(rliteClient *c) {
-	zremrangeGenericCommand(c,ZRANGE_LEX);
+	int retval;
+	long deleted;
+
+	retval = rl_zremrangebylex(c->context->db, UNSIGN(c->argv[1]), c->argvlen[1], UNSIGN(c->argv[2]), c->argvlen[2], UNSIGN(c->argv[3]), c->argvlen[3], &deleted);
+	RLITE_SERVER_ERR(c, retval);
+	c->reply = createLongLongObject(deleted);
+cleanup:
+	return;
 }
 
 static void zcardCommand(rliteClient *c) {
