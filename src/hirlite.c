@@ -2978,7 +2978,7 @@ static void pfdebugCommand(rliteClient *c) {
 		retval = rl_pfdebug_getreg(c->context->db, key, keylen, &size, &elements);
 		RLITE_SERVER_ERR(c, retval);
 		if (retval == RL_OK) {
-			c->reply = createReplyObject(RLITE_REPLY_ARRAY);
+			CHECK_OOM(c->reply = createReplyObject(RLITE_REPLY_ARRAY));
 			c->reply->elements = size;
 			CHECK_OOM_ELSE(c->reply->element = rl_malloc(sizeof(rliteReply*) * c->reply->elements),
 					rl_free(c->reply); c->reply = NULL);
