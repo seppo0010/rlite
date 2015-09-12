@@ -1747,7 +1747,6 @@ cleanup:
 	rl_free(fieldslen);
 	rl_free(values);
 	rl_free(valueslen);
-	return;
 }
 
 static void bitcountCommand(rliteClient *c) {
