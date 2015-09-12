@@ -19,8 +19,14 @@ int rl_flock(FILE *fp, int type)
 	} else {
 		return RL_UNEXPECTED;
 	}
-	flock(fd, locktype);
-	return RL_OK;
+	// all documented error codes for flock do not apply
+	// EWOULDBLOCK because we are not using LOCK_NB
+	// ENOTSUP, EBADF and EINVAL because we received the fileno from a FILE*
+	if (flock(fd, locktype) == 0) {
+		return RL_OK;
+	} else {
+		return RL_UNEXPECTED;
+	}
 }
 
 int rl_is_flocked(const char *path, int type)
