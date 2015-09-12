@@ -3740,7 +3740,7 @@ static void pubsubCommand(rliteClient *c) {
 			goto cleanup;
 		}
 		for (i = 0; i < channelc; i++) {
-			c->reply->element[i] = createStringObject((char *)channelv[i], channelvlen[i]);
+			c->reply->element[i] = createTakeStringObject((char *)channelv[i], channelvlen[i]);
 		}
 	} else if (!strcasecmp(c->argv[1],"numsub")) {
 		long numsub;
@@ -3752,9 +3752,6 @@ static void pubsubCommand(rliteClient *c) {
 		c->reply = createLongLongObject(numpat);
 	}
 cleanup:
-	for (i = 0; i < channelc; i++) {
-		rl_free(channelv[i]);
-	}
 	rl_free(channelv);
 	rl_free(channelvlen);
 	return;
