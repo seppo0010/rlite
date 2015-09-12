@@ -3605,7 +3605,8 @@ static void sortCommand(rliteClient *c) {
 					free(c->reply); c->reply = NULL);
 			for (i = 0; i < objc; i++) {
 				// TODO free elements on oom
-				CHECK_OOM(c->reply->element[i] = createTakeStringObject((char *)objv[i], objvlen[i]));
+				CHECK_OOM_ELSE(c->reply->element[i] = createTakeStringObject((char *)objv[i], objvlen[i]),
+						c->reply->elements = i - 1; rliteFreeReplyObject(c->reply); c->reply = NULL);
 			}
 		} else {
 			c->reply = createReplyObject(RLITE_REPLY_ARRAY);
