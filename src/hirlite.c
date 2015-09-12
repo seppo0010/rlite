@@ -2123,7 +2123,10 @@ cleanup:
 	rl_free(memberslen);
 }
 
-static void sinterCommand(rliteClient *c) {
+#define OP_INTER 0
+#define OP_UNION 1
+#define OP_DIFF 2
+static void sOperationGenericCommand(rliteClient *c, int op) {
 	int keyc = c->argc - 1, i, retval;
 	unsigned char **keys = NULL, **members = NULL;
 	long *keyslen = NULL, j, membersc, *memberslen = NULL;
@@ -2134,7 +2137,8 @@ static void sinterCommand(rliteClient *c) {
 		keys[i] = UNSIGN(c->argv[1 + i]);
 		keyslen[i] = c->argvlen[1 + i];
 	}
-	retval = rl_sinter(c->context->db, keyc, keys, keyslen, &membersc, &members, &memberslen);
+	retval = (op == OP_INTER ? rl_sinter : (op == OP_UNION ? rl_sunion : rl_sdiff))(
+				c->context->db, keyc, keys, keyslen, &membersc, &members, &memberslen);
 	RLITE_SERVER_ERR(c, retval);
 	CHECK_OOM(c->reply = createReplyObject(RLITE_REPLY_ARRAY));
 	c->reply->elements = membersc;
@@ -2154,7 +2158,7 @@ cleanup:
 	return;
 }
 
-static void sinterstoreCommand(rliteClient *c) {
+static void sOperationStoreGenericCommand(rliteClient *c, int op) {
 	int keyc = c->argc - 2, i, retval;
 	unsigned char **keys = NULL;
 	long *keyslen = NULL, membersc;
@@ -2167,127 +2171,38 @@ static void sinterstoreCommand(rliteClient *c) {
 		keys[i] = UNSIGN(c->argv[2 + i]);
 		keyslen[i] = c->argvlen[2 + i];
 	}
-	retval = rl_sinterstore(c->context->db, target, targetlen, keyc, keys, keyslen, &membersc);
+	retval = (op == OP_INTER ? rl_sinterstore: (op == OP_UNION ? rl_sunionstore : rl_sdiffstore))(
+			c->context->db, target, targetlen, keyc, keys, keyslen, &membersc);
 	RLITE_SERVER_ERR(c, retval);
 	c->reply = createLongLongObject(membersc);
 cleanup:
 	rl_free(keys);
 	rl_free(keyslen);
 	return;
+}
+
+static void sinterCommand(rliteClient *c) {
+	sOperationGenericCommand(c, OP_INTER);
+}
+
+static void sinterstoreCommand(rliteClient *c) {
+	sOperationStoreGenericCommand(c, OP_INTER);
 }
 
 static void sunionCommand(rliteClient *c) {
-	int keyc = c->argc - 1, i, retval;
-	unsigned char **keys = NULL, **members = NULL;
-	long *keyslen = NULL, j, membersc, *memberslen = NULL;
-
-	MALLOC(keys, sizeof(unsigned char *) * keyc);
-	MALLOC(keyslen, sizeof(long) * keyc);
-	for (i = 0; i < keyc; i++) {
-		keys[i] = UNSIGN(c->argv[1 + i]);
-		keyslen[i] = c->argvlen[1 + i];
-	}
-	retval = rl_sunion(c->context->db, keyc, keys, keyslen, &membersc, &members, &memberslen);
-	RLITE_SERVER_ERR(c, retval);
-	c->reply = createReplyObject(RLITE_REPLY_ARRAY);
-	c->reply->elements = membersc;
-	if (membersc > 0) {
-		CHECK_OOM_ELSE(c->reply->element = rl_malloc(sizeof(rliteReply*) * membersc),
-				rl_free(c->reply); c->reply = NULL);
-		for (j = 0; j < membersc; j++) {
-			c->reply->element[j] = createStringObject((char *)members[j], memberslen[j]);
-		}
-	}
-cleanup:
-	if (members) {
-		for (j = 0; j < membersc; j++) {
-			rl_free(members[j]);
-		}
-		rl_free(members);
-		rl_free(memberslen);
-	}
-	rl_free(keys);
-	rl_free(keyslen);
-	return;
+	sOperationGenericCommand(c, OP_UNION);
 }
 
 static void sunionstoreCommand(rliteClient *c) {
-	int keyc = c->argc - 2, i, retval;
-	unsigned char **keys = NULL;
-	long *keyslen = NULL, membersc;
-	unsigned char *target = UNSIGN(c->argv[1]);
-	long targetlen = c->argvlen[1];
-
-	MALLOC(keys, sizeof(unsigned char *) * keyc);
-	MALLOC(keyslen, sizeof(long) * keyc);
-	for (i = 0; i < keyc; i++) {
-		keys[i] = UNSIGN(c->argv[2 + i]);
-		keyslen[i] = c->argvlen[2 + i];
-	}
-	retval = rl_sunionstore(c->context->db, target, targetlen, keyc, keys, keyslen, &membersc);
-	RLITE_SERVER_ERR(c, retval);
-	c->reply = createLongLongObject(membersc);
-cleanup:
-	rl_free(keys);
-	rl_free(keyslen);
-	return;
+	sOperationStoreGenericCommand(c, OP_UNION);
 }
 
 static void sdiffCommand(rliteClient *c) {
-	int keyc = c->argc - 1, i, retval;
-	unsigned char **keys = NULL, **members = NULL;
-	long *keyslen = NULL, j, membersc, *memberslen = NULL;
-
-	MALLOC(keys, sizeof(unsigned char *) * keyc);
-	MALLOC(keyslen, sizeof(long) * keyc);
-	for (i = 0; i < keyc; i++) {
-		keys[i] = UNSIGN(c->argv[1 + i]);
-		keyslen[i] = c->argvlen[1 + i];
-	}
-	retval = rl_sdiff(c->context->db, keyc, keys, keyslen, &membersc, &members, &memberslen);
-	RLITE_SERVER_ERR(c, retval);
-	c->reply = createReplyObject(RLITE_REPLY_ARRAY);
-	c->reply->elements = membersc;
-	if (membersc > 0) {
-		CHECK_OOM_ELSE(c->reply->element = rl_malloc(sizeof(rliteReply*) * membersc),
-				rl_free(c->reply); c->reply = NULL);
-		for (j = 0; j < membersc; j++) {
-			CHECK_OOM(c->reply->element[j] = createStringObject((char *)members[j], memberslen[j]));
-		}
-	}
-cleanup:
-	if (members) {
-		for (j = 0; j < membersc; j++) {
-			rl_free(members[j]);
-		}
-		rl_free(members);
-		rl_free(memberslen);
-	}
-	rl_free(keys);
-	rl_free(keyslen);
-	return;
+	sOperationGenericCommand(c, OP_DIFF);
 }
 
 static void sdiffstoreCommand(rliteClient *c) {
-	int keyc = c->argc - 2, i, retval;
-	unsigned char **keys = NULL;
-	long *keyslen = NULL, membersc;
-	unsigned char *target = UNSIGN(c->argv[1]);
-	long targetlen = c->argvlen[1];
-
-	MALLOC(keys, sizeof(unsigned char *) * keyc);
-	MALLOC(keyslen, sizeof(long) * keyc);
-	for (i = 0; i < keyc; i++) {
-		keys[i] = UNSIGN(c->argv[2 + i]);
-		keyslen[i] = c->argvlen[2 + i];
-	}
-	retval = rl_sdiffstore(c->context->db, target, targetlen, keyc, keys, keyslen, &membersc);
-	RLITE_SERVER_ERR(c, retval);
-	c->reply = createLongLongObject(membersc);
-cleanup:
-	rl_free(keys);
-	rl_free(keyslen);
-	return;
+	sOperationStoreGenericCommand(c, OP_DIFF);
 }
 
 static void pushGenericCommand(rliteClient *c, int create, int left) {
