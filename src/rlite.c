@@ -1028,9 +1028,7 @@ int rl_database_is_balanced(rlite *db, short *pages)
 
 cleanup:
 	rl_free(tmp);
-	if (iterator) {
-		rl_btree_iterator_destroy(iterator);
-	}
+	rl_btree_iterator_destroy(iterator);
 	return retval;
 }
 
