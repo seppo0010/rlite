@@ -14,8 +14,8 @@ int rl_print_list_node(rl_list *list, rl_list_node *node);
 int rl_list_node_create(rlite *db, rl_list *list, rl_list_node **node);
 
 rl_list_type rl_list_type_long = {
-	0,
-	0,
+	&rl_data_type_list_long,
+	&rl_data_type_list_node_long,
 	sizeof(long),
 	long_cmp,
 #ifdef RL_DEBUG
@@ -86,12 +86,6 @@ cleanup:
 		rl_list_node_destroy(db, node);
 	}
 	return retval;
-}
-
-void rl_list_init()
-{
-	rl_list_type_long.list_type = &rl_data_type_list_long;
-	rl_list_type_long.list_node_type = &rl_data_type_list_node_long;
 }
 
 int rl_list_node_create(rlite *UNUSED(db), rl_list *list, rl_list_node **_node)

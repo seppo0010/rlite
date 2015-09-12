@@ -252,8 +252,6 @@ cleanup:
 
 int rl_open(const char *filename, rlite **_db, int flags)
 {
-	rl_btree_init();
-	rl_list_init();
 	int retval = RL_OK;
 	rlite *db;
 	RL_MALLOC(db, sizeof(*db));

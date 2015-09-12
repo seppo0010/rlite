@@ -43,7 +43,6 @@ typedef struct rl_list_iterator {
 	long node_position;
 } rl_list_iterator;
 
-void rl_list_init();
 int rl_list_create(struct rlite *db, rl_list **_list, rl_list_type *type);
 int rl_list_destroy(struct rlite *db, void *list);
 int rl_list_node_destroy(struct rlite *db, void *node);

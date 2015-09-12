@@ -8,8 +8,8 @@
 #include "rlite/util.h"
 
 rl_btree_type rl_btree_type_hash_sha1_key = {
-	0,
-	0,
+	&rl_data_type_btree_hash_sha1_key,
+	&rl_data_type_btree_node_hash_sha1_key,
 	sizeof(unsigned char) * 20,
 	sizeof(rl_key),
 	sha1_cmp,
@@ -19,8 +19,8 @@ rl_btree_type rl_btree_type_hash_sha1_key = {
 };
 
 rl_btree_type rl_btree_type_hash_sha1_hashkey = {
-	0,
-	0,
+	&rl_data_type_btree_hash_sha1_hashkey,
+	&rl_data_type_btree_node_hash_sha1_hashkey,
 	sizeof(unsigned char) * 20,
 	sizeof(rl_hashkey),
 	sha1_cmp,
@@ -28,10 +28,9 @@ rl_btree_type rl_btree_type_hash_sha1_hashkey = {
 	sha1_formatter,
 #endif
 };
-
 rl_btree_type rl_btree_type_hash_long_long = {
-	0,
-	0,
+	&rl_data_type_btree_hash_long_long,
+	&rl_data_type_btree_node_hash_long_long,
 	sizeof(long),
 	sizeof(long),
 	long_cmp,
@@ -41,8 +40,8 @@ rl_btree_type rl_btree_type_hash_long_long = {
 };
 
 rl_btree_type rl_btree_type_hash_sha1_double = {
-	0,
-	0,
+	&rl_data_type_btree_hash_sha1_double,
+	&rl_data_type_btree_node_hash_sha1_double,
 	sizeof(unsigned char) * 20,
 	sizeof(double),
 	sha1_cmp,
@@ -52,8 +51,8 @@ rl_btree_type rl_btree_type_hash_sha1_double = {
 };
 
 rl_btree_type rl_btree_type_hash_sha1_long = {
-	0,
-	0,
+	&rl_data_type_btree_hash_sha1_long,
+	&rl_data_type_btree_node_hash_sha1_long,
 	sizeof(unsigned char) * 20,
 	sizeof(long),
 	sha1_cmp,
@@ -62,20 +61,6 @@ rl_btree_type rl_btree_type_hash_sha1_long = {
 #endif
 };
 
-
-void rl_btree_init()
-{
-	rl_btree_type_hash_sha1_hashkey.btree_type = &rl_data_type_btree_hash_sha1_hashkey;
-	rl_btree_type_hash_sha1_hashkey.btree_node_type = &rl_data_type_btree_node_hash_sha1_hashkey;
-	rl_btree_type_hash_sha1_key.btree_type = &rl_data_type_btree_hash_sha1_key;
-	rl_btree_type_hash_sha1_key.btree_node_type = &rl_data_type_btree_node_hash_sha1_key;
-	rl_btree_type_hash_long_long.btree_type = &rl_data_type_btree_hash_long_long;
-	rl_btree_type_hash_long_long.btree_node_type = &rl_data_type_btree_node_hash_long_long;
-	rl_btree_type_hash_sha1_double.btree_type = &rl_data_type_btree_hash_sha1_double;
-	rl_btree_type_hash_sha1_double.btree_node_type = &rl_data_type_btree_node_hash_sha1_double;
-	rl_btree_type_hash_sha1_long.btree_type = &rl_data_type_btree_hash_sha1_long;
-	rl_btree_type_hash_sha1_long.btree_node_type = &rl_data_type_btree_node_hash_sha1_long;
-}
 
 int rl_btree_serialize(struct rlite *UNUSED(db), void *obj, unsigned char *data)
 {
