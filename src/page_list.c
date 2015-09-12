@@ -413,10 +413,7 @@ int rl_list_remove_element(rlite *db, rl_list *list, long list_page, long positi
 				rl_free(node->elements);
 				node->elements = NULL;
 
-				rl_delete(db, number);
-				if (retval != RL_OK) {
-					goto cleanup;
-				}
+				RL_CALL(rl_delete, RL_OK, db, number);
 				goto succeeded;
 			}
 		}
@@ -442,10 +439,7 @@ int rl_list_remove_element(rlite *db, rl_list *list, long list_page, long positi
 				rl_free(node->elements);
 				node->elements = NULL;
 
-				rl_delete(db, number);
-				if (retval != RL_OK) {
-					goto cleanup;
-				}
+				RL_CALL(rl_delete, RL_OK, db, number);
 				goto succeeded;
 			}
 		}
