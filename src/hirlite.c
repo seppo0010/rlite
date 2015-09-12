@@ -3247,7 +3247,8 @@ static void keysCommand(rliteClient *c) {
 			rl_free(c->reply); c->reply = NULL);
 
 	for (i = 0; i < size; i++) {
-		c->reply->element[i] = createTakeStringObject((char *)result[i], resultlen[i]);
+		CHECK_OOM_ELSE(c->reply->element[i] = createTakeStringObject((char *)result[i], resultlen[i]),
+				c->reply->elements = i - 1; rliteFreeReplyObject(c->reply); c->reply = NULL);
 	}
 	rl_free(result);
 	rl_free(resultlen);
