@@ -136,10 +136,12 @@ int rl_btree_node_destroy(rlite *UNUSED(db), void *_node)
 		}
 		rl_free(node->scores);
 	}
-	for (i = 0; i < node->size; i++) {
-		rl_free(node->values[i]);
+	if (node->values) {
+		for (i = 0; i < node->size; i++) {
+			rl_free(node->values[i]);
+		}
+		rl_free(node->values);
 	}
-	rl_free(node->values);
 	if (node->children) {
 		rl_free(node->children);
 	}
