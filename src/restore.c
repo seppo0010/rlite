@@ -26,10 +26,9 @@ int ucread(struct rl_restore_streamer *streamer, unsigned char *str, long len) {
 
 static rl_restore_streamer* init_string_streamer(unsigned char *data, long datalen)
 {
-	rl_restore_streamer *streamer = rl_malloc(sizeof(*streamer));
-	if (!streamer) {
-		return NULL;
-	}
+	int retval;
+	rl_restore_streamer *streamer;
+	RL_MALLOC(streamer, sizeof(*streamer));
 	struct stringwithlength *s = rl_malloc(sizeof(*s));
 	if (!s) {
 		rl_free(streamer);
@@ -39,6 +38,7 @@ static rl_restore_streamer* init_string_streamer(unsigned char *data, long datal
 	s->stringlen = datalen;
 	streamer->context = s;
 	streamer->read = &ucread;
+cleanup:
 	return streamer;
 }
 
@@ -305,7 +305,7 @@ static int read_string(rl_restore_streamer *streamer, unsigned char **str, long 
 		rl_free(cdata);
 	} else if (!is_encoded) {
 		strdatalen = length;
-		strdata = rl_malloc(strdatalen * sizeof(unsigned char));
+		RL_MALLOC(strdata, strdatalen * sizeof(unsigned char));
 		RL_CALL(read, RL_OK, streamer, strdata, strdatalen);
 	} else {
 		retval = RL_NOT_IMPLEMENTED;
@@ -520,7 +520,6 @@ int rl_restore(struct rlite *db, const unsigned char *key, long keylen, unsigned
 	RL_CALL(verify, RL_OK, data, datalen);
 	streamer = init_string_streamer(data, datalen);
 	if (!streamer) {
-		retval = RL_OUT_OF_MEMORY;
 		goto cleanup;
 	}
 	RL_CALL(rl_restore_stream, RL_OK, db, key, keylen, expires, streamer);
