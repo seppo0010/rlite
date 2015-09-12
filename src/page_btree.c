@@ -161,19 +161,15 @@ int rl_btree_create_size(rlite *db, rl_btree **_btree, rl_btree_type *type, long
 	btree->db = db;
 	btree->root = db->next_empty_page;
 	btree->height = 1;
-	retval = rl_btree_node_create(db, btree, &root);
-	if (retval != RL_OK) {
-		rl_btree_destroy(db, btree);
-		goto cleanup;
-	}
+	RL_CALL(rl_btree_node_create, RL_OK, db, btree, &root);
 	root->size = 0;
-	retval = rl_write(db, type->btree_node_type, db->next_empty_page, root);
+	RL_CALL(rl_write, RL_OK, db, type->btree_node_type, db->next_empty_page, root);
+	*_btree = btree;
+	retval = RL_OK;
+cleanup:
 	if (retval != RL_OK) {
 		rl_btree_destroy(db, btree);
-		goto cleanup;
 	}
-	*_btree = btree;
-cleanup:
 	return retval;
 }
 
