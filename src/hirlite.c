@@ -961,8 +961,7 @@ static rliteReply *pollToReply(long elementc, unsigned char **elements, long *el
 	long i;
 	rliteReply *reply = createArrayObject(elementc);
 	for (i = 0; i < elementc; i++) {
-		reply->element[i] = createStringObject((char *)elements[i], elementslen[i]);
-		rl_free(elements[i]);
+		reply->element[i] = createTakeStringObject((char *)elements[i], elementslen[i]);
 	}
 	rl_free(elements);
 	rl_free(elementslen);
