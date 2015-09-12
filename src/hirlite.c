@@ -2055,8 +2055,7 @@ static void spopCommand(rliteClient *c) {
 	if (retval == RL_NOT_FOUND) {
 		c->reply = createReplyObject(RLITE_REPLY_NIL);
 	} else if (retval == RL_OK) {
-		c->reply = createStringObject((char *)member, memberlen);
-		rl_free(member);
+		c->reply = createTakeStringObject((char *)member, memberlen);
 	}
 cleanup:
 	return;
