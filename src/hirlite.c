@@ -2136,23 +2136,19 @@ static void sinterCommand(rliteClient *c) {
 	}
 	retval = rl_sinter(c->context->db, keyc, keys, keyslen, &membersc, &members, &memberslen);
 	RLITE_SERVER_ERR(c, retval);
-	c->reply = createReplyObject(RLITE_REPLY_ARRAY);
+	CHECK_OOM(c->reply = createReplyObject(RLITE_REPLY_ARRAY));
 	c->reply->elements = membersc;
 	if (membersc > 0) {
 		CHECK_OOM_ELSE(c->reply->element = rl_malloc(sizeof(rliteReply*) * membersc),
 				rl_free(c->reply); c->reply = NULL);
 		for (j = 0; j < membersc; j++) {
-			c->reply->element[j] = createStringObject((char *)members[j], memberslen[j]);
+			CHECK_OOM_ELSE(c->reply->element[j] = createTakeStringObject((char *)members[j], memberslen[j]),
+					c->reply->elements = j - 1; rliteFreeReplyObject(c->reply); c->reply = NULL);
 		}
 	}
 cleanup:
-	if (members) {
-		for (j = 0; j < membersc; j++) {
-			rl_free(members[j]);
-		}
-		rl_free(members);
-		rl_free(memberslen);
-	}
+	rl_free(members);
+	rl_free(memberslen);
 	rl_free(keys);
 	rl_free(keyslen);
 	return;
