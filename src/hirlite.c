@@ -1536,9 +1536,6 @@ static void zlexcountCommand(rliteClient *c) {
 
 	int retval = rl_zlexcount(c->context->db, UNSIGN(c->argv[1]), c->argvlen[1], UNSIGN(c->argv[2]), c->argvlen[2], UNSIGN(c->argv[3]), c->argvlen[3], &count);
 	RLITE_SERVER_ERR(c, retval);
-	if (retval == RL_NOT_FOUND) {
-		count = 0;
-	}
 	c->reply = createLongLongObject(count);
 cleanup:
 	return;
