@@ -1203,6 +1203,10 @@ static void zaddGenericCommand(rliteClient *c, int incr) {
 	 * before executing additions to the sorted set, as the command should
 	 * either execute fully or nothing at all. */
 	scores = rl_malloc(sizeof(double) * elements);
+	if (!scores) {
+		__rliteSetError(c->context, RLITE_ERR_OOM, "Out of memory");
+		goto cleanup;
+	}
 	for (j = 0; j < elements; j++) {
 		if (getDoubleFromObjectOrReply(c, c->argv[2+j*2], c->argvlen[2+j*2], &scores[j],NULL)
 			!= RLITE_OK) goto cleanup;
