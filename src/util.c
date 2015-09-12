@@ -36,8 +36,13 @@ int expect_fail()
 
 void *rl_malloc(size_t size)
 {
+	return rl_realloc(NULL, size);
+}
+
+void *rl_realloc(void *ptr, size_t size)
+{
 	if (test_mode == 0) {
-		return malloc(size);
+		return realloc(ptr, size);
 	}
 	unsigned char digest[20];
 	char hexdigest[41];
@@ -79,7 +84,7 @@ void *rl_malloc(size_t size)
 	subdir[42] = 0;
 
 	if (access(subdir, F_OK) == 0) {
-		r = malloc(size);
+		r = realloc(ptr, size);
 	}
 	else {
 		hexdigest[40] = 0;

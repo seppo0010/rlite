@@ -658,7 +658,7 @@ static int hllSparseAdd(unsigned char *str, long strlen, unsigned char *ele, siz
      * into XZERO-VAL-XZERO). Make sure there is enough space right now
      * so that the pointers we take during the execution of the function
      * will be valid all the time. */
-    tmp = realloc(str, sizeof(unsigned char) * (strlen + 3));
+    tmp = rl_realloc(str, sizeof(unsigned char) * (strlen + 3));
     if (!tmp) {
         return 1;
     }
@@ -1457,7 +1457,7 @@ int rl_str_pfdebug_getreg(unsigned char *str, long strlen, int *size, long **ele
 
 #define APPEND(obj, objlen, objalloc, src, srclen)\
     while (objlen + srclen > objalloc) {\
-        unsigned char *tmp = realloc(obj, sizeof(unsigned char) * objalloc * 2);\
+        unsigned char *tmp = rl_realloc(obj, sizeof(unsigned char) * objalloc * 2);\
         if (!tmp) {\
             rl_free(obj);\
             return -4;\
@@ -1508,7 +1508,7 @@ int rl_str_pfdebug_decode(unsigned char *str, long strlen, unsigned char **respo
         }
     }
     decodedlen--;
-    decoded = realloc(decoded, sizeof(unsigned char) * (decodedlen));
+    decoded = rl_realloc(decoded, sizeof(unsigned char) * (decodedlen));
     *response = decoded;
     *responselen = decodedlen;
     return 0;

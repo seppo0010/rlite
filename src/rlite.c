@@ -689,7 +689,7 @@ int rl_read(rlite *db, rl_data_type *type, long page, void *context, void **obj,
 #ifdef RL_DEBUG
 		keep = 1;
 		if (initial_page_size != db->page_size) {
-			page_obj->serialized_data = realloc(data, db->page_size * sizeof(unsigned char));
+			page_obj->serialized_data = rl_realloc(data, db->page_size * sizeof(unsigned char));
 			if (page_obj->serialized_data == NULL) {
 				fprintf(stderr, "realloc failed\n");
 				retval = RL_OUT_OF_MEMORY;
@@ -964,7 +964,7 @@ int rl_discard(struct rlite *db)
 	db->write_pages_len = 0;
 
 	if (db->read_pages_alloc != DEFAULT_READ_PAGES_LEN) {
-		tmp = realloc(db->read_pages, sizeof(rl_page *) * DEFAULT_READ_PAGES_LEN);
+		tmp = rl_realloc(db->read_pages, sizeof(rl_page *) * DEFAULT_READ_PAGES_LEN);
 		if (!tmp) {
 			retval = RL_OUT_OF_MEMORY;
 			goto cleanup;
@@ -975,7 +975,7 @@ int rl_discard(struct rlite *db)
 	if (db->write_pages_alloc > 0) {
 		if (db->write_pages_alloc != DEFAULT_WRITE_PAGES_LEN) {
 			db->write_pages_alloc = DEFAULT_WRITE_PAGES_LEN;
-			tmp = realloc(db->write_pages, sizeof(rl_page *) * DEFAULT_WRITE_PAGES_LEN);
+			tmp = rl_realloc(db->write_pages, sizeof(rl_page *) * DEFAULT_WRITE_PAGES_LEN);
 			if (!tmp) {
 				retval = RL_OUT_OF_MEMORY;
 				goto cleanup;

@@ -60,7 +60,7 @@ static int catvprintf(char** s, size_t *slen, const char *fmt, va_list ap) {
 		}
 		break;
 	}
-	t = realloc(*s, sizeof(char) * (*slen + buflen));
+	t = rl_realloc(*s, sizeof(char) * (*slen + buflen));
 	if (!t) {
 		rl_free(buf);
 		return RLITE_ERR;
@@ -215,7 +215,7 @@ static int addReply(rliteContext* c, rliteReply *reply) {
 	if (c->replyLength == c->replyAlloc) {
 		void *tmp;
 		c->replyAlloc *= 2;
-		tmp = realloc(c->replies, sizeof(rliteReply*) * c->replyAlloc);
+		tmp = rl_realloc(c->replies, sizeof(rliteReply*) * c->replyAlloc);
 		if (!tmp) {
 			__rliteSetError(c,RLITE_ERR_OOM,"Out of memory");
 			return RLITE_ERR;
@@ -428,9 +428,9 @@ int rlitevFormatCommand(rliteClient *client, const char *format, va_list ap) {
 		if (*c != '%' || c[1] == '\0') {
 			if (*c == ' ') {
 				if (touched) {
-					newargv = realloc(curargv, sizeof(char*)*(argc+1));
+					newargv = rl_realloc(curargv, sizeof(char*)*(argc+1));
 					if (newargv == NULL) goto err;
-					newargvlen = realloc(curargvlen, sizeof(size_t)*(argc+1));
+					newargvlen = rl_realloc(curargvlen, sizeof(size_t)*(argc+1));
 					if (newargvlen == NULL) goto err;
 					curargv = newargv;
 					curargvlen = newargvlen;
@@ -443,7 +443,7 @@ int rlitevFormatCommand(rliteClient *client, const char *format, va_list ap) {
 					touched = 0;
 				}
 			} else {
-				newarg = realloc(curarg, sizeof(char) * (curarglen + 1));
+				newarg = rl_realloc(curarg, sizeof(char) * (curarglen + 1));
 				if (newarg == NULL) goto err;
 				newarg[curarglen++] = *c;
 				curarg = newarg;
@@ -461,7 +461,7 @@ int rlitevFormatCommand(rliteClient *client, const char *format, va_list ap) {
 				arg = va_arg(ap,char*);
 				size = strlen(arg);
 				if (size > 0) {
-					newarg = realloc(curarg, sizeof(char) * (curarglen + size));
+					newarg = rl_realloc(curarg, sizeof(char) * (curarglen + size));
 					memcpy(&newarg[curarglen], arg, size);
 					curarglen += size;
 				}
@@ -470,13 +470,13 @@ int rlitevFormatCommand(rliteClient *client, const char *format, va_list ap) {
 				arg = va_arg(ap,char*);
 				size = va_arg(ap,size_t);
 				if (size > 0) {
-					newarg = realloc(curarg, sizeof(char) * (curarglen + size));
+					newarg = rl_realloc(curarg, sizeof(char) * (curarglen + size));
 					memcpy(&newarg[curarglen], arg, size);
 					curarglen += size;
 				}
 				break;
 			case '%':
-				newarg = realloc(curarg, sizeof(char) * (curarglen + 1));
+				newarg = rl_realloc(curarg, sizeof(char) * (curarglen + 1));
 				newarg[curarglen] = '%';
 				curarglen += 1;
 				break;
@@ -593,9 +593,9 @@ int rlitevFormatCommand(rliteClient *client, const char *format, va_list ap) {
 
 	/* Add the last argument if needed */
 	if (touched) {
-		newargv = realloc(curargv,sizeof(char*)*(argc+1));
+		newargv = rl_realloc(curargv,sizeof(char*)*(argc+1));
 		if (newargv == NULL) goto err;
-		newargvlen = realloc(curargvlen,sizeof(char*)*(argc+1));
+		newargvlen = rl_realloc(curargvlen,sizeof(char*)*(argc+1));
 		if (newargvlen == NULL) goto err;
 		curargv = newargv;
 		curargvlen = newargvlen;
@@ -912,7 +912,7 @@ static void watchCommand(rliteClient *c) {
 		while (newAlloc < watchc + c->context->watchedKeysLength) {
 			newAlloc *= 2;
 		}
-		tmp = realloc(c->context->watchedKeys, sizeof(struct watched_key*) * newAlloc);
+		tmp = rl_realloc(c->context->watchedKeys, sizeof(struct watched_key*) * newAlloc);
 		if (tmp == NULL) {
 			c->reply = NULL;
 			__rliteSetError(c->context, RLITE_ERR_OOM, "Out of memory");
@@ -1029,7 +1029,7 @@ int rliteAppendCommandClient(rliteClient *client) {
 				if (newAlloc == 0) {
 					newAlloc = 4;
 				}
-				tmp = realloc(client->context->enqueuedCommands, sizeof(rliteClient *) * newAlloc);
+				tmp = rl_realloc(client->context->enqueuedCommands, sizeof(rliteClient *) * newAlloc);
 				if (!tmp) {
 					retval = RL_OUT_OF_MEMORY;
 					__rliteSetError(client->context, RLITE_ERR_OOM, "Out of memory");

@@ -353,7 +353,7 @@ int rl_hincrby(struct rlite *db, const unsigned char *key, long keylen, unsigned
 	if (retval == RL_FOUND) {
 		hashkey = tmp;
 		rl_multi_string_get(db, hashkey->value_page, &data, &datalen);
-		tmp = realloc(data, sizeof(unsigned char) * (datalen + 1));
+		tmp = rl_realloc(data, sizeof(unsigned char) * (datalen + 1));
 		if (!tmp) {
 			retval = RL_OUT_OF_MEMORY;
 			goto cleanup;
@@ -438,7 +438,7 @@ int rl_hincrbyfloat(struct rlite *db, const unsigned char *key, long keylen, uns
 		hashkey = tmp;
 		rl_multi_string_get(db, hashkey->value_page, &data, &datalen);
 		dataalloc = (datalen / 8 + 1) * 8;
-		tmp = realloc(data, sizeof(unsigned char) * dataalloc);
+		tmp = rl_realloc(data, sizeof(unsigned char) * dataalloc);
 		if (!tmp) {
 			retval = RL_OUT_OF_MEMORY;
 			goto cleanup;

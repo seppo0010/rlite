@@ -15,9 +15,11 @@
 int expect_fail();
 extern int test_mode;
 void *rl_malloc(size_t size);
+void *rl_realloc(void *ptr, size_t size);
 void rl_free(void *ptr);
 #else
 #define rl_malloc malloc
+#define rl_realloc realloc
 #define rl_free free
 #endif
 
@@ -29,7 +31,7 @@ void rl_free(void *ptr);
 	}
 
 #define RL_REALLOC(ptr, size)\
-	tmp = realloc(ptr, size);\
+	tmp = rl_realloc(ptr, size);\
 	if (!tmp) {\
 		retval = RL_OUT_OF_MEMORY;\
 		goto cleanup;\

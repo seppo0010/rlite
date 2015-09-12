@@ -260,8 +260,8 @@ int luaRedisGenericCommand(lua_State *lua, int raise_error) {
 
 	/* Build the arguments vector */
 	if (argv_size < argc) {
-		argv = realloc(argv, sizeof(char *) * argc);
-		argvlen = realloc(argvlen, sizeof(size_t) * argc);
+		argv = rl_realloc(argv, sizeof(char *) * argc);
+		argvlen = rl_realloc(argvlen, sizeof(size_t) * argc);
 		argv_size = argc;
 	}
 
@@ -792,7 +792,7 @@ void luaReplyToRedisReply(rliteClient *c, lua_State *lua) {
 				}
 				luaReplyToRedisReply(c, lua);
 				if (j - 2 == reply->elements) {
-					tmp = realloc(reply->element, sizeof(rliteReply *) * reply->elements * 2);
+					tmp = rl_realloc(reply->element, sizeof(rliteReply *) * reply->elements * 2);
 					if (!tmp) {
 						// TODO: free stuff, panic
 						c->reply = NULL;

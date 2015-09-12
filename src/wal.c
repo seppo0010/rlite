@@ -250,7 +250,7 @@ int rl_write_apply_wal(rlite *db) {
 		if (db->write_pages_len > 0) {
 			page = db->write_pages[db->write_pages_len - 1];
 			if ((page->page_number + 1) * db->page_size > driver->datalen) {
-				void *tmp = realloc(driver->data, (page->page_number + 1) * db->page_size * sizeof(unsigned char));
+				void *tmp = rl_realloc(driver->data, (page->page_number + 1) * db->page_size * sizeof(unsigned char));
 				if (!tmp) {
 					retval = RL_OUT_OF_MEMORY;
 					goto cleanup;
