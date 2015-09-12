@@ -2546,10 +2546,8 @@ static void getCommand(rliteClient *c) {
 	if (retval == RL_NOT_FOUND) {
 		c->reply = createReplyObject(RLITE_REPLY_NIL);
 	} else {
-		c->reply = createStringObject((char *)value, valuelen);
+		c->reply = createTakeStringObject((char *)value, valuelen);
 	}
-
-	rl_free(value);
 cleanup:
 	return;
 }
