@@ -212,7 +212,7 @@ cleanup:
 }
 
 static int addReply(rliteContext* c, rliteReply *reply) {
-	if (c->replyPosition == c->replyAlloc) {
+	if (c->replyLength == c->replyAlloc) {
 		void *tmp;
 		c->replyAlloc *= 2;
 		tmp = realloc(c->replies, sizeof(rliteReply*) * c->replyAlloc);
