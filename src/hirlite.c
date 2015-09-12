@@ -1386,6 +1386,8 @@ static void zunionInterGenericCommand(rliteClient *c, int op) {
 	long setnum;
 	int aggregate = RL_ZSET_AGGREGATE_SUM;
 	double *weights = NULL;
+	unsigned char **keys = NULL;
+	long *keys_len = NULL;
 
 	/* expect setnum input keys to be given */
 	if ((getLongFromObjectOrReply(c, c->argv[2], c->argvlen[2], &setnum, NULL) != RLITE_OK))
@@ -1410,11 +1412,14 @@ static void zunionInterGenericCommand(rliteClient *c, int op) {
 				return;
 			}
 			weights = rl_malloc(sizeof(double) * setnum);
+			if (!weights) {
+				__rliteSetError(c->context, RLITE_ERR_OOM, "Out of memory");
+				return;
+			}
 			for (i = 0; i < setnum; i++) {
 				if (getDoubleFromObjectOrReply(c,c->argv[j + 1 + i],c->argvlen[j + 1 + i], &weights[i],
 						"weight value is not a float") != RLITE_OK) {
-					rl_free(weights);
-					return;
+					goto cleanup;
 				}
 			}
 			j += setnum + 1;
@@ -1427,21 +1432,27 @@ static void zunionInterGenericCommand(rliteClient *c, int op) {
 			} else if (strcasecmp(c->argv[j + 1], "sum") == 0) {
 				aggregate = RL_ZSET_AGGREGATE_SUM;
 			} else {
-				rl_free(weights);
 				c->reply = createErrorObject(RLITE_SYNTAXERR);
-				return;
+				goto cleanup;
 			}
 			j += 2;
 		}
 		if (j != c->argc) {
-			rl_free(weights);
 			c->reply = createErrorObject(RLITE_SYNTAXERR);
-			return;
+			goto cleanup;
 		}
 	}
 
-	unsigned char **keys = rl_malloc(sizeof(unsigned char *) * (1 + setnum));
-	long *keys_len = rl_malloc(sizeof(long) * (1 + setnum));
+	keys = rl_malloc(sizeof(unsigned char *) * (1 + setnum));
+	if (!keys) {
+		__rliteSetError(c->context, RLITE_ERR_OOM, "Out of memory");
+		goto cleanup;
+	}
+	keys_len = rl_malloc(sizeof(long) * (1 + setnum));
+	if (!keys_len) {
+		__rliteSetError(c->context, RLITE_ERR_OOM, "Out of memory");
+		goto cleanup;
+	}
 	keys[0] = UNSIGN(c->argv[1]);
 	keys_len[0] = (long)c->argvlen[1];
 	for (i = 0; i < setnum; i++) {
@@ -1449,13 +1460,12 @@ static void zunionInterGenericCommand(rliteClient *c, int op) {
 		keys_len[i + 1] = c->argvlen[3 + i];
 	}
 	int retval = (op == RLITE_OP_UNION ? rl_zunionstore : rl_zinterstore)(c->context->db, setnum + 1, keys, keys_len, weights, aggregate);
-	rl_free(keys);
-	rl_free(keys_len);
-	rl_free(weights);
 	RLITE_SERVER_ERR(c, retval);
 	zcardCommand(c);
 cleanup:
-	return;
+	rl_free(keys);
+	rl_free(keys_len);
+	rl_free(weights);
 }
 
 static void zunionstoreCommand(rliteClient *c) {
