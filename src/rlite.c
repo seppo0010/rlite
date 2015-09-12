@@ -85,18 +85,6 @@ rl_data_type rl_data_type_header = {
 	rl_header_deserialize,
 	NULL
 };
-rl_data_type rl_data_type_btree_set_long = {
-	"rl_data_type_btree_set_long",
-	rl_btree_serialize,
-	rl_btree_deserialize,
-	rl_btree_destroy,
-};
-rl_data_type rl_data_type_btree_node_set_long = {
-	"rl_data_type_btree_node_set_long",
-	rl_btree_node_serialize_set_long,
-	rl_btree_node_deserialize_set_long,
-	rl_btree_node_destroy,
-};
 rl_data_type rl_data_type_btree_hash_long_long = {
 	"rl_data_type_btree_hash_long_long",
 	rl_btree_serialize,
