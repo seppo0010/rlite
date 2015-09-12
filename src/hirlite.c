@@ -3521,8 +3521,8 @@ static void sortCommand(rliteClient *c) {
 	unsigned char **getv = NULL;
 	long *getvlen = NULL;
 	long i, objc;
-	unsigned char **objv;
-	long *objvlen;
+	unsigned char **objv = NULL;
+	long *objvlen = NULL;
 
 	MALLOC(getv, sizeof(unsigned char *) * c->argc);
 	MALLOC(getvlen, sizeof(long) * c->argc);
@@ -3607,8 +3607,6 @@ static void sortCommand(rliteClient *c) {
 				// TODO free elements on oom
 				CHECK_OOM(c->reply->element[i] = createTakeStringObject((char *)objv[i], objvlen[i]));
 			}
-			rl_free(objv);
-			rl_free(objvlen);
 		} else {
 			c->reply = createReplyObject(RLITE_REPLY_ARRAY);
 			c->reply->elements = 0;
@@ -3617,6 +3615,8 @@ static void sortCommand(rliteClient *c) {
 cleanup:
 	rl_free(getv);
 	rl_free(getvlen);
+	rl_free(objv);
+	rl_free(objvlen);
 }
 
 static void pubsubVarargCommandProcessed(rliteClient *c, const char *type, int argc, unsigned char **args, long *argslen, int func(rlite *db, int argc, unsigned char **argv, long *argvlen)) {
