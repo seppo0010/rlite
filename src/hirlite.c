@@ -2686,7 +2686,6 @@ static void msetnxCommand(rliteClient *c) {
 	retval = RL_OK;
 cleanup:
 	c->reply = createLongLongObject(retval == RL_OK ? 1 : 0);
-	return;
 }
 
 static void getrangeCommand(rliteClient *c) {
