@@ -1051,10 +1051,27 @@ int rliteAppendCommandClient(rliteClient *client) {
 #define COMMAND client->context->enqueuedCommands[client->context->enqueuedCommandsLength]
 			COMMAND->argc = client->argc;
 			COMMAND->argvlen = rl_malloc(sizeof(size_t) * client->argc);
+			if (!COMMAND->argvlen) {
+				retval = RL_OUT_OF_MEMORY;
+				__rliteSetError(client->context, RLITE_ERR_OOM, "Out of memory");
+				goto cleanup;
+			}
 			COMMAND->argv = rl_malloc(sizeof(char *) * client->argc);
+			if (!COMMAND->argv) {
+				rl_free(COMMAND->argvlen);
+				retval = RL_OUT_OF_MEMORY;
+				__rliteSetError(client->context, RLITE_ERR_OOM, "Out of memory");
+				goto cleanup;
+			}
 			for (i = 0; i < client->argc; i++) {
 				COMMAND->argvlen[i] = client->argvlen[i];
 				COMMAND->argv[i] = rl_malloc(sizeof(char) * (client->argvlen[i] + 1));
+				if (!COMMAND->argv[i]) {
+					// TODO free argv
+					retval = RL_OUT_OF_MEMORY;
+					__rliteSetError(client->context, RLITE_ERR_OOM, "Out of memory");
+					goto cleanup;
+				}
 				memcpy(COMMAND->argv[i], client->argv[i], client->argvlen[i]);
 				COMMAND->argv[i][client->argvlen[i]] = 0;
 			}
