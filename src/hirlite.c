@@ -115,6 +115,17 @@ rliteReply *createStringObject(const char *str, const int len) {
 	return createStringTypeObject(RLITE_REPLY_STRING, str, len);
 }
 
+/**
+ * Creates a string reply, taking ownership of a pre-existent pointer.
+ * The pointer will be free'd once the reply is free'd.
+ */
+static rliteReply *createTakeStringObject(char *str, int len) {
+	rliteReply *reply = createReplyObject(RLITE_REPLY_STRING);
+	reply->str = str;
+	reply->len = len;
+	return reply;
+}
+
 rliteReply *createCStringObject(const char *str) {
 	return createStringObject(str, strlen(str));
 }
@@ -161,13 +172,12 @@ static void addZsetIteratorReply(rliteClient *c, int retval, rl_zset_iterator *i
 	c->reply->element = malloc(sizeof(rliteReply*) * c->reply->elements);
 	i = 0;
 	while ((retval = rl_zset_iterator_next(iterator, NULL, withscores ? &score : NULL, &vstr, &vlen)) == RL_OK) {
-		c->reply->element[i] = createStringObject((char *)vstr, vlen);
+		c->reply->element[i] = createTakeStringObject((char *)vstr, vlen);
 		i++;
 		if (withscores) {
 			c->reply->element[i] = createDoubleObject(score);
 			i++;
 		}
-		rl_free(vstr);
 	}
 
 	if (retval != RL_END) {
