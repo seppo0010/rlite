@@ -189,7 +189,7 @@ int rl_btree_destroy(rlite *UNUSED(db), void *btree)
 	return RL_OK;
 }
 
-int rl_btree_find_score(rlite *db, rl_btree *btree, void *score, void **value, rl_btree_node *** nodes, long **positions)
+int rl_btree_find_score(rlite *db, rl_btree *btree, void *score, void **value, rl_btree_node ** nodes, long *positions)
 {
 	if ((!nodes && positions) || (nodes && !positions)) {
 		return RL_INVALID_PARAMETERS;
@@ -202,7 +202,7 @@ int rl_btree_find_score(rlite *db, rl_btree *btree, void *score, void **value, r
 	int cmp = 0;
 	for (i = 0; i < btree->height; i++) {
 		if (nodes) {
-			(*nodes)[i] = node;
+			nodes[i] = node;
 		}
 		pos = 0;
 		min = 0;
@@ -216,10 +216,10 @@ int rl_btree_find_score(rlite *db, rl_btree *btree, void *score, void **value, r
 				}
 				if (nodes) {
 					if (positions) {
-						(*positions)[i] = pos;
+						positions[i] = pos;
 					}
 					for (i++; i < btree->height; i++) {
-						(*nodes)[i] = NULL;
+						nodes[i] = NULL;
 					}
 				}
 				retval = RL_FOUND;
@@ -247,7 +247,7 @@ int rl_btree_find_score(rlite *db, rl_btree *btree, void *score, void **value, r
 			if (pos == max && btree->type->cmp(score, node->scores[pos]) == 1) {
 				pos++;
 			}
-			(*positions)[i] = pos;
+			positions[i] = pos;
 		}
 		if (node->children) {
 			RL_CALL(rl_read, RL_FOUND, db, btree->type->btree_node_type, node->children[pos], btree, &_node, 1);
@@ -312,7 +312,7 @@ int rl_btree_add_element(rlite *db, rl_btree *btree, long btree_page, void *scor
 	long i, pos;
 	long node_page = 0;
 	long child = -1;
-	RL_CALL(rl_btree_find_score, RL_NOT_FOUND, db, btree, score, NULL, &nodes, &positions);
+	RL_CALL(rl_btree_find_score, RL_NOT_FOUND, db, btree, score, NULL, nodes, positions);
 	retval = RL_OK;
 	rl_btree_node *node = NULL;
 	for (i = btree->height - 1; i >= 0; i--) {
@@ -470,7 +470,7 @@ int rl_btree_update_element(rlite *db, rl_btree *btree, void *score, void *value
 	RL_MALLOC(positions, sizeof(long) * btree->height);
 	long i;
 	long node_page;
-	RL_CALL(rl_btree_find_score, RL_FOUND, db, btree, score, NULL, &nodes, &positions);
+	RL_CALL(rl_btree_find_score, RL_FOUND, db, btree, score, NULL, nodes, positions);
 
 	rl_btree_node *node;
 	for (i = btree->height - 1; i >= 0; i--) {
@@ -508,7 +508,7 @@ int rl_btree_remove_element(struct rlite *db, rl_btree *btree, long btree_page, 
 	RL_MALLOC(positions, sizeof(long) * btree->height);
 	long i, j;
 	long node_page = 0, child_node_page, sibling_node_page, parent_node_page;
-	RL_CALL(rl_btree_find_score, RL_FOUND, db, btree, score, NULL, &nodes, &positions);
+	RL_CALL(rl_btree_find_score, RL_FOUND, db, btree, score, NULL, nodes, positions);
 	retval = RL_OK;
 
 	rl_btree_node *node, *parent_node, *sibling_node, *child_node;
