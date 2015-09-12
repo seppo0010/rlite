@@ -1890,11 +1890,10 @@ static void hdelCommand(rliteClient *c) {
 		memberslen[j - 2] = c->argvlen[j];
 	}
 	retval = rl_hdel(c->context->db, key, keylen, c->argc - 2, (unsigned char **)&c->argv[2], memberslen, &delcount);
-	rl_free(memberslen);
 	RLITE_SERVER_ERR(c, retval);
 	c->reply = createLongLongObject(delcount);
 cleanup:
-	return;
+	rl_free(memberslen);
 }
 
 static void hlenCommand(rliteClient *c) {
