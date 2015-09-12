@@ -3629,7 +3629,7 @@ static void pubsubVarargCommandProcessed(rliteClient *c, const char *type, int a
 	int subscribing = !strcasecmp(type, "subscribe") || !strcasecmp(type, "psubscribe");
 	rl_pubsub_count_subscriptions(c->context->db, &count);
 	for (i = 0; i < argc; i++) {
-		rliteReply *reply = createArrayObject(3);;
+		rliteReply *reply = createArrayObject(3);
 		if (reply) {
 			reply->element[0] = createCStringObject(type);
 			reply->element[1] = createStringObject((char *)args[i], argslen[i]);
