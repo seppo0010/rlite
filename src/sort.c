@@ -220,8 +220,8 @@ int rl_sort(struct rlite *db, unsigned char *key, long keylen, unsigned char *so
 	/* Lookup the key to sort. It must be of the right types */
 	unsigned char type;
 	long objc;
-	unsigned char **objv;
-	long *objvlen;
+	unsigned char **objv = NULL;
+	long *objvlen = NULL;
 
 	if (storekey) {
 		RL_CALL2(rl_key_delete_with_value, RL_OK, RL_NOT_FOUND, db, storekey, storekeylen);
@@ -456,17 +456,8 @@ int rl_sort(struct rlite *db, unsigned char *key, long keylen, unsigned char *so
 	/* Send command output to the output buffer, performing the specified
 	 * GET/DEL/INCR/DECR operations if any. */
 	objc = getc ? getc*(end-start+1) : end-start+1;
-	objv = rl_malloc(sizeof(unsigned char *) * objc);
-	if (!objv) {
-		retval = RL_OUT_OF_MEMORY;
-		goto cleanup;
-	}
-	objvlen = rl_malloc(sizeof(long) * objc);
-	if (!objvlen) {
-		rl_free(objv);
-		retval = RL_OUT_OF_MEMORY;
-		goto cleanup;
-	}
+	RL_MALLOC(objv, sizeof(unsigned char *) * objc);
+	RL_MALLOC(objvlen, sizeof(long) * objc);
 
 	for (i = 0, j = start; j <= end; j++) {
 		if (getc) {
@@ -492,6 +483,8 @@ int rl_sort(struct rlite *db, unsigned char *key, long keylen, unsigned char *so
 		}
 		rl_free(objv);
 		rl_free(objvlen);
+		objv = NULL;
+		objvlen = NULL;
 	} else {
 		*retobjv = objv;
 		*retobjvlen = objvlen;
@@ -521,6 +514,8 @@ cleanup:
 			}
 		}
 		*retobjc = 0;
+		rl_free(objv);
+		rl_free(objvlen);
 	}
 	rl_free(vector);
 	rl_free(values);
