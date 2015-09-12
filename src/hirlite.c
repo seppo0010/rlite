@@ -19,6 +19,25 @@
 
 #define UNSIGN(val) ((unsigned char *)val)
 
+#define CHECK_END()\
+	if (retval != RL_END) {\
+		__rliteSetError(c->context, RLITE_ERR, "Unexpected early end");\
+		goto cleanup;\
+	}
+
+#define CHECK_OOM_ELSE(item, els)\
+	if (!(item)) {\
+		els;\
+		__rliteSetError(c->context,RLITE_ERR_OOM,"Out of memory");\
+		retval = RL_OUT_OF_MEMORY;\
+		goto cleanup;\
+	}
+
+#define CHECK_OOM(item) CHECK_OOM_ELSE(item, );
+
+#define MALLOC(target, size)\
+	CHECK_OOM(target = rl_malloc(size));
+
 #define RLITE_SERVER_ERR(c, retval)\
 	if (retval == RL_WRONG_TYPE) {\
 		c->reply = createErrorObject(RLITE_WRONGTYPEERR);\
@@ -163,45 +182,24 @@ static void addZsetIteratorReply(rliteClient *c, int retval, rl_zset_iterator *i
 	long vlen, i;
 	double score;
 
-	c->reply = createReplyObject(RLITE_REPLY_ARRAY);
-	if (!c->reply) {
-		__rliteSetError(c->context,RLITE_ERR_OOM,"Out of memory");
-		goto cleanup;
-	}
+	CHECK_OOM(c->reply = createReplyObject(RLITE_REPLY_ARRAY));
 	if (retval == RL_NOT_FOUND) {
 		c->reply->elements = 0;
 		return;
 	}
 	c->reply->elements = withscores ? (iterator->size * 2) : iterator->size;
-	c->reply->element = rl_malloc(sizeof(rliteReply*) * c->reply->elements);
-	if (!c->reply->element) {
-		c->reply->elements = 0;
-		rliteFreeReplyObject(c);
-		__rliteSetError(c->context,RLITE_ERR_OOM,"Out of memory");
-		goto cleanup;
-	}
+	MALLOC(c->reply->element, sizeof(rliteReply*) * c->reply->elements);
 	i = 0;
 	while ((retval = rl_zset_iterator_next(iterator, NULL, withscores ? &score : NULL, &vstr, &vlen)) == RL_OK) {
-		c->reply->element[i] = createTakeStringObject((char *)vstr, vlen);
-		if (!c->reply->element[i]) {
-			__rliteSetError(c->context,RLITE_ERR_OOM,"Out of memory");
-			goto cleanup;
-		}
+		CHECK_OOM(c->reply->element[i] = createTakeStringObject((char *)vstr, vlen));
 		i++;
 		if (withscores) {
-			c->reply->element[i] = createDoubleObject(score);
-			if (!c->reply->element[i]) {
-				__rliteSetError(c->context,RLITE_ERR_OOM,"Out of memory");
-				goto cleanup;
-			}
+			CHECK_OOM(c->reply->element[i] = createDoubleObject(score));
 			i++;
 		}
 	}
 
-	if (retval != RL_END) {
-		__rliteSetError(c->context, RLITE_ERR, "Unexpected early end");
-		goto cleanup;
-	}
+	CHECK_END();
 	iterator = NULL;
 cleanup:
 	if (iterator) {
@@ -848,7 +846,7 @@ static void execCommand(rliteClient *c) {
 		return;
 	}
 	c->reply->elements = c->context->enqueuedCommandsLength;
-	c->reply->element = rl_malloc(sizeof(rliteReply*) * c->reply->elements);
+	MALLOC(c->reply->element, sizeof(rliteReply*) * c->reply->elements);
 	rliteClient *client;
 	struct rliteCommand *command;
 	for (i = 0; i < c->reply->elements; i++) {
@@ -923,12 +921,8 @@ static void watchCommand(rliteClient *c) {
 		while (newAlloc < watchc + c->context->watchedKeysLength) {
 			newAlloc *= 2;
 		}
-		tmp = rl_realloc(c->context->watchedKeys, sizeof(struct watched_key*) * newAlloc);
-		if (tmp == NULL) {
-			c->reply = NULL;
-			__rliteSetError(c->context, RLITE_ERR_OOM, "Out of memory");
-			return;
-		}
+		CHECK_OOM_ELSE(tmp = rl_realloc(c->context->watchedKeys, sizeof(struct watched_key*) * newAlloc),
+				c->reply = NULL);
 		c->context->watchedKeysAlloc = newAlloc;
 		c->context->watchedKeys = tmp;
 	}
@@ -1005,100 +999,76 @@ static void flagTransactions(rliteClient *c) {
 	}
 }
 
-int rliteAppendCommandClient(rliteClient *client) {
-	if (client->argc == 0) {
+int rliteAppendCommandClient(rliteClient *c) {
+	if (c->argc == 0) {
 		return RLITE_ERR;
 	}
 
 	unsigned char *oldhash = NULL, *newhash = NULL;
 	void *tmp;
 	size_t newAlloc;
-	struct rliteCommand *command = rliteLookupCommand(client->argv[0], client->argvlen[0]);
+	struct rliteCommand *command = rliteLookupCommand(c->argv[0], c->argvlen[0]);
 	int i, retval = RLITE_OK;
 	if (!command) {
-		retval = addReplyErrorFormat(client->context, "unknown command '%s'", (char*)client->argv[0]);
-		flagTransactions(client);
-	} else if ((command->arity > 0 && command->arity != client->argc) ||
-		(client->argc < -command->arity)) {
-		retval = addReplyErrorFormat(client->context, "wrong number of arguments for '%s' command", command->name);
-		flagTransactions(client);
+		retval = addReplyErrorFormat(c->context, "unknown command '%s'", (char*)c->argv[0]);
+		flagTransactions(c);
+	} else if ((command->arity > 0 && command->arity != c->argc) ||
+		(c->argc < -command->arity)) {
+		retval = addReplyErrorFormat(c->context, "wrong number of arguments for '%s' command", command->name);
+		flagTransactions(c);
 	} else {
-		RL_CALL(refresh_rlite_fp, RL_OK, client->context);
+		RL_CALL(refresh_rlite_fp, RL_OK, c->context);
 
-		if (client->context->inTransaction && (command->proc != execCommand && command->proc != discardCommand &&
+		if (c->context->inTransaction && (command->proc != execCommand && command->proc != discardCommand &&
 					command->proc != multiCommand && command->proc != watchCommand)) {
-			if (client->context->enqueuedCommandsLength == client->context->enqueuedCommandsAlloc) {
-				newAlloc = client->context->enqueuedCommandsAlloc * 2;
+			if (c->context->enqueuedCommandsLength == c->context->enqueuedCommandsAlloc) {
+				newAlloc = c->context->enqueuedCommandsAlloc * 2;
 				if (newAlloc == 0) {
 					newAlloc = 4;
 				}
-				tmp = rl_realloc(client->context->enqueuedCommands, sizeof(rliteClient *) * newAlloc);
-				if (!tmp) {
-					retval = RL_OUT_OF_MEMORY;
-					__rliteSetError(client->context, RLITE_ERR_OOM, "Out of memory");
-					goto cleanup;
-				}
-				client->context->enqueuedCommands = tmp;
-				client->context->enqueuedCommandsAlloc = newAlloc;
-			}
-			client->context->enqueuedCommands[client->context->enqueuedCommandsLength] = rl_malloc(sizeof(rliteClient));
-			client->context->enqueuedCommands[client->context->enqueuedCommandsLength]->flags = 0;
-			if (!client->context->enqueuedCommands[client->context->enqueuedCommandsLength]) {
-				retval = RL_OUT_OF_MEMORY;
-				__rliteSetError(client->context, RLITE_ERR_OOM, "Out of memory");
-				goto cleanup;
-			}
-#define COMMAND client->context->enqueuedCommands[client->context->enqueuedCommandsLength]
-			COMMAND->argc = client->argc;
-			COMMAND->argvlen = rl_malloc(sizeof(size_t) * client->argc);
-			if (!COMMAND->argvlen) {
-				retval = RL_OUT_OF_MEMORY;
-				__rliteSetError(client->context, RLITE_ERR_OOM, "Out of memory");
-				goto cleanup;
-			}
-			COMMAND->argv = rl_malloc(sizeof(char *) * client->argc);
-			if (!COMMAND->argv) {
-				rl_free(COMMAND->argvlen);
-				retval = RL_OUT_OF_MEMORY;
-				__rliteSetError(client->context, RLITE_ERR_OOM, "Out of memory");
-				goto cleanup;
-			}
-			for (i = 0; i < client->argc; i++) {
-				COMMAND->argvlen[i] = client->argvlen[i];
-				COMMAND->argv[i] = rl_malloc(sizeof(char) * (client->argvlen[i] + 1));
-				if (!COMMAND->argv[i]) {
-					// TODO free argv
-					retval = RL_OUT_OF_MEMORY;
-					__rliteSetError(client->context, RLITE_ERR_OOM, "Out of memory");
-					goto cleanup;
-				}
-				memcpy(COMMAND->argv[i], client->argv[i], client->argvlen[i]);
-				COMMAND->argv[i][client->argvlen[i]] = 0;
+				CHECK_OOM(tmp = rl_realloc(c->context->enqueuedCommands, sizeof(rliteClient *) * newAlloc));
+				c->context->enqueuedCommands = tmp;
+				c->context->enqueuedCommandsAlloc = newAlloc;
 			}
 
-			client->context->enqueuedCommands[client->context->enqueuedCommandsLength]->context = client->context;
-			client->context->enqueuedCommandsLength++;
-			client->reply = createStatusObject(RLITE_QUEUED);
-			retval = addReply(client->context, client->reply);
+			MALLOC(c->context->enqueuedCommands[c->context->enqueuedCommandsLength], sizeof(rliteClient));
+			c->context->enqueuedCommands[c->context->enqueuedCommandsLength]->flags = 0;
+#define COMMAND c->context->enqueuedCommands[c->context->enqueuedCommandsLength]
+			COMMAND->argc = c->argc;
+			MALLOC(COMMAND->argvlen, sizeof(size_t) * c->argc);
+			CHECK_OOM_ELSE(COMMAND->argv = rl_malloc(sizeof(char *) * c->argc),
+					rl_free(COMMAND->argvlen));
+			for (i = 0; i < c->argc; i++) {
+				COMMAND->argvlen[i] = c->argvlen[i];
+				// TODO free argv
+				MALLOC(COMMAND->argv[i], sizeof(char) * (c->argvlen[i] + 1));
+				memcpy(COMMAND->argv[i], c->argv[i], c->argvlen[i]);
+				COMMAND->argv[i][c->argvlen[i]] = 0;
+			}
+
+			c->context->enqueuedCommands[c->context->enqueuedCommandsLength]->context = c->context;
+			c->context->enqueuedCommandsLength++;
+			c->reply = createStatusObject(RLITE_QUEUED);
+			retval = addReply(c->context, c->reply);
 		} else {
-			client->reply = NULL;
+			c->reply = NULL;
 
-			if (client->context->writeCommand) {
-				RL_CALL(rl_dirty_hash, RL_OK, client->context->db, &oldhash);
+			if (c->context->writeCommand) {
+				RL_CALL(rl_dirty_hash, RL_OK, c->context->db, &oldhash);
 			}
 
-			command->proc(client);
-			if (client->reply) {
-				retval = addReply(client->context, client->reply);
+			command->proc(c);
+			if (c->reply) {
+				retval = addReply(c->context, c->reply);
 			}
 
-			if (client->context->writeCommand) {
-				RL_CALL(rl_dirty_hash, RL_OK, client->context->db, &newhash);
+			if (c->context->writeCommand) {
+				RL_CALL(rl_dirty_hash, RL_OK, c->context->db, &newhash);
 				if (newhash && (!oldhash || memcmp(newhash, oldhash, 20) != 0)) {
-					client->context->writeCommand(rl_get_selected_db(client->context->db), client->argc, client->argv, client->argvlen);
+					c->context->writeCommand(rl_get_selected_db(c->context->db), c->argc, c->argv, c->argvlen);
 				}
 			}
-			RL_CALL(rl_commit, RL_OK, client->context->db);
+			RL_CALL(rl_commit, RL_OK, c->context->db);
 		}
 	}
 cleanup:
@@ -1193,6 +1163,7 @@ static void zaddGenericCommand(rliteClient *c, int incr) {
 	double score = 0, *scores = NULL;
 	int j, elements = (c->argc - 2) / 2;
 	int added = 0;
+	int retval;
 
 	if (c->argc % 2) {
 		c->reply = createErrorObject(RLITE_SYNTAXERR);
@@ -1202,17 +1173,12 @@ static void zaddGenericCommand(rliteClient *c, int incr) {
 	/* Start parsing all the scores, we need to emit any syntax error
 	 * before executing additions to the sorted set, as the command should
 	 * either execute fully or nothing at all. */
-	scores = rl_malloc(sizeof(double) * elements);
-	if (!scores) {
-		__rliteSetError(c->context, RLITE_ERR_OOM, "Out of memory");
-		goto cleanup;
-	}
+	MALLOC(scores, sizeof(double) * elements);
 	for (j = 0; j < elements; j++) {
 		if (getDoubleFromObjectOrReply(c, c->argv[2+j*2], c->argvlen[2+j*2], &scores[j],NULL)
 			!= RLITE_OK) goto cleanup;
 	}
 
-	int retval;
 	for (j = 0; j < elements; j++) {
 		score = scores[j];
 		if (incr) {
@@ -1276,18 +1242,16 @@ static void zremCommand(rliteClient *c) {
 	const size_t keylen = c->argvlen[1];
 	long deleted = 0;
 	int j;
+	int retval;
 
 	// memberslen needs long, we have size_t (unsigned long)
 	// it would be great not to need this
-	long *memberslen = rl_malloc(sizeof(long) * (c->argc - 2));
-	if (!memberslen) {
-		__rliteSetError(c->context, RLITE_ERR_OOM, "Out of memory");
-		goto cleanup;
-	}
+	long *memberslen;
+	MALLOC(memberslen, sizeof(long) * (c->argc - 2));
 	for (j = 2; j < c->argc; j++) {
 		memberslen[j - 2] = c->argvlen[j];
 	}
-	int retval = rl_zrem(c->context->db, key, keylen, c->argc - 2, (unsigned char **)&c->argv[2], memberslen, &deleted);
+	retval = rl_zrem(c->context->db, key, keylen, c->argc - 2, (unsigned char **)&c->argv[2], memberslen, &deleted);
 	rl_free(memberslen);
 	RLITE_SERVER_ERR(c, retval);
 
@@ -1388,6 +1352,7 @@ static void zunionInterGenericCommand(rliteClient *c, int op) {
 	double *weights = NULL;
 	unsigned char **keys = NULL;
 	long *keys_len = NULL;
+	int retval;
 
 	/* expect setnum input keys to be given */
 	if ((getLongFromObjectOrReply(c, c->argv[2], c->argvlen[2], &setnum, NULL) != RLITE_OK))
@@ -1411,11 +1376,7 @@ static void zunionInterGenericCommand(rliteClient *c, int op) {
 				c->reply = createErrorObject(RLITE_SYNTAXERR);
 				return;
 			}
-			weights = rl_malloc(sizeof(double) * setnum);
-			if (!weights) {
-				__rliteSetError(c->context, RLITE_ERR_OOM, "Out of memory");
-				return;
-			}
+			MALLOC(weights, sizeof(double) * setnum);
 			for (i = 0; i < setnum; i++) {
 				if (getDoubleFromObjectOrReply(c,c->argv[j + 1 + i],c->argvlen[j + 1 + i], &weights[i],
 						"weight value is not a float") != RLITE_OK) {
@@ -1443,23 +1404,15 @@ static void zunionInterGenericCommand(rliteClient *c, int op) {
 		}
 	}
 
-	keys = rl_malloc(sizeof(unsigned char *) * (1 + setnum));
-	if (!keys) {
-		__rliteSetError(c->context, RLITE_ERR_OOM, "Out of memory");
-		goto cleanup;
-	}
-	keys_len = rl_malloc(sizeof(long) * (1 + setnum));
-	if (!keys_len) {
-		__rliteSetError(c->context, RLITE_ERR_OOM, "Out of memory");
-		goto cleanup;
-	}
+	MALLOC(keys, sizeof(unsigned char *) * (1 + setnum));
+	MALLOC(keys_len, sizeof(long) * (1 + setnum));
 	keys[0] = UNSIGN(c->argv[1]);
 	keys_len[0] = (long)c->argvlen[1];
 	for (i = 0; i < setnum; i++) {
 		keys[i + 1] = UNSIGN(c->argv[3 + i]);
 		keys_len[i + 1] = c->argvlen[3 + i];
 	}
-	int retval = (op == RLITE_OP_UNION ? rl_zunionstore : rl_zinterstore)(c->context->db, setnum + 1, keys, keys_len, weights, aggregate);
+	retval = (op == RLITE_OP_UNION ? rl_zunionstore : rl_zinterstore)(c->context->db, setnum + 1, keys, keys_len, weights, aggregate);
 	RLITE_SERVER_ERR(c, retval);
 	zcardCommand(c);
 cleanup:
@@ -1713,26 +1666,11 @@ static void hmsetCommand(rliteClient *c) {
 	unsigned char **values = NULL;
 	long *valueslen = NULL;
 
-	fields = rl_malloc(sizeof(unsigned char *) * fieldc);
-	if (!fields) {
-		__rliteSetError(c->context, RLITE_ERR_OOM, "Out of memory");
-		goto cleanup;
-	}
-	fieldslen = rl_malloc(sizeof(long) * fieldc);
-	if (!fieldslen) {
-		__rliteSetError(c->context, RLITE_ERR_OOM, "Out of memory");
-		goto cleanup;
-	}
-	values = rl_malloc(sizeof(unsigned char *) * fieldc);
-	if (!values) {
-		__rliteSetError(c->context, RLITE_ERR_OOM, "Out of memory");
-		goto cleanup;
-	}
-	valueslen = rl_malloc(sizeof(long) * fieldc);
-	if (!valueslen) {
-		__rliteSetError(c->context, RLITE_ERR_OOM, "Out of memory");
-		goto cleanup;
-	}
+	MALLOC(fields, sizeof(unsigned char *) * fieldc);
+	MALLOC(fieldslen, sizeof(long) * fieldc);
+	MALLOC(values, sizeof(unsigned char *) * fieldc);
+	MALLOC(valueslen, sizeof(long) * fieldc);
+
 	for (i = 0, j = 2; i < fieldc; i++) {
 		fields[i] = UNSIGN(c->argv[j]);
 		fieldslen[i] = c->argvlen[j++];
@@ -1806,11 +1744,7 @@ static void bitopCommand(rliteClient *c) {
 		return;
 	}
 
-	memberslen = rl_malloc(sizeof(long) * (c->argc - 2));
-	if (!memberslen) {
-		__rliteSetError(c->context, RLITE_ERR_OOM, "Out of memory");
-		goto cleanup;
-	}
+	MALLOC(memberslen, sizeof(long) * (c->argc - 2));
 	for (j = 3; j < c->argc; j++) {
 		memberslen[j - 3] = c->argvlen[j];
 	}
@@ -1881,11 +1815,8 @@ static void hdelCommand(rliteClient *c) {
 	int j, retval;
 	// memberslen needs long, we have size_t (unsigned long)
 	// it would be great not to need this
-	long *memberslen = rl_malloc(sizeof(long) * (c->argc - 2));
-	if (!memberslen) {
-		__rliteSetError(c->context, RLITE_ERR_OOM, "Out of memory");
-		goto cleanup;
-	}
+	long *memberslen;
+	MALLOC(memberslen, sizeof(long) * (c->argc - 2));
 	for (j = 2; j < c->argc; j++) {
 		memberslen[j - 2] = c->argvlen[j];
 	}
@@ -1963,12 +1894,7 @@ static void addHashIteratorReply(rliteClient *c, int retval, rl_hash_iterator *i
 		return;
 	}
 	c->reply->elements = iterator->size * (fields + values);
-	c->reply->element = rl_malloc(sizeof(rliteReply*) * c->reply->elements);
-	if (!c->reply->element) {
-		__rliteSetError(c->context, RLITE_ERR_OOM, "Out of memory");
-		retval = RL_OUT_OF_MEMORY;
-		goto cleanup;
-	}
+	MALLOC(c->reply->element, sizeof(rliteReply*) * c->reply->elements);
 	while ((retval = rl_hash_iterator_next(iterator,
 					NULL, fields ? &field : NULL, fields ? &fieldlen : NULL,
 					NULL, values ? &value : NULL, values ? &valuelen : NULL
@@ -1983,10 +1909,7 @@ static void addHashIteratorReply(rliteClient *c, int retval, rl_hash_iterator *i
 		}
 	}
 
-	if (retval != RL_END) {
-		__rliteSetError(c->context, RLITE_ERR, "Unexpected early end");
-		goto cleanup;
-	}
+	CHECK_END();
 	retval = RL_OK;
 cleanup:
 	if (retval != RL_OK) {
@@ -2038,46 +1961,37 @@ static void hmgetCommand(rliteClient *c) {
 	long *fieldslen = NULL;
 	unsigned char **values = NULL;
 	long *valueslen = NULL;
+	int retval;
 
-	fields = rl_malloc(sizeof(unsigned char *) * fieldc);
-	if (!fields) {
-		__rliteSetError(c->context, RLITE_ERR_OOM, "Out of memory");
-		goto cleanup;
-	}
-	fieldslen = rl_malloc(sizeof(long) * fieldc);
-	if (!fieldslen) {
-		__rliteSetError(c->context, RLITE_ERR_OOM, "Out of memory");
-		goto cleanup;
-	}
+	MALLOC(fields, sizeof(unsigned char *) * fieldc);
+	MALLOC(fieldslen, sizeof(long) * fieldc);
 	for (i = 0; i < fieldc; i++) {
 		fields[i] = (unsigned char *)c->argv[2 + i];
 		fieldslen[i] = (long)c->argvlen[2 + i];
 	}
 
-	int retval = rl_hmget(c->context->db, key, keylen, fieldc, fields, fieldslen, &values, &valueslen);
+	retval = rl_hmget(c->context->db, key, keylen, fieldc, fields, fieldslen, &values, &valueslen);
 	RLITE_SERVER_ERR(c, retval);
-	c->reply = createReplyObject(RLITE_REPLY_ARRAY);
-	if (!c->reply) {
-		__rliteSetError(c->context, RLITE_ERR_OOM, "Out of memory");
-		goto cleanup;
-	}
+	CHECK_OOM(c->reply = createReplyObject(RLITE_REPLY_ARRAY));
 	c->reply->elements = fieldc;
-	c->reply->element = rl_malloc(sizeof(rliteReply*) * c->reply->elements);
-	if (!c->reply->element) {
-		rl_free(c->reply);
-		c->reply = NULL;
-		__rliteSetError(c->context, RLITE_ERR_OOM, "Out of memory");
-		goto cleanup;
-	}
+	CHECK_OOM_ELSE(c->reply->element = rl_malloc(sizeof(rliteReply*) * c->reply->elements),
+			rl_free(c->reply); c->reply = NULL);
 
 	for (i = 0; i < fieldc; i++) {
 		if (retval == RL_NOT_FOUND || valueslen[i] < 0) {
-			c->reply->element[i] = createReplyObject(RLITE_REPLY_NIL);
+			CHECK_OOM(c->reply->element[i] = createReplyObject(RLITE_REPLY_NIL));
 		} else {
-			c->reply->element[i] = createTakeStringObject((char *)values[i], valueslen[i]);
+			CHECK_OOM(c->reply->element[i] = createTakeStringObject((char *)values[i], valueslen[i]));
 		}
 	}
 cleanup:
+	if (retval == RL_OUT_OF_MEMORY) {
+		for (;;i--) {
+			rliteFreeReplyObject(c->reply->element[i]);
+			if (i == 0) break;
+		}
+		c->reply = NULL;
+	}
 	rl_free(fields);
 	rl_free(fieldslen);
 	rl_free(values);
@@ -2088,27 +2002,19 @@ static void saddCommand(rliteClient *c) {
 	unsigned char *key = UNSIGN(c->argv[1]);
 	size_t keylen = c->argvlen[1];
 
-	int i, memberc = c->argc - 2;
+	int retval, i, memberc = c->argc - 2;
 	unsigned char **members = NULL;
 	long *memberslen = NULL;
 	long count;
 
-	members = rl_malloc(sizeof(unsigned char *) * memberc);
-	if (!members) {
-		__rliteSetError(c->context, RLITE_ERR_OOM, "Out of memory");
-		goto cleanup;
-	}
-	memberslen = rl_malloc(sizeof(long) * memberc);
-	if (!memberslen) {
-		__rliteSetError(c->context, RLITE_ERR_OOM, "Out of memory");
-		goto cleanup;
-	}
+	MALLOC(members, sizeof(unsigned char *) * memberc);
+	MALLOC(memberslen, sizeof(long) * memberc);
 	for (i = 0; i < memberc; i++) {
 		members[i] = (unsigned char *)c->argv[2 + i];
 		memberslen[i] = (long)c->argvlen[2 + i];
 	}
 
-	int retval = rl_sadd(c->context->db, key, keylen, memberc, members, memberslen, &count);
+	retval = rl_sadd(c->context->db, key, keylen, memberc, members, memberslen, &count);
 	RLITE_SERVER_ERR(c, retval);
 	c->reply = createLongLongObject(count);
 cleanup:
@@ -2179,7 +2085,7 @@ static void srandmemberCommand(rliteClient *c) {
 		} else {
 			c->reply = createReplyObject(RLITE_REPLY_ARRAY);
 			c->reply->elements = count;
-			c->reply->element = rl_malloc(sizeof(rliteReply*) * count);
+			MALLOC(c->reply->element, sizeof(rliteReply*) * count);
 			for (i = 0; i < count; i++) {
 				c->reply->element[i] = createStringObject((char *)members[i], memberslen[i]);
 			}
@@ -2201,27 +2107,19 @@ static void sremCommand(rliteClient *c) {
 	unsigned char *key = UNSIGN(c->argv[1]);
 	size_t keylen = c->argvlen[1];
 
-	int i, memberc = c->argc - 2;
+	int retval, i, memberc = c->argc - 2;
 	unsigned char **members = NULL;
 	long *memberslen = NULL;
 	long count;
 
-	members = rl_malloc(sizeof(unsigned char *) * memberc);
-	if (!members) {
-		__rliteSetError(c->context, RLITE_ERR_OOM, "Out of memory");
-		goto cleanup;
-	}
-	memberslen = rl_malloc(sizeof(long) * memberc);
-	if (!memberslen) {
-		__rliteSetError(c->context, RLITE_ERR_OOM, "Out of memory");
-		goto cleanup;
-	}
+	MALLOC(members, sizeof(unsigned char *) * memberc);
+	MALLOC(memberslen, sizeof(long) * memberc);
 	for (i = 0; i < memberc; i++) {
 		members[i] = (unsigned char *)c->argv[2 + i];
 		memberslen[i] = (long)c->argvlen[2 + i];
 	}
 
-	int retval = rl_srem(c->context->db, key, keylen, memberc, members, memberslen, &count);
+	retval = rl_srem(c->context->db, key, keylen, memberc, members, memberslen, &count);
 	RLITE_SERVER_ERR(c, retval);
 	c->reply = createLongLongObject(count);
 cleanup:
@@ -2234,16 +2132,8 @@ static void sinterCommand(rliteClient *c) {
 	unsigned char **keys = NULL, **members = NULL;
 	long *keyslen = NULL, j, membersc, *memberslen = NULL;
 
-	keys = rl_malloc(sizeof(unsigned char *) * keyc);
-	if (!keys) {
-		__rliteSetError(c->context, RLITE_ERR_OOM, "Out of memory");
-		goto cleanup;
-	}
-	keyslen = rl_malloc(sizeof(long) * keyc);
-	if (!keyslen) {
-		__rliteSetError(c->context, RLITE_ERR_OOM, "Out of memory");
-		goto cleanup;
-	}
+	MALLOC(keys, sizeof(unsigned char *) * keyc);
+	MALLOC(keyslen, sizeof(long) * keyc);
 	for (i = 0; i < keyc; i++) {
 		keys[i] = UNSIGN(c->argv[1 + i]);
 		keyslen[i] = c->argvlen[1 + i];
@@ -2253,12 +2143,8 @@ static void sinterCommand(rliteClient *c) {
 	c->reply = createReplyObject(RLITE_REPLY_ARRAY);
 	c->reply->elements = membersc;
 	if (membersc > 0) {
-		c->reply->element = rl_malloc(sizeof(rliteReply*) * membersc);
-		if (!c->reply->element) {
-			rl_free(c->reply);
-			__rliteSetError(c->context, RLITE_ERR_OOM, "Out of memory");
-			goto cleanup;
-		}
+		CHECK_OOM_ELSE(c->reply->element = rl_malloc(sizeof(rliteReply*) * membersc),
+				rl_free(c->reply); c->reply = NULL);
 		for (j = 0; j < membersc; j++) {
 			c->reply->element[j] = createStringObject((char *)members[j], memberslen[j]);
 		}
@@ -2283,16 +2169,8 @@ static void sinterstoreCommand(rliteClient *c) {
 	unsigned char *target = UNSIGN(c->argv[1]);
 	long targetlen = c->argvlen[1];
 
-	keys = rl_malloc(sizeof(unsigned char *) * keyc);
-	if (!keys) {
-		__rliteSetError(c->context, RLITE_ERR_OOM, "Out of memory");
-		goto cleanup;
-	}
-	keyslen = rl_malloc(sizeof(long) * keyc);
-	if (!keyslen) {
-		__rliteSetError(c->context, RLITE_ERR_OOM, "Out of memory");
-		goto cleanup;
-	}
+	MALLOC(keys, sizeof(unsigned char *) * keyc);
+	MALLOC(keyslen, sizeof(long) * keyc);
 	for (i = 0; i < keyc; i++) {
 		keys[i] = UNSIGN(c->argv[2 + i]);
 		keyslen[i] = c->argvlen[2 + i];
@@ -2311,16 +2189,8 @@ static void sunionCommand(rliteClient *c) {
 	unsigned char **keys = NULL, **members = NULL;
 	long *keyslen = NULL, j, membersc, *memberslen = NULL;
 
-	keys = rl_malloc(sizeof(unsigned char *) * keyc);
-	if (!keys) {
-		__rliteSetError(c->context, RLITE_ERR_OOM, "Out of memory");
-		goto cleanup;
-	}
-	keyslen = rl_malloc(sizeof(long) * keyc);
-	if (!keyslen) {
-		__rliteSetError(c->context, RLITE_ERR_OOM, "Out of memory");
-		goto cleanup;
-	}
+	MALLOC(keys, sizeof(unsigned char *) * keyc);
+	MALLOC(keyslen, sizeof(long) * keyc);
 	for (i = 0; i < keyc; i++) {
 		keys[i] = UNSIGN(c->argv[1 + i]);
 		keyslen[i] = c->argvlen[1 + i];
@@ -2330,12 +2200,8 @@ static void sunionCommand(rliteClient *c) {
 	c->reply = createReplyObject(RLITE_REPLY_ARRAY);
 	c->reply->elements = membersc;
 	if (membersc > 0) {
-		c->reply->element = rl_malloc(sizeof(rliteReply*) * membersc);
-		if (!c->reply->element) {
-			rl_free(c->reply);
-			__rliteSetError(c->context, RLITE_ERR_OOM, "Out of memory");
-			goto cleanup;
-		}
+		CHECK_OOM_ELSE(c->reply->element = rl_malloc(sizeof(rliteReply*) * membersc),
+				rl_free(c->reply); c->reply = NULL);
 		for (j = 0; j < membersc; j++) {
 			c->reply->element[j] = createStringObject((char *)members[j], memberslen[j]);
 		}
@@ -2360,16 +2226,8 @@ static void sunionstoreCommand(rliteClient *c) {
 	unsigned char *target = UNSIGN(c->argv[1]);
 	long targetlen = c->argvlen[1];
 
-	keys = rl_malloc(sizeof(unsigned char *) * keyc);
-	if (!keys) {
-		__rliteSetError(c->context, RLITE_ERR_OOM, "Out of memory");
-		goto cleanup;
-	}
-	keyslen = rl_malloc(sizeof(long) * keyc);
-	if (!keyslen) {
-		__rliteSetError(c->context, RLITE_ERR_OOM, "Out of memory");
-		goto cleanup;
-	}
+	MALLOC(keys, sizeof(unsigned char *) * keyc);
+	MALLOC(keyslen, sizeof(long) * keyc);
 	for (i = 0; i < keyc; i++) {
 		keys[i] = UNSIGN(c->argv[2 + i]);
 		keyslen[i] = c->argvlen[2 + i];
@@ -2388,16 +2246,8 @@ static void sdiffCommand(rliteClient *c) {
 	unsigned char **keys = NULL, **members = NULL;
 	long *keyslen = NULL, j, membersc, *memberslen = NULL;
 
-	keys = rl_malloc(sizeof(unsigned char *) * keyc);
-	if (!keys) {
-		__rliteSetError(c->context, RLITE_ERR_OOM, "Out of memory");
-		goto cleanup;
-	}
-	keyslen = rl_malloc(sizeof(long) * keyc);
-	if (!keyslen) {
-		__rliteSetError(c->context, RLITE_ERR_OOM, "Out of memory");
-		goto cleanup;
-	}
+	MALLOC(keys, sizeof(unsigned char *) * keyc);
+	MALLOC(keyslen, sizeof(long) * keyc);
 	for (i = 0; i < keyc; i++) {
 		keys[i] = UNSIGN(c->argv[1 + i]);
 		keyslen[i] = c->argvlen[1 + i];
@@ -2407,14 +2257,10 @@ static void sdiffCommand(rliteClient *c) {
 	c->reply = createReplyObject(RLITE_REPLY_ARRAY);
 	c->reply->elements = membersc;
 	if (membersc > 0) {
-		c->reply->element = rl_malloc(sizeof(rliteReply*) * membersc);
-		if (!c->reply->element) {
-			rl_free(c->reply);
-			__rliteSetError(c->context, RLITE_ERR_OOM, "Out of memory");
-			goto cleanup;
-		}
+		CHECK_OOM_ELSE(c->reply->element = rl_malloc(sizeof(rliteReply*) * membersc),
+				rl_free(c->reply); c->reply = NULL);
 		for (j = 0; j < membersc; j++) {
-			c->reply->element[j] = createStringObject((char *)members[j], memberslen[j]);
+			CHECK_OOM(c->reply->element[j] = createStringObject((char *)members[j], memberslen[j]));
 		}
 	}
 cleanup:
@@ -2437,16 +2283,8 @@ static void sdiffstoreCommand(rliteClient *c) {
 	unsigned char *target = UNSIGN(c->argv[1]);
 	long targetlen = c->argvlen[1];
 
-	keys = rl_malloc(sizeof(unsigned char *) * keyc);
-	if (!keys) {
-		__rliteSetError(c->context, RLITE_ERR_OOM, "Out of memory");
-		goto cleanup;
-	}
-	keyslen = rl_malloc(sizeof(long) * keyc);
-	if (!keyslen) {
-		__rliteSetError(c->context, RLITE_ERR_OOM, "Out of memory");
-		goto cleanup;
-	}
+	MALLOC(keys, sizeof(unsigned char *) * keyc);
+	MALLOC(keyslen, sizeof(long) * keyc);
 	for (i = 0; i < keyc; i++) {
 		keys[i] = UNSIGN(c->argv[2 + i]);
 		keyslen[i] = c->argvlen[2 + i];
@@ -2464,27 +2302,19 @@ static void pushGenericCommand(rliteClient *c, int create, int left) {
 	unsigned char *key = UNSIGN(c->argv[1]);
 	size_t keylen = c->argvlen[1];
 
-	int i, valuec = c->argc - 2;
+	int retval, i, valuec = c->argc - 2;
 	unsigned char **values = NULL;
 	long *valueslen = NULL;
 	long count;
 
-	values = rl_malloc(sizeof(unsigned char *) * valuec);
-	if (!values) {
-		__rliteSetError(c->context, RLITE_ERR_OOM, "Out of memory");
-		goto cleanup;
-	}
-	valueslen = rl_malloc(sizeof(long) * valuec);
-	if (!valueslen) {
-		__rliteSetError(c->context, RLITE_ERR_OOM, "Out of memory");
-		goto cleanup;
-	}
+	MALLOC(values, sizeof(unsigned char *) * valuec);
+	MALLOC(valueslen, sizeof(long) * valuec);
 	for (i = 0; i < valuec; i++) {
 		values[i] = (unsigned char *)c->argv[2 + i];
 		valueslen[i] = (long)c->argvlen[2 + i];
 	}
 
-	int retval = rl_push(c->context->db, key, keylen, create, left, valuec, values, valueslen, &count);
+	retval = rl_push(c->context->db, key, keylen, create, left, valuec, values, valueslen, &count);
 	if (retval == RL_NOT_FOUND) {
 		c->reply = createLongLongObject(0);
 	} else {
@@ -2604,13 +2434,13 @@ static void lrangeCommand(rliteClient *c) {
 
 	int retval = rl_lrange(c->context->db, key, keylen, start, stop, &size, &values, &valueslen);
 	RLITE_SERVER_ERR(c, retval);
-	c->reply = createReplyObject(RLITE_REPLY_ARRAY);
+	CHECK_OOM(c->reply = createReplyObject(RLITE_REPLY_ARRAY));
 	if (retval == RL_NOT_FOUND) {
 		c->reply->elements = 0;
 		return;
 	}
 	c->reply->elements = size;
-	c->reply->element = rl_malloc(sizeof(rliteReply*) * c->reply->elements);
+	MALLOC(c->reply->element, sizeof(rliteReply*) * c->reply->elements);
 	for (i = 0; i < size; i++) {
 		c->reply->element[i] = createStringObject((char *)values[i], valueslen[i]);
 	}
@@ -2874,13 +2704,8 @@ static void mgetCommand(rliteClient *c) {
 
 	c->reply = createReplyObject(RLITE_REPLY_ARRAY);
 	c->reply->elements = keyc;
-	c->reply->element = rl_malloc(sizeof(rliteReply*) * c->reply->elements);
-	if (!c->reply->element) {
-		rl_free(c->reply);
-		c->reply = NULL;
-		__rliteSetError(c->context, RLITE_ERR_OOM, "Out of memory");
-		goto cleanup;
-	}
+	CHECK_OOM_ELSE(c->reply->element = rl_malloc(sizeof(rliteReply*) * c->reply->elements),
+			rl_free(c->reply); c->reply = NULL);
 
 	for (i = 0; i < keyc; i++) {
 		key = (unsigned char *)c->argv[1 + i];
@@ -3178,26 +3003,18 @@ static void pfaddCommand(rliteClient *c) {
 	int updated;
 	unsigned char **elements = NULL;
 	long *elementslen = NULL;
-	int i, elementc = c->argc - 2;
+	int retval, i, elementc = c->argc - 2;
 
 	if (elementc > 0) {
-		elements = rl_malloc(sizeof(unsigned char *) * elementc);
-		if (!elements) {
-			__rliteSetError(c->context, RLITE_ERR_OOM, "Out of memory");
-			goto cleanup;
-		}
-		elementslen = rl_malloc(sizeof(long) * elementc);
-		if (!elementslen) {
-			__rliteSetError(c->context, RLITE_ERR_OOM, "Out of memory");
-			goto cleanup;
-		}
+		MALLOC(elements, sizeof(unsigned char *) * elementc);
+		MALLOC(elementslen, sizeof(long) * elementc);
 		for (i = 0; i < elementc; i++) {
 			elements[i] = UNSIGN(c->argv[i + 2]);
 			elementslen[i] = c->argvlen[i + 2];
 		}
 	}
 
-	int retval = rl_pfadd(c->context->db, key, keylen, elementc, elements, elementslen, &updated);
+	retval = rl_pfadd(c->context->db, key, keylen, elementc, elements, elementslen, &updated);
 	RLITE_SERVER_ERR(c, retval);
 	if (retval == RL_OK) {
 		c->reply = createLongLongObject(updated);
@@ -3214,23 +3031,15 @@ static void pfcountCommand(rliteClient *c) {
 	long count;
 	const unsigned char **elements = NULL;
 	long *elementslen = NULL;
-	int i, elementc = c->argc - 1;
+	int retval, i, elementc = c->argc - 1;
 
-	elements = rl_malloc(sizeof(unsigned char *) * elementc);
-	if (!elements) {
-		__rliteSetError(c->context, RLITE_ERR_OOM, "Out of memory");
-		goto cleanup;
-	}
-	elementslen = rl_malloc(sizeof(long) * elementc);
-	if (!elementslen) {
-		__rliteSetError(c->context, RLITE_ERR_OOM, "Out of memory");
-		goto cleanup;
-	}
+	MALLOC(elements, sizeof(unsigned char *) * elementc);
+	MALLOC(elementslen, sizeof(long) * elementc);
 	for (i = 0; i < elementc; i++) {
 		elements[i] = UNSIGN(c->argv[i + 1]);
 		elementslen[i] = c->argvlen[i + 1];
 	}
-	int retval = rl_pfcount(c->context->db, elementc, elements, elementslen, &count);
+	retval = rl_pfcount(c->context->db, elementc, elements, elementslen, &count);
 	RLITE_SERVER_ERR(c, retval);
 	if (retval == RL_OK) {
 		c->reply = createLongLongObject(count);
@@ -3248,24 +3057,16 @@ static void pfmergeCommand(rliteClient *c) {
 	long keylen = c->argvlen[1];
 	const unsigned char **elements = NULL;
 	long *elementslen = NULL;
-	int i, elementc = c->argc - 2;
+	int retval, i, elementc = c->argc - 2;
 
-	elements = rl_malloc(sizeof(unsigned char *) * elementc);
-	if (!elements) {
-		__rliteSetError(c->context, RLITE_ERR_OOM, "Out of memory");
-		goto cleanup;
-	}
-	elementslen = rl_malloc(sizeof(long) * elementc);
-	if (!elementslen) {
-		__rliteSetError(c->context, RLITE_ERR_OOM, "Out of memory");
-		goto cleanup;
-	}
+	MALLOC(elements, sizeof(unsigned char *) * elementc);
+	MALLOC(elementslen, sizeof(long) * elementc);
 	for (i = 0; i < elementc; i++) {
 		elements[i] = UNSIGN(c->argv[i + 2]);
 		elementslen[i] = c->argvlen[i + 2];
 	}
 
-	int retval = rl_pfmerge(c->context->db, key, keylen, elementc, elements, elementslen);
+	retval = rl_pfmerge(c->context->db, key, keylen, elementc, elements, elementslen);
 	RLITE_SERVER_ERR(c, retval);
 	if (retval == RL_OK) {
 		c->reply = createStatusObject(RLITE_STR_OK);
@@ -3293,13 +3094,8 @@ static void pfdebugCommand(rliteClient *c) {
 		if (retval == RL_OK) {
 			c->reply = createReplyObject(RLITE_REPLY_ARRAY);
 			c->reply->elements = size;
-			c->reply->element = rl_malloc(sizeof(rliteReply*) * c->reply->elements);
-			if (!c->reply->element) {
-				rl_free(c->reply);
-				c->reply = NULL;
-				__rliteSetError(c->context, RLITE_ERR_OOM, "Out of memory");
-				goto cleanup;
-			}
+			CHECK_OOM_ELSE(c->reply->element = rl_malloc(sizeof(rliteReply*) * c->reply->elements),
+					rl_free(c->reply); c->reply = NULL);
 			for (i = 0; i < size; i++) {
 				c->reply->element[i] = createLongLongObject(elements[i]);
 			}
@@ -3563,13 +3359,8 @@ static void keysCommand(rliteClient *c) {
 		return;
 	}
 	c->reply->elements = size;
-	c->reply->element = rl_malloc(sizeof(rliteReply*) * c->reply->elements);
-	if (!c->reply->element) {
-		rl_free(c->reply);
-		c->reply = NULL;
-		__rliteSetError(c->context, RLITE_ERR_OOM, "Out of memory");
-		goto cleanup;
-	}
+	CHECK_OOM_ELSE(c->reply->element = rl_malloc(sizeof(rliteReply*) * c->reply->elements),
+			rl_free(c->reply); c->reply = NULL);
 
 	for (i = 0; i < size; i++) {
 		c->reply->element[i] = createStringObject((char *)result[i], resultlen[i]);
@@ -3844,11 +3635,14 @@ static void sortCommand(rliteClient *c) {
 	// allocing the maximum number possible
 	// this is wasteful, but no need to worry about realloc
 	// and it is not that many probably anyway... hopefully
-	unsigned char **getv = rl_malloc(sizeof(unsigned char *) * c->argc);
-	long *getvlen = rl_malloc(sizeof(long) * c->argc);
+	unsigned char **getv = NULL;
+	long *getvlen = NULL;
 	long i, objc;
 	unsigned char **objv;
 	long *objvlen;
+
+	MALLOC(getv, sizeof(unsigned char *) * c->argc);
+	MALLOC(getvlen, sizeof(long) * c->argc);
 
 	/* The SORT command has an SQL-alike syntax, parse it */
 	j = 2;
@@ -3924,10 +3718,11 @@ static void sortCommand(rliteClient *c) {
 		if (retval == RL_OK) {
 			c->reply = createReplyObject(RLITE_REPLY_ARRAY);
 			c->reply->elements = objc;
-			c->reply->element = rl_malloc(sizeof(rliteReply*) * c->reply->elements);
+			CHECK_OOM_ELSE(c->reply->element = rl_malloc(sizeof(rliteReply*) * c->reply->elements),
+					free(c->reply); c->reply = NULL);
 			for (i = 0; i < objc; i++) {
-				c->reply->element[i] = createStringObject((char *)objv[i], objvlen[i]);
-				rl_free(objv[i]);
+				// TODO free elements on oom
+				CHECK_OOM(c->reply->element[i] = createTakeStringObject((char *)objv[i], objvlen[i]));
 			}
 			rl_free(objv);
 			rl_free(objvlen);
@@ -3965,20 +3760,12 @@ cleanup:
 }
 
 static void pubsubVarargCommand(rliteClient *c, const char *type, int func(rlite *db, int argc, unsigned char **argv, long *argvlen)) {
-	int i = 0, argc = c->argc - 1;
+	int retval, i = 0, argc = c->argc - 1;
 	unsigned char **args = NULL;
 	long *argslen = NULL;
 
-	args = rl_malloc(sizeof(unsigned char *) * argc);
-	if (!args) {
-		__rliteSetError(c->context, RLITE_ERR_OOM, "Out of memory");
-		goto cleanup;
-	}
-	argslen = rl_malloc(sizeof(long) * argc);
-	if (!argslen) {
-		__rliteSetError(c->context, RLITE_ERR_OOM, "Out of memory");
-		goto cleanup;
-	}
+	MALLOC(args, sizeof(unsigned char *) * argc);
+	MALLOC(argslen, sizeof(long) * argc);
 	for (i = 0; i < argc; i++) {
 		args[i] = (unsigned char *)c->argv[1 + i];
 		argslen[i] = (long)c->argvlen[1 + i];
