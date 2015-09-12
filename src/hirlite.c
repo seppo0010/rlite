@@ -164,18 +164,36 @@ static void addZsetIteratorReply(rliteClient *c, int retval, rl_zset_iterator *i
 	double score;
 
 	c->reply = createReplyObject(RLITE_REPLY_ARRAY);
+	if (!c->reply) {
+		__rliteSetError(c,RLITE_ERR_OOM,"Out of memory");
+		goto cleanup;
+	}
 	if (retval == RL_NOT_FOUND) {
 		c->reply->elements = 0;
 		return;
 	}
 	c->reply->elements = withscores ? (iterator->size * 2) : iterator->size;
 	c->reply->element = malloc(sizeof(rliteReply*) * c->reply->elements);
+	if (!c->reply->element) {
+		c->reply->elements = 0;
+		rliteFreeReplyObject(c);
+		__rliteSetError(c,RLITE_ERR_OOM,"Out of memory");
+		goto cleanup;
+	}
 	i = 0;
 	while ((retval = rl_zset_iterator_next(iterator, NULL, withscores ? &score : NULL, &vstr, &vlen)) == RL_OK) {
 		c->reply->element[i] = createTakeStringObject((char *)vstr, vlen);
+		if (!c->reply->element[i]) {
+			__rliteSetError(c,RLITE_ERR_OOM,"Out of memory");
+			goto cleanup;
+		}
 		i++;
 		if (withscores) {
 			c->reply->element[i] = createDoubleObject(score);
+			if (!c->reply->element[i]) {
+				__rliteSetError(c,RLITE_ERR_OOM,"Out of memory");
+				goto cleanup;
+			}
 			i++;
 		}
 	}
@@ -188,6 +206,8 @@ static void addZsetIteratorReply(rliteClient *c, int retval, rl_zset_iterator *i
 cleanup:
 	if (iterator) {
 		rl_zset_iterator_destroy(iterator);
+		c->reply->elements = i;
+		rliteFreeReplyObject(c);
 	}
 }
 
