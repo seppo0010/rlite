@@ -280,22 +280,19 @@ static int publish_to_members(rlite *db, rl_set_iterator *iterator, int valuec, 
 {
 	int retval;
 	unsigned char *value = NULL;
+	void *tmp;
 	long valuelen;
-	char *subscriber_id = NULL;
 	RL_CALL(rl_select_internal, RL_OK, db, RLITE_INTERNAL_DB_SUBSCRIBER_MESSAGES);
 	while ((retval = rl_set_iterator_next(iterator, NULL, &value, &valuelen)) == RL_OK) {
-		subscriber_id = rl_malloc(sizeof(char) * (valuelen + 1));
-		memcpy(subscriber_id, value, valuelen);
-		subscriber_id[valuelen] = 0;
+		RL_REALLOC(value, sizeof(unsigned char) * (valuelen + 1));
+		value[valuelen] = 0;
 
-		retval = do_publish(db, subscriber_id, valuelen, valuec, values, valueslen);
+		retval = do_publish(db, (char *)value, valuelen, valuec, values, valueslen);
 		if (retval == RL_OK) {
 			(*recipients)++;
 		} else if (retval != RL_NOT_FOUND) {
 			goto cleanup;
 		}
-		rl_free(subscriber_id);
-		subscriber_id = NULL;
 		rl_free(value);
 		value = NULL;
 	}
@@ -305,7 +302,6 @@ static int publish_to_members(rlite *db, rl_set_iterator *iterator, int valuec, 
 
 cleanup:
 	rl_free(value);
-	rl_free(subscriber_id);
 	return retval;
 }
 
