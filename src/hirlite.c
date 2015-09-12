@@ -1964,18 +1964,21 @@ static void addHashIteratorReply(rliteClient *c, int retval, rl_hash_iterator *i
 	}
 	c->reply->elements = iterator->size * (fields + values);
 	c->reply->element = rl_malloc(sizeof(rliteReply*) * c->reply->elements);
+	if (!c->reply->element) {
+		__rliteSetError(c->context, RLITE_ERR_OOM, "Out of memory");
+		retval = RL_OUT_OF_MEMORY;
+		goto cleanup;
+	}
 	while ((retval = rl_hash_iterator_next(iterator,
 					NULL, fields ? &field : NULL, fields ? &fieldlen : NULL,
 					NULL, values ? &value : NULL, values ? &valuelen : NULL
 					)) == RL_OK) {
 		if (fields) {
-			c->reply->element[i] = createStringObject((char *)field, fieldlen);
-			rl_free(field);
+			c->reply->element[i] = createTakeStringObject((char *)field, fieldlen);
 			i++;
 		}
 		if (values) {
-			c->reply->element[i] = createStringObject((char *)value, valuelen);
-			rl_free(value);
+			c->reply->element[i] = createTakeStringObject((char *)value, valuelen);
 			i++;
 		}
 	}
@@ -1984,10 +1987,12 @@ static void addHashIteratorReply(rliteClient *c, int retval, rl_hash_iterator *i
 		__rliteSetError(c->context, RLITE_ERR, "Unexpected early end");
 		goto cleanup;
 	}
-	iterator = NULL;
+	retval = RL_OK;
 cleanup:
-	if (iterator) {
+	if (retval != RL_OK) {
 		rl_hash_iterator_destroy(iterator);
+		c->reply->elements = i;
+		rliteFreeReplyObject(c->reply);
 	}
 }
 
