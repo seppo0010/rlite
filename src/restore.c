@@ -314,6 +314,9 @@ static int read_string(rl_restore_streamer *streamer, unsigned char **str, long 
 	*str = strdata;
 	*strlen = strdatalen;
 cleanup:
+	if (retval != RL_OK) {
+		rl_free(strdata);
+	}
 	return retval;
 }
 
