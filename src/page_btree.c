@@ -755,10 +755,7 @@ int rl_btree_node_pages(rlite *db, rl_btree *btree, rl_btree_node *node, short *
 			pages[node->children[i]] = 1;
 			RL_CALL(rl_read, RL_FOUND, db, btree->type->btree_node_type, node->children[i], btree, &tmp, 1);
 			child = tmp;
-			retval = rl_btree_node_pages(db, btree, child, pages);
-			if (retval != RL_OK) {
-				break;
-			}
+			RL_CALL(rl_btree_node_pages, RL_OK, db, btree, child, pages);
 		}
 	}
 cleanup:
@@ -802,10 +799,8 @@ int rl_btree_delete(struct rlite *db, rl_btree *btree)
 {
 	void *tmp;
 	rl_btree_node *node;
-	int retval = rl_read(db, btree->type->btree_node_type, btree->root, btree, &tmp, 1);
-	if (retval != RL_FOUND) {
-		goto cleanup;
-	}
+	int retval;
+	RL_CALL(rl_read, RL_FOUND, db, btree->type->btree_node_type, btree->root, btree, &tmp, 1);
 	node = tmp;
 	RL_CALL(rl_btree_node_delete, RL_OK, db, btree, node);
 	RL_CALL(rl_delete, RL_OK, db, btree->root);
