@@ -120,7 +120,7 @@ TEST basic_test_invalidlex()
 	long datalen = strlen((char *)data);
 
 	RL_CALL_VERBOSE(rl_zadd, RL_OK, db, key, keylen, score, data, datalen);
-	RL_CALL_VERBOSE(rl_zrangebylex, RL_UNEXPECTED, db, key, keylen, UNSIGN("foo"), 3, UNSIGN("bar"), 3, 0, -1, NULL);
+	RL_CALL_VERBOSE(rl_zrangebylex, RL_INVALID_PARAMETERS, db, key, keylen, UNSIGN("foo"), 3, UNSIGN("bar"), 3, 0, -1, NULL);
 
 	rl_close(db);
 	PASS();
