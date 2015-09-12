@@ -430,11 +430,11 @@ cleanup:
 static int validate_lex_range(unsigned char *min, long minlen, unsigned char *max, long maxlen)
 {
 	if ((minlen != 1 || min[0] != '-') && min[0] != '(' && min[0] != '[') {
-		return RL_UNEXPECTED;
+		return RL_INVALID_PARAMETERS;
 	}
 
 	if ((maxlen != 1 || max[0] != '+') && max[0] != '(' && max[0] != '[') {
-		return RL_UNEXPECTED;
+		return RL_INVALID_PARAMETERS;
 	}
 	return RL_OK;
 }
