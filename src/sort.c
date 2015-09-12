@@ -108,11 +108,7 @@ static int lookupKeyByPattern(rlite *db, unsigned char *pattern, long patternlen
 	/* Find out if we're dealing with a hash dereference. */
 	if ((f = (unsigned char *)strstr((char *)p+1, "->")) != NULL && *(f+2) != '\0') {
 		fieldlen = patternlen-(f-pattern)-2;
-		field = rl_malloc(sizeof(unsigned char) * fieldlen);
-		if (!field) {
-			return RL_OUT_OF_MEMORY;
-		}
-		memcpy(field, f + 2, fieldlen);
+		field = f + 2;
 	} else {
 		fieldlen = 0;
 	}
@@ -155,7 +151,6 @@ static int lookupKeyByPattern(rlite *db, unsigned char *pattern, long patternlen
 	retval = RL_OK;
 cleanup:
 	rl_free(key);
-	rl_free(field);
 	if (retval != RL_OK) {
 		*retobj = NULL;
 		*retobjlen = 0;
