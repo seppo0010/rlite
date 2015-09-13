@@ -39,7 +39,7 @@ CFLAGS += ${CFLAGS.gcc}
 endif
 
 ifeq ($(RL_DEBUG), 1)
-CFLAGS += -DRL_DEBUG=1
+CFLAGS += -DRL_DEBUG=1 -g -rdynamic
 endif
 
 LIBS=-lm -lpthread

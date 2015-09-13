@@ -14,7 +14,7 @@ CFLAGS += ${CFLAGS.gcc}
 endif
 
 ifeq ($(RL_DEBUG), 1)
-CFLAGS += -DRL_DEBUG=1
+CFLAGS += -DRL_DEBUG=1 -g -rdynamic
 endif
 
 .PHONY: lua gcov lcov clang-analyzer test buildtest vtest clean
