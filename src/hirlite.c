@@ -38,7 +38,7 @@
 #define MALLOC(target, size)\
 	CHECK_OOM(target = rl_malloc(size));
 
-#define RLITE_SERVER_ERR(c, retval)\
+#define RLITE_SERVER_ERR_BASIC(c, retval)\
 	if (retval == RL_WRONG_TYPE) {\
 		c->reply = createErrorObject(RLITE_WRONGTYPEERR);\
 		goto cleanup;\
@@ -53,6 +53,30 @@
 	}\
 	if (retval == RL_NAN) {\
 		c->reply = createErrorObject("ERR resulting score is not a number (NaN)");\
+		goto cleanup;\
+	}
+
+#define RLITE_SERVER_ERR(c, retval, expected)\
+	RLITE_SERVER_ERR_BASIC(c, retval);\
+	if (retval != expected) {\
+		addReplyErrorFormat(c->context, "unknown retval %d", retval);\
+		goto cleanup;\
+	}
+
+#define RLITE_SERVER_OK(c, retval)\
+	RLITE_SERVER_ERR(c, retval, RL_OK);
+
+#define RLITE_SERVER_ERR2(c, retval, e1, e2)\
+	RLITE_SERVER_ERR_BASIC(c, retval);\
+	if (retval != e1 && retval != e2) {\
+		addReplyErrorFormat(c->context, "unknown retval %d", retval);\
+		goto cleanup;\
+	}
+
+#define RLITE_SERVER_ERR3(c, retval, e1, e2, e3)\
+	RLITE_SERVER_ERR_BASIC(c, retval);\
+	if (retval != e1 && retval != e2 && retval != e3) {\
+		addReplyErrorFormat(c->context, "unknown retval %d", retval);\
 		goto cleanup;\
 	}
 
@@ -833,8 +857,8 @@ static void execCommand(rliteClient *c) {
 	}
 	RL_CALL(refresh_rlite_fp, RL_OK, c->context);
 	retval = rl_check_watched_keys(c->context->db, c->context->watchedKeysLength, c->context->watchedKeys);
-	RLITE_SERVER_ERR(c, retval);
-	if (retval != RL_OK) {
+	RLITE_SERVER_ERR2(c, retval, RL_OK, RL_OUTDATED);
+	if (retval == RL_OUTDATED) {
 		c->reply = createReplyObject(RLITE_REPLY_NIL);
 		goto cleanup;
 	}
@@ -895,11 +919,7 @@ static void execCommand(rliteClient *c) {
 	}
 
 	retval = rl_commit(c->context->db);
-	RLITE_SERVER_ERR(c, retval);
-	if (retval != RL_OK) {
-		goto cleanup;
-	}
-
+	RLITE_SERVER_OK(c, retval);
 cleanup:
 	rl_free(oldhash);
 	rl_free(newhash);
@@ -928,10 +948,7 @@ static void watchCommand(rliteClient *c) {
 	}
 	for (i = 0; i < watchc; i++) {
 		retval = rl_watch(c->context->db, &c->context->watchedKeys[c->context->watchedKeysLength++], (unsigned char *)c->argv[1 + i], c->argvlen[1 + i]);
-		RLITE_SERVER_ERR(c, retval);
-		if (retval != RL_OK) {
-			goto cleanup;
-		}
+		RLITE_SERVER_OK(c, retval);
 	}
 	retval = RL_OK;
 	c->reply = createStatusObject(RLITE_STR_OK);
@@ -1183,10 +1200,10 @@ static void zaddGenericCommand(rliteClient *c, int incr) {
 		score = scores[j];
 		if (incr) {
 			retval = rl_zincrby(c->context->db, key, keylen, score, UNSIGN(c->argv[3+j*2]), c->argvlen[3+j*2], NULL);
-			RLITE_SERVER_ERR(c, retval);
+			RLITE_SERVER_OK(c, retval);
 		} else {
 			retval = rl_zadd(c->context->db, key, keylen, score, UNSIGN(c->argv[3+j*2]), c->argvlen[3+j*2]);
-			RLITE_SERVER_ERR(c, retval);
+			RLITE_SERVER_ERR2(c, retval, RL_OK, RL_FOUND);
 			if (retval == RL_OK) {
 				added++;
 			}
@@ -1253,7 +1270,7 @@ static void zremCommand(rliteClient *c) {
 	}
 	retval = rl_zrem(c->context->db, key, keylen, c->argc - 2, (unsigned char **)&c->argv[2], memberslen, &deleted);
 	rl_free(memberslen);
-	RLITE_SERVER_ERR(c, retval);
+	RLITE_SERVER_OK(c, retval);
 
 	c->reply = createLongLongObject(deleted);
 cleanup:
@@ -1298,7 +1315,7 @@ static void zremrangebyrankCommand(rliteClient *c) {
 		(getLongFromObjectOrReply(c,c->argv[3],c->argvlen[3],&end,NULL) != RLITE_OK))
 		return;
 	retval = rl_zremrangebyrank(c->context->db, UNSIGN(c->argv[1]), c->argvlen[1], start, end, &deleted);
-	RLITE_SERVER_ERR(c, retval);
+	RLITE_SERVER_OK(c, retval);
 	c->reply = createLongLongObject(deleted);
 cleanup:
 	return;
@@ -1314,7 +1331,7 @@ static void zremrangebyscoreCommand(rliteClient *c) {
 		return;
 	}
 	retval = rl_zremrangebyscore(c->context->db, UNSIGN(c->argv[1]), c->argvlen[1], &rlrange, &deleted);
-	RLITE_SERVER_ERR(c, retval);
+	RLITE_SERVER_OK(c, retval);
 	c->reply = createLongLongObject(deleted);
 cleanup:
 	return;
@@ -1325,7 +1342,7 @@ static void zremrangebylexCommand(rliteClient *c) {
 	long deleted;
 
 	retval = rl_zremrangebylex(c->context->db, UNSIGN(c->argv[1]), c->argvlen[1], UNSIGN(c->argv[2]), c->argvlen[2], UNSIGN(c->argv[3]), c->argvlen[3], &deleted);
-	RLITE_SERVER_ERR(c, retval);
+	RLITE_SERVER_OK(c, retval);
 	c->reply = createLongLongObject(deleted);
 cleanup:
 	return;
@@ -1334,7 +1351,7 @@ cleanup:
 static void zcardCommand(rliteClient *c) {
 	long card = 0;
 	int retval = rl_zcard(c->context->db, UNSIGN(c->argv[1]), c->argvlen[1], &card);
-	RLITE_SERVER_ERR(c, retval);
+	RLITE_SERVER_OK(c, retval);
 	c->reply = createLongLongObject(card);
 cleanup:
 	return;
@@ -1413,7 +1430,7 @@ static void zunionInterGenericCommand(rliteClient *c, int op) {
 		keys_len[i + 1] = c->argvlen[3 + i];
 	}
 	retval = (op == RLITE_OP_UNION ? rl_zunionstore : rl_zinterstore)(c->context->db, setnum + 1, keys, keys_len, weights, aggregate);
-	RLITE_SERVER_ERR(c, retval);
+	RLITE_SERVER_OK(c, retval);
 	zcardCommand(c);
 cleanup:
 	rl_free(keys);
@@ -1486,7 +1503,7 @@ static void zlexcountCommand(rliteClient *c) {
 	long count = 0;
 
 	int retval = rl_zlexcount(c->context->db, UNSIGN(c->argv[1]), c->argvlen[1], UNSIGN(c->argv[2]), c->argvlen[2], UNSIGN(c->argv[3]), c->argvlen[3], &count);
-	RLITE_SERVER_ERR(c, retval);
+	RLITE_SERVER_OK(c, retval);
 	c->reply = createLongLongObject(count);
 cleanup:
 	return;
@@ -1533,7 +1550,7 @@ static void zscoreCommand(rliteClient *c) {
 	double score;
 
 	int retval = rl_zscore(c->context->db, UNSIGN(c->argv[1]), c->argvlen[1], UNSIGN(c->argv[2]), c->argvlen[2], &score);
-	RLITE_SERVER_ERR(c, retval);
+	RLITE_SERVER_ERR2(c, retval, RL_FOUND, RL_NOT_FOUND);
 
 	if (retval == RL_FOUND) {
 		c->reply = createDoubleObject(score);
@@ -1549,7 +1566,7 @@ static void zrankGenericCommand(rliteClient *c, int reverse) {
 	long rank;
 
 	int retval = (reverse ? rl_zrevrank : rl_zrank)(c->context->db, UNSIGN(c->argv[1]), c->argvlen[1], UNSIGN(c->argv[2]), c->argvlen[2], &rank);
-	RLITE_SERVER_ERR(c, retval);
+	RLITE_SERVER_ERR2(c, retval, RL_FOUND, RL_NOT_FOUND);
 
 	if (retval == RL_NOT_FOUND) {
 		c->reply = createReplyObject(RLITE_REPLY_NIL);
@@ -1579,7 +1596,7 @@ static void zcountCommand(rliteClient *c) {
 	}
 
 	int retval = rl_zcount(c->context->db, UNSIGN(c->argv[1]), c->argvlen[1], &rlrange, &count);
-	RLITE_SERVER_ERR(c, retval);
+	RLITE_SERVER_ERR2(c, retval, RL_OK, RL_NOT_FOUND);
 	if (retval == RL_NOT_FOUND) {
 		count = 0;
 	}
@@ -1599,7 +1616,7 @@ static void hsetGenericCommand(rliteClient *c, int update) {
 
 	int retval;
 	retval = rl_hset(c->context->db, key, keylen, field, fieldlen, value, valuelen, &added, update);
-	RLITE_SERVER_ERR(c, retval);
+	RLITE_SERVER_OK(c, retval);
 	c->reply = createLongLongObject(added);
 
 cleanup:
@@ -1624,7 +1641,7 @@ static void hgetCommand(rliteClient *c) {
 
 	int retval;
 	retval = rl_hget(c->context->db, key, keylen, field, fieldlen, &value, &valuelen);
-	RLITE_SERVER_ERR(c, retval);
+	RLITE_SERVER_ERR2(c, retval, RL_FOUND, RL_NOT_FOUND);
 	if (retval == RL_NOT_FOUND) {
 		c->reply = createReplyObject(RLITE_REPLY_NIL);
 	} else {
@@ -1644,7 +1661,7 @@ static void hexistsCommand(rliteClient *c) {
 
 	int retval;
 	retval = rl_hget(c->context->db, key, keylen, field, fieldlen, NULL, NULL);
-	RLITE_SERVER_ERR(c, retval);
+	RLITE_SERVER_ERR2(c, retval, RL_FOUND, RL_NOT_FOUND);
 	c->reply = createLongLongObject(retval == RL_NOT_FOUND ? 0 : 1);
 cleanup:
 	return;
@@ -1678,7 +1695,7 @@ static void hmsetCommand(rliteClient *c) {
 		valueslen[i] = c->argvlen[j++];
 	}
 	retval = rl_hmset(c->context->db, key, keylen, fieldc, fields, fieldslen, values, valueslen);
-	RLITE_SERVER_ERR(c, retval);
+	RLITE_SERVER_OK(c, retval);
 	c->reply = createStatusObject(RLITE_STR_OK);
 cleanup:
 	rl_free(fields);
@@ -1706,7 +1723,7 @@ static void bitcountCommand(rliteClient *c) {
 	}
 
 	retval = rl_bitcount(c->context->db, key, keylen, start, stop, &bitcount);
-	RLITE_SERVER_ERR(c, retval);
+	RLITE_SERVER_ERR2(c, retval, RL_NOT_FOUND, RL_OK);
 	if (retval == RL_NOT_FOUND) {
 		c->reply = createLongLongObject(0);
 	} else if (retval == RL_OK) {
@@ -1750,13 +1767,11 @@ static void bitopCommand(rliteClient *c) {
 	}
 
 	retval = rl_bitop(c->context->db, op, destkey, destkeylen, c->argc - 3, (const unsigned char **)&c->argv[3], memberslen);
-	RLITE_SERVER_ERR(c, retval);
+	RLITE_SERVER_OK(c, retval);
 
 	retval = rl_get(c->context->db, destkey, destkeylen, NULL, &length);
-	RLITE_SERVER_ERR(c, retval);
-	if (retval == RL_OK) {
-		c->reply = createLongLongObject(length);
-	}
+	RLITE_SERVER_OK(c, retval);
+	c->reply = createLongLongObject(length);
 cleanup:
 	rl_free(memberslen);
 }
@@ -1793,7 +1808,7 @@ static void bitposCommand(rliteClient *c) {
 	}
 
 	retval = rl_bitpos(c->context->db, key, keylen, bit, start, stop, end_given, &pos);
-	RLITE_SERVER_ERR(c, retval);
+	RLITE_SERVER_ERR2(c, retval, RL_OK, RL_NOT_FOUND);
 	if (retval == RL_OK) {
 		c->reply = createLongLongObject(pos);
 	} else if (retval == RL_NOT_FOUND) {
@@ -1821,7 +1836,7 @@ static void hdelCommand(rliteClient *c) {
 		memberslen[j - 2] = c->argvlen[j];
 	}
 	retval = rl_hdel(c->context->db, key, keylen, c->argc - 2, (unsigned char **)&c->argv[2], memberslen, &delcount);
-	RLITE_SERVER_ERR(c, retval);
+	RLITE_SERVER_OK(c, retval);
 	c->reply = createLongLongObject(delcount);
 cleanup:
 	rl_free(memberslen);
@@ -1830,11 +1845,11 @@ cleanup:
 static void hlenCommand(rliteClient *c) {
 	unsigned char *key = UNSIGN(c->argv[1]);
 	size_t keylen = c->argvlen[1];
-	long len;
+	long len = 0;
 	int retval;
 
 	retval = rl_hlen(c->context->db, key, keylen, &len);
-	RLITE_SERVER_ERR(c, retval);
+	RLITE_SERVER_ERR2(c, retval, RL_OK, RL_NOT_FOUND);
 	c->reply = createLongLongObject(len);
 cleanup:
 	return;
@@ -1857,7 +1872,7 @@ static void hincrbyCommand(rliteClient *c) {
 		c->reply = createErrorObject("ERR increment or decrement would overflow");
 		goto cleanup;
 	}
-	RLITE_SERVER_ERR(c, retval);
+	RLITE_SERVER_OK(c, retval);
 	c->reply = createLongLongObject(newvalue);
 cleanup:
 	return;
@@ -1876,7 +1891,7 @@ static void hincrbyfloatCommand(rliteClient *c) {
 		c->reply = createErrorObject("ERR hash value is not a float");
 		goto cleanup;
 	}
-	RLITE_SERVER_ERR(c, retval);
+	RLITE_SERVER_OK(c, retval);
 	c->reply = createDoubleObject(newvalue);
 cleanup:
 	return;
@@ -1924,7 +1939,7 @@ static void hgetallCommand(rliteClient *c) {
 	size_t keylen = c->argvlen[1];
 	rl_hash_iterator *iterator;
 	int retval = rl_hgetall(c->context->db, &iterator, key, keylen);
-	RLITE_SERVER_ERR(c, retval);
+	RLITE_SERVER_ERR2(c, retval, RL_OK, RL_NOT_FOUND);
 	addHashIteratorReply(c, retval, iterator, 1, 1);
 cleanup:
 	return;
@@ -1935,7 +1950,7 @@ static void hkeysCommand(rliteClient *c) {
 	size_t keylen = c->argvlen[1];
 	rl_hash_iterator *iterator;
 	int retval = rl_hgetall(c->context->db, &iterator, key, keylen);
-	RLITE_SERVER_ERR(c, retval);
+	RLITE_SERVER_ERR2(c, retval, RL_OK, RL_NOT_FOUND);
 	addHashIteratorReply(c, retval, iterator, 1, 0);
 cleanup:
 	return;
@@ -1946,7 +1961,7 @@ static void hvalsCommand(rliteClient *c) {
 	size_t keylen = c->argvlen[1];
 	rl_hash_iterator *iterator;
 	int retval = rl_hgetall(c->context->db, &iterator, key, keylen);
-	RLITE_SERVER_ERR(c, retval);
+	RLITE_SERVER_ERR2(c, retval, RL_OK, RL_NOT_FOUND);
 	addHashIteratorReply(c, retval, iterator, 0, 1);
 cleanup:
 	return;
@@ -1971,7 +1986,7 @@ static void hmgetCommand(rliteClient *c) {
 	}
 
 	retval = rl_hmget(c->context->db, key, keylen, fieldc, fields, fieldslen, &values, &valueslen);
-	RLITE_SERVER_ERR(c, retval);
+	RLITE_SERVER_OK(c, retval);
 	CHECK_OOM(c->reply = createReplyObject(RLITE_REPLY_ARRAY));
 	c->reply->elements = fieldc;
 	CHECK_OOM_ELSE(c->reply->element = rl_malloc(sizeof(rliteReply*) * c->reply->elements),
@@ -2015,7 +2030,7 @@ static void saddCommand(rliteClient *c) {
 	}
 
 	retval = rl_sadd(c->context->db, key, keylen, memberc, members, memberslen, &count);
-	RLITE_SERVER_ERR(c, retval);
+	RLITE_SERVER_OK(c, retval);
 	c->reply = createLongLongObject(count);
 cleanup:
 	rl_free(members);
@@ -2025,7 +2040,7 @@ cleanup:
 static void scardCommand(rliteClient *c) {
 	long card = 0;
 	int retval = rl_scard(c->context->db, UNSIGN(c->argv[1]), c->argvlen[1], &card);
-	RLITE_SERVER_ERR(c, retval);
+	RLITE_SERVER_ERR2(c, retval, RL_OK, RL_NOT_FOUND);
 	c->reply = createLongLongObject(card);
 cleanup:
 	return;
@@ -2033,7 +2048,7 @@ cleanup:
 
 static void sismemberCommand(rliteClient *c) {
 	int retval = rl_sismember(c->context->db, UNSIGN(c->argv[1]), c->argvlen[1], UNSIGN(c->argv[2]), c->argvlen[2]);
-	RLITE_SERVER_ERR(c, retval);
+	RLITE_SERVER_ERR2(c, retval, RL_FOUND, RL_NOT_FOUND);
 	c->reply = createLongLongObject(retval == RL_FOUND ? 1 : 0);
 cleanup:
 	return;
@@ -2041,7 +2056,7 @@ cleanup:
 
 static void smoveCommand(rliteClient *c) {
 	int retval = rl_smove(c->context->db, UNSIGN(c->argv[1]), c->argvlen[1], UNSIGN(c->argv[2]), c->argvlen[2], UNSIGN(c->argv[3]), c->argvlen[3]);
-	RLITE_SERVER_ERR(c, retval);
+	RLITE_SERVER_ERR2(c, retval, RL_OK, RL_NOT_FOUND);
 	c->reply = createLongLongObject(retval == RL_OK ? 1 : 0);
 cleanup:
 	return;
@@ -2051,7 +2066,7 @@ static void spopCommand(rliteClient *c) {
 	unsigned char *member;
 	long memberlen;
 	int retval = rl_spop(c->context->db, UNSIGN(c->argv[1]), c->argvlen[1], &member, &memberlen);
-	RLITE_SERVER_ERR(c, retval);
+	RLITE_SERVER_ERR2(c, retval, RL_NOT_FOUND, RL_OK);
 	if (retval == RL_NOT_FOUND) {
 		c->reply = createReplyObject(RLITE_REPLY_NIL);
 	} else if (retval == RL_OK) {
@@ -2077,8 +2092,8 @@ static void srandmemberCommand(rliteClient *c) {
 	}
 
 	int retval = rl_srandmembers(c->context->db, UNSIGN(c->argv[1]), c->argvlen[1], repeat, &count, &members, &memberslen);
-	RLITE_SERVER_ERR(c, retval);
-	if (retval == RL_OK && count > 0) {
+	RLITE_SERVER_OK(c, retval);
+	if (count > 0) {
 		if (c->argc == 2) {
 			c->reply = createTakeStringObject((char *)members[0], memberslen[0]);
 		} else {
@@ -2116,7 +2131,7 @@ static void sremCommand(rliteClient *c) {
 	}
 
 	retval = rl_srem(c->context->db, key, keylen, memberc, members, memberslen, &count);
-	RLITE_SERVER_ERR(c, retval);
+	RLITE_SERVER_OK(c, retval);
 	c->reply = createLongLongObject(count);
 cleanup:
 	rl_free(members);
@@ -2139,7 +2154,7 @@ static void sOperationGenericCommand(rliteClient *c, int op) {
 	}
 	retval = (op == OP_INTER ? rl_sinter : (op == OP_UNION ? rl_sunion : rl_sdiff))(
 				c->context->db, keyc, keys, keyslen, &membersc, &members, &memberslen);
-	RLITE_SERVER_ERR(c, retval);
+	RLITE_SERVER_OK(c, retval);
 	CHECK_OOM(c->reply = createReplyObject(RLITE_REPLY_ARRAY));
 	c->reply->elements = membersc;
 	if (membersc > 0) {
@@ -2173,7 +2188,7 @@ static void sOperationStoreGenericCommand(rliteClient *c, int op) {
 	}
 	retval = (op == OP_INTER ? rl_sinterstore: (op == OP_UNION ? rl_sunionstore : rl_sdiffstore))(
 			c->context->db, target, targetlen, keyc, keys, keyslen, &membersc);
-	RLITE_SERVER_ERR(c, retval);
+	RLITE_SERVER_OK(c, retval);
 	c->reply = createLongLongObject(membersc);
 cleanup:
 	rl_free(keys);
@@ -2225,7 +2240,7 @@ static void pushGenericCommand(rliteClient *c, int create, int left) {
 	if (retval == RL_NOT_FOUND) {
 		c->reply = createLongLongObject(0);
 	} else {
-		RLITE_SERVER_ERR(c, retval);
+		RLITE_SERVER_OK(c, retval);
 		c->reply = createLongLongObject(count);
 	}
 cleanup:
@@ -2252,7 +2267,7 @@ static void rpushxCommand(rliteClient *c) {
 static void llenCommand(rliteClient *c) {
 	long len = 0;
 	int retval = rl_llen(c->context->db, UNSIGN(c->argv[1]), c->argvlen[1], &len);
-	RLITE_SERVER_ERR(c, retval);
+	RLITE_SERVER_ERR2(c, retval, RL_OK, RL_NOT_FOUND);
 	c->reply = createLongLongObject(len);
 cleanup:
 	return;
@@ -2262,7 +2277,7 @@ static void popGenericCommand(rliteClient *c, int left) {
 	unsigned char *value;
 	long valuelen;
 	int retval = rl_pop(c->context->db, UNSIGN(c->argv[1]), c->argvlen[1], &value, &valuelen, left);
-	RLITE_SERVER_ERR(c, retval);
+	RLITE_SERVER_ERR2(c, retval, RL_OK, RL_NOT_FOUND);
 	if (retval == RL_NOT_FOUND) {
 		c->reply = createReplyObject(RLITE_REPLY_NIL);
 	} else if (retval == RL_OK) {
@@ -2289,7 +2304,7 @@ static void lindexCommand(rliteClient *c) {
 		return;
 
 	int retval = rl_lindex(c->context->db, UNSIGN(c->argv[1]), c->argvlen[1], index, &value, &valuelen);
-	RLITE_SERVER_ERR(c, retval);
+	RLITE_SERVER_ERR3(c, retval, RL_INVALID_PARAMETERS, RL_NOT_FOUND, RL_OK);
 	if (retval == RL_INVALID_PARAMETERS || retval == RL_NOT_FOUND) {
 		c->reply = createReplyObject(RLITE_REPLY_NIL);
 	} else if (retval == RL_OK) {
@@ -2315,7 +2330,7 @@ static void linsertCommand(rliteClient *c) {
 
 	long size;
 	int retval = rl_linsert(c->context->db, key, keylen, after, UNSIGN(c->argv[3]), c->argvlen[3], UNSIGN(c->argv[4]), c->argvlen[4], &size);
-	RLITE_SERVER_ERR(c, retval);
+	RLITE_SERVER_ERR2(c, retval, RL_OK, RL_NOT_FOUND);
 	if (retval == RL_OK) {
 		c->reply = createLongLongObject(size);
 	} else {
@@ -2338,7 +2353,7 @@ static void lrangeCommand(rliteClient *c) {
 		(getLongFromObjectOrReply(c, c->argv[3], c->argvlen[3], &stop, NULL) != RLITE_OK)) return;
 
 	int retval = rl_lrange(c->context->db, key, keylen, start, stop, &size, &values, &valueslen);
-	RLITE_SERVER_ERR(c, retval);
+	RLITE_SERVER_ERR2(c, retval, RL_OK, RL_NOT_FOUND);
 	CHECK_OOM(c->reply = createReplyObject(RLITE_REPLY_ARRAY));
 	if (retval == RL_NOT_FOUND) {
 		c->reply->elements = 0;
@@ -2358,7 +2373,7 @@ cleanup:
 static void lremCommand(rliteClient *c) {
 	unsigned char *key = UNSIGN(c->argv[1]);
 	size_t keylen = c->argvlen[1];
-	long count, maxcount, resultcount;
+	long count, maxcount, resultcount = 0;
 	int direction;
 
 	if ((getLongFromObjectOrReply(c, c->argv[2], c->argvlen[2], &count, NULL) != RLITE_OK)) return;
@@ -2371,7 +2386,7 @@ static void lremCommand(rliteClient *c) {
 		maxcount = -count;
 	}
 	int retval = rl_lrem(c->context->db, key, keylen, direction,  maxcount, UNSIGN(c->argv[3]), c->argvlen[3], &resultcount);
-	RLITE_SERVER_ERR(c, retval);
+	RLITE_SERVER_ERR2(c, retval, RL_OK, RL_NOT_FOUND);
 	c->reply = createLongLongObject(resultcount);
 cleanup:
 	return;
@@ -2385,7 +2400,7 @@ static void lsetCommand(rliteClient *c) {
 	if ((getLongFromObjectOrReply(c, c->argv[2], c->argvlen[2], &index, NULL) != RLITE_OK)) return;
 
 	int retval = rl_lset(c->context->db, key, keylen, index, UNSIGN(c->argv[3]), c->argvlen[3]);
-	RLITE_SERVER_ERR(c, retval);
+	RLITE_SERVER_ERR3(c, retval, RL_NOT_FOUND, RL_INVALID_PARAMETERS, RL_OK);
 	if (retval == RL_NOT_FOUND) {
 		c->reply = createErrorObject(RLITE_NOKEYERR);
 	} else if (retval == RL_INVALID_PARAMETERS) {
@@ -2406,7 +2421,7 @@ static void ltrimCommand(rliteClient *c) {
 		(getLongFromObjectOrReply(c, c->argv[3], c->argvlen[3], &stop, NULL) != RLITE_OK)) return;
 
 	int retval = rl_ltrim(c->context->db, key, keylen, start, stop);
-	RLITE_SERVER_ERR(c, retval);
+	RLITE_SERVER_OK(c, retval);
 	c->reply = createStatusObject(RLITE_STR_OK);
 cleanup:
 	return;
@@ -2416,16 +2431,13 @@ static void rpoplpushCommand(rliteClient *c) {
 	unsigned char *value;
 	long valuelen;
 	int retval = rl_pop(c->context->db, UNSIGN(c->argv[1]), c->argvlen[1], &value, &valuelen, 0);
-	RLITE_SERVER_ERR(c, retval);
+	RLITE_SERVER_ERR2(c, retval, RL_OK, RL_NOT_FOUND);
 	if (retval == RL_NOT_FOUND) {
 		c->reply = createReplyObject(RLITE_REPLY_NIL);
 		goto cleanup;
 	}
-	if (retval != RL_OK) {
-		goto cleanup;
-	}
 	retval = rl_push(c->context->db, UNSIGN(c->argv[2]), c->argvlen[2], 1, 1, 1, &value, &valuelen, NULL);
-	RLITE_SERVER_ERR(c, retval);
+	RLITE_SERVER_OK(c, retval);
 
 	c->reply = createTakeStringObject((char *)value, valuelen);
 cleanup:
@@ -2459,7 +2471,7 @@ static void setGenericCommand(rliteClient *c, int flags, const unsigned char *ke
 	}
 
 	retval = rl_set(c->context->db, key, keylen, value, valuelen, 0, milliseconds);
-	RLITE_SERVER_ERR(c, retval);
+	RLITE_SERVER_OK(c, retval);
 	c->reply = createStatusObject(RLITE_STR_OK);
 cleanup:
 	return;
@@ -2542,7 +2554,7 @@ static void getCommand(rliteClient *c) {
 
 	int retval;
 	retval = rl_get(c->context->db, key, keylen, &value, &valuelen);
-	RLITE_SERVER_ERR(c, retval);
+	RLITE_SERVER_ERR2(c, retval, RL_NOT_FOUND, RL_OK);
 	if (retval == RL_NOT_FOUND) {
 		c->reply = createReplyObject(RLITE_REPLY_NIL);
 	} else {
@@ -2561,10 +2573,8 @@ static void appendCommand(rliteClient *c) {
 
 	int retval;
 	retval = rl_append(c->context->db, key, keylen, value, valuelen, &newlen);
-	RLITE_SERVER_ERR(c, retval);
-	if (retval == RL_OK) {
-		c->reply = createLongLongObject(newlen);
-	}
+	RLITE_SERVER_OK(c, retval);
+	c->reply = createLongLongObject(newlen);
 cleanup:
 	return;
 }
@@ -2579,7 +2589,7 @@ static void getsetCommand(rliteClient *c) {
 
 	int retval;
 	retval = rl_get(c->context->db, key, keylen, &prevvalue, &prevvaluelen);
-	RLITE_SERVER_ERR(c, retval);
+	RLITE_SERVER_ERR2(c, retval, RL_NOT_FOUND, RL_OK);
 	if (retval == RL_NOT_FOUND) {
 		c->reply = createReplyObject(RLITE_REPLY_NIL);
 	} else {
@@ -2587,7 +2597,7 @@ static void getsetCommand(rliteClient *c) {
 	}
 
 	retval = rl_set(c->context->db, key, keylen, value, valuelen, 0, 0);
-	RLITE_SERVER_ERR(c, retval);
+	RLITE_SERVER_OK(c, retval);
 cleanup:
 	return;
 }
@@ -2612,7 +2622,7 @@ static void mgetCommand(rliteClient *c) {
 		if (retval == RL_WRONG_TYPE) {
 			retval = RL_NOT_FOUND;
 		}
-		RLITE_SERVER_ERR(c, retval);
+		RLITE_SERVER_ERR2(c, retval, RL_NOT_FOUND, RL_OK);
 		if (retval == RL_NOT_FOUND) {
 			c->reply->element[i] = createReplyObject(RLITE_REPLY_NIL);
 		} else {
@@ -2643,7 +2653,7 @@ static void msetCommand(rliteClient *c) {
 		value = (unsigned char *)c->argv[i + 1];
 		valuelen = (long)c->argvlen[i + 1];
 		retval = rl_set(c->context->db, key, keylen, value, valuelen, 0, 0);
-		RLITE_SERVER_ERR(c, retval);
+		RLITE_SERVER_OK(c, retval);
 	}
 	c->reply = createStatusObject(RLITE_STR_OK);
 cleanup:
@@ -2678,10 +2688,7 @@ static void msetnxCommand(rliteClient *c) {
 		value = (unsigned char *)c->argv[i + 1];
 		valuelen = (long)c->argvlen[i + 1];
 		retval = rl_set(c->context->db, key, keylen, value, valuelen, 1, 0);
-		RLITE_SERVER_ERR(c, retval);
-		if (retval != RL_OK) {
-			goto cleanup;
-		}
+		RLITE_SERVER_OK(c, retval);
 	}
 	retval = RL_OK;
 cleanup:
@@ -2703,7 +2710,7 @@ static void getrangeCommand(rliteClient *c) {
 
 	int retval;
 	retval = rl_getrange(c->context->db, key, keylen, start, stop, &value, &valuelen);
-	RLITE_SERVER_ERR(c, retval);
+	RLITE_SERVER_ERR2(c, retval, RL_NOT_FOUND, RL_OK);
 	if (retval == RL_NOT_FOUND) {
 		c->reply = createReplyObject(RLITE_REPLY_NIL);
 	} else {
@@ -2719,7 +2726,7 @@ static void setrangeCommand(rliteClient *c) {
 	unsigned char *value = UNSIGN(c->argv[3]);
 	long valuelen = c->argvlen[3];
 	long long offset;
-	long newlength;
+	long newlength = 0;
 	int retval;
 
 	if (getLongLongFromObject(c->argv[2], c->argvlen[2], &offset) != RLITE_OK) {
@@ -2729,12 +2736,8 @@ static void setrangeCommand(rliteClient *c) {
 
 	if (offset == 0 && valuelen == 0) {
 		retval = rl_get(c->context->db, key, keylen, NULL, &newlength);
-		RLITE_SERVER_ERR(c, retval);
-		if (retval == RL_OK) {
-			c->reply = createLongLongObject(newlength);
-		} else {
-			c->reply = createLongLongObject(0);
-		}
+		RLITE_SERVER_ERR2(c, retval, RL_NOT_FOUND, RL_OK);
+		c->reply = createLongLongObject(newlength);
 		goto cleanup;
 	}
 	if (offset < 0) {
@@ -2743,7 +2746,7 @@ static void setrangeCommand(rliteClient *c) {
 	}
 
 	retval = rl_setrange(c->context->db, key, keylen, offset, value, valuelen, &newlength);
-	RLITE_SERVER_ERR(c, retval);
+	RLITE_SERVER_ERR2(c, retval, RL_OK, RL_INVALID_PARAMETERS);
 	if (retval == RL_OK) {
 		c->reply = createLongLongObject(newlength);
 	} else if (retval == RL_INVALID_PARAMETERS) {
@@ -2759,7 +2762,7 @@ static void strlenCommand(rliteClient *c) {
 	long length;
 
 	int retval = rl_get(c->context->db, key, keylen, NULL, &length);
-	RLITE_SERVER_ERR(c, retval);
+	RLITE_SERVER_ERR2(c, retval, RL_OK, RL_NOT_FOUND);
 	if (retval == RL_OK) {
 		c->reply = createLongLongObject(length);
 	} else if (retval == RL_NOT_FOUND) {
@@ -2779,10 +2782,8 @@ static void incrGenericCommand(rliteClient *c, long long increment) {
 		c->reply = createErrorObject("ERR value is not an integer or out of range");
 		goto cleanup;
 	}
-	RLITE_SERVER_ERR(c, retval);
-	if (retval == RL_OK) {
-		c->reply = createLongLongObject(newvalue);
-	}
+	RLITE_SERVER_OK(c, retval);
+	c->reply = createLongLongObject(newvalue);
 cleanup:
 	return;
 }
@@ -2824,10 +2825,8 @@ static void incrbyfloatCommand(rliteClient *c) {
 		c->reply = createErrorObject("ERR value is not a valid float");
 		goto cleanup;
 	}
-	RLITE_SERVER_ERR(c, retval);
-	if (retval == RL_OK) {
-		c->reply = createDoubleObject(newvalue);
-	}
+	RLITE_SERVER_OK(c, retval);
+	c->reply = createDoubleObject(newvalue);
 cleanup:
 	return;
 }
@@ -2842,10 +2841,8 @@ static void getbitCommand(rliteClient *c) {
 		return;
 	}
 	int retval = rl_getbit(c->context->db, key, keylen, offset, &value);
-	RLITE_SERVER_ERR(c, retval);
-	if (retval == RL_OK) {
-		c->reply = createLongLongObject(value);
-	}
+	RLITE_SERVER_OK(c, retval);
+	c->reply = createLongLongObject(value);
 cleanup:
 	return;
 }
@@ -2868,7 +2865,7 @@ static void setbitCommand(rliteClient *c) {
 
 	bit = c->argv[3][0] == '0' ? 0 : 1;
 	int retval = rl_setbit(c->context->db, key, keylen, offset, bit, &previousvalue);
-	RLITE_SERVER_ERR(c, retval);
+	RLITE_SERVER_ERR2(c, retval, RL_OK, RL_INVALID_PARAMETERS);
 	if (retval == RL_OK) {
 		c->reply = createLongLongObject(previousvalue);
 	} else if (retval == RL_INVALID_PARAMETERS) {
@@ -2902,7 +2899,7 @@ static void pfaddCommand(rliteClient *c) {
 	}
 
 	retval = rl_pfadd(c->context->db, key, keylen, elementc, elements, elementslen, &updated);
-	RLITE_SERVER_ERR(c, retval);
+	RLITE_SERVER_ERR2(c, retval, RL_OK, RL_INVALID_STATE);
 	if (retval == RL_OK) {
 		c->reply = createLongLongObject(updated);
 	} else if (retval == RL_INVALID_STATE) {
@@ -2927,7 +2924,7 @@ static void pfcountCommand(rliteClient *c) {
 		elementslen[i] = c->argvlen[i + 1];
 	}
 	retval = rl_pfcount(c->context->db, elementc, elements, elementslen, &count);
-	RLITE_SERVER_ERR(c, retval);
+	RLITE_SERVER_ERR2(c, retval, RL_OK, RL_INVALID_STATE);
 	if (retval == RL_OK) {
 		c->reply = createLongLongObject(count);
 	} else if (retval == RL_INVALID_STATE) {
@@ -2954,7 +2951,7 @@ static void pfmergeCommand(rliteClient *c) {
 	}
 
 	retval = rl_pfmerge(c->context->db, key, keylen, elementc, elements, elementslen);
-	RLITE_SERVER_ERR(c, retval);
+	RLITE_SERVER_ERR2(c, retval, RL_OK, RL_INVALID_STATE);
 	if (retval == RL_OK) {
 		c->reply = createStatusObject(RLITE_STR_OK);
 	} else if (retval == RL_INVALID_STATE) {
@@ -2976,37 +2973,29 @@ static void pfdebugCommand(rliteClient *c) {
 
 	if (!strcasecmp(c->argv[1],"getreg")) {
 		retval = rl_pfdebug_getreg(c->context->db, key, keylen, &size, &elements);
-		RLITE_SERVER_ERR(c, retval);
-		if (retval == RL_OK) {
-			CHECK_OOM(c->reply = createReplyObject(RLITE_REPLY_ARRAY));
-			c->reply->elements = size;
-			CHECK_OOM_ELSE(c->reply->element = rl_malloc(sizeof(rliteReply*) * c->reply->elements),
-					rl_free(c->reply); c->reply = NULL);
-			for (i = 0; i < size; i++) {
-				c->reply->element[i] = createLongLongObject(elements[i]);
-			}
+		RLITE_SERVER_OK(c, retval);
+		CHECK_OOM(c->reply = createReplyObject(RLITE_REPLY_ARRAY));
+		c->reply->elements = size;
+		CHECK_OOM_ELSE(c->reply->element = rl_malloc(sizeof(rliteReply*) * c->reply->elements),
+				rl_free(c->reply); c->reply = NULL);
+		for (i = 0; i < size; i++) {
+			c->reply->element[i] = createLongLongObject(elements[i]);
 		}
 	}
 	else if (!strcasecmp(c->argv[1],"decode")) {
 		retval = rl_pfdebug_decode(c->context->db, key, keylen, &value, &valuelen);
-		RLITE_SERVER_ERR(c, retval);
-		if (retval == RL_OK) {
-			c->reply = createStringObject((char *)value, valuelen);
-		}
+		RLITE_SERVER_OK(c, retval);
+		c->reply = createStringObject((char *)value, valuelen);
 	}
 	else if (!strcasecmp(c->argv[1],"encoding")) {
 		retval = rl_pfdebug_encoding(c->context->db, key, keylen, &value, &valuelen);
-		RLITE_SERVER_ERR(c, retval);
-		if (retval == RL_OK) {
-			c->reply = createStringObject((char *)value, valuelen);
-		}
+		RLITE_SERVER_OK(c, retval);
+		c->reply = createStringObject((char *)value, valuelen);
 	}
 	else if (!strcasecmp(c->argv[1],"todense")) {
 		retval = rl_pfdebug_todense(c->context->db, key, keylen, &size);
-		RLITE_SERVER_ERR(c, retval);
-		if (retval == RL_OK) {
-			c->reply = createLongLongObject(size);
-		}
+		RLITE_SERVER_OK(c, retval);
+		c->reply = createLongLongObject(size);
 	}
 cleanup:
 	rl_free(elements);
@@ -3017,7 +3006,7 @@ static void expireGenericCommand(rliteClient *c, unsigned long long expires) {
 	unsigned char *key = UNSIGN(c->argv[1]);
 	long keylen = c->argvlen[1];
 	int retval = rl_key_expires(c->context->db, key, keylen, expires);
-	RLITE_SERVER_ERR(c, retval);
+	RLITE_SERVER_ERR2(c, retval, RL_OK, RL_NOT_FOUND);
 	if (retval == RL_NOT_FOUND) {
 		c->reply = createLongLongObject(0);
 	} else if (retval == RL_OK) {
@@ -3071,10 +3060,8 @@ static void selectCommand(rliteClient *c) {
 		c->reply = createErrorObject("ERR invalid DB index");
 		return;
 	}
-	RLITE_SERVER_ERR(c, retval);
-	if (retval == RL_OK) {
-		c->reply = createStatusObject(RLITE_STR_OK);
-	}
+	RLITE_SERVER_OK(c, retval);
+	c->reply = createStatusObject(RLITE_STR_OK);
 cleanup:
 	return;
 }
@@ -3087,7 +3074,7 @@ static void moveCommand(rliteClient *c) {
 		return;
 	}
 	int retval = rl_move(c->context->db, key, keylen, db);
-	RLITE_SERVER_ERR(c, retval);
+	RLITE_SERVER_ERR3(c, retval, RL_FOUND, RL_NOT_FOUND, RL_OK);
 	if (retval == RL_FOUND || retval == RL_NOT_FOUND) {
 		c->reply = createLongLongObject(0);
 	} else if (retval == RL_OK) {
@@ -3099,20 +3086,16 @@ cleanup:
 
 static void flushdbCommand(rliteClient *c) {
 	int retval = rl_flushdb(c->context->db);
-	RLITE_SERVER_ERR(c, retval);
-	if (retval == RL_OK) {
-		c->reply = createStatusObject(RLITE_STR_OK);
-	}
+	RLITE_SERVER_OK(c, retval);
+	c->reply = createStatusObject(RLITE_STR_OK);
 cleanup:
 	return;
 }
 
 static void flushallCommand(rliteClient *c) {
 	int retval = rl_flushall(c->context->db);
-	RLITE_SERVER_ERR(c, retval);
-	if (retval == RL_OK) {
-		c->reply = createStatusObject(RLITE_STR_OK);
-	}
+	RLITE_SERVER_OK(c, retval);
+	c->reply = createStatusObject(RLITE_STR_OK);
 cleanup:
 	return;
 }
@@ -3134,7 +3117,7 @@ static void renameGenericCommand(rliteClient *c, int overwrite) {
 	unsigned char *target = UNSIGN(c->argv[2]);
 	long targetlen = c->argvlen[2];
 	int retval = rl_rename(c->context->db, src, srclen, target, targetlen, overwrite);
-	RLITE_SERVER_ERR(c, retval);
+	RLITE_SERVER_ERR2(c, retval, RL_OK, RL_FOUND);
 	if (retval == RL_OK && overwrite) {
 		c->reply = createStatusObject(RLITE_STR_OK);
 	} else if (retval == RL_OK && !overwrite) {
@@ -3151,7 +3134,7 @@ static void ttlGenericCommand(rliteClient *c, long divisor) {
 	long keylen = c->argvlen[1];
 	unsigned long long expires, now;
 	int retval = rl_key_get(c->context->db, key, keylen, NULL, NULL, NULL, &expires, NULL);
-	RLITE_SERVER_ERR(c, retval);
+	RLITE_SERVER_ERR2(c, retval, RL_FOUND, RL_NOT_FOUND);
 	if (retval == RL_NOT_FOUND) {
 		c->reply = createLongLongObject(-2);
 	} else if (retval == RL_FOUND) {
@@ -3182,13 +3165,13 @@ static void persistCommand(rliteClient *c) {
 	unsigned long long expires;
 	long version = 0;
 	int retval = rl_key_get(c->context->db, key, keylen, &type, NULL, &page, &expires, &version);
-	RLITE_SERVER_ERR(c, retval);
+	RLITE_SERVER_ERR2(c, retval, RL_FOUND, RL_NOT_FOUND);
 	if (retval == RL_NOT_FOUND || expires == 0) {
 		c->reply = createLongLongObject(0);
 		goto cleanup;
 	}
 	retval = rl_key_set(c->context->db, key, keylen, type, page, 0, version + 1);
-	RLITE_SERVER_ERR(c, retval);
+	RLITE_SERVER_OK(c, retval);
 	c->reply = createLongLongObject(1);
 cleanup:
 	return;
@@ -3205,10 +3188,7 @@ static void renamenxCommand(rliteClient *c) {
 static void dbsizeCommand(rliteClient *c) {
 	long size;
 	int retval = rl_dbsize(c->context->db, &size);
-	RLITE_SERVER_ERR(c, retval);
-	if (retval != RL_OK) {
-		goto cleanup;
-	}
+	RLITE_SERVER_OK(c, retval);
 	c->reply = createLongLongObject(size);
 cleanup:
 	return;
@@ -3218,7 +3198,7 @@ static void randomkeyCommand(rliteClient *c) {
 	unsigned char *key = NULL;
 	long keylen;
 	int retval = rl_randomkey(c->context->db, &key, &keylen);
-	RLITE_SERVER_ERR(c, retval);
+	RLITE_SERVER_ERR2(c, retval, RL_OK, RL_NOT_FOUND);
 	if (retval == RL_OK) {
 		c->reply = createTakeStringObject((char *)key, keylen);
 	} else {
@@ -3233,11 +3213,8 @@ static void keysCommand(rliteClient *c) {
 	unsigned char **result = NULL;
 	long *resultlen = NULL;
 	int retval = rl_keys(c->context->db, UNSIGN(c->argv[1]), c->argvlen[1], &size, &result, &resultlen);
-	RLITE_SERVER_ERR(c, retval);
-	if (retval != RL_OK) {
-		goto cleanup;
-	}
-	c->reply = createReplyObject(RLITE_REPLY_ARRAY);
+	RLITE_SERVER_ERR2(c, retval, RL_OK, RL_NOT_FOUND);
+	CHECK_OOM(c->reply = createReplyObject(RLITE_REPLY_ARRAY));
 	if (retval == RL_NOT_FOUND) {
 		c->reply->elements = 0;
 		return;
@@ -3264,7 +3241,7 @@ static void existsCommand(rliteClient *c) {
 static void typeCommand(rliteClient *c) {
 	unsigned char type;
 	int retval = rl_key_get(c->context->db, UNSIGN(c->argv[1]), c->argvlen[1], &type, NULL, NULL, NULL, NULL);
-	RLITE_SERVER_ERR(c, retval);
+	RLITE_SERVER_ERR2(c, retval, RL_FOUND, RL_NOT_FOUND);
 	if (retval == RL_NOT_FOUND) {
 		c->reply = createStringObject("none", 4);
 	}
@@ -3311,7 +3288,7 @@ static void getKeyEncoding(rliteClient *c, char *encoding, unsigned char *key, l
 			int hashtable = c->context->hashtableLimitEntries < (size_t)len;
 			if (!hashtable) {
 				int retval = rl_hgetall(c->context->db, &iterator, key, keylen);
-				RLITE_SERVER_ERR(c, retval);
+				RLITE_SERVER_OK(c, retval);
 				while ((retval = rl_hash_iterator_next(iterator, NULL, NULL, NULL, NULL, &value, &valuelen)) == RL_OK) {
 					rl_free(value);
 					if ((size_t)valuelen > c->context->hashtableLimitValue) {
@@ -3325,7 +3302,7 @@ static void getKeyEncoding(rliteClient *c, char *encoding, unsigned char *key, l
 					goto cleanup;
 				}
 			}
-			RLITE_SERVER_ERR(c, retval);
+			RLITE_SERVER_OK(c, retval);
 			const char *enc = hashtable ? "hashtable" : "ziplist";
 			memcpy(encoding, enc, (strlen(enc) + 1) * sizeof(char));
 		}
@@ -3335,11 +3312,11 @@ static void getKeyEncoding(rliteClient *c, char *encoding, unsigned char *key, l
 			long len, valuelen;
 			rl_set_iterator *iterator = NULL;
 			int retval = rl_scard(c->context->db, key, keylen, &len);
-			RLITE_SERVER_ERR(c, retval);
+			RLITE_SERVER_OK(c, retval);
 			int hashtable = 512 < (size_t)len;
 			if (!hashtable) {
 				int retval = rl_smembers(c->context->db, &iterator, key, keylen);
-				RLITE_SERVER_ERR(c, retval);
+				RLITE_SERVER_OK(c, retval);
 				while ((retval = rl_set_iterator_next(iterator, NULL, &value, &valuelen)) == RL_OK) {
 					if (getLongLongFromObject((char *)value, valuelen, NULL) != RLITE_OK) {
 						hashtable = 1;
@@ -3364,11 +3341,11 @@ static void getKeyEncoding(rliteClient *c, char *encoding, unsigned char *key, l
 			long keylen = c->argvlen[2];
 			long len, i;
 			int retval = rl_llen(c->context->db, key, keylen, &len);
-			RLITE_SERVER_ERR(c, retval);
+			RLITE_SERVER_OK(c, retval);
 			int linkedlist = 256 < (size_t)len;
 			if (!linkedlist) {
 				int retval = rl_lrange(c->context->db, key, keylen, 0, -1, &size, &values, &valueslen);
-				RLITE_SERVER_ERR(c, retval);
+				RLITE_SERVER_OK(c, retval);
 				for (i = 0; i < size; i++) {
 					linkedlist = linkedlist || (valueslen[i] > 16);
 					rl_free(values[i]);
@@ -3444,7 +3421,7 @@ static void dumpCommand(rliteClient *c) {
 	long datalen;
 
 	int retval = rl_dump(c->context->db, key, keylen, &data, &datalen);
-	RLITE_SERVER_ERR(c, retval);
+	RLITE_SERVER_ERR2(c, retval, RL_OK, RL_NOT_FOUND);
 	if (retval == RL_NOT_FOUND) {
 		c->reply = createReplyObject(RLITE_REPLY_NIL);
 	} else if (retval == RL_OK){
@@ -3471,10 +3448,7 @@ static void restoreCommand(rliteClient *c) {
 	if (c->argc >= 5) {
 		if (c->argvlen[4] == 7 && strcasecmp(c->argv[4], "replace") == 0) {
 			retval = rl_key_delete_with_value(c->context->db, key, keylen);
-			RLITE_SERVER_ERR(c, retval);
-			if (retval != RL_OK && retval != RL_FOUND && retval != RL_NOT_FOUND) {
-				return;
-			}
+			RLITE_SERVER_ERR3(c, retval, RL_OK, RL_FOUND, RL_NOT_FOUND);
 		} else {
 			c->reply = createErrorObject(RLITE_SYNTAXERR);
 			return;
@@ -3482,13 +3456,11 @@ static void restoreCommand(rliteClient *c) {
 	}
 
 	retval = rl_restore(c->context->db, key, keylen, expires, payload, payloadlen);
-	RLITE_SERVER_ERR(c, retval);
+	RLITE_SERVER_ERR3(c, retval, RL_FOUND, RL_INVALID_PARAMETERS, RL_OK);
 	if (retval == RL_FOUND) {
 		c->reply = createErrorObject("BUSYKEY Target key name already exists");
 	} else if (retval == RL_INVALID_PARAMETERS){
 		c->reply = createErrorObject("ERR DUMP payload version or checksum are wrong");
-	} else if (retval == RL_UNEXPECTED){
-		c->reply = createErrorObject("ERR unexpected");
 	} else if (retval == RL_OK){
 		c->reply = createStatusObject(RLITE_STR_OK);
 	}
@@ -3594,7 +3566,7 @@ static void sortCommand(rliteClient *c) {
 		c->reply = createErrorObject("ERR One or more scores can't be converted into double");
 		goto cleanup;
 	}
-	RLITE_SERVER_ERR(c, retval);
+	RLITE_SERVER_OK(c, retval);
 	if (storekey) {
 		c->reply = createLongLongObject(objc);
 	} else {
@@ -3623,7 +3595,7 @@ cleanup:
 static void pubsubVarargCommandProcessed(rliteClient *c, const char *type, int argc, unsigned char **args, long *argslen, int func(rlite *db, int argc, unsigned char **argv, long *argvlen)) {
 	int i, retval;
 	retval = func(c->context->db, argc, args, argslen);
-	RLITE_SERVER_ERR(c, retval);
+	RLITE_SERVER_OK(c, retval);
 
 	long count = 0;
 	int subscribing = !strcasecmp(type, "subscribe") || !strcasecmp(type, "psubscribe");
@@ -3670,7 +3642,7 @@ static void unsubscribeCommand(rliteClient *c) {
 	long *channelvlen = NULL;
 	if (c->argc == 1) {
 		int retval = rl_pubsub_channels(c->context->db, NULL, 0, &channelc, &channelv, &channelvlen);
-		RLITE_SERVER_ERR(c, retval);
+		RLITE_SERVER_OK(c, retval);
 		pubsubVarargCommandProcessed(c, "unsubscribe", channelc, channelv, channelvlen, rl_unsubscribe);
 	} else {
 		pubsubVarargCommand(c, "unsubscribe", rl_unsubscribe);
@@ -3694,7 +3666,7 @@ static void punsubscribeCommand(rliteClient *c) {
 	long *patternvlen = NULL;
 	if (c->argc == 1) {
 		int retval = rl_pubsub_patterns(c->context->db, &patternc, &patternv, &patternvlen);
-		RLITE_SERVER_ERR(c, retval);
+		RLITE_SERVER_OK(c, retval);
 		pubsubVarargCommandProcessed(c, "punsubscribe", patternc, patternv, patternvlen, rl_punsubscribe);
 	} else {
 		pubsubVarargCommand(c, "punsubscribe", rl_punsubscribe);
@@ -3715,7 +3687,7 @@ static void publishCommand(rliteClient *c) {
 	size_t datalen = c->argvlen[2];
 	long recipients = 0;
 	int retval = rl_publish(c->context->db, channel, channellen, data, datalen, &recipients);
-	RLITE_SERVER_ERR(c, retval);
+	RLITE_SERVER_OK(c, retval);
 	c->reply = createLongLongObject(recipients);
 cleanup:
 	return;
@@ -3734,11 +3706,8 @@ static void pubsubCommand(rliteClient *c) {
 			patternlen = c->argvlen[2];
 		}
 		retval = rl_pubsub_channels(c->context->db, pattern, patternlen, &channelc, &channelv, &channelvlen);
-		RLITE_SERVER_ERR(c, retval);
-		c->reply = createArrayObject(channelc);
-		if (c->reply == NULL) {
-			goto cleanup;
-		}
+		RLITE_SERVER_OK(c, retval);
+		CHECK_OOM(c->reply = createArrayObject(channelc));
 		for (i = 0; i < channelc; i++) {
 			c->reply->element[i] = createTakeStringObject((char *)channelv[i], channelvlen[i]);
 		}
@@ -3775,15 +3744,13 @@ void pubsubPollCommand(rliteClient *c) {
 	} else {
 		retval = rl_poll(c->context->db, &elementc, &elements, &elementslen);
 	}
-	RLITE_SERVER_ERR(c, retval);
+	RLITE_SERVER_ERR2(c, retval, RL_OK, RL_NOT_FOUND);
 	if (retval == RL_NOT_FOUND) {
 		if (c->context->replyPosition == c->context->replyLength) {
 			c->reply = createReplyObject(RLITE_REPLY_NIL);
 		}
 	} else if (retval == RL_OK) {
 		c->reply = pollToReply(elementc, elements, elementslen);
-	} else {
-		addReplyErrorFormat(c->context, "unknown retval %d", retval);
 	}
 cleanup:
 	return;
