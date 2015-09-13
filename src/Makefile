@@ -38,6 +38,10 @@ DEBUG += ${DEBUG.gcc}
 CFLAGS += ${CFLAGS.gcc}
 endif
 
+ifeq ($(RL_DEBUG), 1)
+CFLAGS += -DRL_DEBUG=1
+endif
+
 LIBS=-lm -lpthread
 
 INSTALL?= cp -a
@@ -80,12 +84,7 @@ LUA_STLIB=../deps/lua/src/liblua.a
 AR=ar
 ARFLAGS=rcu
 
-.PHONY: lua gcov lcov clang-analyzer test buildtest vtest clean builddebug debug
-
-builddebug: CFLAGS += -DRL_DEBUG=1
-builddebug: clean buildtest
-
-debug: builddebug vtest
+.PHONY: lua gcov lcov clang-analyzer test buildtest vtest clean
 
 lua:
 	cd ../deps/lua && $(MAKE) ansi CFLAGS="$(LUA_CFLAGS)" MYLDFLAGS="$(LUA_LDFLAGS)" AR="$(AR) $(ARFLAGS)"

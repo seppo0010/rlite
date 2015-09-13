@@ -13,18 +13,14 @@ DEBUG += ${DEBUG.gcc}
 CFLAGS += ${CFLAGS.gcc}
 endif
 
+ifeq ($(RL_DEBUG), 1)
+CFLAGS += -DRL_DEBUG=1
+endif
+
 .PHONY: lua gcov lcov clang-analyzer test buildtest vtest clean
 
 gcov: CFLAGS += -fprofile-arcs -ftest-coverage
 gcov: clean test
-
-builddebug: CFLAGS += -DRL_DEBUG=1
-builddebug: clean buildtest
-
-debug: builddebug vtest
-
-full-lcov: CFLAGS += -fprofile-arcs -ftest-coverage -DRL_DEBUG=1
-full-lcov: clean buildtest
 
 .c.o:
 	$(CC) $(ARCH) $(DEBUG) $(CFLAGS) -c $<
