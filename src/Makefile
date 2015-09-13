@@ -84,7 +84,7 @@ LUA_STLIB=../deps/lua/src/liblua.a
 AR=ar
 ARFLAGS=rcu
 
-.PHONY: lua gcov lcov clang-analyzer test buildtest vtest clean
+.PHONY: lua gcov lcov clang-analyzer test buildtest vtest vtestoom clean
 
 lua:
 	cd ../deps/lua && $(MAKE) ansi CFLAGS="$(LUA_CFLAGS)" MYLDFLAGS="$(LUA_LDFLAGS)" AR="$(AR) $(ARFLAGS)"
@@ -120,6 +120,9 @@ test: $(STLIBNAME)
 
 vtest: $(STLIBNAME)
 	cd ../tests/ && $(MAKE) vtest
+
+vtestoom: $(STLIBNAME)
+	cd ../tests/ && $(MAKE) vtestoom
 
 $(PKGCONFNAME): rlite/hirlite.h
 	@echo "Generating $@ for pkgconfig..."

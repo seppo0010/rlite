@@ -21,7 +21,8 @@ compiler:
 script:
   - make
   - if [ "$TRAVIS_OS_NAME" = "osx" ]; then brew install --HEAD valgrind; fi
-  - make vtest
+  - if [ "$RL_DEBUG" = 0 ]; then make vtest; fi
+  - if [ "$RL_DEBUG" = 1 ]; then make vtestoom; fi
 
 notifications:
   email: false

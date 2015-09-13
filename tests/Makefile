@@ -34,5 +34,8 @@ test: buildtest
 vtest: buildtest
 	valgrind --track-origins=yes --leak-check=full --show-reachable=yes --suppressions=../.valgrind.supp --error-exitcode=1 ./rlite-test
 
+vtestoom: buildtest
+	valgrind --track-origins=yes --leak-check=full --show-reachable=yes --suppressions=../.valgrind.supp --error-exitcode=1 ./rlite-test -t oom
+
 clean:
 	rm -f *.o rlite-test hirlite-test
