@@ -1,0 +1,14 @@
+{
+   Ignore leak in OS X strold
+   Memcheck:Leak
+   ...
+   fun:strtold
+   ...
+}
+{
+   Ignore leak in OS X fprintf
+   Memcheck:Leak
+   ...
+   fun:fprintf
+   ...
+}

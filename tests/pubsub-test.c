@@ -294,6 +294,7 @@ TEST basic_subscribe2_publish(int publish_channel)
 	rl_close(db);
 
 	ASSERT_EQ(buffer.read, 1);
+	pthread_join(thread, NULL);
 	PASS();
 }
 
@@ -337,6 +338,7 @@ TEST basic_subscribe_timeout_publish(int timeout)
 	ASSERT(elapsed < 5000);
 	ASSERT_EQ(buffer_r.read, 1);
 	ASSERT_EQ(buffer_w.recipients, 1);
+	pthread_join(thread_w, NULL);
 	PASS();
 }
 

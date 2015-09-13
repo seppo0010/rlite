@@ -52,6 +52,7 @@ TEST basic_read_write()
 	ASSERT_EQ(datalen, testdatalen);
 	ASSERT_EQ(memcmp(data, testdata, datalen), 0);
 	rl_free(testdata);
+	pthread_join(thread, NULL);
 	PASS();
 }
 
@@ -98,6 +99,7 @@ TEST basic_read_timeout_write()
 	ASSERT_EQ(datalen, testdatalen);
 	ASSERT_EQ(memcmp(data, testdata, datalen), 0);
 	rl_free(testdata);
+	pthread_join(thread, NULL);
 	PASS();
 }
 

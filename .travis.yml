@@ -6,11 +6,19 @@ language: c
 
 sudo: false
 
+addons:
+  apt:
+    packages:
+      - valgrind
+
 compiler:
   - clang
   - gcc
 
-script: make && make test
+script:
+  - make
+  - if [ "$TRAVIS_OS_NAME" = "osx" ]; then brew install --HEAD valgrind; fi
+  - make vtest
 
 notifications:
   email: false
