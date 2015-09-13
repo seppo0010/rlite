@@ -678,7 +678,6 @@ int rl_read(rlite *db, rl_data_type *type, long page, void *context, void **obj,
 		if (initial_page_size != db->page_size) {
 			page_obj->serialized_data = rl_realloc(data, db->page_size * sizeof(unsigned char));
 			if (page_obj->serialized_data == NULL) {
-				fprintf(stderr, "realloc failed\n");
 				retval = RL_OUT_OF_MEMORY;
 				goto cleanup;
 			}
