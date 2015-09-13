@@ -678,6 +678,7 @@ int rl_read(rlite *db, rl_data_type *type, long page, void *context, void **obj,
 		if (initial_page_size != db->page_size) {
 			page_obj->serialized_data = rl_realloc(data, db->page_size * sizeof(unsigned char));
 			if (page_obj->serialized_data == NULL) {
+				rl_free(page_obj);
 				retval = RL_OUT_OF_MEMORY;
 				goto cleanup;
 			}
@@ -691,6 +692,10 @@ int rl_read(rlite *db, rl_data_type *type, long page, void *context, void **obj,
 		}
 
 		serialize_data = calloc(db->page_size, sizeof(unsigned char));
+		if (!serialize_data) {
+			rl_free(page_obj->serialized_data);
+			rl_free(page_obj);
+		}
 		retval = type->serialize(db, obj ? *obj : NULL, serialize_data);
 		if (retval != RL_OK) {
 			goto cleanup;
@@ -717,7 +722,7 @@ int rl_read(rlite *db, rl_data_type *type, long page, void *context, void **obj,
 	}
 cleanup:
 #ifdef RL_DEBUG
-	if (!keep) {
+	if (retval != RL_FOUND || !keep) {
 		rl_free(data);
 	}
 #endif
