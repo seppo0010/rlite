@@ -80,6 +80,11 @@ LUA_STLIB=../deps/lua/src/liblua.a
 AR=ar
 ARFLAGS=rcu
 
+builddebug: CFLAGS += -DDEBUG=1
+builddebug: clean buildtest
+
+debug: builddebug vtest
+
 lua:
 	cd ../deps/lua && $(MAKE) ansi CFLAGS="$(LUA_CFLAGS)" MYLDFLAGS="$(LUA_LDFLAGS)" AR="$(AR) $(ARFLAGS)"
 
