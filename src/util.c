@@ -55,10 +55,15 @@ void *rl_realloc(void *ptr, size_t size)
 	if (strings == NULL) {
 		exit(1);
 	}
-	if (strstr(strings[1], test_mode_caller)) {
-		if (--test_mode_counter == 0) {
-			test_mode = 0;
-			return NULL;
+
+	int i;
+	for (i = 1; i < nptrs; i++) {
+		if (strstr(strings[i], test_mode_caller)) {
+			if (--test_mode_counter == 0) {
+				test_mode = 0;
+				// fprintf(stderr, "%s\n", strings[1]);
+				return NULL;
+			}
 		}
 	}
 	return realloc(ptr, size);
