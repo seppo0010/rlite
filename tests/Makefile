@@ -13,6 +13,8 @@ DEBUG += ${DEBUG.gcc}
 CFLAGS += ${CFLAGS.gcc}
 endif
 
+.PHONY: lua gcov lcov clang-analyzer test buildtest vtest clean
+
 gcov: CFLAGS += -fprofile-arcs -ftest-coverage
 gcov: clean test
 

@@ -80,6 +80,8 @@ LUA_STLIB=../deps/lua/src/liblua.a
 AR=ar
 ARFLAGS=rcu
 
+.PHONY: lua gcov lcov clang-analyzer test buildtest vtest clean builddebug debug
+
 builddebug: CFLAGS += -DDEBUG=1
 builddebug: clean buildtest
 
