@@ -228,7 +228,7 @@ int rl_write_apply_wal(rlite *db) {
 		rl_file_driver *driver = db->driver;
 		wal_path = get_wal_filename(driver->filename);
 		if (wal_path == NULL) {
-			retval = RL_UNEXPECTED;
+			retval = RL_OUT_OF_MEMORY;
 			goto cleanup;
 		}
 		fp = fopen(wal_path, "wb");
@@ -288,7 +288,7 @@ int rl_apply_wal(rlite *db) {
 	size_t datalen;
 	char *wal_path = get_wal_filename(driver->filename);
 	if (wal_path == NULL) {
-		retval = RL_UNEXPECTED;
+		retval = RL_OUT_OF_MEMORY;
 		goto cleanup;
 	}
 	if (access(wal_path, F_OK) != 0) {
