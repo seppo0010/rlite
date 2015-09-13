@@ -10,6 +10,9 @@ addons:
   apt:
     packages:
       - valgrind
+env:
+  - RL_DEBUG=0
+  - RL_DEBUG=1
 
 compiler:
   - clang
