@@ -62,10 +62,12 @@ void *rl_realloc(void *ptr, size_t size)
 			if (--test_mode_counter == 0) {
 				test_mode = 0;
 				// fprintf(stderr, "%s\n", strings[1]);
+				free(strings);
 				return NULL;
 			}
 		}
 	}
+	free(strings);
 	return realloc(ptr, size);
 }
 
