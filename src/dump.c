@@ -35,7 +35,7 @@ static int rl_dump_list(struct rlite *db, const unsigned char *key, long keylen,
 	long buflen;
 	uint32_t length;
 	long valuelen = 0;
-	rl_list_iterator *iterator;
+	rl_list_iterator *iterator = NULL;
 	void *tmp;
 	long page, size;
 
@@ -47,9 +47,9 @@ static int rl_dump_list(struct rlite *db, const unsigned char *key, long keylen,
 		RL_CALL(rl_multi_string_get, RL_OK, db, page, NULL, &valuelen);
 		buflen += 5 + valuelen;
 	}
+	iterator = NULL;
 
 	if (retval != RL_END) {
-		rl_list_iterator_destroy(db, iterator);
 		goto cleanup;
 	}
 
@@ -72,9 +72,9 @@ static int rl_dump_list(struct rlite *db, const unsigned char *key, long keylen,
 		RL_CALL(rl_multi_string_cpy, RL_OK, db, page, &buf[buflen], NULL);
 		buflen += valuelen;
 	}
+	iterator = NULL;
 
 	if (retval != RL_END) {
-		rl_list_iterator_destroy(db, iterator);
 		goto cleanup;
 	}
 
@@ -82,6 +82,12 @@ static int rl_dump_list(struct rlite *db, const unsigned char *key, long keylen,
 	*datalen = buflen;
 	retval = RL_OK;
 cleanup:
+	if (retval != RL_OK) {
+		if (iterator) {
+			rl_list_iterator_destroy(db, iterator);
+		}
+		rl_free(buf);
+	}
 	return retval;
 }
 

@@ -61,7 +61,7 @@ void *rl_realloc(void *ptr, size_t size)
 		if (strstr(strings[i], test_mode_caller)) {
 			if (--test_mode_counter == 0) {
 				test_mode = 0;
-				// fprintf(stderr, "%s\n", strings[1]);
+				// for (i = 1; i < nptrs; i++) { fprintf(stderr, "%s\n", strings[i]); }
 				free(strings);
 				return NULL;
 			}

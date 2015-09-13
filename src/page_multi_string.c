@@ -299,9 +299,6 @@ int rl_multi_string_cpyrange(struct rlite *db, long number, unsigned char *data,
 	}
 	retval = RL_OK;
 cleanup:
-	if (retval != RL_OK) {
-		rl_free(data);
-	}
 	if (list) {
 		rl_list_nocache_destroy(db, list);
 	}

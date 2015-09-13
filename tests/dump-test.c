@@ -50,6 +50,40 @@ TEST test_list()
 	PASS();
 }
 
+#ifdef RL_DEBUG
+TEST test_list_oom()
+{
+	int i, retval;
+	rlite *db = NULL;
+	RL_CALL_VERBOSE(rl_open, RL_OK, ":memory:", &db, RLITE_OPEN_READWRITE | RLITE_OPEN_CREATE);
+	unsigned char *key = UNSIGN("mykey"), *testvalue;
+	long keylen = 5, testvaluelen;
+	unsigned char *values[2] = {UNSIGN("b"), UNSIGN("a")};
+	long valueslen[2] = {1, 1};
+	RL_CALL_VERBOSE(rl_push, RL_OK, db, key, keylen, 1, 0, 2, values, valueslen, NULL);
+	for (i = 1; ; i++) {
+		test_mode = 1;
+		test_mode_caller = "rl_dump";
+		test_mode_counter = i;
+
+		retval = rl_dump(db, key, keylen, &testvalue, &testvaluelen);
+		if (retval == RL_OK) {
+			if (i == 1) {
+				fprintf(stderr, "No OOM triggered\n");
+				test_mode = 0;
+				FAIL();
+			}
+			rl_free(testvalue);
+			break;
+		}
+		EXPECT_INT(retval, RL_OUT_OF_MEMORY);
+	}
+	test_mode = 0;
+	rl_close(db);
+	PASS();
+}
+#endif
+
 TEST test_set()
 {
 	int retval;
@@ -109,4 +143,7 @@ SUITE(dump_test)
 	RUN_TEST(test_set);
 	RUN_TEST(test_zset);
 	RUN_TEST(test_hash);
+#ifdef RL_DEBUG
+	RUN_TEST(test_list_oom);
+#endif
 }
