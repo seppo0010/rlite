@@ -18,12 +18,12 @@ endif
 gcov: CFLAGS += -fprofile-arcs -ftest-coverage
 gcov: clean test
 
-builddebug: CFLAGS += -DDEBUG=1
+builddebug: CFLAGS += -DRL_DEBUG=1
 builddebug: clean buildtest
 
 debug: builddebug vtest
 
-full-lcov: CFLAGS += -fprofile-arcs -ftest-coverage -DDEBUG=1
+full-lcov: CFLAGS += -fprofile-arcs -ftest-coverage -DRL_DEBUG=1
 full-lcov: clean buildtest
 
 .c.o:

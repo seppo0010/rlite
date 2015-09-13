@@ -82,7 +82,7 @@ ARFLAGS=rcu
 
 .PHONY: lua gcov lcov clang-analyzer test buildtest vtest clean builddebug debug
 
-builddebug: CFLAGS += -DDEBUG=1
+builddebug: CFLAGS += -DRL_DEBUG=1
 builddebug: clean buildtest
 
 debug: builddebug vtest
