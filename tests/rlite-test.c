@@ -74,6 +74,7 @@ TEST rl_open_oom()
 			if (retval == RL_OK) {
 				if (i == 1) {
 					fprintf(stderr, "No OOM triggered\n");
+					test_mode = 0;
 					FAIL();
 				}
 				rl_close(db);
