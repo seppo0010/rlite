@@ -27,6 +27,8 @@ int _sha1_formatter(unsigned char *data, char formatted[40])
 #ifdef RL_DEBUG
 
 int test_mode = 0;
+char *test_mode_caller;
+size_t test_mode_counter;
 int failed = 0;
 
 int expect_fail()
@@ -44,64 +46,22 @@ void *rl_realloc(void *ptr, size_t size)
 	if (test_mode == 0) {
 		return realloc(ptr, size);
 	}
-	unsigned char digest[20];
-	char hexdigest[41];
-	int j, nptrs;
-	void *r;
+	int nptrs;
 #define SIZE 1000
 	void *buffer[SIZE];
 	char **strings;
 	nptrs = backtrace(buffer, SIZE);
 	strings = backtrace_symbols(buffer, nptrs);
 	if (strings == NULL) {
-		return NULL;
+		exit(1);
 	}
-
-	SHA1_CTX sha;
-	SHA1Init(&sha);
-	for (j = 0; j < nptrs; j++) {
-		SHA1Update(&sha, (unsigned char *)strings[j], strlen(strings[j]));
-	}
-	SHA1Final(digest, &sha);
-
-	_sha1_formatter(digest, hexdigest);
-
-	const char *dir = "malloc-debug";
-	char subdir[100];
-	mkdir(dir, 0777);
-	long i = strlen(dir);
-	memcpy(subdir, dir, strlen(dir));
-	subdir[i] = '/';
-	subdir[i + 1] = hexdigest[0];
-	subdir[i + 2] = hexdigest[1];
-	subdir[i + 3] = 0;
-	mkdir(subdir, 0777);
-	subdir[i + 3] = '/';
-
-	for (j = 0; j < 38; j++) {
-		subdir[i + 4 + j] = hexdigest[2 + j];
-	}
-	subdir[42] = 0;
-
-	if (access(subdir, F_OK) == 0) {
-		r = realloc(ptr, size);
-	}
-	else {
-		hexdigest[40] = 0;
-		fprintf(stderr, "Failing malloc on %s\n", hexdigest);
-
-		FILE *fp = fopen(subdir, "w");
-		for (j = 0; j < nptrs; j++) {
-			fwrite(strings[j], 1, strlen(strings[j]), fp);
-			fwrite("\n", 1, 1, fp);
+	if (strstr(strings[1], test_mode_caller)) {
+		if (--test_mode_counter == 0) {
+			test_mode = 0;
+			return NULL;
 		}
-		fclose(fp);
-		failed = 1;
-		fprintf(stderr, "Simulating OOM\n");
-		r = NULL;
 	}
-	rl_free(strings);
-	return r;
+	return realloc(ptr, size);
 }
 
 void rl_free(void *ptr)

@@ -4,6 +4,7 @@
 #include <stdlib.h>
 #include "util.h"
 #include "../src/rlite.h"
+#include "rlite/util.h"
 
 TEST test_rlite_page_cache()
 {
@@ -59,8 +60,38 @@ TEST test_has_key()
 	PASS();
 }
 
+#ifdef RL_DEBUG
+TEST rl_open_oom()
+{
+	int j, i, retval;
+	rlite *db = NULL;
+	for (j = 0; j < 2; j++) {
+		for (i = 1; ; i++) {
+			test_mode = 1;
+			test_mode_caller = j == 0 ? "rl_open" : "rl_create_db";
+			test_mode_counter = i;
+			retval = rl_open(":memory:", &db, RLITE_OPEN_CREATE | RLITE_OPEN_READWRITE);
+			if (retval == RL_OK) {
+				if (i == 1) {
+					fprintf(stderr, "No OOM triggered\n");
+					FAIL();
+				}
+				rl_close(db);
+				break;
+			}
+			EXPECT_INT(retval, RL_OUT_OF_MEMORY);
+		}
+	}
+	test_mode = 0;
+	PASS();
+}
+#endif
+
 SUITE(rlite_test)
 {
 	RUN_TEST(test_rlite_page_cache);
 	RUN_TEST(test_has_key);
+#ifdef RL_DEBUG
+	RUN_TEST(rl_open_oom);
+#endif
 }

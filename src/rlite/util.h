@@ -14,6 +14,8 @@
 #ifdef RL_DEBUG
 int expect_fail();
 extern int test_mode;
+extern char *test_mode_caller;
+extern size_t test_mode_counter;
 void *rl_malloc(size_t size);
 void *rl_realloc(void *ptr, size_t size);
 void rl_free(void *ptr);

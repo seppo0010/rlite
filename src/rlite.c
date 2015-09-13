@@ -261,6 +261,11 @@ int rl_open(const char *filename, rlite **_db, int flags)
 	db->page_size = DEFAULT_PAGE_SIZE;
 	db->read_pages = db->write_pages = NULL;
 	db->read_pages_alloc = db->read_pages_len = db->write_pages_len = db->write_pages_alloc = 0;
+	db->initial_number_of_pages = db->number_of_pages = 0;
+	db->initial_number_of_databases =
+	db->number_of_databases = 0;
+	db->driver = NULL;
+	db->driver_type = -1;
 
 	RL_MALLOC(db->read_pages, sizeof(rl_page *) * DEFAULT_READ_PAGES_LEN)
 	db->read_pages_len = 0;
@@ -907,7 +912,9 @@ int rl_discard(struct rlite *db)
 	db->number_of_databases = db->initial_number_of_databases;
 	rl_free(db->databases);
 	RL_MALLOC(db->databases, sizeof(long) * (db->number_of_databases + RLITE_INTERNAL_DB_COUNT));
-	memcpy(db->databases, db->initial_databases, sizeof(long) *  (db->number_of_databases + RLITE_INTERNAL_DB_COUNT));
+	if (db->initial_databases) {
+		memcpy(db->databases, db->initial_databases, sizeof(long) *  (db->number_of_databases + RLITE_INTERNAL_DB_COUNT));
+	}
 	rl_page *page;
 
 	if (db->driver_type == RL_FILE_DRIVER) {
