@@ -488,12 +488,6 @@ static int rl_search_cache(rlite *db, rl_data_type *type, long page_number, void
 			pos = min + (max - min) / 2;
 			page = pages[pos];
 			if (page->page_number == page_number) {
-#ifdef RL_DEBUG
-				if (page->type != &rl_data_type_long && type != &rl_data_type_long && type != NULL && page->type != type) {
-					fprintf(stderr, "Type of page in cache (%s) doesn't match the asked one (%s)\n", page->type->name, type->name);
-					return RL_UNEXPECTED;
-				}
-#endif
 				if (obj) {
 					if (page->type == NULL) {
 						// This happens when we are in read-only mode, and have a wal file
@@ -506,6 +500,12 @@ static int rl_search_cache(rlite *db, rl_data_type *type, long page_number, void
 						rl_free(serialize_data);
 					}
 					*obj = page->obj;
+#ifdef RL_DEBUG
+				if (page->type != &rl_data_type_long && type != &rl_data_type_long && type != NULL && page->type != type) {
+					fprintf(stderr, "Type of page in cache (%s) doesn't match the asked one (%s)\n", page->type->name, type->name);
+					return RL_UNEXPECTED;
+				}
+#endif
 				}
 				if (position) {
 					*position = pos;

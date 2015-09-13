@@ -98,6 +98,10 @@ static int rl_apply_wal_data(rlite *db, unsigned char *data, size_t datalen, int
 			// TODO: better cleanup on OOM
 			rl_ensure_pages(db);
 			RL_MALLOC(page_obj, sizeof(*page_obj));
+#ifdef RL_DEBUG
+			RL_MALLOC(page_obj->serialized_data, db->page_size * sizeof(unsigned char));
+			memcpy(page_obj->serialized_data, &data[position], db->page_size);
+#endif
 			page_obj->page_number = page_number;
 			page_obj->type = NULL;
 			page_obj->obj = rl_malloc(sizeof(unsigned char) * db->page_size);
