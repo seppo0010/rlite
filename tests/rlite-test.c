@@ -65,12 +65,12 @@ TEST rl_open_oom()
 {
 	int j, i, retval;
 	rlite *db = NULL;
-	for (j = 0; j < 2; j++) {
+	for (j = 0; j < 4; j++) {
 		for (i = 1; ; i++) {
 			test_mode = 1;
-			test_mode_caller = j == 0 ? "rl_open" : "rl_create_db";
+			test_mode_caller = j % 2 == 0 ? "rl_open" : "rl_create_db";
 			test_mode_counter = i;
-			retval = rl_open(":memory:", &db, RLITE_OPEN_CREATE | RLITE_OPEN_READWRITE);
+			retval = rl_open(j < 2 ? ":memory:" : "rlite-test.rld", &db, RLITE_OPEN_CREATE | RLITE_OPEN_READWRITE);
 			if (retval == RL_OK) {
 				if (i == 1) {
 					fprintf(stderr, "No OOM triggered\n");
