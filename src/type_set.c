@@ -231,9 +231,11 @@ int rl_set_iterator_next(rl_set_iterator *iterator, long *_page, unsigned char *
 			*_page = page;
 		}
 		rl_free(tmp);
-		RL_CALL(rl_multi_string_get, RL_OK, iterator->db, page, member, memberlen);
+		retval = rl_multi_string_get(iterator->db, page, member, memberlen);
+		if (retval != RL_OK) {
+			rl_set_iterator_destroy(iterator);
+		}
 	}
-cleanup:
 	return retval;
 }
 

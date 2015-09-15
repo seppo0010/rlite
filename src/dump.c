@@ -100,7 +100,7 @@ static int rl_dump_set(struct rlite *db, const unsigned char *key, long keylen, 
 	long page;
 	uint32_t length;
 
-	rl_set_iterator *iterator;
+	rl_set_iterator *iterator = NULL;
 	RL_CALL(rl_smembers, RL_OK, db, &iterator, key, keylen);
 	buflen = 16;
 	length = 0;
@@ -108,6 +108,7 @@ static int rl_dump_set(struct rlite *db, const unsigned char *key, long keylen, 
 		buflen += 5 + valuelen;
 		length++;
 	}
+	iterator = NULL;
 	if (retval != RL_END) {
 		goto cleanup;
 	}
@@ -128,6 +129,7 @@ static int rl_dump_set(struct rlite *db, const unsigned char *key, long keylen, 
 		RL_CALL(rl_multi_string_cpy, RL_OK, db, page, &buf[buflen], NULL);
 		buflen += valuelen;
 	}
+	iterator = NULL;
 	if (retval != RL_END) {
 		goto cleanup;
 	}
@@ -136,6 +138,12 @@ static int rl_dump_set(struct rlite *db, const unsigned char *key, long keylen, 
 	*datalen = buflen;
 	retval = RL_OK;
 cleanup:
+	if (retval != RL_OK) {
+		if (iterator) {
+			rl_set_iterator_destroy(iterator);
+		}
+		rl_free(buf);
+	}
 	return retval;
 }
 
