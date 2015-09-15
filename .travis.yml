@@ -16,7 +16,8 @@ env:
 
 compiler:
   - clang
-  - gcc
+#  Disabling gcc because clang is enough, and we don't need to waste cpu cycles
+#  - gcc
 
 script:
   - if [ "$TRAVIS_OS_NAME" = "osx" ]; then brew install --HEAD valgrind; fi
