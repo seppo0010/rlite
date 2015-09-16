@@ -7,16 +7,20 @@
 #include "../src/rlite/page_btree.h"
 #include "../src/rlite/status.h"
 
+#define INIT()\
+	rl_btree *btree = NULL;\
+	int retval;\
+	rlite *db = NULL;\
+	RL_CALL_VERBOSE(setup_db, RL_OK, &db, 0, 1);\
+	RL_CALL_VERBOSE(rl_btree_create_size, RL_OK, db, &btree, &rl_btree_type_hash_long_long, btree_node_size);
+
 TEST basic_insert_hash_test()
 {
+	long btree_node_size = 2;
+	INIT();
 	long **keys = malloc(sizeof(long *) * 7);
 	long **vals = malloc(sizeof(long *) * 7);
 
-	rl_btree *btree = NULL;
-	int retval;
-	rlite *db = NULL;
-	RL_CALL_VERBOSE(setup_db, RL_OK, &db, 0, 1);
-	RL_CALL_VERBOSE(rl_btree_create_size, RL_OK, db, &btree, &rl_btree_type_hash_long_long, 2);
 	long btree_page = db->next_empty_page;
 	RL_CALL_VERBOSE(rl_write, RL_OK, db, btree->type->btree_type, btree_page, btree);
 	long i;
@@ -49,14 +53,9 @@ cleanup:
 
 TEST random_hash_test(long size, long btree_node_size)
 {
+	INIT();
 	long *key, *val;
 	int *results = malloc(sizeof(int) * size);
-
-	rl_btree *btree = NULL;
-	int retval;
-	rlite *db = NULL;
-	RL_CALL_VERBOSE(setup_db, RL_OK, &db, 0, 1);
-	RL_CALL_VERBOSE(rl_btree_create_size, RL_OK, db, &btree, &rl_btree_type_hash_long_long, btree_node_size);
 	long btree_page = db->next_empty_page;
 	RL_CALL_VERBOSE(rl_write, RL_OK, db, btree->type->btree_type, btree_page, btree);
 	long i;
@@ -104,16 +103,13 @@ static int contains_element(long element, long *elements, long size)
 
 TEST fuzzy_hash_test(long size, long btree_node_size, int _commit)
 {
-	int retval;
-	rlite *db = NULL;
-	rl_btree *btree = NULL;
+	INIT();
+
 	long *elements = malloc(sizeof(long) * size);
 	long *nonelements = malloc(sizeof(long) * size);
 	long *values = malloc(sizeof(long) * size);
 	void **flatten_scores = malloc(sizeof(void *) * size);
 
-	RL_CALL_VERBOSE(setup_db, RL_OK, &db, _commit, 1);
-	RL_CALL_VERBOSE(rl_btree_create_size, RL_OK, db, &btree, &rl_btree_type_hash_long_long, btree_node_size);
 	long btree_page = db->next_empty_page;
 	RL_CALL_VERBOSE(rl_write, RL_OK, db, btree->type->btree_type, btree_page, btree);
 
@@ -185,16 +181,13 @@ cleanup:
 
 TEST fuzzy_hash_test_iterator(long size, long btree_node_size, int _commit)
 {
-	int retval;
-	rlite *db = NULL;
-	rl_btree *btree = NULL;
+	INIT();
+
 	rl_btree_iterator *iterator = NULL;
 	long *elements = malloc(sizeof(long) * size);
 	long *nonelements = malloc(sizeof(long) * size);
 	long *values = malloc(sizeof(long) * size);
-	RL_CALL_VERBOSE(setup_db, RL_OK, &db, _commit, 1);
 
-	RL_CALL_VERBOSE(rl_btree_create_size, RL_OK, db, &btree, &rl_btree_type_hash_long_long, btree_node_size);
 	long btree_page = db->next_empty_page;
 	RL_CALL_VERBOSE(rl_write, RL_OK, db, btree->type->btree_type, btree_page, btree);
 
