@@ -25,6 +25,9 @@ static int rl_dump_string(struct rlite *db, const unsigned char *key, long keyle
 	*datalen = buflen;
 	retval = RL_OK;
 cleanup:
+	if (retval != RL_OK) {
+		rl_free(buf);
+	}
 	return retval;
 }
 

@@ -60,6 +60,15 @@ TEST test_string()
 	PASS();
 }
 
+#ifdef RL_DEBUG
+TEST test_string_oom()
+{
+	INIT();
+	RL_CALL_VERBOSE(rl_set, RL_OK, db, key, keylen, UNSIGN("asd"), 3, 0, 0);
+	OOM();
+}
+#endif
+
 TEST test_list()
 {
 	INIT();
@@ -168,6 +177,7 @@ SUITE(dump_test)
 	RUN_TEST(test_zset);
 	RUN_TEST(test_hash);
 #ifdef RL_DEBUG
+	RUN_TEST(test_string_oom);
 	RUN_TEST(test_list_oom);
 	RUN_TEST(test_set_oom);
 	RUN_TEST(test_zset_oom);
