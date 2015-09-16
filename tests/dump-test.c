@@ -41,13 +41,16 @@
 
 #endif
 
+#define INIT()\
+	int retval;\
+	rlite *db = NULL;\
+	unsigned char *key = UNSIGN("mykey"), *testvalue;\
+	long keylen = 5, testvaluelen;\
+	RL_CALL_VERBOSE(rl_open, RL_OK, ":memory:", &db, RLITE_OPEN_READWRITE | RLITE_OPEN_CREATE);
+
 TEST test_string()
 {
-	int retval;
-	rlite *db = NULL;
-	unsigned char *key = UNSIGN("mykey"), *testvalue;
-	long keylen = 5, testvaluelen;
-	RL_CALL_VERBOSE(rl_open, RL_OK, ":memory:", &db, RLITE_OPEN_READWRITE | RLITE_OPEN_CREATE);
+	INIT();
 
 	RL_CALL_VERBOSE(rl_set, RL_OK, db, key, keylen, UNSIGN("asd"), 3, 0, 0);
 	RL_CALL_VERBOSE(rl_dump, RL_OK, db, key, keylen, &testvalue, &testvaluelen);
@@ -59,11 +62,7 @@ TEST test_string()
 
 TEST test_list()
 {
-	int retval;
-	rlite *db = NULL;
-	unsigned char *key = UNSIGN("mykey"), *testvalue;
-	long keylen = 5, testvaluelen;
-	RL_CALL_VERBOSE(rl_open, RL_OK, ":memory:", &db, RLITE_OPEN_READWRITE | RLITE_OPEN_CREATE);
+	INIT();
 
 	unsigned char *values[2] = {UNSIGN("b"), UNSIGN("a")};
 	long valueslen[2] = {1, 1};
@@ -78,11 +77,8 @@ TEST test_list()
 #ifdef RL_DEBUG
 TEST test_list_oom()
 {
-	int retval;
-	rlite *db = NULL;
-	RL_CALL_VERBOSE(rl_open, RL_OK, ":memory:", &db, RLITE_OPEN_READWRITE | RLITE_OPEN_CREATE);
-	unsigned char *key = UNSIGN("mykey"), *testvalue;
-	long keylen = 5, testvaluelen;
+	INIT();
+
 	unsigned char *values[2] = {UNSIGN("b"), UNSIGN("a")};
 	long valueslen[2] = {1, 1};
 	RL_CALL_VERBOSE(rl_push, RL_OK, db, key, keylen, 1, 0, 2, values, valueslen, NULL);
@@ -92,11 +88,7 @@ TEST test_list_oom()
 
 TEST test_set()
 {
-	int retval;
-	rlite *db = NULL;
-	unsigned char *key = UNSIGN("mykey"), *testvalue;
-	long keylen = 5, testvaluelen;
-	RL_CALL_VERBOSE(rl_open, RL_OK, ":memory:", &db, RLITE_OPEN_READWRITE | RLITE_OPEN_CREATE);
+	INIT();
 
 	unsigned char *values[2] = {UNSIGN("b"), UNSIGN("a")};
 	long valueslen[2] = {1, 1};
@@ -111,11 +103,8 @@ TEST test_set()
 #ifdef RL_DEBUG
 TEST test_set_oom()
 {
-	int retval;
-	rlite *db = NULL;
-	RL_CALL_VERBOSE(rl_open, RL_OK, ":memory:", &db, RLITE_OPEN_READWRITE | RLITE_OPEN_CREATE);
-	unsigned char *key = UNSIGN("mykey"), *testvalue;
-	long keylen = 5, testvaluelen;
+	INIT();
+
 	unsigned char *values[2] = {UNSIGN("b"), UNSIGN("a")};
 	long valueslen[2] = {1, 1};
 	RL_CALL_VERBOSE(rl_sadd, RL_OK, db, key, keylen, 2, values, valueslen, NULL);
@@ -125,11 +114,7 @@ TEST test_set_oom()
 
 TEST test_zset()
 {
-	int retval;
-	rlite *db = NULL;
-	unsigned char *key = UNSIGN("mykey"), *testvalue;
-	long keylen = 5, testvaluelen;
-	RL_CALL_VERBOSE(rl_open, RL_OK, ":memory:", &db, RLITE_OPEN_READWRITE | RLITE_OPEN_CREATE);
+	INIT();
 
 	RL_CALL_VERBOSE(rl_zadd, RL_OK, db, key, keylen, 1.23, UNSIGN("a"), 1);
 	RL_CALL_VERBOSE(rl_zadd, RL_OK, db, key, keylen, 4.5, UNSIGN("b"), 1);
@@ -143,11 +128,7 @@ TEST test_zset()
 #ifdef RL_DEBUG
 TEST test_zset_oom()
 {
-	int retval;
-	rlite *db = NULL;
-	unsigned char *key = UNSIGN("mykey"), *testvalue;
-	long keylen = 5, testvaluelen;
-	RL_CALL_VERBOSE(rl_open, RL_OK, ":memory:", &db, RLITE_OPEN_READWRITE | RLITE_OPEN_CREATE);
+	INIT();
 
 	RL_CALL_VERBOSE(rl_zadd, RL_OK, db, key, keylen, 1.23, UNSIGN("a"), 1);
 	RL_CALL_VERBOSE(rl_zadd, RL_OK, db, key, keylen, 4.5, UNSIGN("b"), 1);
@@ -157,11 +138,7 @@ TEST test_zset_oom()
 
 TEST test_hash()
 {
-	int retval;
-	rlite *db = NULL;
-	unsigned char *key = UNSIGN("mykey"), *testvalue;
-	long keylen = 5, testvaluelen;
-	RL_CALL_VERBOSE(rl_open, RL_OK, ":memory:", &db, RLITE_OPEN_READWRITE | RLITE_OPEN_CREATE);
+	INIT();
 
 	RL_CALL_VERBOSE(rl_hset, RL_OK, db, key, keylen, UNSIGN("field"), 5, UNSIGN("value"), 5, NULL, 0);
 	RL_CALL_VERBOSE(rl_hset, RL_OK, db, key, keylen, UNSIGN("field2"), 6, UNSIGN("value2"), 6, NULL, 0);
