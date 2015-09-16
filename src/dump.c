@@ -218,7 +218,7 @@ static int rl_dump_hash(struct rlite *db, const unsigned char *key, long keylen,
 	uint32_t length;
 	long valuepage, value2page;
 
-	rl_hash_iterator *iterator;
+	rl_hash_iterator *iterator = NULL;
 	RL_CALL(rl_hgetall, RL_OK, db, &iterator, key, keylen);
 	buflen = 16;
 	length = 0;
@@ -226,6 +226,7 @@ static int rl_dump_hash(struct rlite *db, const unsigned char *key, long keylen,
 		buflen += 10 + valuelen + value2len;
 		length++;
 	}
+	iterator = NULL;
 	if (retval != RL_END) {
 		goto cleanup;
 	}
@@ -253,6 +254,7 @@ static int rl_dump_hash(struct rlite *db, const unsigned char *key, long keylen,
 		RL_CALL(rl_multi_string_cpy, RL_OK, db, value2page, &buf[buflen], NULL);
 		buflen += value2len;
 	}
+	iterator = NULL;
 
 	if (retval != RL_END) {
 		goto cleanup;
@@ -262,6 +264,12 @@ static int rl_dump_hash(struct rlite *db, const unsigned char *key, long keylen,
 	*datalen = buflen;
 	retval = RL_OK;
 cleanup:
+	if (retval != RL_OK) {
+		if (iterator) {
+			rl_hash_iterator_destroy(iterator);
+		}
+		rl_free(buf);
+	}
 	return retval;
 }
 

@@ -149,6 +149,17 @@ TEST test_hash()
 	PASS();
 }
 
+#ifdef RL_DEBUG
+TEST test_hash_oom()
+{
+	INIT();
+
+	RL_CALL_VERBOSE(rl_hset, RL_OK, db, key, keylen, UNSIGN("field"), 5, UNSIGN("value"), 5, NULL, 0);
+	RL_CALL_VERBOSE(rl_hset, RL_OK, db, key, keylen, UNSIGN("field2"), 6, UNSIGN("value2"), 6, NULL, 0);
+	OOM();
+}
+#endif
+
 SUITE(dump_test)
 {
 	RUN_TEST(test_string);
@@ -160,5 +171,6 @@ SUITE(dump_test)
 	RUN_TEST(test_list_oom);
 	RUN_TEST(test_set_oom);
 	RUN_TEST(test_zset_oom);
+	RUN_TEST(test_hash_oom);
 #endif
 }
