@@ -102,6 +102,7 @@ typedef struct rlite {
 	// these four properties can change during a transaction
 	// we need to record their original values to use when
 	// checking watched keys
+	long initial_next_empty_page;
 	long initial_number_of_pages;
 	int initial_number_of_databases;
 	long *initial_databases;

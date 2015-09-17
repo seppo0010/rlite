@@ -208,6 +208,7 @@ int rl_header_deserialize(struct rlite *db, void **UNUSED(obj), void *UNUSED(con
 		return RL_INVALID_STATE;
 	}
 	db->page_size = get_4bytes(&data[identifier_len]);
+	db->initial_next_empty_page =
 	db->next_empty_page = get_4bytes(&data[identifier_len + 4]);
 	db->initial_number_of_pages =
 	db->number_of_pages = get_4bytes(&data[identifier_len + 8]);
@@ -385,6 +386,7 @@ int rl_create_db(rlite *db)
 {
 	int retval, i;
 	RL_CALL(rl_ensure_pages, RL_OK, db);
+	db->initial_next_empty_page =
 	db->next_empty_page = 1;
 	db->initial_number_of_pages =
 	db->number_of_pages = 1;
@@ -896,6 +898,7 @@ int rl_commit(struct rlite *db)
 {
 	int retval;
 	RL_CALL(rl_write_apply_wal, RL_OK, db);
+	db->initial_next_empty_page = db->next_empty_page;
 	db->initial_number_of_pages = db->number_of_pages;
 	db->initial_number_of_databases = db->number_of_databases;
 	rl_free(db->initial_databases);
@@ -949,6 +952,7 @@ int rl_discard(struct rlite *db)
 	db->read_pages_len = 0;
 	db->write_pages_len = 0;
 
+	db->next_empty_page = db->initial_next_empty_page;
 	db->number_of_pages = db->initial_number_of_pages;
 	db->number_of_databases = db->initial_number_of_databases;
 	rl_free(db->databases);
