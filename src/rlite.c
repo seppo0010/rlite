@@ -345,7 +345,9 @@ int rl_close(rlite *db)
 		return RL_OK;
 	}
 
-	rl_unsubscribe_all(db);
+	if (db->driver_type == RL_FILE_DRIVER) {
+		rl_unsubscribe_all(db);
+	}
 	// discard before removing the driver, since we need to release locks
 	rl_discard(db);
 	if (db->driver_type == RL_FILE_DRIVER) {
