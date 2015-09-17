@@ -14,6 +14,58 @@
 	RL_CALL_VERBOSE(setup_db, RL_OK, &db, 0, 1);\
 	RL_CALL_VERBOSE(rl_btree_create_size, RL_OK, db, &btree, &rl_btree_type_hash_long_long, btree_node_size);
 
+#ifdef RL_DEBUG
+#define CHECK_RETVAL(r)\
+	retval = r;\
+	if (retval == RL_OUT_OF_MEMORY) { break; }\
+	EXPECT_INT(retval, RL_OK);
+
+TEST btree_insert_oom()
+{
+	long btree_node_size = 2;
+	rl_btree *btree = NULL;
+	int retval;
+	rlite *db = NULL;
+	RL_CALL_VERBOSE(setup_db, RL_OK, &db, 0, 1);
+
+	long *key;
+	long *val;
+
+	long j, i;
+	int finished = 0;
+	for (j = 1; !finished; j++) {
+		for (i = 0; i < 7; i++) {
+			test_mode = 0;
+			RL_CALL_VERBOSE(rl_btree_create_size, RL_OK, db, &btree, &rl_btree_type_hash_long_long, btree_node_size);
+			long btree_page = db->next_empty_page;
+			RL_CALL_VERBOSE(rl_write, RL_OK, db, btree->type->btree_type, btree_page, btree);
+			test_mode = 1;
+			test_mode_caller = "rl_btree_add_element";
+			test_mode_counter = j;
+			key = malloc(sizeof(long));
+			val = malloc(sizeof(long));
+			*key = i + 1;
+			*val = i * 10;
+			CHECK_RETVAL(rl_btree_add_element(db, btree, btree_page, key, val));
+			if (i == 6 && retval == RL_OK) {
+				if (j == 1) {
+					fprintf(stderr, "No OOM triggered\n");
+					test_mode = 0;
+					FAIL();
+				}
+				finished = 1;
+				break;
+			}
+		}
+		test_mode = 0;
+		rl_discard(db);
+	}
+	test_mode = 0;
+	rl_close(db);
+	PASS();
+}
+#endif
+
 TEST basic_insert_hash_test()
 {
 	long btree_node_size = 2;
@@ -270,6 +322,9 @@ SUITE(btree_test)
 	RUN_TEST(basic_insert_hash_test);
 	RUN_TESTp(random_hash_test, 10, 2);
 	RUN_TESTp(random_hash_test, 100, 10);
+#ifdef RL_DEBUG
+	RUN_TEST(btree_insert_oom);
+#endif
 
 	long delete_tests[DELETE_TESTS_COUNT][2] = {
 		{8, 8},
