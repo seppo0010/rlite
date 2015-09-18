@@ -20,6 +20,33 @@
 	if (retval == RL_OUT_OF_MEMORY) { break; }\
 	EXPECT_INT(retval, RL_OK);
 
+TEST btree_create_oom()
+{
+	rl_btree *btree = NULL;
+	int i, retval;
+	long btree_node_size = 10;
+	rlite *db = NULL;
+	RL_CALL_VERBOSE(setup_db, RL_OK, &db, 0, 1);
+	for (i = 1; ;i++) {
+		test_mode = 1;
+		test_mode_caller = "rl_btree_create_size";
+		test_mode_counter = i;
+		retval = rl_btree_create_size(db, &btree, &rl_btree_type_hash_long_long, btree_node_size);
+		if (retval == RL_OK) {
+			if (i == 1) {
+				fprintf(stderr, "No OOM triggered\n");
+				test_mode = 0;
+				FAIL();
+			}
+			break;
+		}
+		EXPECT_INT(retval, RL_OUT_OF_MEMORY);
+	}
+	rl_btree_destroy(db, btree);
+	rl_close(db);
+	PASS();
+}
+
 TEST btree_insert_oom()
 {
 	long btree_node_size = 2;
@@ -324,6 +351,7 @@ SUITE(btree_test)
 	RUN_TESTp(random_hash_test, 100, 10);
 #ifdef RL_DEBUG
 	RUN_TEST(btree_insert_oom);
+	RUN_TEST(btree_create_oom);
 #endif
 
 	long delete_tests[DELETE_TESTS_COUNT][2] = {
