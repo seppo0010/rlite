@@ -44,6 +44,7 @@ TEST btree_create_oom()
 	}
 	rl_btree_destroy(db, btree);
 	rl_close(db);
+	test_mode = 0;
 	PASS();
 }
 
