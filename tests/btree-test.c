@@ -92,6 +92,50 @@ TEST btree_insert_oom()
 	rl_close(db);
 	PASS();
 }
+
+TEST btree_find_oom()
+{
+	long btree_node_size = 2;
+	INIT();
+
+	long btree_page = db->next_empty_page;
+	RL_CALL_VERBOSE(rl_write, RL_OK, db, btree->type->btree_type, btree_page, btree);
+	long i;
+	long **keys = malloc(sizeof(long *) * 7);
+	long **vals = malloc(sizeof(long *) * 7);
+	for (i = 0; i < 7; i++) {
+		keys[i] = malloc(sizeof(long));
+		vals[i] = malloc(sizeof(long));
+		*keys[i] = i + 1;
+		*vals[i] = i * 10;
+		RL_CALL_VERBOSE(rl_btree_add_element, RL_OK, db, btree, btree_page, keys[i], vals[i]);
+		RL_CALL_VERBOSE(rl_btree_is_balanced, RL_OK, db, btree);
+	}
+
+	long nonexistent_vals[2] = {0, 8};
+	test_mode = 1;
+	test_mode_caller = "rl_btree_find_score";
+	test_mode_counter = 1;
+	for (i = 0; i < 7; i++) {
+		RL_CALL_VERBOSE(rl_btree_find_score, RL_FOUND, db, btree, keys[i], NULL, NULL, NULL);
+	}
+
+	for (i = 0; i < 2; i++) {
+		RL_CALL_VERBOSE(rl_btree_find_score, RL_NOT_FOUND, db, btree, &nonexistent_vals[i], NULL, NULL, NULL);
+	}
+
+	if (retval == RL_OUT_OF_MEMORY) {
+		fprintf(stderr, "Unexpected out of memory in rl_btree_find_score (expected no allocations)\n");
+		test_mode = 0;
+		FAIL();
+	}
+
+	free(vals);
+	free(keys);
+	test_mode = 0;
+	rl_close(db);
+	PASS();
+}
 #endif
 
 TEST basic_insert_hash_test()
@@ -353,6 +397,7 @@ SUITE(btree_test)
 #ifdef RL_DEBUG
 	RUN_TEST(btree_insert_oom);
 	RUN_TEST(btree_create_oom);
+	RUN_TEST(btree_find_oom);
 #endif
 
 	long delete_tests[DELETE_TESTS_COUNT][2] = {
