@@ -15,10 +15,10 @@
 	RL_CALL_VERBOSE(rl_btree_create_size, RL_OK, db, &btree, &rl_btree_type_hash_long_long, btree_node_size);
 
 #ifdef RL_DEBUG
-#define CHECK_RETVAL(r)\
+#define CHECK_RETVAL(r, expected)\
 	retval = r;\
 	if (retval == RL_OUT_OF_MEMORY) { break; }\
-	EXPECT_INT(retval, RL_OK);
+	EXPECT_INT(retval, expected);
 
 TEST btree_create_oom()
 {
@@ -74,8 +74,8 @@ TEST btree_insert_oom()
 			val = malloc(sizeof(long));
 			*key = i + 1;
 			*val = i * 10;
-			CHECK_RETVAL(rl_btree_add_element(db, btree, btree_page, key, val));
-			if (i == 6 && retval == RL_OK) {
+			CHECK_RETVAL(rl_btree_add_element(db, btree, btree_page, key, val), RL_OK);
+			if (i == 6) {
 				if (j == 1) {
 					fprintf(stderr, "No OOM triggered\n");
 					test_mode = 0;
