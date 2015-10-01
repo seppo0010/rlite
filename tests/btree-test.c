@@ -29,7 +29,6 @@ TEST btree_create_oom()
 	RL_CALL_VERBOSE(setup_db, RL_OK, &db, 0, 1);
 	for (i = 1; ;i++) {
 		test_mode = 1;
-		test_mode_caller = "rl_btree_create_size";
 		test_mode_counter = i;
 		retval = rl_btree_create_size(db, &btree, &rl_btree_type_hash_long_long, btree_node_size);
 		if (retval == RL_OK) {
@@ -68,7 +67,6 @@ TEST btree_insert_oom()
 			long btree_page = db->next_empty_page;
 			RL_CALL_VERBOSE(rl_write, RL_OK, db, btree->type->btree_type, btree_page, btree);
 			test_mode = 1;
-			test_mode_caller = "rl_btree_add_element";
 			test_mode_counter = j;
 			key = malloc(sizeof(long));
 			val = malloc(sizeof(long));
@@ -114,7 +112,6 @@ TEST btree_find_oom()
 
 	long nonexistent_vals[2] = {0, 8};
 	test_mode = 1;
-	test_mode_caller = "rl_btree_find_score";
 	test_mode_counter = 1;
 	for (i = 0; i < 7; i++) {
 		RL_CALL_VERBOSE(rl_btree_find_score, RL_FOUND, db, btree, keys[i], NULL, NULL, NULL);

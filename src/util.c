@@ -27,7 +27,6 @@ int _sha1_formatter(unsigned char *data, char formatted[40])
 #ifdef RL_DEBUG
 
 int test_mode = 0;
-char *test_mode_caller;
 size_t test_mode_counter;
 int failed = 0;
 
@@ -58,13 +57,11 @@ void *rl_realloc(void *ptr, size_t size)
 
 	int i;
 	for (i = 1; i < nptrs; i++) {
-		if (strstr(strings[i], test_mode_caller)) {
-			if (--test_mode_counter == 0) {
-				test_mode = 0;
-				// for (i = 1; i < nptrs; i++) { fprintf(stderr, "%s\n", strings[i]); }
-				free(strings);
-				return NULL;
-			}
+		if (--test_mode_counter == 0) {
+			test_mode = 0;
+			// for (i = 1; i < nptrs; i++) { fprintf(stderr, "%s\n", strings[i]); }
+			free(strings);
+			return NULL;
 		}
 	}
 	free(strings);

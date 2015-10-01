@@ -21,7 +21,6 @@
 	int i;\
 	for (i = 1; ; i++) {\
 		test_mode = 1;\
-		test_mode_caller = "rl_dump";\
 		test_mode_counter = i;\
 		retval = rl_dump(db, key, keylen, &testvalue, &testvaluelen);\
 		if (retval == RL_OK) {\

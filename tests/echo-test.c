@@ -14,7 +14,6 @@ TEST test_ping_oom() {
 	int i;
 	for (i = 1;;i++) {
 		test_mode = 1;
-		test_mode_caller = "rliteCommandArgv";
 		test_mode_counter = i;
 		reply = rliteCommandArgv(context, 1, argv, argvlen);
 		if (reply != NULL) {

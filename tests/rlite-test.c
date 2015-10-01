@@ -68,7 +68,6 @@ TEST rl_open_oom()
 	for (j = 0; j < 2; j++) {
 		for (i = 1; ; i++) {
 			test_mode = 1;
-			test_mode_caller = "rl_open";
 			test_mode_counter = i;
 			retval = rl_open(j == 0 ? ":memory:" : "rlite-test.rld", &db, RLITE_OPEN_CREATE | RLITE_OPEN_READWRITE);
 			if (retval == RL_OK) {
