@@ -276,6 +276,9 @@ static int addReplyStatusFormat(rliteContext *c, const char *fmt, ...) {
 static int addReplyErrorFormat(rliteContext *c, const char *fmt, ...) {
 	int maxlen = strlen(fmt) * 2;
 	char *str = rl_malloc(maxlen * sizeof(char));
+	if (str == NULL) {
+		return RL_OUT_OF_MEMORY;
+	}
 	va_list ap;
 	va_start(ap, fmt);
 	int written = vsnprintf(str, maxlen, fmt, ap);

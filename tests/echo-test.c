@@ -63,6 +63,37 @@ TEST test_echo_oom() {
 	rliteFree(context);
 	PASS();
 }
+
+TEST test_echo_wrong_arity_oom() {
+	size_t argvlen[2];
+	char* argv[2];
+	rliteReply* reply;
+	argvlen[0] = 4;
+	argv[0] = "echo";
+	rliteContext *context = rliteConnect(":memory:", 0);
+	int i;
+	for (i = 1;;i++) {
+		test_mode = 1;
+		test_mode_counter = i;
+		reply = rliteCommandArgv(context, 1, argv, argvlen);
+		if (reply != NULL) {
+			if (i == 1) {
+				fprintf(stderr, "No OOM triggered\n");
+				test_mode = 0;
+				FAIL();
+			}
+			EXPECT_REPLY_ERROR(reply);
+			const char *err = "wrong number of arguments for 'echo' command";
+			ASSERT_EQ(memcmp(reply->str, err, strlen(err)), 0);
+			break;
+		}
+	}
+
+	test_mode = 0;
+	rliteFreeReplyObject(reply);
+	rliteFree(context);
+	PASS();
+}
 #endif
 
 TEST test_ping() {
@@ -162,6 +193,7 @@ SUITE(echo_test)
 #ifdef RL_DEBUG
 	RUN_TEST(test_ping_oom);
 	RUN_TEST(test_echo_oom);
+	RUN_TEST(test_echo_wrong_arity_oom);
 #endif
 	RUN_TEST(test_ping);
 	RUN_TEST(test_ping_str);
