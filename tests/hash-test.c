@@ -2,6 +2,38 @@
 #include "rlite/hirlite.h"
 #include "util.h"
 
+#ifdef RL_DEBUG
+TEST test_hset_oom() {
+	rliteReply* reply;
+	char* argv[100] = {"hset", "mykey", "myfield", "mydata", NULL};
+	size_t argvlen[100];
+	rliteContext *context = rliteConnect(":memory:", 0);
+	int i;
+	for (i = 1;;i++) {
+		test_mode = 1;
+		test_mode_counter = i;
+		reply = rliteCommandArgv(context, populateArgvlen(argv, argvlen), argv, argvlen);
+		if (reply != NULL) {
+			EXPECT_REPLY_INTEGER(reply, 1000);
+			if (i == 1) {
+				fprintf(stderr, "No OOM triggered\n");
+				test_mode = 0;
+				FAIL();
+			}
+			EXPECT_REPLY_INTEGER(reply, 1);
+			break;
+		}
+		test_mode = 0;
+		rl_discard(context->db);
+	}
+
+	test_mode = 0;
+	rliteFreeReplyObject(reply);
+	rliteFree(context);
+	PASS();
+}
+#endif
+
 TEST test_hset() {
 	rliteContext *context = rliteConnect(":memory:", 0);
 
@@ -420,6 +452,9 @@ TEST test_hmget() {
 
 SUITE(hash_test)
 {
+#ifdef RL_DEBUG
+	RUN_TEST(test_hset_oom);
+#endif
 	RUN_TEST(test_hset);
 	RUN_TEST(test_hget);
 	RUN_TEST(test_hexists);

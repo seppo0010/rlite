@@ -53,7 +53,7 @@ TEST test_echo_oom() {
 				test_mode = 0;
 				FAIL();
 			}
-            EXPECT_REPLY_STR(reply, argv[1], argvlen[1]);
+			EXPECT_REPLY_STR(reply, argv[1], argvlen[1]);
 			break;
 		}
 	}

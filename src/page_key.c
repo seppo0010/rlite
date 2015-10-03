@@ -54,8 +54,8 @@ int rl_key_set(rlite *db, const unsigned char *key, long keylen, unsigned char t
 {
 	int retval;
 
-	rl_key *key_obj = NULL;
-	unsigned char *digest = NULL;
+	rl_key *key_obj = NULL, *tmp2;
+	unsigned char *digest = NULL, *tmp;
 	RL_CALL2(rl_key_delete, RL_OK, RL_NOT_FOUND, db, key, keylen);
 	RL_MALLOC(digest, sizeof(unsigned char) * 20);
 	RL_CALL(sha1, RL_OK, key, keylen, digest);
@@ -72,7 +72,11 @@ int rl_key_set(rlite *db, const unsigned char *key, long keylen, unsigned char t
 	}
 	key_obj->version = version;
 
-	RL_CALL(rl_btree_add_element, RL_OK, db, btree, db->databases[rl_get_selected_db(db)], digest, key_obj);
+	tmp = digest;
+	digest = NULL;
+	tmp2 = key_obj;
+	key_obj = NULL;
+	RL_CALL(rl_btree_add_element, RL_OK, db, btree, db->databases[rl_get_selected_db(db)], tmp, tmp2);
 	retval = RL_OK;
 cleanup:
 	if (retval != RL_OK) {

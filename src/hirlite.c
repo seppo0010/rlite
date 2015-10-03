@@ -59,7 +59,12 @@
 #define RLITE_SERVER_ERR(c, retval, expected)\
 	RLITE_SERVER_ERR_BASIC(c, retval);\
 	if (retval != expected) {\
-		addReplyErrorFormat(c->context, "unknown retval %d", retval);\
+		if (retval == RL_OUT_OF_MEMORY) {\
+			__rliteSetError(c->context,RLITE_ERR_OOM,"Out of memory");\
+			c->reply = NULL;\
+		} else {\
+			addReplyErrorFormat(c->context, "unknown retval %d", retval);\
+		}\
 		goto cleanup;\
 	}
 
@@ -69,14 +74,24 @@
 #define RLITE_SERVER_ERR2(c, retval, e1, e2)\
 	RLITE_SERVER_ERR_BASIC(c, retval);\
 	if (retval != e1 && retval != e2) {\
-		addReplyErrorFormat(c->context, "unknown retval %d", retval);\
+		if (retval == RL_OUT_OF_MEMORY) {\
+			__rliteSetError(c->context,RLITE_ERR_OOM,"Out of memory");\
+			c->reply = NULL;\
+		} else {\
+			addReplyErrorFormat(c->context, "unknown retval %d", retval);\
+		}\
 		goto cleanup;\
 	}
 
 #define RLITE_SERVER_ERR3(c, retval, e1, e2, e3)\
 	RLITE_SERVER_ERR_BASIC(c, retval);\
 	if (retval != e1 && retval != e2 && retval != e3) {\
-		addReplyErrorFormat(c->context, "unknown retval %d", retval);\
+		if (retval == RL_OUT_OF_MEMORY) {\
+			__rliteSetError(c->context,RLITE_ERR_OOM,"Out of memory");\
+			c->reply = NULL;\
+		} else {\
+			addReplyErrorFormat(c->context, "unknown retval %d", retval);\
+		}\
 		goto cleanup;\
 	}
 
