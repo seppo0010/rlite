@@ -1,4 +1,4 @@
-#include "rlite.h"
+#include "rlite/rlite.h"
 
 int rl_flock(FILE *fp, int type) {
 	// TODO: implement flock

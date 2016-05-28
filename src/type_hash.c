@@ -3,7 +3,7 @@
 #include <errno.h>
 #include <math.h>
 #include <stdlib.h>
-#include "rlite.h"
+#include "rlite/rlite.h"
 #include "rlite/page_multi_string.h"
 #include "rlite/type_hash.h"
 #include "rlite/page_btree.h"

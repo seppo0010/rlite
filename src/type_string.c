@@ -2,7 +2,7 @@
 #include <errno.h>
 #include <math.h>
 #include <ctype.h>
-#include "rlite.h"
+#include "rlite/rlite.h"
 #include "rlite/page_multi_string.h"
 #include "rlite/type_string.h"
 #include "rlite/util.h"

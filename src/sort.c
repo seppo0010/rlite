@@ -29,7 +29,7 @@
  */
 
 
-#include "rlite.h"
+#include "rlite/rlite.h"
 #include "rlite/sort.h"
 #include "rlite/pqsort.h" /* Partial qsort for SORT+LIMIT */
 #include <math.h> /* isnan() */

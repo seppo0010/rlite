@@ -1,7 +1,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
-#include "../src/rlite.h"
+#include "../src/rlite/rlite.h"
 #include "../src/rlite/page_skiplist.h"
 #include "../src/rlite/page_multi_string.h"
 #include "util.h"

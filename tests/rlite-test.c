@@ -3,7 +3,7 @@
 #include <string.h>
 #include <stdlib.h>
 #include "util.h"
-#include "../src/rlite.h"
+#include "../src/rlite/rlite.h"
 #include "rlite/util.h"
 
 TEST test_rlite_page_cache()

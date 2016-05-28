@@ -1,7 +1,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include "rlite/sha1.h"
-#include "rlite.h"
+#include "rlite/rlite.h"
 #include "rlite/page_list.h"
 #include "rlite/page_string.h"
 #include "rlite/page_multi_string.h"

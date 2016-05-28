@@ -2,7 +2,7 @@
 #include <string.h>
 #include <limits.h>
 #include <math.h>
-#include "../src/rlite.h"
+#include "../src/rlite/rlite.h"
 #include "../src/rlite/type_string.h"
 #include "util.h"
 

@@ -13,7 +13,7 @@
 #include "rlite/type_string.h"
 #include "rlite/type_zset.h"
 #include "rlite/type_hash.h"
-#include "rlite.h"
+#include "rlite/rlite.h"
 #include "rlite/util.h"
 #include "rlite/sha1.h"
 #include "rlite/flock.h"

@@ -4,7 +4,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
-#include "../src/rlite.h"
+#include "../src/rlite/rlite.h"
 #include "util.h"
 
 static int test_int8()

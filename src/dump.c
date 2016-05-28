@@ -1,5 +1,5 @@
 #include <arpa/inet.h>
-#include "rlite.h"
+#include "rlite/rlite.h"
 #include "rlite/util.h"
 #include "rlite/crc64.h"
 #include "rlite/endianconv.h"

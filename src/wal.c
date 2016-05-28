@@ -2,7 +2,7 @@
 #include <stdlib.h>
 #include <unistd.h>
 
-#include "rlite.h"
+#include "rlite/rlite.h"
 #include "rlite/flock.h"
 #include "rlite/sha1.h"
 

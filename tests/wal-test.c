@@ -1,7 +1,7 @@
 #include <string.h>
 #include <unistd.h>
 #include <pthread.h>
-#include "rlite.h"
+#include "rlite/rlite.h"
 #include "util.h"
 #include "rlite/wal.h"
 

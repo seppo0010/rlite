@@ -3,7 +3,7 @@
 #include <string.h>
 #include <limits.h>
 #include "util.h"
-#include "../src/rlite.h"
+#include "../src/rlite/rlite.h"
 #include "../src/rlite/status.h"
 #include "../src/rlite/page_string.h"
 

@@ -3,7 +3,7 @@
 #include <string.h>
 #include "util.h"
 #include "../src/rlite/page_key.h"
-#include "../src/rlite.h"
+#include "../src/rlite/rlite.h"
 #include "../src/rlite/type_zset.h"
 
 TEST basic_multi_test(int _commit)

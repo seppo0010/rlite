@@ -1,4 +1,4 @@
-#include "rlite.h"
+#include "rlite/rlite.h"
 
 int rl_create_signal(const char *signal_name) {
 	return RL_NOT_IMPLEMENTED;

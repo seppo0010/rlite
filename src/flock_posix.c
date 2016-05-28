@@ -4,7 +4,7 @@
 #include <unistd.h>
 #include <errno.h>
 
-#include "rlite.h"
+#include "rlite/rlite.h"
 
 int rl_flock(FILE *fp, int type)
 {

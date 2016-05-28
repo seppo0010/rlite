@@ -28,7 +28,7 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "rlite.h"
+#include "rlite/rlite.h"
 #include "rlite/hirlite.h"
 #include "rlite/sha1.h"
 #include "rlite/rand.h"

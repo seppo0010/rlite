@@ -5,7 +5,7 @@
 #include <pthread.h>
 #include "greatest.h"
 #include "util.h"
-#include "../src/rlite.h"
+#include "../src/rlite/rlite.h"
 #include "../src/rlite/pubsub.h"
 
 #define DATA "hello world!"

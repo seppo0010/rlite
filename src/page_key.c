@@ -1,6 +1,6 @@
 #include <stdlib.h>
 #include <string.h>
-#include "rlite.h"
+#include "rlite/rlite.h"
 #include "rlite/util.h"
 #include "rlite/page_btree.h"
 #include "rlite/page_key.h"

@@ -4,7 +4,7 @@
 #include <math.h>
 #include "rlite/status.h"
 #include "rlite/page_btree.h"
-#include "rlite.h"
+#include "rlite/rlite.h"
 #include "rlite/util.h"
 
 rl_btree_type rl_btree_type_hash_sha1_key = {

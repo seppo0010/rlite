@@ -3,7 +3,7 @@
 #include <string.h>
 #include "util.h"
 #include "../src/rlite/page_key.h"
-#include "../src/rlite.h"
+#include "../src/rlite/rlite.h"
 #include "../src/rlite/type_zset.h"
 
 static int expect_key(rlite *db, unsigned char *key, long keylen, char type, long page)

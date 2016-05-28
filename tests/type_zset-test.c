@@ -2,7 +2,7 @@
 #include <string.h>
 #include <limits.h>
 #include <math.h>
-#include "../src/rlite.h"
+#include "../src/rlite/rlite.h"
 #include "../src/rlite/type_zset.h"
 #include "../src/rlite/page_key.h"
 #include "util.h"

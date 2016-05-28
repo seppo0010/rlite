@@ -2,7 +2,7 @@
 #include <string.h>
 #include <stdio.h>
 #include <math.h>
-#include "rlite.h"
+#include "rlite/rlite.h"
 #include "rlite/status.h"
 #include "rlite/page_list.h"
 #include "rlite/page_string.h"

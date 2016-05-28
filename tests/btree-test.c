@@ -3,7 +3,7 @@
 #include <string.h>
 #include "greatest.h"
 #include "util.h"
-#include "../src/rlite.h"
+#include "../src/rlite/rlite.h"
 #include "../src/rlite/page_btree.h"
 #include "../src/rlite/status.h"
 

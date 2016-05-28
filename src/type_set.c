@@ -1,5 +1,5 @@
 #include <stdlib.h>
-#include "rlite.h"
+#include "rlite/rlite.h"
 #include "rlite/page_multi_string.h"
 #include "rlite/type_set.h"
 #include "rlite/page_btree.h"

@@ -1,7 +1,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <limits.h>
-#include "../src/rlite.h"
+#include "../src/rlite/rlite.h"
 #include "../src/rlite/page_multi_string.h"
 #include "../src/rlite/util.h"
 #include "util.h"
