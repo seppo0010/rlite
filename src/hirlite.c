@@ -89,13 +89,14 @@ static int catvprintf(char** s, size_t *slen, const char *fmt, va_list ap) {
 	va_list cpy;
 	char *buf, *t;
 	size_t buflen = 16;
+	int written;
 
 	while(1) {
 		buf = rl_malloc(buflen);
 		if (buf == NULL) return RLITE_ERR;
 		buf[buflen-2] = '\0';
 		va_copy(cpy,ap);
-		vsnprintf(buf, buflen, fmt, cpy);
+		written = vsnprintf(buf, buflen, fmt, cpy);
 		if (buf[buflen-2] != '\0') {
 			rl_free(buf);
 			buflen *= 2;
@@ -109,6 +110,8 @@ static int catvprintf(char** s, size_t *slen, const char *fmt, va_list ap) {
 		return RLITE_ERR;
 	}
 	memmove(&t[*slen], buf, buflen);
+	*s = t;
+	*slen = written;
 	rl_free(buf);
 	return RLITE_OK;
 }

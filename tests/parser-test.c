@@ -105,6 +105,17 @@ TEST test_command_bparam() {
 	return 0;
 }
 
+TEST test_command_lldparam() {
+	rliteContext *context = rliteConnect(":memory:", 0);
+	rliteReply *reply = rliteCommand(context, "ECHO %d", 123);
+	ASSERT_EQ(reply->type, RLITE_REPLY_STRING);
+	ASSERT_EQ(memcmp(reply->str, "123", 3), 0);
+
+	rliteFreeReplyObject(reply);
+	rliteFree(context);
+	return 0;
+}
+
 SUITE(parser_test)
 {
 	RUN_TEST(test_format_noparam);
@@ -112,4 +123,5 @@ SUITE(parser_test)
 	RUN_TEST(test_format_bparam);
 	RUN_TEST(test_append_sparam);
 	RUN_TEST(test_command_bparam);
+	RUN_TEST(test_command_lldparam);
 }
