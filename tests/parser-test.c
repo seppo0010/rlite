@@ -116,6 +116,17 @@ TEST test_command_lldparam() {
 	return 0;
 }
 
+TEST test_hset_hmget_dparam() {
+	rliteContext *context = rliteConnect(":memory:", 0);
+	rliteFreeReplyObject(rliteCommand(context, "HSET a f1 %d", 1));
+	rliteReply* reply = rliteCommand(context, "HMGET a f1");
+	ASSERT_EQ(reply->elements, 1);
+
+	rliteFreeReplyObject(reply);
+	rliteFree(context);
+	return 0;
+}
+
 SUITE(parser_test)
 {
 	RUN_TEST(test_format_noparam);
@@ -124,4 +135,5 @@ SUITE(parser_test)
 	RUN_TEST(test_append_sparam);
 	RUN_TEST(test_command_bparam);
 	RUN_TEST(test_command_lldparam);
+	RUN_TEST(test_hset_hmget_dparam);
 }
