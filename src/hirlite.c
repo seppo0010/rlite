@@ -80,6 +80,9 @@
 		goto cleanup;\
 	}
 
+#define ARGVCASEEQ(c, pos, val)\
+	(c->argvlen[pos] == strlen(val) && !strncasecmp(c->argv[pos], val, c->argvlen[pos]))
+
 int strerror_r(int, char *, size_t);
 
 struct rliteCommand *rliteLookupCommand(const char *name, size_t UNUSED(len));
@@ -1241,7 +1244,7 @@ static void zrangeGenericCommand(rliteClient *c, int reverse) {
 	if ((getLongFromObjectOrReply(c, c->argv[2], c->argvlen[2], &start, NULL) != RLITE_OK) ||
 		(getLongFromObjectOrReply(c, c->argv[3], c->argvlen[3], &end, NULL) != RLITE_OK)) return;
 
-	if (c->argc == 5 && !strcasecmp(c->argv[4], "withscores")) {
+	if (c->argc == 5 && ARGVCASEEQ(c, 4, "withscores")) {
 		withscores = 1;
 	} else if (c->argc >= 5) {
 		c->reply = createErrorObject(RLITE_SYNTAXERR);
@@ -1394,7 +1397,7 @@ static void zunionInterGenericCommand(rliteClient *c, int op) {
 
 	if (c->argc > 3 + setnum) {
 		j = 3 + setnum;
-		if (strcasecmp(c->argv[j], "weights") == 0) {
+		if (ARGVCASEEQ(c, j, "weights")) {
 			if (j + 1 + setnum > c->argc) {
 				c->reply = createErrorObject(RLITE_SYNTAXERR);
 				return;
@@ -1409,11 +1412,11 @@ static void zunionInterGenericCommand(rliteClient *c, int op) {
 			j += setnum + 1;
 		}
 		if (c->argc > j && c->argvlen[j] == 9 && memcmp(c->argv[j], "aggregate", 9) == 0) {
-			if (strcasecmp(c->argv[j + 1], "min") == 0) {
+			if (ARGVCASEEQ(c, j + 1, "min")) {
 				aggregate = RL_ZSET_AGGREGATE_MIN;
-			} else if (strcasecmp(c->argv[j + 1], "max") == 0) {
+			} else if (ARGVCASEEQ(c, j + 1, "max")) {
 				aggregate = RL_ZSET_AGGREGATE_MAX;
-			} else if (strcasecmp(c->argv[j + 1], "sum") == 0) {
+			} else if (ARGVCASEEQ(c, j + 1, "sum")) {
 				aggregate = RL_ZSET_AGGREGATE_SUM;
 			} else {
 				c->reply = createErrorObject(RLITE_SYNTAXERR);
@@ -1478,10 +1481,10 @@ static void genericZrangebyscoreCommand(rliteClient *c, int reverse) {
 		int pos = 4;
 
 		while (remaining) {
-			if (remaining >= 1 && !strcasecmp(c->argv[pos],"withscores")) {
+			if (remaining >= 1 && ARGVCASEEQ(c, pos, "withscores")) {
 				pos++; remaining--;
 				withscores = 1;
-			} else if (remaining >= 3 && !strcasecmp(c->argv[pos],"limit")) {
+			} else if (remaining >= 3 && ARGVCASEEQ(c, pos, "limit")) {
 				if ((getLongFromObjectOrReply(c, c->argv[pos+1], c->argvlen[pos+1], &offset, NULL) != RLITE_OK) ||
 					(getLongFromObjectOrReply(c, c->argv[pos+2], c->argvlen[pos+2], &limit, NULL) != RLITE_OK)) return;
 				pos += 3; remaining -= 3;
@@ -1525,7 +1528,7 @@ static void genericZrangebylexCommand(rliteClient *c, int reverse) {
 		int pos = 4;
 
 		while (remaining) {
-			if (remaining >= 3 && !strcasecmp(c->argv[pos],"limit")) {
+			if (remaining >= 3 && ARGVCASEEQ(c, pos, "limit")) {
 				if ((getLongFromObjectOrReply(c, c->argv[pos+1], c->argvlen[pos+1], &offset, NULL) != RLITE_OK) ||
 					(getLongFromObjectOrReply(c, c->argv[pos+2], c->argvlen[pos+2], &limit, NULL) != RLITE_OK)) return;
 				pos += 3; remaining -= 3;
@@ -2322,9 +2325,9 @@ cleanup:
 
 static void linsertCommand(rliteClient *c) {
 	int after;
-	if (strcasecmp(c->argv[2], "after") == 0) {
+	if (ARGVCASEEQ(c, 2, "after")) {
 		after = 1;
-	} else if (strcasecmp(c->argv[2], "before") == 0) {
+	} else if (ARGVCASEEQ(c, 2, "before")) {
 		after = 0;
 	} else {
 		c->reply = createErrorObject(RLITE_SYNTAXERR);
@@ -2977,7 +2980,7 @@ static void pfdebugCommand(rliteClient *c) {
 	unsigned char *value = NULL;
 	long valuelen = 0;
 
-	if (!strcasecmp(c->argv[1],"getreg")) {
+	if (ARGVCASEEQ(c, 1, "getreg")) {
 		retval = rl_pfdebug_getreg(c->context->db, key, keylen, &size, &elements);
 		RLITE_SERVER_OK(c, retval);
 		CHECK_OOM(c->reply = createReplyObject(RLITE_REPLY_ARRAY));
@@ -2988,17 +2991,17 @@ static void pfdebugCommand(rliteClient *c) {
 			c->reply->element[i] = createLongLongObject(elements[i]);
 		}
 	}
-	else if (!strcasecmp(c->argv[1],"decode")) {
+	else if (ARGVCASEEQ(c, 1, "decode")) {
 		retval = rl_pfdebug_decode(c->context->db, key, keylen, &value, &valuelen);
 		RLITE_SERVER_OK(c, retval);
 		c->reply = createStringObject((char *)value, valuelen);
 	}
-	else if (!strcasecmp(c->argv[1],"encoding")) {
+	else if (ARGVCASEEQ(c, 1, "encoding")) {
 		retval = rl_pfdebug_encoding(c->context->db, key, keylen, &value, &valuelen);
 		RLITE_SERVER_OK(c, retval);
 		c->reply = createStringObject((char *)value, valuelen);
 	}
-	else if (!strcasecmp(c->argv[1],"todense")) {
+	else if (ARGVCASEEQ(c, 1, "todense")) {
 		retval = rl_pfdebug_todense(c->context->db, key, keylen, &size);
 		RLITE_SERVER_OK(c, retval);
 		c->reply = createLongLongObject(size);
@@ -3368,20 +3371,20 @@ cleanup:
 }
 
 static void debugCommand(rliteClient *c) {
-	if (!strcasecmp(c->argv[1],"segfault")) {
+	if (ARGVCASEEQ(c, 1, "segfault")) {
 		*((char*)-1) = 'x';
-	} else if (!strcasecmp(c->argv[1],"oom")) {
+	} else if (ARGVCASEEQ(c, 1, "oom")) {
 		void *ptr = rl_malloc(ULONG_MAX); /* Should trigger an out of memory. */
 		rl_free(ptr);
 		c->reply = createStatusObject(RLITE_STR_OK);
-	} else if (!strcasecmp(c->argv[1],"assert")) {
+	} else if (ARGVCASEEQ(c, 1, "assert")) {
 		// TODO
 		c->reply = createErrorObject("ERR Not implemented");
-	} else if (!strcasecmp(c->argv[1],"reload")) {
+	} else if (ARGVCASEEQ(c, 1, "reload")) {
 		c->reply = createStatusObject(RLITE_STR_OK);
-	} else if (!strcasecmp(c->argv[1],"loadaof")) {
+	} else if (ARGVCASEEQ(c, 1, "loadaof")) {
 		c->reply = createStatusObject(RLITE_STR_OK);
-	} else if (!strcasecmp(c->argv[1],"object") && c->argc == 3) {
+	} else if (ARGVCASEEQ(c, 1, "object") && c->argc == 3) {
 		char encoding[100];
 		if (rl_key_get(c->context->db, UNSIGN(c->argv[2]), c->argvlen[2], NULL, NULL, NULL, NULL, NULL)) {
 			getKeyEncoding(c, encoding, UNSIGN(c->argv[2]), c->argvlen[2]);
@@ -3390,15 +3393,15 @@ static void debugCommand(rliteClient *c) {
 				"encoding:%s serializedlength:0 "
 				"lru:0 lru_seconds_idle:0", encoding);
 		}
-	} else if (!strcasecmp(c->argv[1],"sdslen") && c->argc == 3) {
+	} else if (ARGVCASEEQ(c, 1, "sdslen") && c->argc == 3) {
 		// TODO
 		c->reply = createErrorObject("ERR Not implemented");
-	} else if (!strcasecmp(c->argv[1],"populate") &&
+	} else if (ARGVCASEEQ(c, 1, "populate") &&
 			   (c->argc == 3 || c->argc == 4)) {
 		c->reply = createErrorObject("ERR Not implemented");
-	} else if (!strcasecmp(c->argv[1],"digest") && c->argc == 2) {
+	} else if (ARGVCASEEQ(c, 1, "digest") && c->argc == 2) {
 		c->reply = createErrorObject("ERR Not implemented");
-	} else if (!strcasecmp(c->argv[1],"sleep") && c->argc == 3) {
+	} else if (ARGVCASEEQ(c, 1, "sleep") && c->argc == 3) {
 		double dtime = strtod(c->argv[2], NULL);
 		long long utime = dtime*1000000;
 		struct timespec tv;
@@ -3407,11 +3410,9 @@ static void debugCommand(rliteClient *c) {
 		tv.tv_nsec = (utime % 1000000) * 1000;
 		nanosleep(&tv, NULL);
 		c->reply = createStatusObject(RLITE_STR_OK);
-	} else if (!strcasecmp(c->argv[1],"set-active-expire") &&
-			   c->argc == 3)
-	{
+	} else if (ARGVCASEEQ(c, 1, "set-active-expire") && c->argc == 3) {
 		c->reply = createErrorObject("ERR Not implemented");
-	} else if (!strcasecmp(c->argv[1],"error") && c->argc == 3) {
+	} else if (ARGVCASEEQ(c, 1, "error") && c->argc == 3) {
 		c->reply = createStringObject(c->argv[2], c->argvlen[2]);
 	} else {
 		c->reply = createStringObject(c->argv[2], c->argvlen[2]);
@@ -3452,7 +3453,7 @@ static void restoreCommand(rliteClient *c) {
 
 	int retval;
 	if (c->argc >= 5) {
-		if (c->argvlen[4] == 7 && strcasecmp(c->argv[4], "replace") == 0) {
+		if (c->argvlen[4] == 7 && ARGVCASEEQ(c, 4, "replace")) {
 			retval = rl_key_delete_with_value(c->context->db, key, keylen);
 			RLITE_SERVER_ERR3(c, retval, RL_OK, RL_FOUND, RL_NOT_FOUND);
 		} else {
@@ -3475,7 +3476,7 @@ cleanup:
 }
 
 static void objectCommand(rliteClient *c) {
-	if (!strcasecmp(c->argv[1],"encoding")) {
+	if (ARGVCASEEQ(c, 1, "encoding")) {
 		char encoding[100];
 		getKeyEncoding(c, encoding, UNSIGN(c->argv[2]), c->argvlen[2]);
 		c->reply = createCStringObject(encoding);
@@ -3509,13 +3510,13 @@ static void sortCommand(rliteClient *c) {
 	j = 2;
 	while(j < c->argc) {
 		int leftargs = c->argc-j-1;
-		if (!strcasecmp(c->argv[j],"asc")) {
+		if (ARGVCASEEQ(c, j, "asc")) {
 			desc = 0;
-		} else if (!strcasecmp(c->argv[j],"desc")) {
+		} else if (ARGVCASEEQ(c, j, "desc")) {
 			desc = 1;
-		} else if (!strcasecmp(c->argv[j],"alpha")) {
+		} else if (ARGVCASEEQ(c, j, "alpha")) {
 			alpha = 1;
-		} else if (!strcasecmp(c->argv[j],"limit") && leftargs >= 2) {
+		} else if (ARGVCASEEQ(c, j, "limit") && leftargs >= 2) {
 			if ((getLongFromObjectOrReply(c, c->argv[j+1], c->argvlen[j+1], &limit_start, NULL)
 				 != RL_OK) ||
 				(getLongFromObjectOrReply(c, c->argv[j+2], c->argvlen[j+2], &limit_count, NULL)
@@ -3525,11 +3526,11 @@ static void sortCommand(rliteClient *c) {
 				break;
 			}
 			j+=2;
-		} else if (!strcasecmp(c->argv[j],"store") && leftargs >= 1) {
+		} else if (ARGVCASEEQ(c, j, "store") && leftargs >= 1) {
 			storekey = (unsigned char*)c->argv[j+1];
 			storekeylen = c->argvlen[j+1];
 			j++;
-		} else if (!strcasecmp(c->argv[j],"by") && leftargs >= 1) {
+		} else if (ARGVCASEEQ(c, j, "by") && leftargs >= 1) {
 			sortby = (unsigned char *)c->argv[j+1];
 			sortbylen = c->argvlen[j+1];
 			/* If the BY pattern does not contain '*', i.e. it is constant,
@@ -3546,7 +3547,7 @@ static void sortCommand(rliteClient *c) {
 				}
 			}
 			j++;
-		} else if (!strcasecmp(c->argv[j],"get") && leftargs >= 1) {
+		} else if (ARGVCASEEQ(c, j, "get") && leftargs >= 1) {
 			if (c->context->cluster_enabled) {
 				c->reply = createErrorObject("ERR GET option of SORT denied in Cluster mode.");
 				syntax_error++;
@@ -3704,7 +3705,7 @@ static void pubsubCommand(rliteClient *c) {
 	unsigned char **channelv = NULL;
 	long *channelvlen = NULL;
 	int retval;
-	if (!strcasecmp(c->argv[1],"channels")) {
+	if (ARGVCASEEQ(c, 1, "channels")) {
 		unsigned char *pattern = NULL;
 		long patternlen = 0;
 		if (c->argc >= 3) {
@@ -3717,11 +3718,11 @@ static void pubsubCommand(rliteClient *c) {
 		for (i = 0; i < channelc; i++) {
 			c->reply->element[i] = createTakeStringObject((char *)channelv[i], channelvlen[i]);
 		}
-	} else if (!strcasecmp(c->argv[1],"numsub")) {
+	} else if (ARGVCASEEQ(c, 1, "numsub")) {
 		long numsub;
 		retval = rl_pubsub_numsub(c->context->db, c->argc - 2, (unsigned char **)&c->argv[2], (long *)&c->argvlen[2], &numsub);
 		c->reply = createLongLongObject(numsub);
-	} else if (!strcasecmp(c->argv[1],"numpat")) {
+	} else if (ARGVCASEEQ(c, 1, "numpat")) {
 		long numpat;
 		retval = rl_pubsub_numpat(c->context->db, &numpat);
 		c->reply = createLongLongObject(numpat);
