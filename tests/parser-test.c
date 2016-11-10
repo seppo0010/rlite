@@ -130,6 +130,7 @@ TEST test_hset_hmget_dparam() {
 TEST test_zrange() {
 	rliteContext *context = rliteConnect(":memory:", 0);
 	rliteFreeReplyObject(rliteCommand(context, "ZRANGEBYLEX key + - LIMIT 0 30"));
+	rliteFreeReplyObject(rliteCommand(context, "ZRANGEBYSCORE key -inf +inf"));
 	rliteFree(context);
 	return 0;
 }

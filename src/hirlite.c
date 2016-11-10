@@ -1287,9 +1287,20 @@ cleanup:
 }
 
 /* Populate the rangespec according to the objects min and max. */
-static int zslParseRange(const char *min, const char *max, rl_zrangespec *spec) {
-	char *eptr;
+static int zslParseRange(const char *mins, size_t minlength, const char *maxs, size_t maxlength, rl_zrangespec *spec) {
+	char *eptr, min[100], max[100];
 	spec->minex = spec->maxex = 0;
+
+	if (minlength > 99 || maxlength > 99) {
+		spec->minex = minlength > 99 ? 1 : 0;
+		spec->minex = minlength > 99 ? 1 : 0;
+		goto cleanup;
+	} else {
+		memcpy(min, mins, minlength);
+		min[minlength] = '\0';
+		memcpy(max, maxs, maxlength);
+		max[maxlength] = '\0';
+	}
 
 	/* Parse the min-max interval. If one of the values is prefixed
 	 * by the "(" character, it's considered "open". For instance
@@ -1312,6 +1323,7 @@ static int zslParseRange(const char *min, const char *max, rl_zrangespec *spec) 
 		if (eptr[0] != '\0' || isnan(spec->max)) return RLITE_ERR;
 	}
 
+cleanup:
 	return RLITE_OK;
 }
 
@@ -1335,7 +1347,7 @@ static void zremrangebyscoreCommand(rliteClient *c) {
 	long deleted;
 	rl_zrangespec rlrange;
 
-	if (zslParseRange(c->argv[2],c->argv[3],&rlrange) != RLITE_OK) {
+	if (zslParseRange(c->argv[2], c->argvlen[2], c->argv[3], c->argvlen[3], &rlrange) != RLITE_OK) {
 		c->reply = createErrorObject("ERR min or max is not a float");
 		return;
 	}
@@ -1471,7 +1483,7 @@ static void genericZrangebyscoreCommand(rliteClient *c, int reverse) {
 		minidx = 2; maxidx = 3;
 	}
 
-	if (zslParseRange(c->argv[minidx],c->argv[maxidx],&range) != RLITE_OK) {
+	if (zslParseRange(c->argv[minidx], c->argvlen[minidx], c->argv[maxidx], c->argvlen[maxidx], &range) != RLITE_OK) {
 		c->reply = createErrorObject("ERR min or max is not a float");
 		return;
 	}
@@ -1599,7 +1611,7 @@ static void zcountCommand(rliteClient *c) {
 	long count;
 
 	/* Parse the range arguments */
-	if (zslParseRange(c->argv[2],c->argv[3],&rlrange) != RLITE_OK) {
+	if (zslParseRange(c->argv[2],c->argvlen[2],c->argv[3],c->argvlen[3],&rlrange) != RLITE_OK) {
 		c->reply = createErrorObject("ERR min or max is not a float");
 		return;
 	}
