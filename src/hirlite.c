@@ -1288,16 +1288,16 @@ cleanup:
 
 /* Populate the rangespec according to the objects min and max. */
 static int zslParseRange(const char *mins, size_t minlength, const char *maxs, size_t maxlength, rl_zrangespec *spec) {
-	char *eptr, min[100], max[100];
+	char *eptr, min[MAX_DOUBLE_DIGITS + 16], max[MAX_DOUBLE_DIGITS + 16];
 	spec->minex = spec->maxex = 0;
 
-	if (minlength > 99 || maxlength > 99) {
+	if (minlength > MAX_DOUBLE_DIGITS || maxlength > MAX_DOUBLE_DIGITS) {
 		return RLITE_ERR;
 	} else {
 		memcpy(min, mins, minlength);
-		min[minlength] = '\0';
+		memset(&min[minlength], 0, MAX_DOUBLE_DIGITS + 16 -1 - minlength);
 		memcpy(max, maxs, maxlength);
-		max[maxlength] = '\0';
+		memset(&max[maxlength], 0, MAX_DOUBLE_DIGITS + 16 -1 - maxlength);
 	}
 
 	/* Parse the min-max interval. If one of the values is prefixed
