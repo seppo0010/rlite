@@ -1292,9 +1292,7 @@ static int zslParseRange(const char *mins, size_t minlength, const char *maxs, s
 	spec->minex = spec->maxex = 0;
 
 	if (minlength > 99 || maxlength > 99) {
-		spec->minex = minlength > 99 ? 1 : 0;
-		spec->minex = minlength > 99 ? 1 : 0;
-		goto cleanup;
+		return RLITE_ERR;
 	} else {
 		memcpy(min, mins, minlength);
 		min[minlength] = '\0';
@@ -1323,7 +1321,6 @@ static int zslParseRange(const char *mins, size_t minlength, const char *maxs, s
 		if (eptr[0] != '\0' || isnan(spec->max)) return RLITE_ERR;
 	}
 
-cleanup:
 	return RLITE_OK;
 }
 
