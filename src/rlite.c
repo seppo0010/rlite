@@ -280,7 +280,7 @@ int rl_open(const char *filename, rlite **_db, int flags)
 		db->write_pages_alloc = 0;
 	}
 
-	if (memcmp(filename, ":memory:", 9) == 0) {
+	if (strcmp(filename, ":memory:") == 0) {
 		rl_memory_driver *driver;
 		RL_MALLOC(driver, sizeof(*driver));
 		db->driver_type = RL_MEMORY_DRIVER;

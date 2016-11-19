@@ -3,6 +3,12 @@
 #include "rlite/hirlite.h"
 #include "util.h"
 
+TEST test_rlite_connect() {
+	rliteContext *context = rliteConnect("user.db", 0);
+	rliteFree(context);
+	PASS();
+}
+
 TEST keys() {
 	rliteContext *context = rliteConnect(":memory:", 0);
 
@@ -600,6 +606,7 @@ TEST flushdb_multidb() {
 }
 
 SUITE(db_test) {
+	RUN_TEST(test_rlite_connect);
 	RUN_TEST(keys);
 	RUN_TEST(dbsize);
 	RUN_TESTp(expire, "expire", "-1");
