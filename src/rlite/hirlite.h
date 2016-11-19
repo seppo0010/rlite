@@ -168,6 +168,7 @@ int rliteAppendCommandClient(struct rliteClient *client);
  * NULL if there was an error in performing the request, otherwise it will
  * return the reply. In a non-blocking context, it is identical to calling
  * only rliteAppendCommand and will always return NULL. */
+// when using %b, the numbers must be size_t (not int)
 void *rlitevCommand(rliteContext *c, const char *format, va_list ap);
 void *rliteCommand(rliteContext *c, const char *format, ...);
 void *rliteCommandArgv(rliteContext *c, int argc, char **argv, size_t *argvlen);
