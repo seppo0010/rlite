@@ -1031,12 +1031,21 @@ int rliteAppendCommandClient(rliteClient *c) {
 	}
 
 	unsigned char *oldhash = NULL, *newhash = NULL;
+	char *cmd;
 	void *tmp;
 	size_t newAlloc;
 	struct rliteCommand *command = rliteLookupCommand(c->argv[0], c->argvlen[0]);
 	int i, retval = RLITE_OK;
 	if (!command) {
-		retval = addReplyErrorFormat(c->context, "unknown command '%s'", (char*)c->argv[0]);
+		cmd = rl_malloc(sizeof(char) * (c->argvlen[0] + 1));
+		memcpy(cmd, c->argv[0], c->argvlen[0] * sizeof(char));
+		cmd[c->argvlen[0]] = '\0';
+		if (cmd) {
+			retval = addReplyErrorFormat(c->context, "unknown command '%s'", cmd);
+			rl_free(cmd);
+		} else {
+			retval = RL_OUT_OF_MEMORY;
+		}
 		flagTransactions(c);
 	} else if ((command->arity > 0 && command->arity != c->argc) ||
 		(c->argc < -command->arity)) {

@@ -135,6 +135,13 @@ TEST test_zrange() {
 	return 0;
 }
 
+TEST test_invalid_command() {
+	rliteContext *context = rliteConnect(":memory:", 0);
+	rliteFreeReplyObject(rliteCommand(context, "ASD ayy ayy"));
+	rliteFree(context);
+	return 0;
+}
+
 SUITE(parser_test)
 {
 	RUN_TEST(test_format_noparam);
@@ -145,4 +152,5 @@ SUITE(parser_test)
 	RUN_TEST(test_command_lldparam);
 	RUN_TEST(test_hset_hmget_dparam);
 	RUN_TEST(test_zrange);
+	RUN_TEST(test_invalid_command);
 }
