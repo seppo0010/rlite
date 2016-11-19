@@ -1,5 +1,6 @@
 #include <string.h>
 #include <stdlib.h>
+#include <unistd.h>
 #include "greatest.h"
 #include "rlite/hirlite.h"
 
@@ -142,6 +143,16 @@ TEST test_invalid_command() {
 	return 0;
 }
 
+TEST test_file_set_del_set() {
+	unlink("user.db");
+	rliteContext *context = rliteConnect("user.db", 0);
+	rliteFreeReplyObject(rliteCommand(context, "SET a b"));
+	rliteFreeReplyObject(rliteCommand(context, "DEL a"));
+	rliteFreeReplyObject(rliteCommand(context, "SET a b"));
+	rliteFree(context);
+	return 0;
+}
+
 SUITE(parser_test)
 {
 	RUN_TEST(test_format_noparam);
@@ -153,4 +164,5 @@ SUITE(parser_test)
 	RUN_TEST(test_hset_hmget_dparam);
 	RUN_TEST(test_zrange);
 	RUN_TEST(test_invalid_command);
+	RUN_TEST(test_file_set_del_set);
 }
