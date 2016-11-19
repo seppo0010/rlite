@@ -4,6 +4,7 @@
 #include "util.h"
 
 TEST test_rlite_connect() {
+	unlink("user.db");
 	rliteContext *context = rliteConnect("user.db", 0);
 	rliteFree(context);
 	PASS();

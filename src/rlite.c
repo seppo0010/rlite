@@ -855,7 +855,13 @@ cleanup:
 
 int rl_delete(struct rlite *db, long page_number)
 {
-	int retval;
+	int retval, i;
+	for (i = 0; i < db->number_of_databases + RLITE_INTERNAL_DB_COUNT; i++) {
+		if (db->databases[i] == page_number) {
+			db->databases[i] = 0;
+			RL_CALL(rl_write, RL_OK, db, &rl_data_type_header, 0, NULL);
+		}
+	}
 	RL_CALL(rl_long_set, RL_OK, db, db->next_empty_page, page_number);
 	db->next_empty_page = page_number;
 cleanup:
