@@ -8,7 +8,7 @@
 
 #define HIRLITE_MAJOR 0
 #define HIRLITE_MINOR 1
-#define HIRLITE_PATCH 0
+#define HIRLITE_PATCH 1
 
 #define RLITE_ERR -1
 #define RLITE_OK 0
