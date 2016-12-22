@@ -63,6 +63,26 @@ TEST test_format_bparam() {
 	return 0;
 }
 
+TEST test_format_bdparam() {
+	rliteClient client;
+	// extra 1 to test that's not being read
+	if (rliteFormatCommand(&client, "ECHO %b%d", "helloworld1", 10, 1) != 0) {
+		FAIL();
+	}
+	ASSERT_EQ(client.argc, 2);
+	ASSERT_EQ(client.argvlen[0], 4);
+	ASSERT_EQ(memcmp(client.argv[0], "ECHO", 4), 0);
+	ASSERT_EQ(client.argvlen[1], 11);
+	ASSERT_EQ(memcmp(client.argv[1], "helloworld1", 11), 0);
+	int i;
+	for (i = 0; i < client.argc; i++) {
+		free(client.argv[i]);
+	}
+	free(client.argvlen);
+	free(client.argv);
+	return 0;
+}
+
 TEST test_format_dparam() {
 	rliteClient client;
 	ASSERT_EQ(rliteFormatCommand(&client, "ECHO %d", 10), 0);
@@ -100,6 +120,17 @@ TEST test_command_bparam() {
 	rliteReply *reply = rliteCommand(context, "ECHO %b", "helloworld", 10);
 	ASSERT_EQ(reply->type, RLITE_REPLY_STRING);
 	ASSERT_EQ(memcmp(reply->str, "helloworld", 10), 0);
+
+	rliteFreeReplyObject(reply);
+	rliteFree(context);
+	return 0;
+}
+
+TEST test_command_bdparam() {
+	rliteContext *context = rliteConnect(":memory:", 0);
+	rliteReply *reply = rliteCommand(context, "ECHO %b%d", "helloworld", 10, 1);
+	ASSERT_EQ(reply->type, RLITE_REPLY_STRING);
+	ASSERT_EQ(memcmp(reply->str, "helloworld1", 11), 0);
 
 	rliteFreeReplyObject(reply);
 	rliteFree(context);
@@ -158,8 +189,10 @@ SUITE(parser_test)
 	RUN_TEST(test_format_noparam);
 	RUN_TEST(test_format_sparam);
 	RUN_TEST(test_format_bparam);
+	RUN_TEST(test_format_bdparam);
 	RUN_TEST(test_append_sparam);
 	RUN_TEST(test_command_bparam);
+	RUN_TEST(test_command_bdparam);
 	RUN_TEST(test_command_lldparam);
 	RUN_TEST(test_hset_hmget_dparam);
 	RUN_TEST(test_zrange);

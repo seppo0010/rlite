@@ -445,7 +445,7 @@ void rliteFreeReplyObject(void *reply) {
 int rlitevFormatCommand(rliteClient *client, const char *format, va_list ap) {
 	const char *c = format;
 	char *curarg, *newarg; /* current argument */
-	size_t curarglen;
+	size_t curarglen, tmparglen;
 	int touched = 0; /* was the current argument touched? */
 	char **curargv = NULL, **newargv = NULL;
 	size_t *curargvlen = NULL, *newargvlen = NULL;
@@ -601,9 +601,11 @@ int rlitevFormatCommand(rliteClient *client, const char *format, va_list ap) {
 						memcpy(_format,c,_l);
 						_format[_l] = '\0';
 						newarg = curarg;
+						tmparglen = curarglen;
 						if (RLITE_ERR == catvprintf(&newarg, &curarglen, _format,_cpy)) {
 							goto err;
 						}
+						curarglen += tmparglen;
 
 						c = _p-1;
 					}
