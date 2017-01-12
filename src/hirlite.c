@@ -8,6 +8,7 @@
 #include <string.h>
 #include <strings.h>
 #include <sys/time.h>
+#define __need_timespec
 #include <time.h>
 #include <unistd.h>
 
