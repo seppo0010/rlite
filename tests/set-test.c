@@ -344,6 +344,13 @@ TEST test_smembers() {
 		rliteFreeReplyObject(reply);
 	}
 
+	{
+		char* argv[100] = {"smembers", "myset2", NULL};
+		reply = rliteCommandArgv(context, populateArgvlen(argv, argvlen), argv, argvlen);
+		EXPECT_REPLY_LEN(reply, 0);
+		rliteFreeReplyObject(reply);
+	}
+
 	rliteFree(context);
 	return 0;
 }
