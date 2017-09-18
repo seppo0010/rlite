@@ -2184,8 +2184,12 @@ static void sOperationGenericCommand(rliteClient *c, int op) {
 	}
 	retval = (op == OP_INTER ? rl_sinter : (op == OP_UNION ? rl_sunion : rl_sdiff))(
 				c->context->db, keyc, keys, keyslen, &membersc, &members, &memberslen);
-	RLITE_SERVER_OK(c, retval);
+	RLITE_SERVER_ERR2(c, retval, RL_OK, RL_NOT_FOUND);
 	CHECK_OOM(c->reply = createReplyObject(RLITE_REPLY_ARRAY));
+	if (retval == RL_NOT_FOUND) {
+		c->reply->elements = 0;
+		goto cleanup;
+	}
 	c->reply->elements = membersc;
 	if (membersc > 0) {
 		CHECK_OOM_ELSE(c->reply->element = rl_malloc(sizeof(rliteReply*) * membersc),
