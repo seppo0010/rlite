@@ -38,6 +38,7 @@ TEST test_hsetnx() {
 	rliteFreeReplyObject(reply);
 
 	char *argv3[100] = {"hget", "mykey", "myfield", NULL};
+	reply = rliteCommandArgv(context, populateArgvlen(argv3, argvlen), argv3, argvlen);
 	EXPECT_REPLY_STR(reply, "mydata", 6);
 	rliteFreeReplyObject(reply);
 
@@ -421,6 +422,7 @@ TEST test_hmget() {
 SUITE(hash_test)
 {
 	RUN_TEST(test_hset);
+	RUN_TEST(test_hsetnx);
 	RUN_TEST(test_hget);
 	RUN_TEST(test_hexists);
 	RUN_TEST(test_hdel);

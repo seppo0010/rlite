@@ -1642,11 +1642,11 @@ static void hsetGenericCommand(rliteClient *c, int update) {
 	size_t fieldlen = c->argvlen[2];
 	unsigned char *value = UNSIGN(c->argv[3]);
 	size_t valuelen = c->argvlen[3];
-	long added;
+	long added = 0;
 
 	int retval;
 	retval = rl_hset(c->context->db, key, keylen, field, fieldlen, value, valuelen, &added, update);
-	RLITE_SERVER_OK(c, retval);
+	RLITE_SERVER_ERR2(c, retval, RL_OK, RL_FOUND);
 	c->reply = createLongLongObject(added);
 
 cleanup:
