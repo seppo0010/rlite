@@ -2016,7 +2016,7 @@ static void hmgetCommand(rliteClient *c) {
 	}
 
 	retval = rl_hmget(c->context->db, key, keylen, fieldc, fields, fieldslen, &values, &valueslen);
-	RLITE_SERVER_OK(c, retval);
+	RLITE_SERVER_ERR2(c, retval, RL_OK, RL_NOT_FOUND);
 	CHECK_OOM(c->reply = createReplyObject(RLITE_REPLY_ARRAY));
 	c->reply->elements = fieldc;
 	CHECK_OOM_ELSE(c->reply->element = rl_malloc(sizeof(rliteReply*) * c->reply->elements),

@@ -399,8 +399,15 @@ TEST test_hmget() {
 	ASSERT_EQ(reply->type, RLITE_REPLY_STATUS);
 	rliteFreeReplyObject(reply);
 
-	char *argv3[100] = {"hmget", "mykey", "myfield", "nofield", "myfield2", NULL};
+	char *argv3[100] = {"hmget", "mykey2", "myfield", "myfield2", NULL};
 	reply = rliteCommandArgv(context, populateArgvlen(argv3, argvlen), argv3, argvlen);
+	EXPECT_REPLY_LEN(reply, 2);
+	ASSERT_EQ(reply->element[0]->type, RLITE_REPLY_NIL);
+	ASSERT_EQ(reply->element[1]->type, RLITE_REPLY_NIL);
+	rliteFreeReplyObject(reply);
+
+	char *argv4[100] = {"hmget", "mykey", "myfield", "nofield", "myfield2", NULL};
+	reply = rliteCommandArgv(context, populateArgvlen(argv4, argvlen), argv4, argvlen);
 	EXPECT_REPLY_LEN(reply, 3);
 	if (reply->element[0]->type != RLITE_REPLY_STRING || reply->element[2]->type != RLITE_REPLY_STRING) {
 		fprintf(stderr, "Expected reply->element[i] to be STRING, got %d,%d instead on line %d\n",
