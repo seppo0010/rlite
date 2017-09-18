@@ -2188,7 +2188,7 @@ static void sOperationGenericCommand(rliteClient *c, int op) {
 	CHECK_OOM(c->reply = createReplyObject(RLITE_REPLY_ARRAY));
 	if (retval == RL_NOT_FOUND) {
 		c->reply->elements = 0;
-		return;
+		goto cleanup;
 	}
 	c->reply->elements = membersc;
 	if (membersc > 0) {
