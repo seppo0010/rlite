@@ -24,7 +24,7 @@ static int rl_delete_wal(const char *wal_path) {
 static int rl_read_wal(const char *wal_path, unsigned char **_data, size_t *_datalen) {
 	int retval = RL_OK;
 	char *data = NULL;
-	size_t datalen;
+	size_t datalen = 0;
 	FILE *fp = fopen(wal_path, "rb");
 	if (fp == NULL) {
 		// file does not exist! empty data, retval=ok are set
